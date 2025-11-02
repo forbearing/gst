@@ -104,19 +104,6 @@ func RegisterTo[M types.Model](dbname string, records ...M) {
 	}
 }
 
-// RegisterRoutes register one route path with multiple api verbs.
-// call this function multiple to register multiple route path.
-// If route path is same, using latest register route path.
-//
-// Deprecated: use router.Register() instead. This function is a no-op.
-func RegisterRoutes[M types.Model](path string, verbs ...consts.HTTPVerb) {
-	// mu.Lock()
-	// defer mu.Unlock()
-	// if len(path) != 0 && len(verbs) != 0 {
-	// 	Routes = append(Routes, route{Path: path, Verbs: verbs, Model: reflect.New(reflect.TypeOf(*new(M)).Elem()).Interface().(types.Model)})
-	// }
-}
-
 var (
 	_ types.Model = (*Base)(nil)
 	_ types.Model = (*Empty)(nil)
