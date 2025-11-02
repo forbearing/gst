@@ -673,8 +673,71 @@ type RBAC interface {
 	UnassignRole(subject string, role string) error
 }
 
+// Plugin interface defines a comprehensive plugin system for creating modular API endpoints
+// with automatic CRUD operations, routing, and service layer integration.
+//
+// The Plugin interface enables developers to create reusable, self-contained modules
+// that automatically register models, services, and routes with the framework.
+// Each plugin encapsulates a complete API resource with customizable behavior.
+//
+// Generic constraints:
+//   - M: Must implement the Model interface (typically a pointer to struct)
+//   - REQ: Request type for API operations (can be any serializable type)
+//   - RSP: Response type for API operations (can be any serializable type)
+//
+// Implementation requirements:
+//  1. Must provide a Service instance that handles business logic
+//  2. Must define the API route path for the resource
+//  3. Can optionally customize URL parameter names
+//  4. Can optionally make endpoints public (bypass authentication)
+//
+// Usage example:
+//
+//	type HelloworldPlugin struct{}
+//
+//	func (HelloworldPlugin) Service() types.Service[*Helloworld, *Req, *Rsp] {
+//	    return &HelloworldService{}
+//	}
+//	func (HelloworldPlugin) Pub() bool     { return false }  // requires auth
+//	func (HelloworldPlugin) Route() string { return "hello-world" }
+//	func (HelloworldPlugin) Param() string { return "id" }   // URL param name
+//
+//	// Register the plugin with specific CRUD phases
+//	plugin.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
+//	    &HelloworldPlugin{},
+//	    consts.PHASE_CREATE,
+//	    consts.PHASE_LIST,
+//	    consts.PHASE_GET,
+//	)
+//
+// This will automatically create the following routes:
+//   - POST   /hello-world        (create)
+//   - GET    /hello-world        (list)
+//   - GET    /hello-world/:id    (get by id)
+//
+// Authentication behavior:
+//   - If Pub() returns true: endpoints are publicly accessible
+//   - If Pub() returns false: endpoints require authentication/authorization
 type Plugin[M Model, REQ Request, RSP Response] interface {
+	// Service returns the service instance that handles business logic for this plugin.
+	// The service must implement all CRUD operations and lifecycle hooks.
 	Service() Service[M, REQ, RSP]
+
+	// Pub determines whether the API endpoints are public or require authentication.
+	// Returns true for public endpoints, false for authenticated endpoints.
+	// Default behavior should return false (require authentication).
+	Pub() bool
+
+	// Route returns the base API path for this plugin's endpoints.
+	// The path should not include leading/trailing slashes or "api" prefix.
+	// Example: "users", "hello-world", "products"
+	Route() string
+
+	// Param returns the URL parameter name used for resource identification.
+	// If empty string is returned, defaults to "id".
+	// This parameter is used in routes like: GET /resource/:param
+	// Example: "id", "uuid", "slug"
+	Param() string
 }
 
 // ESDocumenter represents a document that can be indexed into Elasticsearch.

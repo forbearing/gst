@@ -36,3 +36,6 @@ type HelloworldPlugin struct{}
 func (HelloworldPlugin) Service() types.Service[*Helloworld, *Req, *Rsp] {
 	return &Service{}
 }
+func (HelloworldPlugin) Pub() bool     { return false }
+func (HelloworldPlugin) Route() string { return "hello-world" }
+func (HelloworldPlugin) Param() string { return "id" }

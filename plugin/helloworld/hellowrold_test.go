@@ -17,8 +17,6 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/plugin"
 	"github.com/forbearing/gst/plugin/helloworld"
-	"github.com/forbearing/gst/router"
-	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
@@ -38,43 +36,43 @@ func init() {
 	os.Setenv(config.LOGGER_DIR, "/tmp/test_plugin")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
 
-	plugin.Use[
-		*helloworld.Helloworld,
-		*helloworld.Req,
-		*helloworld.Rsp,
-		*helloworld.Service](
-		&helloworld.HelloworldPlugin{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-		consts.PHASE_CREATE_MANY,
-		consts.PHASE_DELETE_MANY,
-		consts.PHASE_UPDATE_MANY,
-		consts.PHASE_PATCH_MANY,
-	)
-
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
 	}
 
 	go func() {
-		cfg := &types.ControllerConfig[*helloworld.Helloworld]{
-			ParamName: "id",
-		}
+		// cfg := &types.ControllerConfig[*helloworld.Helloworld]{
+		// 	ParamName: "id",
+		// }
+		//
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world", nil, consts.Create)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Delete)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Update)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Patch)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world", nil, consts.List)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Get)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.CreateMany)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.DeleteMany)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.UpdateMany)
+		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.PatchMany)
 
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world", nil, consts.Create)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Delete)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Update)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Patch)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world", nil, consts.List)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Get)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", cfg, consts.CreateMany)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", cfg, consts.DeleteMany)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", cfg, consts.UpdateMany)
-		router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", cfg, consts.PatchMany)
+		plugin.Use[
+			*helloworld.Helloworld,
+			*helloworld.Req,
+			*helloworld.Rsp,
+			*helloworld.Service](
+			&helloworld.HelloworldPlugin{},
+			consts.PHASE_CREATE,
+			consts.PHASE_DELETE,
+			consts.PHASE_UPDATE,
+			consts.PHASE_PATCH,
+			consts.PHASE_LIST,
+			consts.PHASE_GET,
+			consts.PHASE_CREATE_MANY,
+			consts.PHASE_DELETE_MANY,
+			consts.PHASE_UPDATE_MANY,
+			consts.PHASE_PATCH_MANY,
+		)
 
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
