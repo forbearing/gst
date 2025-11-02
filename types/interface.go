@@ -673,6 +673,10 @@ type RBAC interface {
 	UnassignRole(subject string, role string) error
 }
 
+type Plugin[M Model, REQ Request, RSP Response] interface {
+	Service() Service[M, REQ, RSP]
+}
+
 // ESDocumenter represents a document that can be indexed into Elasticsearch.
 // Types implementing this interface should be able to convert themselves
 // into a document format suitable for Elasticsearch indexing.

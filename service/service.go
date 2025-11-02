@@ -9,6 +9,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/logger"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"go.uber.org/zap"
@@ -17,6 +18,8 @@ import (
 var (
 	serviceMap = make(map[string]any)
 	mu         sync.Mutex
+
+	_ types.Service[*model.User, any, any] = (*Base[*model.User, any, any])(nil)
 )
 
 var (
