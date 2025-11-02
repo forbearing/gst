@@ -107,6 +107,7 @@ func RegisterTo[M types.Model](dbname string, records ...M) {
 var (
 	_ types.Model = (*Base)(nil)
 	_ types.Model = (*Empty)(nil)
+	_ types.Model = (*Any)(nil)
 )
 
 // Base implement types.Model interface.
