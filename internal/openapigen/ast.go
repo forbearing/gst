@@ -37,7 +37,7 @@ func parseModelDocs(t any) map[string]string {
 	result := make(map[string]string)
 
 	typ := reflect.TypeOf(t)
-	for typ.Kind() == reflect.Ptr {
+	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 

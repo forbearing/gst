@@ -185,7 +185,7 @@ func (c *Client) List(items any, total *int64) (*Resp, error) {
 	}
 
 	val := reflect.ValueOf(items)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return nil, errors.New("items must be a pointer to slice")
 	}
 	if val.Elem().Kind() != reflect.Slice {
@@ -217,7 +217,7 @@ func (c *Client) Get(id string, dst any) (*Resp, error) {
 		return nil, errors.New("id is required")
 	}
 	val := reflect.ValueOf(dst)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return nil, errors.New("dst must be a pointer to struct")
 	}
 	if val.Elem().Kind() != reflect.Struct {
@@ -241,14 +241,14 @@ func (c *Client) Get(id string, dst any) (*Resp, error) {
 
 func isStructSlice(payload any) bool {
 	typ := reflect.TypeOf(payload)
-	for typ.Kind() == reflect.Ptr {
+	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 	if typ.Kind() != reflect.Slice {
 		return false
 	}
 	elemTyp := typ.Elem()
-	for elemTyp.Kind() == reflect.Ptr {
+	for elemTyp.Kind() == reflect.Pointer {
 		elemTyp = elemTyp.Elem()
 	}
 	return elemTyp.Kind() == reflect.Struct
@@ -256,7 +256,7 @@ func isStructSlice(payload any) bool {
 
 func isStringSlice(payload any) bool {
 	typ := reflect.TypeOf(payload)
-	for typ.Kind() == reflect.Ptr {
+	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 	return typ.Kind() == reflect.Slice && typ.Elem().Kind() == reflect.String
