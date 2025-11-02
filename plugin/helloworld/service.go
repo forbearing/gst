@@ -83,7 +83,7 @@ func (s *Service) Get(ctx *types.ServiceContext, req *Req) (*Rsp, error) {
 func (s *Service) CreateMany(ctx *types.ServiceContext, req *Req) (*Rsp, error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
-	log.Info("helloworld plugin many creater")
+	log.Info("helloworld plugin many creator")
 	counter = counter + req.Field2*req.Field2
 
 	return &Rsp{

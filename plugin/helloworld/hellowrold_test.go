@@ -173,7 +173,6 @@ func TestHelloworldPlugin(t *testing.T) {
 				defer httpResp.Body.Close()
 				data, err := io.ReadAll(httpResp.Body)
 				require.NoError(t, err)
-				pretty.Println(string(data))
 
 				resp = &client.Resp{}
 				require.NoError(t, json.Unmarshal(data, resp))
