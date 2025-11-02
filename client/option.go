@@ -10,40 +10,40 @@ import (
 	"golang.org/x/time/rate"
 )
 
-type Option func(*Client)
+type Option[M, REQ, RSP any] func(*Client[M, REQ, RSP])
 
-func WithContext(ctx context.Context) Option {
-	return func(c *Client) {
+func WithContext[M, REQ, RSP any](ctx context.Context) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if ctx != nil {
 			c.ctx = ctx
 		}
 	}
 }
 
-func WithHTTPClient(client *http.Client) Option {
-	return func(c *Client) {
+func WithHTTPClient[M, REQ, RSP any](client *http.Client) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if client != nil {
 			c.httpClient = client
 		}
 	}
 }
 
-func WithHeader(header http.Header) Option {
-	return func(c *Client) {
+func WithHeader[M, REQ, RSP any](header http.Header) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if header != nil {
 			c.header = header.Clone()
 		}
 	}
 }
 
-func WithDebug() Option {
-	return func(c *Client) {
+func WithDebug[M, REQ, RSP any]() Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		c.debug = true
 	}
 }
 
-func WithRetry(maxRetries int, wait time.Duration) Option {
-	return func(c *Client) {
+func WithRetry[M, REQ, RSP any](maxRetries int, wait time.Duration) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if maxRetries < 0 {
 			maxRetries = 0
 		}
@@ -55,8 +55,8 @@ func WithRetry(maxRetries int, wait time.Duration) Option {
 	}
 }
 
-func WithRateLimit(r rate.Limit, b int) Option {
-	return func(c *Client) {
+func WithRateLimit[M, REQ, RSP any](r rate.Limit, b int) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if r <= 0 || b <= 0 {
 			return
 		}
@@ -64,16 +64,16 @@ func WithRateLimit(r rate.Limit, b int) Option {
 	}
 }
 
-func WithLogger(logger types.Logger) Option {
-	return func(c *Client) {
+func WithLogger[M, REQ, RSP any](logger types.Logger) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if logger != nil {
 			c.Logger = logger
 		}
 	}
 }
 
-func WithTimeout(timeout time.Duration) Option {
-	return func(c *Client) {
+func WithTimeout[M, REQ, RSP any](timeout time.Duration) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if timeout <= 0 {
 			return
 		}
@@ -84,8 +84,8 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-func WithUserAgent(userAgent string) Option {
-	return func(c *Client) {
+func WithUserAgent[M, REQ, RSP any](userAgent string) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.header == nil {
 			c.header = http.Header{}
 		}
@@ -93,8 +93,8 @@ func WithUserAgent(userAgent string) Option {
 	}
 }
 
-func WithBaseAuth(username, password string) Option {
-	return func(c *Client) {
+func WithBaseAuth[M, REQ, RSP any](username, password string) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if username = strings.TrimSpace(username); len(username) != 0 {
 			c.username = username
 			c.password = password
@@ -102,8 +102,8 @@ func WithBaseAuth(username, password string) Option {
 	}
 }
 
-func WithToken(token string) Option {
-	return func(c *Client) {
+func WithToken[M, REQ, RSP any](token string) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if token = strings.TrimSpace(token); len(token) != 0 {
 			c.token = token
 		}

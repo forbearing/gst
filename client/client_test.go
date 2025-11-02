@@ -14,6 +14,7 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/router"
+	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/stretchr/testify/require"
@@ -89,6 +90,11 @@ func startServer() {
 		router.Register[*User, *User, *User](router.Auth(), "test-user/batch", nil, consts.DeleteMany)
 		router.Register[*User, *User, *User](router.Auth(), "test-user/batch", nil, consts.UpdateMany)
 		router.Register[*User, *User, *User](router.Auth(), "test-user/batch", nil, consts.PatchMany)
+
+		router.Register[*Group, *GroupReq, *GroupRsp](router.Auth(), "test-group", nil, consts.Create)
+		router.Register[*Group, *GroupReq, *GroupRsp](router.Auth(), "test-group", nil, consts.Delete)
+		router.Register[*Group, *GroupReq, *GroupRsp](router.Auth(), "test-group", nil, consts.List)
+
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
 		}
@@ -112,7 +118,7 @@ func startServer() {
 func Test_Client(t *testing.T) {
 	startServer()
 
-	cli, err := client.New(addr2, client.WithToken(token), client.WithQueryPagination(1, 2))
+	cli, err := client.New[any, any, any](addr2, client.WithToken[any, any, any](token), client.WithQueryPagination[any, any, any](1, 2))
 	require.NoError(t, err)
 	fmt.Println(cli.QueryString())
 	fmt.Println(cli.RequestURL())
@@ -252,7 +258,7 @@ func Test_Client(t *testing.T) {
 
 	// Test CreateMany
 	t.Run("create_many", func(t *testing.T) {
-		cli, err := client.New(addr2, client.WithToken(token))
+		cli, err := client.New[any, any, any](addr2, client.WithToken[any, any, any](token))
 		require.NoError(t, err)
 		items := make([]User, 0)
 		total := *new(int64)
@@ -284,7 +290,7 @@ func Test_Client(t *testing.T) {
 
 	// Test DeleteMany
 	t.Run("delete_many", func(t *testing.T) {
-		cli, err := client.New(addr2, client.WithToken(token))
+		cli, err := client.New[any, any, any](addr2, client.WithToken[any, any, any](token))
 		require.NoError(t, err)
 		items := make([]User, 0)
 		total := *new(int64)
@@ -317,7 +323,7 @@ func Test_Client(t *testing.T) {
 
 	// Test UpdateMany
 	t.Run("update_many", func(t *testing.T) {
-		cli, err := client.New(addr2, client.WithToken(token))
+		cli, err := client.New[any, any, any](addr2, client.WithToken[any, any, any](token))
 		require.NoError(t, err)
 
 		// 1.delete all resources
@@ -367,7 +373,7 @@ func Test_Client(t *testing.T) {
 
 	// Test PatchMany
 	t.Run("patch_many", func(t *testing.T) {
-		cli, err := client.New(addr2, client.WithToken(token))
+		cli, err := client.New[any, any, any](addr2, client.WithToken[any, any, any](token))
 		require.NoError(t, err)
 
 		// 1.delete all resources
@@ -416,6 +422,15 @@ func Test_Client(t *testing.T) {
 	})
 }
 
+func Test_CustomReqRsp(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
+		cli, err := client.New[*Group, *GroupReq, *GroupRsp](addr2, client.WithToken[*Group, *GroupReq, *GroupRsp](token))
+		require.NoError(t, err)
+
+		cli.Create()
+	})
+}
+
 type User struct {
 	Name   string `json:"name,omitempty"`
 	Email  string `json:"email,omitempty"`
@@ -426,4 +441,34 @@ type User struct {
 
 func (u *User) GetTableName() string {
 	return "test_users"
+}
+
+type Group struct {
+	Name string
+	model.Base
+}
+
+func (Group) Purge() bool { return true }
+
+type GroupReq struct {
+	DisplayName string `json:"display_name"`
+}
+type GroupRsp struct {
+	CustomName string `json:"custom_name"`
+}
+
+type groupService struct {
+	service.Base[*Group, *GroupReq, *GroupRsp]
+}
+
+func (*groupService) Create(ctx *types.ServiceContext, req *GroupReq) (*GroupRsp, error) {
+	return &GroupRsp{
+		CustomName: req.DisplayName + "-create",
+	}, nil
+}
+
+func (*groupService) List(ctx *types.ServiceContext, req *GroupReq) (*GroupRsp, error) {
+	return &GroupRsp{
+		CustomName: req.DisplayName + "-list",
+	}, nil
 }

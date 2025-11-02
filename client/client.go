@@ -42,7 +42,7 @@ var (
 	ErrNotStructSlice = errors.New("payload must be a struct slice")
 )
 
-type Client struct {
+type Client[M, REQ, RSP any] struct {
 	addr       string
 	httpClient *http.Client
 	username   string
@@ -63,12 +63,22 @@ type Client struct {
 	types.Logger
 }
 
-type Resp struct {
-	Code      int             `json:"code"`
-	Msg       string          `json:"msg"`
-	Data      json.RawMessage `json:"data"`
-	RequestID string          `json:"request_id"`
+type Resp[RSP any] struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Data      RSP    `json:"data"`
+	RequestID string `json:"request_id"`
 }
+type ListResp[RSP any] struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		Items []RSP `json:"items,omitempty"`
+		Total int64 `json:"total,omitempty"`
+	} `json:"data"`
+	RequestID string `json:"request_id"`
+}
+
 type batchReq struct {
 	// Ids is the id list that should be batch delete.
 	Ids any `json:"ids,omitempty"`
@@ -78,8 +88,8 @@ type batchReq struct {
 
 // New creates a new client instance with given base URL and options.
 // The base URL must start with "http://" or "https://".
-func New(addr string, opts ...Option) (*Client, error) {
-	client := &Client{
+func New[M, REQ, RSP any](addr string, opts ...Option[M, REQ, RSP]) (*Client[M, REQ, RSP], error) {
+	client := &Client[M, REQ, RSP]{
 		httpClient: http.DefaultClient,
 		header:     http.Header{},
 		addr:       strings.TrimRight(addr, "/"),
@@ -101,7 +111,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 
 // QueryString build the query string from structured query parameters
 // and raw query string.
-func (c *Client) QueryString() (string, error) {
+func (c *Client[M, REQ, RSP]) QueryString() (string, error) {
 	if c.query == nil && len(c.queryRaw) == 0 {
 		return "", nil
 	}
@@ -126,7 +136,7 @@ func (c *Client) QueryString() (string, error) {
 }
 
 // RequestURL constructs the full request URL including base URL and query parameters.
-func (c *Client) RequestURL() (string, error) {
+func (c *Client[M, REQ, RSP]) RequestURL() (string, error) {
 	if !strings.HasPrefix(c.addr, "http://") && !strings.HasPrefix(c.addr, "https://") {
 		return "", errors.New("addr must start with http:// or https://")
 	}
@@ -142,12 +152,12 @@ func (c *Client) RequestURL() (string, error) {
 
 // Create send a POST request to create a new resource.
 // payload can be []byte or struct/pointer that can be marshaled to JSON.
-func (c *Client) Create(payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) Create(payload any) (*Resp[RSP], error) {
 	return c.request(create, payload)
 }
 
 // Delete send a DELETE request to delete a resource.
-func (c *Client) Delete(id string) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) Delete(id string) (*Resp[RSP], error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is required")
 	}
@@ -156,7 +166,7 @@ func (c *Client) Delete(id string) (*Resp, error) {
 }
 
 // Update send a PUT request to fully update a resource.
-func (c *Client) Update(id string, payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) Update(id string, payload any) (*Resp[RSP], error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is required")
 	}
@@ -165,7 +175,7 @@ func (c *Client) Update(id string, payload any) (*Resp, error) {
 }
 
 // Patch send a PATCH request to partially update a resource.
-func (c *Client) Patch(id string, payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) Patch(id string, payload any) (*Resp[RSP], error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is required")
 	}
@@ -176,7 +186,7 @@ func (c *Client) Patch(id string, payload any) (*Resp, error) {
 // List send a GET request to retrieve a list of resources.
 // items must be a pointer to slice where items will be unmarshaled into.
 // total will be set to the total number of items available.
-func (c *Client) List(items any, total *int64) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) List(items any, total *int64) (*Resp[RSP], error) {
 	if items == nil {
 		return nil, errors.New("items cannot be nil")
 	}
@@ -212,7 +222,7 @@ func (c *Client) List(items any, total *int64) (*Resp, error) {
 // Get send a GET request to get one resource by given id.
 // The id parameter specifies which resource to retrieve.
 // The dst parameter must be a pointer to struct where the resource will be unmarshaled into.
-func (c *Client) Get(id string, dst any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) Get(id string, dst any) (*Resp[RSP], error) {
 	if len(id) == 0 {
 		return nil, errors.New("id is required")
 	}
@@ -264,7 +274,7 @@ func isStringSlice(payload any) bool {
 
 // CreateMany send a POST request to batch create multiple resources.
 // payload should be a struct slice, eg: []User or []*User
-func (c *Client) CreateMany(payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) CreateMany(payload any) (*Resp[RSP], error) {
 	if !isStructSlice(payload) {
 		return nil, ErrNotStructSlice
 	}
@@ -273,7 +283,7 @@ func (c *Client) CreateMany(payload any) (*Resp, error) {
 
 // DeleteMany send a DELETE request to batch delete multiple resources.
 // payload should be a string slice contains id list.
-func (c *Client) DeleteMany(payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) DeleteMany(payload any) (*Resp, error) {
 	if !isStringSlice(payload) {
 		return nil, ErrNotStringSlice
 	}
@@ -282,7 +292,7 @@ func (c *Client) DeleteMany(payload any) (*Resp, error) {
 
 // UpdateMany send a PUT request to batch update multiple resources.
 // payload should be a struct slice, eg: []User or []*User
-func (c *Client) UpdateMany(payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) UpdateMany(payload any) (*Resp, error) {
 	if !isStructSlice(payload) {
 		return nil, ErrNotStructSlice
 	}
@@ -291,7 +301,7 @@ func (c *Client) UpdateMany(payload any) (*Resp, error) {
 
 // PatchMany send a PATCH request to batch partially update multiple resources.
 // payload should be a struct slice, eg: []User or []*User
-func (c *Client) PatchMany(payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) PatchMany(payload any) (*Resp, error) {
 	if !isStructSlice(payload) {
 		return nil, ErrNotStructSlice
 	}
@@ -301,7 +311,7 @@ func (c *Client) PatchMany(payload any) (*Resp, error) {
 // request send a request to backend server.
 // action determines the type of request,
 // payload can be []byte or struct/pointer that can be marshaled to JSON.
-func (c *Client) request(action action, payload any) (*Resp, error) {
+func (c *Client[M, REQ, RSP]) request(action action, payload any) (*Resp, error) {
 	if c.rateLimiter != nil {
 		if err := c.rateLimiter.Wait(c.ctx); err != nil {
 			return nil, errors.Wrap(err, "rate limit exceeded")

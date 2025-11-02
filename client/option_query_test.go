@@ -12,19 +12,19 @@ var addr = "http://localhost:8080"
 
 func Test_OptionQuery(t *testing.T) {
 	t.Run("WithQuery", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQuery("name", "tom", "age", 20, "_sortby", "created_at desc,name asc"))
+		cli, err := client.New[any, any, any](addr, client.WithQuery[any, any, any]("name", "tom", "age", 20, "_sortby", "created_at desc,name asc"))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
 		assert.Equal(t, "name=tom&age=20&_sortby=created_at+desc%2Cname+asc", query)
 
-		cli, err = client.New(addr, client.WithQuery("name", "tom", "age", 20, "suname"))
+		cli, err = client.New[any, any, any](addr, client.WithQuery[any, any, any]("name", "tom", "age", 20, "suname"))
 		assert.NoError(t, err)
 		query, err = cli.QueryString()
 		assert.NoError(t, err)
 		assert.Equal(t, "name=tom&age=20", query)
 
-		cli, err = client.New(addr, client.WithQuery("name", "tom", "age", 20, "suname"), client.WithQueryIndex("idx_composite_name_createdat"))
+		cli, err = client.New[any, any, any](addr, client.WithQuery[any, any, any]("name", "tom", "age", 20, "suname"), client.WithQueryIndex[any, any, any]("idx_composite_name_createdat"))
 		assert.NoError(t, err)
 		query, err = cli.QueryString()
 		assert.NoError(t, err)
@@ -32,7 +32,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQueryPagination", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQueryPagination(1, 10))
+		cli, err := client.New[any, any, any](addr, client.WithQueryPagination[any, any, any](1, 10))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -40,13 +40,13 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQueryExpand", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQueryExpand("all", 3))
+		cli, err := client.New[any, any, any](addr, client.WithQueryExpand[any, any, any]("all", 3))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
 		assert.Equal(t, "_depth=3&_expand=all", query)
 
-		cli, err = client.New(addr, client.WithQueryExpand("children,parent", 3))
+		cli, err = client.New[any, any, any](addr, client.WithQueryExpand[any, any, any]("children,parent", 3))
 		assert.NoError(t, err)
 		query, err = cli.QueryString()
 		assert.NoError(t, err)
@@ -54,7 +54,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQueryFuzzy", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQueryFuzzy(true))
+		cli, err := client.New[any, any, any](addr, client.WithQueryFuzzy[any, any, any](true))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -62,7 +62,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQuerySortby", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQuerySortby("created_at desc,id asc"))
+		cli, err := client.New[any, any, any](addr, client.WithQuerySortby[any, any, any]("created_at desc,id asc"))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -70,7 +70,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQueryNocache", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQueryNocache(true))
+		cli, err := client.New[any, any, any](addr, client.WithQueryNocache[any, any, any](true))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -80,7 +80,7 @@ func Test_OptionQuery(t *testing.T) {
 	t.Run("WithQueryTimeRange", func(t *testing.T) {
 		begin := time.Date(2022, 1, 1, 0, 0, 0, 0, time.Local)
 		end := time.Date(2022, 1, 2, 0, 0, 0, 0, time.Local)
-		cli, err := client.New(addr, client.WithQueryTimeRange("created_at", begin, end))
+		cli, err := client.New[any, any, any](addr, client.WithQueryTimeRange[any, any, any]("created_at", begin, end))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -88,7 +88,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQueryOr", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQueryOr(true))
+		cli, err := client.New[any, any, any](addr, client.WithQueryOr[any, any, any](true))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -96,7 +96,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQueryIndex", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQueryIndex("idx_composite_name_createdat"))
+		cli, err := client.New[any, any, any](addr, client.WithQueryIndex[any, any, any]("idx_composite_name_createdat"))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
@@ -104,7 +104,7 @@ func Test_OptionQuery(t *testing.T) {
 	})
 
 	t.Run("WithQuerySelect", func(t *testing.T) {
-		cli, err := client.New(addr, client.WithQuerySelect("name", "age", ""))
+		cli, err := client.New[any, any, any](addr, client.WithQuerySelect[any, any, any]("name", "age", ""))
 		assert.NoError(t, err)
 		query, err := cli.QueryString()
 		assert.NoError(t, err)
