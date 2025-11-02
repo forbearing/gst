@@ -11,9 +11,9 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-func WithQuery(_keyValues ...any) Option {
+func WithQuery[M, REQ, RSP any](_keyValues ...any) Option[M, REQ, RSP] {
 	if len(_keyValues) == 0 || len(_keyValues) == 1 {
-		return func(_ *Client) {}
+		return func(_ *Client[M, REQ, RSP]) {}
 	}
 	keyValues := make([]string, 0, len(_keyValues))
 	for i := range _keyValues {
@@ -38,7 +38,7 @@ func WithQuery(_keyValues ...any) Option {
 
 	length := len(keyValues)
 	if length == 0 || length == 1 {
-		return func(_ *Client) {}
+		return func(_ *Client[M, REQ, RSP]) {}
 	}
 	if length%2 != 0 {
 		length--
@@ -57,13 +57,13 @@ func WithQuery(_keyValues ...any) Option {
 		queryBuilder.WriteString(value)
 	}
 
-	return func(c *Client) {
+	return func(c *Client[M, REQ, RSP]) {
 		c.queryRaw = queryBuilder.String()
 	}
 }
 
-func WithQueryPagination(page, size uint) Option {
-	return func(c *Client) {
+func WithQueryPagination[M, REQ, RSP any](page, size uint) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.query == nil {
 			c.query = new(model.Base)
 		}
@@ -78,8 +78,8 @@ func WithQueryPagination(page, size uint) Option {
 	}
 }
 
-func WithQueryExpand(expand string, depth uint) Option {
-	return func(c *Client) {
+func WithQueryExpand[M, REQ, RSP any](expand string, depth uint) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.query == nil {
 			c.query = new(model.Base)
 		}
@@ -91,8 +91,8 @@ func WithQueryExpand(expand string, depth uint) Option {
 	}
 }
 
-func WithQueryFuzzy(fuzzy bool) Option {
-	return func(c *Client) {
+func WithQueryFuzzy[M, REQ, RSP any](fuzzy bool) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.query == nil {
 			c.query = new(model.Base)
 		}
@@ -100,8 +100,8 @@ func WithQueryFuzzy(fuzzy bool) Option {
 	}
 }
 
-func WithQuerySortby(sortby string) Option {
-	return func(c *Client) {
+func WithQuerySortby[M, REQ, RSP any](sortby string) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if sortby = strings.TrimSpace(sortby); len(sortby) == 0 {
 			return
 		}
@@ -112,8 +112,8 @@ func WithQuerySortby(sortby string) Option {
 	}
 }
 
-func WithQueryNocache(nocache bool) Option {
-	return func(c *Client) {
+func WithQueryNocache[M, REQ, RSP any](nocache bool) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.query == nil {
 			c.query = new(model.Base)
 		}
@@ -121,8 +121,8 @@ func WithQueryNocache(nocache bool) Option {
 	}
 }
 
-func WithQueryTimeRange(columeName string, start, end time.Time) Option {
-	return func(c *Client) {
+func WithQueryTimeRange[M, REQ, RSP any](columeName string, start, end time.Time) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.query == nil {
 			c.query = new(model.Base)
 		}
@@ -141,8 +141,8 @@ func WithQueryTimeRange(columeName string, start, end time.Time) Option {
 	}
 }
 
-func WithQueryOr(or bool) Option {
-	return func(c *Client) {
+func WithQueryOr[M, REQ, RSP any](or bool) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if c.query == nil {
 			c.query = new(model.Base)
 		}
@@ -150,8 +150,8 @@ func WithQueryOr(or bool) Option {
 	}
 }
 
-func WithQueryIndex(index string) Option {
-	return func(c *Client) {
+func WithQueryIndex[M, REQ, RSP any](index string) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		if index = strings.TrimSpace(index); len(index) == 0 {
 			return
 		}
@@ -162,8 +162,8 @@ func WithQueryIndex(index string) Option {
 	}
 }
 
-func WithQuerySelect(selects ...string) Option {
-	return func(c *Client) {
+func WithQuerySelect[M, REQ, RSP any](selects ...string) Option[M, REQ, RSP] {
+	return func(c *Client[M, REQ, RSP]) {
 		_selects := make([]string, 0, len(selects))
 		for i := range selects {
 			if len(strings.TrimSpace(selects[i])) != 0 {
