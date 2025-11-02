@@ -18,7 +18,6 @@ import (
 	"github.com/forbearing/gst/plugin"
 	"github.com/forbearing/gst/plugin/helloworld"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
