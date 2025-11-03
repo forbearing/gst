@@ -27,6 +27,14 @@ func Init() error {
 }
 `
 
+var moduleContent = consts.CodeGeneratedComment() + `
+package module
+
+func Init() error {
+	return nil
+}
+`
+
 var mainContent = consts.CodeGeneratedComment() + `
 package main
 
@@ -35,6 +43,7 @@ import (
 	_ "%s/cronjob"
 	_ "%s/middleware"
 	_ "%s/model"
+	"%s/module"
 	"%s/router"
 	_ "%s/service"
 
@@ -44,6 +53,7 @@ import (
 
 func main() {
 	RunOrDie(bootstrap.Bootstrap)
+	RunOrDie(module.Init)
 	RunOrDie(router.Init)
 	RunOrDie(bootstrap.Run)
 }
