@@ -1,4 +1,4 @@
-.PHONY: check build format vet modernize lint shadow test testv fix help
+.PHONY: check build format vet modernize lint shadow test testv fix install help
 
 # Default target
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "  test       - Run unit tests (simple output)"
 	@echo "  testv      - Run unit tests with verbose output"
 	@echo "  fix        - Auto-fix code issues (gofumpt, golangci-lint, shadow, modernize)"
+	@echo "  install    - Install gg command (go install ./cmd/gg)"
 	@echo "  help       - Show this help message"
 
 # Run all code quality checks
@@ -75,3 +76,8 @@ fix:
 	@echo "Running modernize -fix..."
 	modernize -fix ./...
 	@echo "All auto-fix operations completed!"
+
+# Install gg command
+install:
+	@echo "Installing gg command..."
+	go install ./cmd/gg
