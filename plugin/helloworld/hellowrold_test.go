@@ -165,12 +165,15 @@ func TestHelloworldPlugin(t *testing.T) {
 					Field2: 0,
 				})
 			case "list":
-				req, err := http.NewRequest(http.MethodGet, addr, nil)
+				var req *http.Request
+				var data []byte
+				var httpResp *http.Response
+				req, err = http.NewRequest(http.MethodGet, addr, nil)
 				require.NoError(t, err)
-				httpResp, err := http.DefaultClient.Do(req)
+				httpResp, err = http.DefaultClient.Do(req)
 				require.NoError(t, err)
 				defer httpResp.Body.Close()
-				data, err := io.ReadAll(httpResp.Body)
+				data, err = io.ReadAll(httpResp.Body)
 				require.NoError(t, err)
 
 				resp = &client.Resp{}
