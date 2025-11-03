@@ -1,4 +1,4 @@
-.PHONY: check build vet modernize lint shadow help
+.PHONY: check build vet modernize lint shadow test test-verbose help
 
 # Default target
 help:
@@ -9,6 +9,8 @@ help:
 	@echo "  modernize  - Run modernize"
 	@echo "  lint       - Run golangci-lint"
 	@echo "  shadow     - Run shadow analysis"
+	@echo "  test       - Run unit tests (simple output)"
+	@echo "  testv      - Run unit tests with verbose output"
 	@echo "  help       - Show this help message"
 
 # Run all code quality checks
@@ -39,3 +41,17 @@ lint:
 shadow:
 	@echo "Running shadow analysis..."
 	shadow ./...
+
+# Run unit tests
+test:
+	@echo "Running unit tests..."
+	go test ./dsl
+	go test ./client
+	go test ./internal/codegen/gen/
+
+# Run unit tests with verbose output
+test-verbose:
+	@echo "Running unit tests with verbose output..."
+	go test -v ./dsl
+	go test -v ./client
+	go test -v ./internal/codegen/gen/
