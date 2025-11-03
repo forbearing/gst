@@ -430,17 +430,17 @@ const (
 type OP string
 
 const (
-	OP_CREATE OP = "create"
-	OP_DELETE OP = "delete"
-	OP_UPDATE OP = "update"
-	OP_PATCH  OP = "patch"
-	OP_LIST   OP = "list"
-	OP_GET    OP = "get"
-	OP_EXPORT OP = "export"
-	OP_IMPORT OP = "import"
+	OP_CREATE OP = create
+	OP_DELETE OP = delete_
+	OP_UPDATE OP = update
+	OP_PATCH  OP = patch
+	OP_LIST   OP = list
+	OP_GET    OP = get
+	OP_EXPORT OP = export
+	OP_IMPORT OP = import_
 
-	OP_CREATE_MANY OP = "create_many"
-	OP_DELETE_MANY OP = "delete_many"
-	OP_UPDATE_MANY OP = "update_many"
-	OP_PATCH_MANY  OP = "patch_many"
+	OP_CREATE_MANY OP = create_many
+	OP_DELETE_MANY OP = delete_many
+	OP_UPDATE_MANY OP = update_many
+	OP_PATCH_MANY  OP = patch_many
 )

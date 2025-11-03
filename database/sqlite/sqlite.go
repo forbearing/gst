@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
@@ -33,10 +34,17 @@ func Init() (err error) {
 	if db, err = Default.DB(); err != nil {
 		return errors.Wrap(err, "failed to get sqlite db")
 	}
-	db.SetMaxIdleConns(config.App.Database.MaxIdleConns)
-	db.SetMaxOpenConns(config.App.Database.MaxOpenConns)
+
+	// SQLite works best with limited concurrent connections to avoid lock contention
+	db.SetMaxIdleConns(1)
+	db.SetMaxOpenConns(1) // Use single connection to avoid "database table is locked" errors
 	db.SetConnMaxLifetime(config.App.Database.ConnMaxLifetime)
 	db.SetConnMaxIdleTime(config.App.Database.ConnMaxIdleTime)
+
+	// Optimize database performance with PRAGMA settings
+	if err = OptimizeDatabase(Default); err != nil {
+		zap.S().Warnw("failed to optimize sqlite database", "error", err)
+	}
 
 	zap.S().Infow("successfully connect to sqlite", "path", cfg.Path, "database", cfg.Database, "is_memory", cfg.IsMemory)
 	return helper.InitDatabase(Default, dbmap)
@@ -48,6 +56,18 @@ func New(cfg config.Sqlite) (*gorm.DB, error) {
 	return gorm.Open(sqlite.Open(buildDSN(cfg)), &gorm.Config{Logger: logger.Gorm})
 }
 
+// OptimizeDatabase applies performance optimization settings to the SQLite database.
+// This function executes PRAGMA optimize to collect statistics and improve query planning.
+func OptimizeDatabase(db *gorm.DB) error {
+	// Execute PRAGMA optimize to collect statistics for better query planning
+	if err := db.Exec("PRAGMA optimize").Error; err != nil {
+		return errors.Wrap(err, "failed to execute PRAGMA optimize")
+	}
+
+	zap.S().Debug("sqlite database optimization completed")
+	return nil
+}
+
 func buildDSN(cfg config.Sqlite) string {
 	dsn := cfg.Path
 	if cfg.IsMemory || len(cfg.Path) == 0 {
@@ -55,6 +75,18 @@ func buildDSN(cfg config.Sqlite) string {
 			zap.S().Warn("sqlite path is empty, using in-memory database")
 		}
 		dsn = "file::memory:?cache=shared" // Ignore file based database if IsMemory is true.
+	} else {
+		// Add comprehensive SQLite optimization parameters
+		params := []string{
+			"_journal_mode=WAL",   // Enable WAL mode for better concurrency
+			"_busy_timeout=5000",  // 5 second timeout for lock contention
+			"_synchronous=NORMAL", // Safe and performant in WAL mode
+			"_temp_store=MEMORY",  // Use memory for temporary storage
+			"_cache_size=-32000",  // 32MB cache size (negative value means KB)
+			"_foreign_keys=ON",    // Enable foreign key constraint checking
+		}
+
+		dsn = dsn + "?" + strings.Join(params, "&")
 	}
 	return dsn
 }

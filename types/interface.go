@@ -673,6 +673,73 @@ type RBAC interface {
 	UnassignRole(subject string, role string) error
 }
 
+// Module interface defines a comprehensive module system for creating modular API endpoints
+// with automatic CRUD operations, routing, and service layer integration.
+//
+// The Module interface enables developers to create reusable, self-contained modules
+// that automatically register models, services, and routes with the framework.
+// Each module encapsulates a complete API resource with customizable behavior.
+//
+// Generic constraints:
+//   - M: Must implement the Model interface (typically a pointer to struct)
+//   - REQ: Request type for API operations (can be any serializable type)
+//   - RSP: Response type for API operations (can be any serializable type)
+//
+// Implementation requirements:
+//  1. Must provide a Service instance that handles business logic
+//  2. Must define the API route path for the resource
+//  3. Can optionally customize URL parameter names
+//  4. Can optionally make endpoints public (bypass authentication)
+//
+// Usage example:
+//
+//	type HelloworldModule struct{}
+//
+//	func (HelloworldModule) Service() types.Service[*Helloworld, *Req, *Rsp] {
+//	    return &HelloworldService{}
+//	}
+//	func (HelloworldModule) Pub() bool     { return false }  // requires auth
+//	func (HelloworldModule) Route() string { return "hello-world" }
+//	func (HelloworldModule) Param() string { return "id" }   // URL param name
+//
+//	// Register the module with specific CRUD phases
+//	module.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
+//	    &HelloworldModule{},
+//	    consts.PHASE_CREATE,
+//	    consts.PHASE_LIST,
+//	    consts.PHASE_GET,
+//	)
+//
+// This will automatically create the following routes:
+//   - POST   /hello-world        (create)
+//   - GET    /hello-world        (list)
+//   - GET    /hello-world/:id    (get by id)
+//
+// Authentication behavior:
+//   - If Pub() returns true: endpoints are publicly accessible
+//   - If Pub() returns false: endpoints require authentication/authorization
+type Module[M Model, REQ Request, RSP Response] interface {
+	// Service returns the service instance that handles business logic for this module.
+	// The service must implement all CRUD operations and lifecycle hooks.
+	Service() Service[M, REQ, RSP]
+
+	// Pub determines whether the API endpoints are public or require authentication.
+	// Returns true for public endpoints, false for authenticated endpoints.
+	// Default behavior should return false (require authentication).
+	Pub() bool
+
+	// Route returns the base API path for this module's endpoints.
+	// The path should not include leading/trailing slashes or "api" prefix.
+	// Example: "users", "hello-world", "products"
+	Route() string
+
+	// Param returns the URL parameter name used for resource identification.
+	// If empty string is returned, defaults to "id".
+	// This parameter is used in routes like: GET /resource/:param
+	// Example: "id", "uuid", "slug"
+	Param() string
+}
+
 // ESDocumenter represents a document that can be indexed into Elasticsearch.
 // Types implementing this interface should be able to convert themselves
 // into a document format suitable for Elasticsearch indexing.

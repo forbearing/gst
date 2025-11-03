@@ -17,27 +17,30 @@ import (
 var ErrMobileLength = errors.New("mobile number length must be 11")
 
 var (
-	// Records is the table records must be pr-eexists before any database curd,
-	// its register by register function.
-	// The underlying type of map value must be model pointer to structure, eg: *model.User
-	//
-	// Records is the table records that should created automatically when app bootstraping.
-	Records []*Record = make([]*Record, 0)
-
-	// Tables is the database table that should created automatically when app bootstraping.
-	Tables []types.Model
-
-	TablesWithDB []struct {
-		Table  types.Model
-		DBName string
-	}
-
 	mu sync.Mutex
 
 	// Routes map an API path to its allowed HTTP methods.
 	// The key is the API endpoint path (e.g., "/user/:id")
 	// and the value is a list of supported HTTP methods (e.g., GET, POST, DELETE).
 	Routes map[string][]string = make(map[string][]string)
+
+	// TableChan is a buffered channel for asynchronous table registration.
+	// It receives table models from Register() function for processing by InitDatabase.
+	// The channel supports concurrent registration and real-time processing during initialization.
+	TableChan = make(chan types.Model, 1024)
+
+	// TableDBChan is a buffered channel for asynchronous table registration with custom database targeting.
+	// It receives TableDB structs from RegisterTo() function for processing by InitDatabase.
+	// The channel supports concurrent registration and real-time processing during initialization.
+	TableDBChan = make(chan TableDB, 1024)
+
+	// RecordChan is a buffered channel for asynchronous record insertion.
+	// It receives Record structs from Register() and RegisterTo() functions for processing by InitDatabase.
+	// The channel supports concurrent registration and ensures records are inserted after table creation.
+	//
+	// Records are table records that must pre-exist before any database CRUD operations.
+	// They are registered by Register() or RegisterTo() functions and processed asynchronously.
+	RecordChan = make(chan *Record, 1024)
 )
 
 // Record is table record
@@ -48,8 +51,23 @@ type Record struct {
 	DBName  string
 }
 
-// Register associates the model with database table and will created automatically.
+// TableDB represents a table model with its target database name for custom database registration.
+// It is used by RegisterTo() function to associate a table with a specific database instance.
+// The struct is sent through TableDBChan for asynchronous processing by InitDatabase.
+type TableDB struct {
+	Table  types.Model // The table model to be registered
+	DBName string      // The target database name (case-insensitive)
+}
+
+// Register associates the model with database table and will be created automatically.
 // If records provided, they will be inserted when application bootstrapping.
+// This function supports asynchronous registration and can be called at any stage - before, during, or after InitDatabase execution.
+//
+// Key features:
+//   - Thread-safe concurrent registration using mutex protection
+//   - Asynchronous processing via goroutines and channels
+//   - Automatic ID generation for records without IDs
+//   - Real-time integration with InitDatabase process
 //
 // Parameters:
 //   - records: Optional initial records to be seeded into the table. Can be single or multiple records.
@@ -69,57 +87,69 @@ type Record struct {
 //	Register[*model.User](users...)  // where users is []*model.User
 //
 // NOTE:
-//  1. Always call this function in init().
+//  1. Can be called in init() or at any time during application lifecycle.
 //  2. Ensure the model package is imported in main.go.
-//     The init() function will only executed if the file is imported directly or indirectly by main.go.
+//  3. The function is thread-safe and supports concurrent registration.
 func Register[M types.Model](records ...M) {
 	mu.Lock()
 	defer mu.Unlock()
+
 	table := reflect.New(reflect.TypeOf(*new(M)).Elem()).Interface().(M) //nolint:errcheck
-	Tables = append(Tables, table)
+	go func() {
+		TableChan <- table
+	}()
+
 	// NOTE: it's necessary to set id before insert.
 	for i := range records {
 		if len(records[i].GetID()) == 0 {
 			records[i].SetID()
 		}
 	}
+
 	if len(records) != 0 {
-		Records = append(Records, &Record{Table: table, Rows: records, Expands: table.Expands()})
+		go func() {
+			RecordChan <- &Record{Table: table, Rows: records, Expands: table.Expands()}
+		}()
 	}
 }
 
 // RegisterTo works identically to Register(), but registers the model on the specified database instance.
-// more details see: Register().
+// This function supports asynchronous registration and can be called at any stage - before, during, or after InitDatabase execution.
+//
+// Key features:
+//   - Thread-safe concurrent registration using mutex protection
+//   - Asynchronous processing via goroutines and channels
+//   - Automatic ID generation for records without IDs
+//   - Real-time integration with InitDatabase process
+//   - Custom database instance targeting
+//
+// Parameters:
+//   - dbname: The name of the target database instance (case-insensitive)
+//   - records: Optional initial records to be seeded into the table
+//
+// For more details and examples, see: Register().
 func RegisterTo[M types.Model](dbname string, records ...M) {
 	mu.Lock()
 	defer mu.Unlock()
+
 	dbname = strings.ToLower(dbname)
 	table := reflect.New(reflect.TypeOf(*new(M)).Elem()).Interface().(M) //nolint:errcheck
-	TablesWithDB = append(TablesWithDB, struct {
-		Table  types.Model
-		DBName string
-	}{table, dbname})
-	if len(records) != 0 {
-		Records = append(Records, &Record{Table: table, Rows: records, Expands: table.Expands(), DBName: dbname})
-	}
-}
 
-// RegisterRoutes register one route path with multiple api verbs.
-// call this function multiple to register multiple route path.
-// If route path is same, using latest register route path.
-//
-// Deprecated: use router.Register() instead. This function is a no-op.
-func RegisterRoutes[M types.Model](path string, verbs ...consts.HTTPVerb) {
-	// mu.Lock()
-	// defer mu.Unlock()
-	// if len(path) != 0 && len(verbs) != 0 {
-	// 	Routes = append(Routes, route{Path: path, Verbs: verbs, Model: reflect.New(reflect.TypeOf(*new(M)).Elem()).Interface().(types.Model)})
-	// }
+	go func() {
+		TableDBChan <- TableDB{Table: table, DBName: dbname}
+	}()
+
+	if len(records) != 0 {
+		go func() {
+			RecordChan <- &Record{Table: table, Rows: records, Expands: table.Expands(), DBName: dbname}
+		}()
+	}
 }
 
 var (
 	_ types.Model = (*Base)(nil)
 	_ types.Model = (*Empty)(nil)
+	_ types.Model = (*Any)(nil)
 )
 
 // Base implement types.Model interface.

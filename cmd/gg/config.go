@@ -229,7 +229,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 // convertStructToINI converts a struct to INI key-value pairs
 func convertStructToINI(section *ini.Section, value any) error {
 	val := reflect.ValueOf(value)
-	if val.Kind() == reflect.Ptr {
+	if val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return nil
 		}

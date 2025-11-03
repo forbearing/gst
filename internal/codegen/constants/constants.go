@@ -38,6 +38,7 @@ const (
 	PkgModel     = "model"
 	PkgService   = "service"
 	PkgRouter    = "router"
+	PkgModule    = "module"
 	PkgBootstrap = "bootstrap"
 )
 
@@ -74,6 +75,7 @@ const (
 	SubDirCronjob    = "cronjob"
 	SubDirMiddleware = "middleware"
 	SubDirModel      = "model"
+	SubDirModule     = "module"
 	SubDirService    = "service"
 	SubDirRouter     = "router"
 )
@@ -83,4 +85,5 @@ const (
 	BootstrapBootstrap = "Bootstrap"
 	BootstrapRun       = "Run"
 	RouterInit         = "Init"
+	ModuleInit         = "Init"
 )

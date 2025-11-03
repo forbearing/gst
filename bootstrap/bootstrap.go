@@ -14,6 +14,7 @@ import (
 	"github.com/forbearing/gst/controller"
 	"github.com/forbearing/gst/cronjob"
 	"github.com/forbearing/gst/database/clickhouse"
+	"github.com/forbearing/gst/database/helper"
 	"github.com/forbearing/gst/database/mysql"
 	"github.com/forbearing/gst/database/postgres"
 	"github.com/forbearing/gst/database/sqlite"
@@ -80,7 +81,14 @@ func Bootstrap() error {
 		mysql.Init,
 		clickhouse.Init,
 		sqlserver.Init,
+	)
+	if err := Init(); err != nil {
+		return err
+	}
+	// Wait for all database table and records to be created.
+	helper.Wait()
 
+	Register(
 		// provider
 		redis.Init,
 		otel.Init,
@@ -141,6 +149,10 @@ func Bootstrap() error {
 
 func Run() error {
 	defer Cleanup()
+
+	// Module system may register model after initialization.
+	// Wait for all tables and records registered by module system to be created.
+	helper.Wait()
 
 	RegisterGo(
 		router.Run,

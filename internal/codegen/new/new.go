@@ -23,6 +23,7 @@ var fileContentMap = map[string]string{
 	"middleware/middleware.go": middlewareContent,
 	"model/model.go":           modelContent,
 	"service/service.go":       serviceContent,
+	"module/module.go":         moduleContent,
 	"router/router.go":         routerContent,
 	"dao/.gitkeep":             "",
 	"provider/.gitkeep":        "",
@@ -105,7 +106,7 @@ func Run(projectName string) error {
 
 	// main.go
 	if err := createFile("main.go", fmt.Sprintf(mainContent,
-		projectName, projectName, projectName, projectName, projectName, projectName)); err != nil {
+		projectName, projectName, projectName, projectName, projectName, projectName, projectName)); err != nil {
 		return err
 	}
 	logFileCreate("main.go")

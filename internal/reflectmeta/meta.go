@@ -38,7 +38,7 @@ type StructMeta struct {
 }
 
 func GetStructMeta(t reflect.Type) *StructMeta {
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	key := t.PkgPath() + "|" + t.String()
@@ -190,7 +190,7 @@ func GetCachedMethodParamType(typ reflect.Type, methodName string, idx int) (ref
 
 func GetTypeOfModel[M any]() reflect.Type {
 	typ := reflect.TypeFor[M]()
-	for typ.Kind() == reflect.Ptr {
+	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 	return typ
