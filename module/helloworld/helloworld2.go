@@ -6,7 +6,7 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-var _ types.Module[*Helloworld2, *Helloworld2, *Helloworld2] = (*Helloworld2Module)(nil)
+var _ types.Module[*Helloworld2, *Helloworld2, *Helloworld2] = (*Module2)(nil)
 
 type Helloworld2 struct {
 	Before string `json:"before" schema:"before"`
@@ -19,22 +19,22 @@ type Service2 struct {
 	service.Base[*Helloworld2, *Helloworld2, *Helloworld2]
 }
 
-type Helloworld2Module struct{}
+type Module2 struct{}
 
-func (*Helloworld2Module) Service() types.Service[*Helloworld2, *Helloworld2, *Helloworld2] {
+func (*Module2) Service() types.Service[*Helloworld2, *Helloworld2, *Helloworld2] {
 	return &Service2{}
 }
 
-func (*Helloworld2Module) Route() string {
+func (*Module2) Route() string {
 	return "hello-world2"
 }
 
 // Param returns the route parameter identifier.
 // returns empty string to use default "id".
-func (*Helloworld2Module) Param() string {
+func (*Module2) Param() string {
 	return ""
 }
 
-func (*Helloworld2Module) Pub() bool {
+func (*Module2) Pub() bool {
 	return false
 }

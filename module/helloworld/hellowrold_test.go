@@ -46,7 +46,7 @@ func init() {
 			*helloworld.Req,
 			*helloworld.Rsp,
 			*helloworld.Service](
-			&helloworld.HelloworldModule{},
+			&helloworld.Module{},
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,
@@ -64,7 +64,7 @@ func init() {
 			*helloworld.Helloworld2,
 			*helloworld.Helloworld2,
 			*helloworld.Service2](
-			&helloworld.Helloworld2Module{},
+			&helloworld.Module2{},
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,

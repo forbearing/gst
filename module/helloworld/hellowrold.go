@@ -6,7 +6,7 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-var _ types.Module[*Helloworld, *Req, *Rsp] = (*HelloworldModule)(nil)
+var _ types.Module[*Helloworld, *Req, *Rsp] = (*Module)(nil)
 
 // Helloworld is the model definition.
 type Helloworld struct {
@@ -33,12 +33,12 @@ type Service struct {
 	service.Base[*Helloworld, *Req, *Rsp]
 }
 
-// HelloworldModule implements the `types.Module` interface.
-type HelloworldModule struct{}
+// Module implements the `types.Module` interface.
+type Module struct{}
 
-func (HelloworldModule) Service() types.Service[*Helloworld, *Req, *Rsp] {
+func (Module) Service() types.Service[*Helloworld, *Req, *Rsp] {
 	return &Service{}
 }
-func (HelloworldModule) Pub() bool     { return false }
-func (HelloworldModule) Route() string { return "hello-world" }
-func (HelloworldModule) Param() string { return "id" }
+func (Module) Pub() bool     { return false }
+func (Module) Route() string { return "hello-world" }
+func (Module) Param() string { return "id" }
