@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/forbearing/gst/client"
-	"github.com/forbearing/gst/plugin/helloworld"
+	"github.com/forbearing/gst/module/helloworld"
 	"github.com/kr/pretty"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestHelloworld2Plugin(t *testing.T) {
+func TestHelloworld2Module(t *testing.T) {
 	tests := []struct {
 		name   string
 		before string

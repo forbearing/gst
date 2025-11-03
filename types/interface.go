@@ -673,12 +673,12 @@ type RBAC interface {
 	UnassignRole(subject string, role string) error
 }
 
-// Plugin interface defines a comprehensive plugin system for creating modular API endpoints
+// Module interface defines a comprehensive module system for creating modular API endpoints
 // with automatic CRUD operations, routing, and service layer integration.
 //
-// The Plugin interface enables developers to create reusable, self-contained modules
+// The Module interface enables developers to create reusable, self-contained modules
 // that automatically register models, services, and routes with the framework.
-// Each plugin encapsulates a complete API resource with customizable behavior.
+// Each module encapsulates a complete API resource with customizable behavior.
 //
 // Generic constraints:
 //   - M: Must implement the Model interface (typically a pointer to struct)
@@ -693,18 +693,18 @@ type RBAC interface {
 //
 // Usage example:
 //
-//	type HelloworldPlugin struct{}
+//	type HelloworldModule struct{}
 //
-//	func (HelloworldPlugin) Service() types.Service[*Helloworld, *Req, *Rsp] {
+//	func (HelloworldModule) Service() types.Service[*Helloworld, *Req, *Rsp] {
 //	    return &HelloworldService{}
 //	}
-//	func (HelloworldPlugin) Pub() bool     { return false }  // requires auth
-//	func (HelloworldPlugin) Route() string { return "hello-world" }
-//	func (HelloworldPlugin) Param() string { return "id" }   // URL param name
+//	func (HelloworldModule) Pub() bool     { return false }  // requires auth
+//	func (HelloworldModule) Route() string { return "hello-world" }
+//	func (HelloworldModule) Param() string { return "id" }   // URL param name
 //
-//	// Register the plugin with specific CRUD phases
-//	plugin.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
-//	    &HelloworldPlugin{},
+//	// Register the module with specific CRUD phases
+//	module.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
+//	    &HelloworldModule{},
 //	    consts.PHASE_CREATE,
 //	    consts.PHASE_LIST,
 //	    consts.PHASE_GET,
@@ -718,8 +718,8 @@ type RBAC interface {
 // Authentication behavior:
 //   - If Pub() returns true: endpoints are publicly accessible
 //   - If Pub() returns false: endpoints require authentication/authorization
-type Plugin[M Model, REQ Request, RSP Response] interface {
-	// Service returns the service instance that handles business logic for this plugin.
+type Module[M Model, REQ Request, RSP Response] interface {
+	// Service returns the service instance that handles business logic for this module.
 	// The service must implement all CRUD operations and lifecycle hooks.
 	Service() Service[M, REQ, RSP]
 
@@ -728,7 +728,7 @@ type Plugin[M Model, REQ Request, RSP Response] interface {
 	// Default behavior should return false (require authentication).
 	Pub() bool
 
-	// Route returns the base API path for this plugin's endpoints.
+	// Route returns the base API path for this module's endpoints.
 	// The path should not include leading/trailing slashes or "api" prefix.
 	// Example: "users", "hello-world", "products"
 	Route() string

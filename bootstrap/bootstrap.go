@@ -150,8 +150,8 @@ func Bootstrap() error {
 func Run() error {
 	defer Cleanup()
 
-	// Plugin system may register model after initialization.
-	// Wait for all tables and records registered by plugin system to be created.
+	// Module system may register model after initialization.
+	// Wait for all tables and records registered by module system to be created.
 	helper.Wait()
 
 	RegisterGo(

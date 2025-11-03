@@ -1,9 +1,9 @@
-// Package plugin provides a comprehensive plugin system for creating modular API endpoints
+// Package module provides a comprehensive module system for creating modular API endpoints
 // with automatic CRUD operations, routing, and service layer integration.
 //
-// The plugin package enables developers to create reusable, self-contained modules
+// The module package enables developers to create reusable, self-contained modules
 // that automatically register models, services, and routes with the framework.
-// Each plugin encapsulates a complete API resource with customizable behavior.
+// Each module encapsulates a complete API resource with customizable behavior.
 //
 // Key features:
 //   - Automatic model registration with the ORM layer
@@ -15,19 +15,19 @@
 //
 // Usage example:
 //
-//	// Define your plugin implementation
-//	type HelloworldPlugin struct{}
+//	// Define your module implementation
+//	type HelloworldModule struct{}
 //
-//	func (HelloworldPlugin) Service() types.Service[*Helloworld, *Req, *Rsp] {
+//	func (HelloworldModule) Service() types.Service[*Helloworld, *Req, *Rsp] {
 //	    return &HelloworldService{}
 //	}
-//	func (HelloworldPlugin) Pub() bool     { return false }
-//	func (HelloworldPlugin) Route() string { return "hello-world" }
-//	func (HelloworldPlugin) Param() string { return "id" }
+//	func (HelloworldModule) Pub() bool     { return false }
+//	func (HelloworldModule) Route() string { return "hello-world" }
+//	func (HelloworldModule) Param() string { return "id" }
 //
-//	// Register the plugin with desired CRUD operations
-//	plugin.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
-//	    &HelloworldPlugin{},
+//	// Register the module with desired CRUD operations
+//	module.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
+//	    &HelloworldModule{},
 //	    consts.PHASE_CREATE,
 //	    consts.PHASE_LIST,
 //	    consts.PHASE_GET,
@@ -47,7 +47,7 @@
 //   - PUT    /hello-world/batch  (update multiple resources)
 //   - PATCH  /hello-world/batch  (patch multiple resources)
 //   - DELETE /hello-world/batch  (delete multiple resources)
-package plugin
+package module
 
 import (
 	"fmt"
@@ -60,13 +60,13 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-// Use registers a plugin with the framework, automatically setting up models, services, and routes
-// for the specified CRUD phases. This is the main entry point for plugin registration.
+// Use registers a module with the framework, automatically setting up models, services, and routes
+// for the specified CRUD phases. This is the main entry point for module registration.
 //
 // The function performs three main registration steps:
 //  1. Model registration: Registers the model type with the ORM layer
 //  2. Service registration: Registers the service for each specified phase
-//  3. Route registration: Creates HTTP endpoints based on the plugin configuration and phases
+//  3. Route registration: Creates HTTP endpoints based on the module configuration and phases
 //
 // Generic type parameters:
 //   - M: Model type that implements types.Model interface (must be pointer to struct)
@@ -75,8 +75,8 @@ import (
 //   - S: Service type that implements types.Service[M, REQ, RSP] interface
 //
 // Parameters:
-//   - plugin: The plugin instance that defines the API configuration
-//   - phases: Variable number of CRUD phases to enable for this plugin
+//   - mod: The module instance that defines the API configuration
+//   - phases: Variable number of CRUD phases to enable for this module
 //
 // Supported phases and their generated routes:
 //   - PHASE_CREATE: POST /route (create single resource)
@@ -91,21 +91,21 @@ import (
 //   - PHASE_PATCH_MANY: PATCH /route/batch (patch multiple resources)
 //
 // Route processing:
-//   - Automatically trims leading slashes and "api" prefix from plugin.Route()
-//   - Uses plugin.Param() for URL parameter name, defaults to "id" if empty
-//   - Registers routes as public or authenticated based on plugin.Pub()
+//   - Automatically trims leading slashes and "api" prefix from module.Route()
+//   - Uses module.Param() for URL parameter name, defaults to "id" if empty
+//   - Registers routes as public or authenticated based on module.Pub()
 //
 // Example usage:
 //
-//	plugin.Use[*User, *UserRequest, *UserResponse, *UserService](
-//	    &UserPlugin{},
+//	module.Use[*User, *UserRequest, *UserResponse, *UserService](
+//	    &UserModule{},
 //	    consts.PHASE_CREATE,
 //	    consts.PHASE_LIST,
 //	    consts.PHASE_GET,
 //	    consts.PHASE_UPDATE,
 //	    consts.PHASE_DELETE,
 //	)
-func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M, REQ, RSP]](plugin types.Plugin[M, REQ, RSP], phases ...consts.Phase) {
+func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M, REQ, RSP]](mod types.Module[M, REQ, RSP], phases ...consts.Phase) {
 	// Register model with the ORM layer for database operations
 	model.Register[M]()
 
@@ -116,13 +116,13 @@ func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M
 
 	// Process and normalize the route path
 	// Remove leading slashes and "api" prefix to ensure consistent routing
-	route := plugin.Route()
+	route := mod.Route()
 	route = strings.TrimLeft(route, "/")
 	route = strings.TrimLeft(route, "api")
 	route = strings.TrimLeft(route, "/")
 
 	// Get URL parameter name, default to "id" if not specified
-	param := plugin.Param()
+	param := mod.Param()
 	if len(param) == 0 {
 		param = "id"
 	}
@@ -132,43 +132,43 @@ func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M
 		switch p {
 		case consts.PHASE_CREATE:
 			// POST /route - Create single resource
-			registerRouter(plugin, route, nil, consts.Create)
+			registerRouter(mod, route, nil, consts.Create)
 		case consts.PHASE_DELETE:
 			// DELETE /route/:param - Delete single resource by ID
-			registerRouter(plugin, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Delete)
+			registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Delete)
 		case consts.PHASE_UPDATE:
 			// PUT /route/:param - Update single resource by ID
-			registerRouter(plugin, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Update)
+			registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Update)
 		case consts.PHASE_PATCH:
 			// PATCH /route/:param - Patch single resource by ID
-			registerRouter(plugin, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Patch)
+			registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Patch)
 		case consts.PHASE_LIST:
 			// GET /route - List resources with pagination
-			registerRouter(plugin, route, nil, consts.List)
+			registerRouter(mod, route, nil, consts.List)
 		case consts.PHASE_GET:
 			// GET /route/:param - Get single resource by ID
-			registerRouter(plugin, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Get)
+			registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Get)
 		case consts.PHASE_CREATE_MANY:
 			// POST /route/batch - Create multiple resources
-			registerRouter(plugin, route+"/batch", nil, consts.CreateMany)
+			registerRouter(mod, route+"/batch", nil, consts.CreateMany)
 		case consts.PHASE_DELETE_MANY:
 			// DELETE /route/batch - Delete multiple resources
-			registerRouter(plugin, route+"/batch", nil, consts.DeleteMany)
+			registerRouter(mod, route+"/batch", nil, consts.DeleteMany)
 		case consts.PHASE_UPDATE_MANY:
 			// PUT /route/batch - Update multiple resources
-			registerRouter(plugin, route+"/batch", nil, consts.UpdateMany)
+			registerRouter(mod, route+"/batch", nil, consts.UpdateMany)
 		case consts.PHASE_PATCH_MANY:
 			// PATCH /route/batch - Patch multiple resources
-			registerRouter(plugin, route+"/batch", nil, consts.PatchMany)
+			registerRouter(mod, route+"/batch", nil, consts.PatchMany)
 		}
 	}
 }
 
 // registerRouter is a helper function that registers an HTTP route with the appropriate router
-// based on the plugin's authentication requirements.
+// based on the module's authentication requirements.
 //
 // This function determines whether to register the route with the public router (no authentication)
-// or the authenticated router (requires authentication/authorization) based on the plugin's Pub() method.
+// or the authenticated router (requires authentication/authorization) based on the module's Pub() method.
 //
 // Generic type parameters:
 //   - M: Model type that implements types.Model interface
@@ -176,19 +176,19 @@ func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M
 //   - RSP: Response type for API operations
 //
 // Parameters:
-//   - plugin: The plugin instance that defines authentication requirements
+//   - mod: The module instance that defines authentication requirements
 //   - route: The HTTP route path (e.g., "users", "users/:id", "users/batch")
 //   - cfg: Controller configuration containing parameter names and other settings
 //   - verb: HTTP verb/method for the route (GET, POST, PUT, DELETE, etc.)
 //
 // Route registration logic:
-//   - If plugin.Pub() returns true: registers with public router (no auth required)
-//   - If plugin.Pub() returns false: registers with authenticated router (auth required)
+//   - If mod.Pub() returns true: registers with public router (no auth required)
+//   - If mod.Pub() returns false: registers with authenticated router (auth required)
 //
-// This abstraction allows plugins to easily control the authentication behavior
+// This abstraction allows modules to easily control the authentication behavior
 // of their endpoints without directly interacting with the router registration logic.
-func registerRouter[M types.Model, REQ types.Request, RSP types.Response](plugin types.Plugin[M, REQ, RSP], route string, cfg *types.ControllerConfig[M], verb consts.HTTPVerb) {
-	if plugin.Pub() {
+func registerRouter[M types.Model, REQ types.Request, RSP types.Response](mod types.Module[M, REQ, RSP], route string, cfg *types.ControllerConfig[M], verb consts.HTTPVerb) {
+	if mod.Pub() {
 		// Register with public router - no authentication required
 		router.Register[M, REQ, RSP](router.Pub(), route, cfg, verb)
 	} else {

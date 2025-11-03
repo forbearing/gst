@@ -15,8 +15,8 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/plugin"
-	"github.com/forbearing/gst/plugin/helloworld"
+	"github.com/forbearing/gst/module"
+	"github.com/forbearing/gst/module/helloworld"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +33,7 @@ func init() {
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
 	os.Setenv(config.SQLITE_IS_MEMORY, "true")
 	os.Setenv(config.SERVER_PORT, fmt.Sprintf("%d", port))
-	os.Setenv(config.LOGGER_DIR, "/tmp/test_plugin")
+	os.Setenv(config.LOGGER_DIR, "/tmp/test_module")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
 
 	if err := bootstrap.Bootstrap(); err != nil {
@@ -56,12 +56,12 @@ func init() {
 		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.UpdateMany)
 		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.PatchMany)
 
-		plugin.Use[
+		module.Use[
 			*helloworld.Helloworld,
 			*helloworld.Req,
 			*helloworld.Rsp,
 			*helloworld.Service](
-			&helloworld.HelloworldPlugin{},
+			&helloworld.HelloworldModule{},
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,
@@ -74,12 +74,12 @@ func init() {
 			consts.PHASE_PATCH_MANY,
 		)
 
-		plugin.Use[
+		module.Use[
 			*helloworld.Helloworld2,
 			*helloworld.Helloworld2,
 			*helloworld.Helloworld2,
 			*helloworld.Service2](
-			&helloworld.Helloworld2Plugin{},
+			&helloworld.Helloworld2Module{},
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,
@@ -112,7 +112,7 @@ func init() {
 	}
 }
 
-func TestHelloworldPlugin(t *testing.T) {
+func TestHelloworldModule(t *testing.T) {
 	tests := []struct {
 		name string
 		want string
