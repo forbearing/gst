@@ -26,6 +26,7 @@ var (
 	token = "-"
 	port  = 8000
 	addr  = fmt.Sprintf("http://localhost:%d/api/hello-world", port)
+	addr2 = fmt.Sprintf("http://localhost:%d/api/hello-world2", port)
 )
 
 func init() {
@@ -61,6 +62,24 @@ func init() {
 			*helloworld.Rsp,
 			*helloworld.Service](
 			&helloworld.HelloworldPlugin{},
+			consts.PHASE_CREATE,
+			consts.PHASE_DELETE,
+			consts.PHASE_UPDATE,
+			consts.PHASE_PATCH,
+			consts.PHASE_LIST,
+			consts.PHASE_GET,
+			consts.PHASE_CREATE_MANY,
+			consts.PHASE_DELETE_MANY,
+			consts.PHASE_UPDATE_MANY,
+			consts.PHASE_PATCH_MANY,
+		)
+
+		plugin.Use[
+			*helloworld.Helloworld2,
+			*helloworld.Helloworld2,
+			*helloworld.Helloworld2,
+			*helloworld.Service2](
+			&helloworld.Helloworld2Plugin{},
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,

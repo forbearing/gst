@@ -10,6 +10,9 @@ var _ types.Plugin[*Helloworld, *Req, *Rsp] = (*HelloworldPlugin)(nil)
 
 // Helloworld is the model definition.
 type Helloworld struct {
+	Hello string `json:"hello" schema:"hello"`
+	World string `json:"world" schema:"world"`
+
 	model.Base
 }
 
