@@ -613,6 +613,7 @@ func CheckAllowedDirectories() int {
 	// Define allowed directories for gst framework projects
 	allowedDirs := map[string]bool{
 		"model":      true,
+		"module":     true,
 		"service":    true,
 		"router":     true,
 		"dao":        true,
