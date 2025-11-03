@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,9 +23,6 @@ var startedTable int32
 // initedTable is a concurrent map that tracks initialized tables by their unique key (table_name:db_name)
 // It is used by the record processing goroutine to wait for table creation before inserting records
 var initedTable = cmap.New[string]()
-
-// tableMutex is used to serialize table creation operations to prevent concurrent access issues
-var tableMutex sync.Mutex
 
 // InitDatabase initializes database tables and records with asynchronous processing support.
 // It creates tables and inserts records that are registered via Register() or RegisterTo() functions.
@@ -60,7 +56,6 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 				case m := <-model.TableChan:
 					// create table automatically in default database.
 					begin := time.Now()
-					tableMutex.Lock()
 
 					typ := reflect.TypeOf(m).Elem()
 					if err = db.Table(m.GetTableName()).AutoMigrate(m); err != nil {
@@ -69,13 +64,11 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 					}
 					zap.S().Infow("database create table", "model", typ.String(), "cost", util.FormatDurationSmart(time.Since(begin)))
 
-					tableMutex.Unlock()
 					initedTable.Set(typ.String(), "")
 
 				case v := <-model.TableDBChan:
 					// create table automatically with custom database.
 					begin := time.Now()
-					tableMutex.Lock()
 
 					handler := db
 					if val, exists := dbmap[strings.ToLower(v.DBName)]; exists {
@@ -89,14 +82,13 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 					}
 					zap.S().Infow("database create table", "model", typ.String(), "cost", util.FormatDurationSmart(time.Since(begin)))
 
-					tableMutex.Unlock()
 					initedTable.Set(typ.String(), v.DBName)
 
 				case r := <-model.RecordChan:
 					// create the table records that must be pre-exists before database curds.
 					// NOTE: we should always creates records after table migration finished.
 					//
-					// We should runing this goroutine in a separate goroutine to avoid blocking the main goroutine.
+					// We should running this goroutine in a separate goroutine to avoid blocking the main goroutine.
 					go func(r *model.Record) {
 						typ := reflect.TypeOf(r.Table).Elem()
 						for {
