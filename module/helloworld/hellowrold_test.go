@@ -41,21 +41,6 @@ func init() {
 	}
 
 	go func() {
-		// cfg := &types.ControllerConfig[*helloworld.Helloworld]{
-		// 	ParamName: "id",
-		// }
-		//
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world", nil, consts.Create)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Delete)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Update)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Patch)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world", nil, consts.List)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/:id", cfg, consts.Get)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.CreateMany)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.DeleteMany)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.UpdateMany)
-		// router.Register[*helloworld.Helloworld, *helloworld.Req, *helloworld.Rsp](router.Auth(), "hello-world/batch", nil, consts.PatchMany)
-
 		module.Use[
 			*helloworld.Helloworld,
 			*helloworld.Req,
