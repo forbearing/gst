@@ -1,27 +1,33 @@
-.PHONY: check build vet modernize lint shadow test testv fix help
+.PHONY: check build format vet modernize lint shadow test testv fix help
 
 # Default target
 help:
 	@echo "Available commands:"
 	@echo "  check      - Run all code quality checks"
 	@echo "  build      - Build the project"
+	@echo "  format     - Format code with gofumpt"
 	@echo "  vet        - Run go vet"
 	@echo "  modernize  - Run modernize"
 	@echo "  lint       - Run golangci-lint"
 	@echo "  shadow     - Run shadow analysis"
 	@echo "  test       - Run unit tests (simple output)"
 	@echo "  testv      - Run unit tests with verbose output"
-	@echo "  fix        - Auto-fix code issues (golangci-lint, shadow, modernize)"
+	@echo "  fix        - Auto-fix code issues (gofumpt, golangci-lint, shadow, modernize)"
 	@echo "  help       - Show this help message"
 
 # Run all code quality checks
-check: build vet modernize lint shadow
+check: build format vet modernize lint shadow
 	@echo "All checks passed successfully!"
 
 # Build the project
 build:
 	@echo "Running go build..."
 	go build ./...
+
+# Format code with gofumpt
+format:
+	@echo "Running gofumpt..."
+	gofumpt -l -w .
 
 # Run go vet
 vet:
@@ -51,7 +57,7 @@ test:
 	go test ./internal/codegen/gen/
 
 # Run unit tests with verbose output
-test-verbose:
+testv:
 	@echo "Running unit tests with verbose output..."
 	go test -v ./dsl
 	go test -v ./client
@@ -60,6 +66,8 @@ test-verbose:
 # Auto-fix code issues
 fix:
 	@echo "Running auto-fix tools..."
+	@echo "Running gofumpt..."
+	gofumpt -l -w .
 	@echo "Running golangci-lint --fix..."
 	golangci-lint run --fix ./...
 	@echo "Running shadow -fix..."
