@@ -289,6 +289,17 @@ type DistributedCache[T any] interface {
 }
 ```
 
+### Module
+
+```
+type Module[M Model, REQ Request, RSP Response] interface {
+	Service() Service[M, REQ, RSP]
+	Pub() bool
+	Route() string
+	Param() string
+}
+```
+
 ### ESDocumenter
 
 ```go
