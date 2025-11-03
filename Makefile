@@ -56,6 +56,7 @@ test:
 	go test ./dsl
 	go test ./client
 	go test ./internal/codegen/gen/
+	go test ./module/helloworld
 
 # Run unit tests with verbose output
 testv:
@@ -63,6 +64,7 @@ testv:
 	go test -v ./dsl
 	go test -v ./client
 	go test -v ./internal/codegen/gen/
+	go test -v ./module/helloworld
 
 # Auto-fix code issues
 fix:
