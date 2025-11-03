@@ -30,6 +30,10 @@ func (i *initializer) RegisterGo(fn ...func() error) {
 // Init executes all registered initialization functions sequentially
 // and logs their execution time for performance monitoring
 func (i *initializer) Init() error {
+	defer func() {
+		i.fns = make([]func() error, 0)
+	}()
+
 	for j := range i.fns {
 		fn := i.fns[j]
 		if fn == nil {
@@ -45,6 +49,10 @@ func (i *initializer) Init() error {
 }
 
 func (i *initializer) Go() error {
+	defer func() {
+		i.gos = make([]func() error, 0)
+	}()
+
 	g, _ := errgroup.WithContext(context.Background())
 	for _, fn := range i.gos {
 		if fn == nil {
