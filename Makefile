@@ -1,4 +1,4 @@
-.PHONY: check build vet modernize lint shadow test test-verbose help
+.PHONY: check build vet modernize lint shadow test testv fix help
 
 # Default target
 help:
@@ -11,6 +11,7 @@ help:
 	@echo "  shadow     - Run shadow analysis"
 	@echo "  test       - Run unit tests (simple output)"
 	@echo "  testv      - Run unit tests with verbose output"
+	@echo "  fix        - Auto-fix code issues (golangci-lint, shadow, modernize)"
 	@echo "  help       - Show this help message"
 
 # Run all code quality checks
@@ -55,3 +56,14 @@ test-verbose:
 	go test -v ./dsl
 	go test -v ./client
 	go test -v ./internal/codegen/gen/
+
+# Auto-fix code issues
+fix:
+	@echo "Running auto-fix tools..."
+	@echo "Running golangci-lint --fix..."
+	golangci-lint run --fix ./...
+	@echo "Running shadow -fix..."
+	shadow -fix ./...
+	@echo "Running modernize -fix..."
+	modernize -fix ./...
+	@echo "All auto-fix operations completed!"
