@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,6 +24,9 @@ var startedTable int32
 // initedTable is a concurrent map that tracks initialized tables by their unique key (table_name:db_name)
 // It is used by the record processing goroutine to wait for table creation before inserting records
 var initedTable = cmap.New[string]()
+
+// tableMutex is used to serialize table creation operations to prevent concurrent access issues
+var tableMutex sync.Mutex
 
 // InitDatabase initializes database tables and records with asynchronous processing support.
 // It creates tables and inserts records that are registered via Register() or RegisterTo() functions.
@@ -56,18 +60,23 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 				case m := <-model.TableChan:
 					// create table automatically in default database.
 					begin := time.Now()
+					tableMutex.Lock()
+
 					typ := reflect.TypeOf(m).Elem()
 					if err = db.Table(m.GetTableName()).AutoMigrate(m); err != nil {
 						err = errors.Wrap(err, fmt.Sprintf("failed to create table(%s)", typ.String()))
 						panic(err)
 					}
-					zap.S().Infow("database create table", "cost", util.FormatDurationSmart(time.Since(begin)))
+					zap.S().Infow("database create table", "model", typ.String(), "cost", util.FormatDurationSmart(time.Since(begin)))
 
+					tableMutex.Unlock()
 					initedTable.Set(typ.String(), "")
 
 				case v := <-model.TableDBChan:
 					// create table automatically with custom database.
 					begin := time.Now()
+					tableMutex.Lock()
+
 					handler := db
 					if val, exists := dbmap[strings.ToLower(v.DBName)]; exists {
 						handler = val
@@ -78,32 +87,37 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 						err = errors.Wrap(err, fmt.Sprintf("failed to create table(%s)", typ.String()))
 						panic(err)
 					}
-					zap.S().Infow("database create table", "cost", util.FormatDurationSmart(time.Since(begin)))
+					zap.S().Infow("database create table", "model", typ.String(), "cost", util.FormatDurationSmart(time.Since(begin)))
 
+					tableMutex.Unlock()
 					initedTable.Set(typ.String(), v.DBName)
 
 				case r := <-model.RecordChan:
 					// create the table records that must be pre-exists before database curds.
 					// NOTE: we should always creates records after table migration finished.
-					typ := reflect.TypeOf(r.Table).Elem()
-					for {
-						dbname, e := initedTable.Get(typ.String())
-						if e && dbname == r.DBName {
-							break
+					//
+					// We should runing this goroutine in a separate goroutine to avoid blocking the main goroutine.
+					go func(r *model.Record) {
+						typ := reflect.TypeOf(r.Table).Elem()
+						for {
+							dbname, e := initedTable.Get(typ.String())
+							if e && dbname == r.DBName {
+								break
+							}
+							time.Sleep(100 * time.Millisecond)
 						}
-						time.Sleep(300 * time.Millisecond)
-					}
 
-					begin := time.Now()
-					handler := db
-					if val, exists := dbmap[strings.ToLower(r.DBName)]; exists {
-						handler = val
-					}
-					if err = handler.Table(r.Table.GetTableName()).Save(r.Rows).Error; err != nil {
-						err = errors.Wrap(err, "failed to create table records")
-						panic(err)
-					}
-					zap.S().Infow("database create table records", "cost", util.FormatDurationSmart(time.Since(begin)))
+						begin := time.Now()
+						handler := db
+						if val, exists := dbmap[strings.ToLower(r.DBName)]; exists {
+							handler = val
+						}
+						if err = handler.Table(r.Table.GetTableName()).Save(r.Rows).Error; err != nil {
+							err = errors.Wrap(err, "failed to create table records")
+							panic(err)
+						}
+						zap.S().Infow("database create table records", "model", typ.String(), "cost", util.FormatDurationSmart(time.Since(begin)))
+					}(r)
 
 				}
 			}
@@ -123,3 +137,66 @@ func Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error { return db.Tran
 
 // Exec executes raw sql without return rows
 func Exec(db *gorm.DB, sql string, values any) error { return db.Exec(sql, values).Error }
+
+// Wait blocks until all pending database initialization operations are completed.
+// It monitors three channels used by the InitDatabase function's background goroutine:
+//
+//   - model.TableChan: Contains models waiting for table creation in the default database
+//   - model.TableDBChan: Contains models waiting for table creation in custom databases
+//   - model.RecordChan: Contains records waiting for insertion after table creation
+//
+// This function is useful in scenarios where you need to ensure that all database
+// tables and initial records are fully created before proceeding with application logic.
+// Common use cases include:
+//
+//   - Testing environments where you need to wait for complete database setup
+//   - Application startup sequences that depend on specific tables being available
+//   - Migration scripts that require all tables to be created before data operations
+//
+// The function polls the channels every 100 milliseconds and prints progress information
+// showing the number of pending operations in each channel. It returns only when all
+// channels are empty, indicating that the InitDatabase background processing is complete.
+//
+// NOTE: This function should be called after InitDatabase() has been invoked, as it
+// relies on the background goroutine started by InitDatabase to process the channels.
+// Calling Wait() before InitDatabase() will return immediately with a warning.
+func Wait() {
+	// Check if InitDatabase has been called and the processing goroutine has started
+	if atomic.LoadInt32(&startedTable) == 0 {
+		zap.S().Warnw("Wait() called before InitDatabase(), returning immediately",
+			"reason", "processing goroutine not started")
+		return
+	}
+
+	startTime := time.Now()
+	var lastLogTime time.Time
+
+	for len(model.TableChan) != 0 || len(model.TableDBChan) != 0 || len(model.RecordChan) != 0 {
+		tablePending := len(model.TableChan)
+		tableDBPending := len(model.TableDBChan)
+		recordPending := len(model.RecordChan)
+
+		// Log progress every 500ms to avoid spam
+		if time.Since(lastLogTime) >= 500*time.Millisecond {
+			elapsed := time.Since(startTime)
+			totalPending := tablePending + tableDBPending + recordPending
+
+			zap.S().Infow("waiting for database initialization",
+				"elapsed", util.FormatDurationSmart(elapsed),
+				"total_pending", totalPending,
+				"default_tables", tablePending,
+				"custom_tables", tableDBPending,
+				"records", recordPending,
+			)
+			lastLogTime = time.Now()
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// Log completion
+	elapsed := time.Since(startTime)
+	zap.S().Infow("database initialization completed",
+		"total_time", util.FormatDurationSmart(elapsed),
+	)
+}
