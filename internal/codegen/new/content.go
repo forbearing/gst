@@ -34,6 +34,14 @@ var moduleContent = `// Package module provides business logic modules for the a
 // provided by the gst framework or develop your own custom modules by implementing
 // the Module interface, providing maximum flexibility and extensibility.
 //
+// Recommended pattern:
+//   - Organize each resource into its own subpackage under module/, e.g., module/user.
+//   - Inside each subpackage, expose a Register() function that wires models,
+//     services, and routes via module.Use.
+//   - Call these Register() functions from module.Init() to centralize startup.
+//   - This mirrors the demo style (e.g., helloworld.Register()) and keeps
+//     registration consistent and reusable.
+//
 // Example usage:
 //
 //	import (
@@ -79,55 +87,56 @@ var moduleContent = `// Package module provides business logic modules for the a
 //	func (UserModule) Route() string { return "users" }
 //	func (UserModule) Param() string { return "id" }
 //
-//	func Init() error {
-//		// Use module.Use with type parameters to register modules
-//		module.Use[*User, *UserReq, *UserRsp, *UserService](
-//			&UserModule{},
-//			consts.PHASE_CREATE,
-//			consts.PHASE_DELETE,
-//			consts.PHASE_UPDATE,
-//			consts.PHASE_PATCH,
-//			consts.PHASE_LIST,
-//			consts.PHASE_GET,
-//			consts.PHASE_CREATE_MANY,
-//			consts.PHASE_DELETE_MANY,
-//			consts.PHASE_UPDATE_MANY,
-//			consts.PHASE_PATCH_MANY,
-//		)
-//		return nil
-//	}
+//	// In subpackage module/user:
+//	// package user
+//	// func Register() {
+//	//     module.Use[*User, *UserReq, *UserRsp, *UserService](
+//	//         &UserModule{},
+//	//         consts.PHASE_CREATE,
+//	//         consts.PHASE_DELETE,
+//	//         consts.PHASE_UPDATE,
+//	//         consts.PHASE_PATCH,
+//	//         consts.PHASE_LIST,
+//	//         consts.PHASE_GET,
+//	//         consts.PHASE_CREATE_MANY,
+//	//         consts.PHASE_DELETE_MANY,
+//	//         consts.PHASE_UPDATE_MANY,
+//	//         consts.PHASE_PATCH_MANY,
+//	//     )
+//	// }
+//
+//	// Then call user.Register() from module.Init().
 //
 // Place your business module implementations here.
 package module
 
 func Init() error {
-	// TODO: Add your custom module registrations here
-	//
-	// You have two options:
-	// 1. Use gst framework provided modules
-	// 2. Develop your own custom modules by implementing the Module interface
-	//
-	// Steps to create a custom module:
-	// - Define your model, request (Req suffix), response (Rsp suffix) types
-	// - Implement service with service.Base
-	// - Implement module with types.Module interface (Service, Pub, Route, Param methods)
-	// - Use module.Use[Model, Request, Response, Service] to register
-	//
-	// Template:
-	// module.Use[*YourModel, *YourReq, *YourRsp, *YourService](
-	//     &YourModule{},
-	//     consts.PHASE_CREATE,
-	//     consts.PHASE_DELETE,
-	//     consts.PHASE_UPDATE,
-	//     consts.PHASE_PATCH,
-	//     consts.PHASE_LIST,
-	//     consts.PHASE_GET,
-	//     consts.PHASE_CREATE_MANY,
-	//     consts.PHASE_DELETE_MANY,
-	//     consts.PHASE_UPDATE_MANY,
-	//     consts.PHASE_PATCH_MANY,
-	// )
-	return nil
+    // TODO: Add your custom module registrations here
+    //
+    // Preferred approach:
+    // - Create a subpackage per resource (e.g., module/user, module/order)
+    // - In each subpackage, expose a Register() function that calls module.Use
+    // - Call those Register() functions here to keep registrations centralized
+    //
+    // Example:
+    //   // import "your/module/path/module/user"
+    //   // user.Register()
+    //
+    // Direct registration is also supported if you prefer:
+    // module.Use[*YourModel, *YourReq, *YourRsp, *YourService](
+    //     &YourModule{},
+    //     consts.PHASE_CREATE,
+    //     consts.PHASE_DELETE,
+    //     consts.PHASE_UPDATE,
+    //     consts.PHASE_PATCH,
+    //     consts.PHASE_LIST,
+    //     consts.PHASE_GET,
+    //     consts.PHASE_CREATE_MANY,
+    //     consts.PHASE_DELETE_MANY,
+    //     consts.PHASE_UPDATE_MANY,
+    //     consts.PHASE_PATCH_MANY,
+    // )
+    return nil
 }
 `
 
