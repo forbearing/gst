@@ -53,5 +53,5 @@ func (*LoginLogModule) Service() types.Service[*LoginLog, *LoginLog, *LoginLog] 
 	return &LoginLogService{}
 }
 func (*LoginLogModule) Pub() bool     { return false }
-func (*LoginLogModule) Route() string { return "loginlog" }
+func (*LoginLogModule) Route() string { return "/log/loginlog" }
 func (*LoginLogModule) Param() string { return "id" }

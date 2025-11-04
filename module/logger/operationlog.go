@@ -52,5 +52,5 @@ func (*OperationLogModule) Service() types.Service[*OperationLog, *OperationLog,
 }
 
 func (*OperationLogModule) Pub() bool     { return false }
-func (*OperationLogModule) Route() string { return "operationlog" }
+func (*OperationLogModule) Route() string { return "/log/operationlog" }
 func (*OperationLogModule) Param() string { return "id" }
