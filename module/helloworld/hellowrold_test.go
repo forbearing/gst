@@ -15,9 +15,7 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/module/helloworld"
-	"github.com/forbearing/gst/types/consts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,41 +39,7 @@ func init() {
 	}
 
 	go func() {
-		module.Use[
-			*helloworld.Helloworld,
-			*helloworld.Req,
-			*helloworld.Rsp,
-			*helloworld.Service](
-			&helloworld.Module{},
-			consts.PHASE_CREATE,
-			consts.PHASE_DELETE,
-			consts.PHASE_UPDATE,
-			consts.PHASE_PATCH,
-			consts.PHASE_LIST,
-			consts.PHASE_GET,
-			consts.PHASE_CREATE_MANY,
-			consts.PHASE_DELETE_MANY,
-			consts.PHASE_UPDATE_MANY,
-			consts.PHASE_PATCH_MANY,
-		)
-
-		module.Use[
-			*helloworld.Helloworld2,
-			*helloworld.Helloworld2,
-			*helloworld.Helloworld2,
-			*helloworld.Service2](
-			&helloworld.Module2{},
-			consts.PHASE_CREATE,
-			consts.PHASE_DELETE,
-			consts.PHASE_UPDATE,
-			consts.PHASE_PATCH,
-			consts.PHASE_LIST,
-			consts.PHASE_GET,
-			consts.PHASE_CREATE_MANY,
-			consts.PHASE_DELETE_MANY,
-			consts.PHASE_UPDATE_MANY,
-			consts.PHASE_PATCH_MANY,
-		)
+		helloworld.Register()
 
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
