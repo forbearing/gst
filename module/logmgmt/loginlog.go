@@ -1,4 +1,4 @@
-package logger
+package logmgmt
 
 import (
 	. "github.com/forbearing/gst/dsl"

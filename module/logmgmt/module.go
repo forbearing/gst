@@ -1,4 +1,4 @@
-package logger
+package logmgmt
 
 import (
 	"github.com/forbearing/gst/cronjob"
@@ -27,5 +27,5 @@ func Register() {
 		consts.PHASE_GET,
 	)
 
-	cronjob.Register(cleanupLogs, "0 0 */1 * * *", "cleanup operationlog and loginlog")
+	cronjob.Register(cleanupLogs, "0 0 * * * *", "cleanup operationlog and loginlog hourly")
 }
