@@ -630,6 +630,7 @@ func CheckAllowedDirectories() int {
 		"helper":     true,
 		"internal":   true,
 		"cmd":        true,
+		"errorx":     true,
 		"testcode":   true,
 		"testdata":   true,
 		"docs":       true,
