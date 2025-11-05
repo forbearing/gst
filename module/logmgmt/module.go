@@ -6,7 +6,18 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-// Register registers two models: LoginLog OperationLog, and their services, routes and cronjob.
+// Register registers two modules: LoginLog and OperationLog.
+//
+// Models:
+//   - LoginLog
+//   - OperationLog
+//
+// Routes:
+//   - /api/log/loginlog
+//   - /api/log/operationlog
+//
+// Cronjob:
+//   - cleanup operationlog and loginlog hourly.
 func Register() {
 	module.Use[*LoginLog,
 		*LoginLog,

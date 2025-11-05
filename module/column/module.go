@@ -9,10 +9,15 @@ import (
 
 var tableColumns = make(map[string][]string)
 
-// Register columns service and routes
+// Register registers column module.
+//
 // m key is the table name, value is the table's columns name.
-// for example:
-// Register(map[string][]string{"user": {"name", "email"}})
+// for example: Register(map[string][]string{"user": {"name", "email"}})
+//
+// Models: no
+//
+// Routes:
+//   - /api/column/:id
 func Register(m map[string][]string) {
 	maps.Copy(tableColumns, m)
 

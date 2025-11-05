@@ -5,8 +5,16 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-// Register registers two models: Helloworld Helloworld2, and their services and routes.
+// Register registers two modules: Helloworld and Helloworld2.
 // helloworld demo just used for demo, that not contains any business logic.
+//
+// Models:
+//   - Helloworld
+//   - Helloworld2
+//
+// Routes:
+//   - /api/hello-world
+//   - /api/hello-world2
 func Register() {
 	module.Use[
 		*Helloworld,
