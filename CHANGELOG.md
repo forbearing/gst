@@ -1,7 +1,59 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Build
+- add module/helloworld tests to Makefile
+
 ### Chore
+- **cursor:** update cursor projct rules
+- **model:** make sure `Any` type as implementing types.Model interface
+- **model:** remove unused RegisterRouters
+- **plugin:** remove unsed pretty import from hellowold test
+- **test:** remove unused comment
+
+### Docs
+- update README.md contains module interface
+- **module:** update docs
+
+### Feat
+- Makefile add `install` to install `gg` command
+- Makefile add `format`
+- Makefile add `fix` to improve code quality
+- Makefile add `test` and `testv` to run unit test
+- add Makefile with code quality checks
+- **bootstrap:** improve initialization flow with database synchronization
+- **database:** add Wait function for database migration/initialization synchronization
+- **model:** support register models and records at anytime
+- **module:** add LoginLog, OperationLog modules
+- **plugin:** support plugin system now
+
+### Perf
+- **database:** remove table creation mutex
+
+### Refactor
+- rename plugin system to module system
+- **module:** rename moudle bundle from `logger` -> `logmgmt`
+
+### Style
+- **golangci-lint:** resolve issues
+- **modernize:** reflect.Ptr -> reflect.Pointer
+- **shadow:** reslove shadow issues
+
+### Test
+- **client:** use sqlite as backend database
+
+### Wip
+- **plugin:** change `Plugin` interface: add method Route, Param, Pub, and add more docs
+- **plugin:** prepare support plugin system
+
+
+<a name="v0.9.7-beta.4"></a>
+## [v0.9.7-beta.4] - 2025-10-31
+
+<a name="v0.9.7"></a>
+## [v0.9.7] - 2025-10-31
+### Chore
+- **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
 
 ### Enh
@@ -12,6 +64,9 @@
 
 ### Style
 - **gofumpt:** gofumpt -l -w .
+
+### Pull Requests
+- Merge pull request [#44](https://github.com/forbearing/gst/issues/44) from forbearing/dev
 
 
 <a name="v0.9.7-beta.3"></a>
@@ -679,11 +734,11 @@ Configuration field names changed from Jaeger to OTEL
 - Merge pull request [#5](https://github.com/forbearing/gst/issues/5) from forbearing/dev
 
 
-<a name="v0.7.0-beta.3"></a>
-## [v0.7.0-beta.3] - 2025-08-20
-
 <a name="v0.7.0"></a>
 ## [v0.7.0] - 2025-08-20
+
+<a name="v0.7.0-beta.3"></a>
+## [v0.7.0-beta.3] - 2025-08-20
 ### Chore
 - update CHANGELOG.md
 - **model:** remove zap debug logging from `setID`
@@ -2274,7 +2329,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...HEAD
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
@@ -2299,9 +2356,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.7.4]: https://github.com/forbearing/gst/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/forbearing/gst/compare/v0.7.2...v0.7.3
 [v0.7.2]: https://github.com/forbearing/gst/compare/v0.7.1...v0.7.2
-[v0.7.1]: https://github.com/forbearing/gst/compare/v0.7.0-beta.3...v0.7.1
-[v0.7.0-beta.3]: https://github.com/forbearing/gst/compare/v0.7.0...v0.7.0-beta.3
-[v0.7.0]: https://github.com/forbearing/gst/compare/v0.7.0-beta.2...v0.7.0
+[v0.7.1]: https://github.com/forbearing/gst/compare/v0.7.0...v0.7.1
+[v0.7.0]: https://github.com/forbearing/gst/compare/v0.7.0-beta.3...v0.7.0
+[v0.7.0-beta.3]: https://github.com/forbearing/gst/compare/v0.7.0-beta.2...v0.7.0-beta.3
 [v0.7.0-beta.2]: https://github.com/forbearing/gst/compare/v0.7.0-beta.1...v0.7.0-beta.2
 [v0.7.0-beta.1]: https://github.com/forbearing/gst/compare/v0.6.2...v0.7.0-beta.1
 [v0.6.2]: https://github.com/forbearing/gst/compare/v0.6.1...v0.6.2
