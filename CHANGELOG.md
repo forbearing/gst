@@ -2,6 +2,30 @@
 ## [Unreleased]
 
 ### Build
+- add test case for "model" and "util"
+
+### Chore
+- **docs:** update README.md
+- **model:** remove empty line
+
+### Docs
+- **module:** update modules docs for `column`, `helloworld`, `logmgmt`
+- **types:** update `ServiceContext`.`Params` comments
+
+### Enh
+- **module:** normalizes param
+
+### Feat
+- **model:** add `IsValid` to check whether the model is valid
+- **module:** add column modules
+
+### Refactor
+- **model:** rename IsModelEmpty -> IsEmpty, and add more check in IsEmpty
+
+
+<a name="v0.10.0-beta.0"></a>
+## [v0.10.0-beta.0] - 2025-11-05
+### Build
 - add module/helloworld tests to Makefile
 
 ### Chore
@@ -9,6 +33,7 @@
 - **model:** make sure `Any` type as implementing types.Model interface
 - **model:** remove unused RegisterRouters
 - **plugin:** remove unsed pretty import from hellowold test
+- **release:** generate CHANGEME.md
 - **test:** remove unused comment
 
 ### Docs
@@ -46,12 +71,20 @@
 - **plugin:** change `Plugin` interface: add method Route, Param, Pub, and add more docs
 - **plugin:** prepare support plugin system
 
+### Pull Requests
+- Merge pull request [#47](https://github.com/forbearing/gst/issues/47) from forbearing/dev
+- Merge pull request [#45](https://github.com/forbearing/gst/issues/45) from forbearing/dev
 
-<a name="v0.9.7-beta.4"></a>
-## [v0.9.7-beta.4] - 2025-10-31
+### BREAKING CHANGE
+
+Plugin interface renamed to Module interface
+
 
 <a name="v0.9.7"></a>
 ## [v0.9.7] - 2025-10-31
+
+<a name="v0.9.7-beta.4"></a>
+## [v0.9.7-beta.4] - 2025-10-31
 ### Chore
 - **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
@@ -2329,9 +2362,10 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...HEAD
-[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
-[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...HEAD
+[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
