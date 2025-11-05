@@ -133,7 +133,7 @@ type ServiceContext struct {
 	// eg: PUT /api/gists/:id/star
 	// Params: map[string]string{"id": "xxxxx-mygistid-xxxxx"}
 	//
-	// eg: DELETE /api/user/:userid/shelf/shelfid/book
+	// eg: DELETE /api/user/:userid/shelf/:shelfid/book
 	// Params: map[string]string{"userid": "xxxxx-myuserid-xxxxx", "shelfid": "xxxxx-myshelfid-xxxxx"}
 	Params map[string]string
 	Query  map[string][]string
