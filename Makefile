@@ -53,6 +53,8 @@ shadow:
 # Run unit tests
 test:
 	@echo "Running unit tests..."
+	go test ./model/...
+	go test ./util/...
 	go test ./dsl
 	go test ./client
 	go test ./internal/codegen/gen/
@@ -61,6 +63,8 @@ test:
 # Run unit tests with verbose output
 testv:
 	@echo "Running unit tests with verbose output..."
+	go test -v ./model/...
+	go test -v ./util/...
 	go test -v ./dsl
 	go test -v ./client
 	go test -v ./internal/codegen/gen/
