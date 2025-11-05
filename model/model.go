@@ -91,6 +91,10 @@ type TableDB struct {
 //  2. Ensure the model package is imported in main.go.
 //  3. The function is thread-safe and supports concurrent registration.
 func Register[M types.Model](records ...M) {
+	if !IsValid[M]() {
+		return
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -129,6 +133,10 @@ func Register[M types.Model](records ...M) {
 //
 // For more details and examples, see: Register().
 func RegisterTo[M types.Model](dbname string, records ...M) {
+	if !IsValid[M]() {
+		return
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 

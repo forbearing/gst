@@ -7,7 +7,7 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-var _ types.Module[*LoginLog, *LoginLog, *LoginLog] = (*LoginLogModule)(nil)
+var _ types.Module[*LoginLog, *LoginLog, *LoginLog] = (*loginLogModule)(nil)
 
 type LoginStatus string
 
@@ -43,15 +43,15 @@ func (LoginLog) Design() {
 	})
 }
 
-type LoginLogService struct {
+type loginLogService struct {
 	service.Base[*LoginLog, *LoginLog, *LoginLog]
 }
 
-type LoginLogModule struct{}
+type loginLogModule struct{}
 
-func (*LoginLogModule) Service() types.Service[*LoginLog, *LoginLog, *LoginLog] {
-	return &LoginLogService{}
+func (*loginLogModule) Service() types.Service[*LoginLog, *LoginLog, *LoginLog] {
+	return &loginLogService{}
 }
-func (*LoginLogModule) Pub() bool     { return false }
-func (*LoginLogModule) Route() string { return "/log/loginlog" }
-func (*LoginLogModule) Param() string { return "id" }
+func (*loginLogModule) Pub() bool     { return false }
+func (*loginLogModule) Route() string { return "/log/loginlog" }
+func (*loginLogModule) Param() string { return "id" }

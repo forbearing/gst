@@ -1197,7 +1197,7 @@ func setExport[M types.Model, REQ types.Request, RSP types.Response](path string
 
 // register Model, Model Payload, Model Result into openapi3 schema.
 func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey, rspKey string, reqSchemaRef *openapi3.SchemaRef, rspSchemaRef *openapi3.SchemaRef) {
-	if !model.IsModelEmpty[M]() {
+	if !model.IsEmpty[M]() {
 		typ := reflect.TypeOf(*new(M))
 		for typ.Kind() == reflect.Pointer {
 			typ = typ.Elem()
@@ -1216,7 +1216,7 @@ func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey
 		docMutex.Unlock()
 	}
 
-	if !model.IsModelEmpty[REQ]() {
+	if !model.IsEmpty[REQ]() {
 		typ := reflect.TypeOf(*new(M))
 		for typ.Kind() == reflect.Pointer {
 			typ = typ.Elem()
@@ -1234,7 +1234,7 @@ func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey
 			doc.Components.RequestBodies[reqKey] = &openapi3.RequestBodyRef{
 				Value: &openapi3.RequestBody{
 					Description: fmt.Sprintf("%s Payload", name),
-					Required:    !model.IsModelEmpty[REQ](),
+					Required:    !model.IsEmpty[REQ](),
 					Content:     openapi3.NewContentWithJSONSchemaRef(reqSchemaRef),
 				},
 			}
@@ -1243,7 +1243,7 @@ func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey
 		docMutex.Unlock()
 	}
 
-	if !model.IsModelEmpty[RSP]() {
+	if !model.IsEmpty[RSP]() {
 		typ := reflect.TypeOf(*new(M))
 		for typ.Kind() == reflect.Pointer {
 			typ = typ.Elem()
@@ -2206,7 +2206,7 @@ func fieldType2openapiType(field reflect.StructField) *openapi3.Types {
 }
 
 func newRequestBody[REQ types.Request](reqKey string) *openapi3.RequestBodyRef {
-	if model.IsModelEmpty[REQ]() {
+	if model.IsEmpty[REQ]() {
 		return nil
 	}
 	return &openapi3.RequestBodyRef{
@@ -2215,7 +2215,7 @@ func newRequestBody[REQ types.Request](reqKey string) *openapi3.RequestBodyRef {
 }
 
 func newResponses[RSP types.Response](status int, rspKey string) *openapi3.Responses {
-	if model.IsModelEmpty[RSP]() {
+	if model.IsEmpty[RSP]() {
 		return nil
 	}
 	return openapi3.NewResponses(openapi3.WithStatus(status, &openapi3.ResponseRef{Ref: "#/components/responses/" + rspKey}))

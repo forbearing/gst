@@ -8,7 +8,7 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-var _ types.Module[*OperationLog, *OperationLog, *OperationLog] = (*OperationLogModule)(nil)
+var _ types.Module[*OperationLog, *OperationLog, *OperationLog] = (*operationLogModule)(nil)
 
 type OperationLog struct {
 	User       string    `json:"user,omitempty" schema:"user"`   // 操作者, 本地账号该字段为空,例如 root
@@ -41,16 +41,16 @@ func (OperationLog) Design() {
 	})
 }
 
-type OperationLogService struct {
+type operationLogService struct {
 	service.Base[*OperationLog, *OperationLog, *OperationLog]
 }
 
-type OperationLogModule struct{}
+type operationLogModule struct{}
 
-func (*OperationLogModule) Service() types.Service[*OperationLog, *OperationLog, *OperationLog] {
-	return &OperationLogService{}
+func (*operationLogModule) Service() types.Service[*OperationLog, *OperationLog, *OperationLog] {
+	return &operationLogService{}
 }
 
-func (*OperationLogModule) Pub() bool     { return false }
-func (*OperationLogModule) Route() string { return "/log/operationlog" }
-func (*OperationLogModule) Param() string { return "id" }
+func (*operationLogModule) Pub() bool     { return false }
+func (*operationLogModule) Route() string { return "/log/operationlog" }
+func (*operationLogModule) Param() string { return "id" }
