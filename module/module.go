@@ -1,52 +1,94 @@
-// Package module provides a comprehensive module system for creating modular API endpoints
-// with automatic CRUD operations, routing, and service layer integration.
+// Package module provides a unified module registration system that automatically
+// registers models, services, and HTTP routes for CRUD operations.
 //
-// The module package enables developers to create reusable, self-contained modules
-// that automatically register models, services, and routes with the framework.
-// Each module encapsulates a complete API resource with customizable behavior.
+// The module system enables developers to create self-contained, reusable modules
+// that encapsulate complete API resources with minimal boilerplate code. Each module
+// defines its model, service, routing configuration, and authentication requirements.
 //
-// Key features:
-//   - Automatic model registration with the ORM layer
-//   - Service registration for business logic handling
-//   - Dynamic route generation based on CRUD phases
-//   - Support for both public and authenticated endpoints
-//   - Flexible URL parameter customization
-//   - Batch operation support for bulk operations
+// Core Components:
+//   - Model: Database entity that implements types.Model interface
+//   - Service: Business logic layer that implements types.Service interface
+//   - Module: Configuration provider that implements types.Module interface
 //
-// Usage example:
+// Usage Pattern:
 //
-//	// Define your module implementation
-//	type HelloworldModule struct{}
+//  1. Define your model struct (embedding model.Base)
+//  2. Define your request and response types
+//  3. Implement a service that embeds service.Base
+//  4. Implement a module that implements types.Module interface
+//  5. Call module.Use() to register the module with desired CRUD phases
 //
-//	func (HelloworldModule) Service() types.Service[*Helloworld, *Req, *Rsp] {
-//	    return &HelloworldService{}
+// Example - Full CRUD Module:
+//
+//	type User struct {
+//	    Username string `json:"username"`
+//	    Email    string `json:"email"`
+//	    model.Base
 //	}
-//	func (HelloworldModule) Pub() bool     { return false }
-//	func (HelloworldModule) Route() string { return "hello-world" }
-//	func (HelloworldModule) Param() string { return "id" }
 //
-//	// Register the module with desired CRUD operations
-//	module.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
-//	    &HelloworldModule{},
-//	    consts.PHASE_CREATE,
+//	type UserService struct {
+//	    service.Base[*User, *User, *User]
+//	}
+//
+//	type UserModule struct{}
+//
+//	func (UserModule) Service() types.Service[*User, *User, *User] {
+//	    return &UserService{}
+//	}
+//	func (UserModule) Pub() bool     { return false }
+//	func (UserModule) Route() string { return "users" }
+//	func (UserModule) Param() string { return "id" }
+//
+//	func Register() {
+//	    module.Use[*User, *User, *User, *UserService](
+//	        &UserModule{},
+//	        consts.PHASE_CREATE,
+//	        consts.PHASE_DELETE,
+//	        consts.PHASE_UPDATE,
+//	        consts.PHASE_PATCH,
+//	        consts.PHASE_LIST,
+//	        consts.PHASE_GET,
+//	        consts.PHASE_CREATE_MANY,
+//	        consts.PHASE_DELETE_MANY,
+//	        consts.PHASE_UPDATE_MANY,
+//	        consts.PHASE_PATCH_MANY,
+//	    )
+//	}
+//
+// This will automatically create the following routes:
+//   - POST   /users           (create)
+//   - DELETE /users/:id       (delete)
+//   - PUT    /users/:id       (update)
+//   - PATCH  /users/:id       (patch)
+//   - GET    /users           (list)
+//   - GET    /users/:id       (get)
+//   - POST   /users/batch     (create many)
+//   - DELETE /users/batch     (delete many)
+//   - PUT    /users/batch     (update many)
+//   - PATCH  /users/batch     (patch many)
+//
+// Example - Read-Only Module:
+//
+//	module.Use[*LoginLog, *LoginLog, *LoginLog, *LoginLogService](
+//	    &LoginLogModule{},
 //	    consts.PHASE_LIST,
 //	    consts.PHASE_GET,
-//	    consts.PHASE_UPDATE,
-//	    consts.PHASE_DELETE,
 //	)
 //
-// This automatically creates the following REST API endpoints:
-//   - POST   /hello-world        (create single resource)
-//   - GET    /hello-world        (list resources with pagination)
-//   - GET    /hello-world/:id    (get single resource by ID)
-//   - PUT    /hello-world/:id    (update single resource)
-//   - DELETE /hello-world/:id    (delete single resource)
+// This will create only:
+//   - GET /loginlog           (list)
+//   - GET /loginlog/:id       (get)
 //
-// Additional batch operations are available:
-//   - POST   /hello-world/batch  (create multiple resources)
-//   - PUT    /hello-world/batch  (update multiple resources)
-//   - PATCH  /hello-world/batch  (patch multiple resources)
-//   - DELETE /hello-world/batch  (delete multiple resources)
+// Authentication:
+//   - If Module.Pub() returns true: endpoints are publicly accessible
+//   - If Module.Pub() returns false: endpoints require authentication/authorization
+//
+// Route Path Normalization:
+//   - Leading slashes are automatically removed
+//   - "api" prefix is automatically removed
+//   - Route paths are normalized for consistency
+//
+// See module/helloworld and module/logger for complete working examples.
 package module
 
 import (
@@ -60,51 +102,70 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-// Use registers a module with the framework, automatically setting up models, services, and routes
-// for the specified CRUD phases. This is the main entry point for module registration.
+// Use registers a module with the framework, automatically setting up model registration,
+// service registration, and HTTP route registration for the specified CRUD phases.
 //
-// The function performs three main registration steps:
-//  1. Model registration: Registers the model type with the ORM layer
-//  2. Service registration: Registers the service for each specified phase
-//  3. Route registration: Creates HTTP endpoints based on the module configuration and phases
+// This function is the primary entry point for module registration. It performs three
+// main operations:
+//  1. Registers the model type with the ORM layer for database operations
+//  2. Registers the service type for each specified phase to handle business logic
+//  3. Registers HTTP routes for each specified CRUD operation
 //
-// Generic type parameters:
-//   - M: Model type that implements types.Model interface (must be pointer to struct)
+// Generic Type Parameters:
+//   - M: Model type that implements types.Model interface (typically a pointer to struct)
 //   - REQ: Request type for API operations (can be any serializable type)
 //   - RSP: Response type for API operations (can be any serializable type)
 //   - S: Service type that implements types.Service[M, REQ, RSP] interface
 //
 // Parameters:
-//   - mod: The module instance that defines the API configuration
-//   - phases: Variable number of CRUD phases to enable for this module
+//   - mod: Module instance that implements types.Module[M, REQ, RSP] interface.
+//     This provides configuration for routing, authentication, and service access.
+//   - phases: Variable number of CRUD phases to register. Each phase corresponds to
+//     a specific HTTP endpoint. Available phases:
+//   - PHASE_CREATE:        POST   /route              (create single resource)
+//   - PHASE_DELETE:        DELETE /route/:param        (delete single resource)
+//   - PHASE_UPDATE:        PUT    /route/:param       (update single resource)
+//   - PHASE_PATCH:         PATCH  /route/:param       (patch single resource)
+//   - PHASE_LIST:          GET    /route              (list resources with pagination)
+//   - PHASE_GET:           GET    /route/:param       (get single resource by ID)
+//   - PHASE_CREATE_MANY:   POST   /route/batch         (create multiple resources)
+//   - PHASE_DELETE_MANY:   DELETE /route/batch         (delete multiple resources)
+//   - PHASE_UPDATE_MANY:   PUT    /route/batch         (update multiple resources)
+//   - PHASE_PATCH_MANY:    PATCH  /route/batch         (patch multiple resources)
 //
-// Supported phases and their generated routes:
-//   - PHASE_CREATE: POST /route (create single resource)
-//   - PHASE_DELETE: DELETE /route/:param (delete single resource)
-//   - PHASE_UPDATE: PUT /route/:param (update single resource)
-//   - PHASE_PATCH: PATCH /route/:param (patch single resource)
-//   - PHASE_LIST: GET /route (list resources with pagination)
-//   - PHASE_GET: GET /route/:param (get single resource)
-//   - PHASE_CREATE_MANY: POST /route/batch (create multiple resources)
-//   - PHASE_DELETE_MANY: DELETE /route/batch (delete multiple resources)
-//   - PHASE_UPDATE_MANY: PUT /route/batch (update multiple resources)
-//   - PHASE_PATCH_MANY: PATCH /route/batch (patch multiple resources)
+// Route Registration:
+//   - Routes are automatically registered based on the module's Route() and Param() methods
+//   - Route paths are normalized (leading slashes and "api" prefix are removed)
+//   - URL parameter name defaults to "id" if Param() returns empty string
+//   - Authentication is determined by the module's Pub() method
 //
-// Route processing:
-//   - Automatically trims leading slashes and "api" prefix from module.Route()
-//   - Uses module.Param() for URL parameter name, defaults to "id" if empty
-//   - Registers routes as public or authenticated based on module.Pub()
+// Service Registration:
+//   - Service is registered for each specified phase
+//   - The same service instance is used for all phases, but lifecycle hooks are
+//     called at appropriate times based on the phase
 //
-// Example usage:
+// Example Usage:
 //
+//	// Register a full CRUD module
 //	module.Use[*User, *UserRequest, *UserResponse, *UserService](
 //	    &UserModule{},
 //	    consts.PHASE_CREATE,
+//	    consts.PHASE_DELETE,
+//	    consts.PHASE_UPDATE,
+//	    consts.PHASE_PATCH,
 //	    consts.PHASE_LIST,
 //	    consts.PHASE_GET,
-//	    consts.PHASE_UPDATE,
-//	    consts.PHASE_DELETE,
 //	)
+//
+//	// Register a read-only module
+//	module.Use[*LoginLog, *LoginLog, *LoginLog, *LoginLogService](
+//	    &LoginLogModule{},
+//	    consts.PHASE_LIST,
+//	    consts.PHASE_GET,
+//	)
+//
+// Note: This function must be called during application initialization, typically
+// in a Register() function within your module package.
 func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M, REQ, RSP]](mod types.Module[M, REQ, RSP], phases ...consts.Phase) {
 	// Register model with the ORM layer for database operations
 	model.Register[M]()

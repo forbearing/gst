@@ -69,10 +69,10 @@ func startServer() {
 	os.Setenv(config.LOGGER_DIR, "/tmp/test_client")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
 
-	os.Setenv(config.DATABASE_TYPE, string(config.DBMySQL))
-	os.Setenv(config.MYSQL_DATABASE, "test")
-	os.Setenv(config.MYSQL_USERNAME, "test")
-	os.Setenv(config.MYSQL_PASSWORD, "test")
+	// os.Setenv(config.DATABASE_TYPE, string(config.DBMySQL))
+	// os.Setenv(config.MYSQL_DATABASE, "test")
+	// os.Setenv(config.MYSQL_USERNAME, "test")
+	// os.Setenv(config.MYSQL_PASSWORD, "test")
 
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
