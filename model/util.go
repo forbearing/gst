@@ -106,10 +106,8 @@ func IsEmpty[T any]() bool {
 	}
 
 	invalidFieldCount := 0
-
 	for i := 0; i < typ.NumField(); i++ {
 		ftyp := typ.Field(i).Type
-
 		for ftyp.Kind() == reflect.Pointer {
 			ftyp = ftyp.Elem()
 		}
