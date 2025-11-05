@@ -69,7 +69,7 @@ func AreTypesEqual[M types.Model, REQ types.Request, RSP types.Response]() bool 
 	return typ1 == typ2 && typ2 == typ3
 }
 
-// IsModelEmpty check the REQ is struct only has anonymous field model.Empty or has no fields, eg:
+// IsModelEmpty check the T is struct only has anonymous field model.Empty or has no fields, eg:
 //
 //	type Login struct {
 //		model.Empty
@@ -97,4 +97,40 @@ func IsModelEmpty[T any]() bool {
 	}
 
 	return false
+}
+
+// IsValid check whether the T is valid model.
+//
+// If T is not pointer to struct, return false.
+// If T has no fields, return false.
+// If T fields contains `Empty` or `Any`, return false,
+// otherwise return true.
+func IsValid[T any]() bool {
+	typ := reflect.TypeFor[T]()
+
+	// T type not pointer, return false.
+	if typ.Kind() != reflect.Pointer {
+		return false
+	}
+
+	// T type not struct, return false
+	typ = typ.Elem()
+	if typ.Kind() != reflect.Struct {
+		return false
+	}
+
+	// T has no fields, return false
+	if typ.NumField() == 0 {
+		return false
+	}
+
+	// T fields contains `Empty` or `Any`, return false
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		if field.Type == reflect.TypeFor[Empty]() || field.Type == reflect.TypeFor[Any]() {
+			return false
+		}
+	}
+
+	return true
 }

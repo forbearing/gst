@@ -75,6 +75,28 @@ func TestIsModelEmpty(t *testing.T) {
 	require.False(t, IsModelEmpty[t4]())
 }
 
+func TestIsValid(t *testing.T) {
+	type t1 string
+	type t2 int
+	type t3 struct{}
+	type t4 struct{ Empty }
+	type t5 struct{ Any }
+	type t6 struct{ Base }
+
+	require.False(t, IsValid[t1]())
+	require.False(t, IsValid[*t1]())
+	require.False(t, IsValid[t2]())
+	require.False(t, IsValid[*t2]())
+	require.False(t, IsValid[t3]())
+	require.False(t, IsValid[*t3]())
+	require.False(t, IsValid[t4]())
+	require.False(t, IsValid[*t4]())
+	require.False(t, IsValid[t5]())
+	require.False(t, IsValid[*t5]())
+	require.False(t, IsValid[t6]())
+	require.True(t, IsValid[*t6]())
+}
+
 func BenchmarkIsModelEmpty(b *testing.B) {
 	b.Run("test", func(b *testing.B) {
 		for b.Loop() {
