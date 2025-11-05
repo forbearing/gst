@@ -291,7 +291,7 @@ type DistributedCache[T any] interface {
 
 ### Module
 
-```
+```go
 type Module[M Model, REQ Request, RSP Response] interface {
 	Service() Service[M, REQ, RSP]
 	Pub() bool
