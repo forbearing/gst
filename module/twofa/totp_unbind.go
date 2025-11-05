@@ -1,0 +1,34 @@
+package twofa
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+// TOTPUnbind 解绑 TOTP 设备
+type TOTPUnbind struct {
+	model.Empty
+}
+
+type TOTPUnbindReq struct {
+	DeviceID string `json:"device_id" validate:"required"`                // 要解绑的设备ID
+	Password string `json:"password,omitempty"`                           // 用户密码（可选，用于额外验证）
+	TOTPCode string `json:"totp_code,omitempty" validate:"len=6,numeric"` // TOTP验证码（可选，用于额外验证）
+}
+
+type TOTPUnbindRsp struct {
+	Success     bool   `json:"success"`      // 操作是否成功
+	Message     string `json:"message"`      // 操作结果消息
+	DeviceCount int    `json:"device_count"` // 剩余活跃设备数量
+}
+
+func (TOTPUnbind) Design() {
+	Route("2fa/totp/unbind", func() {
+		Create(func() {
+			Enabled(true)
+			Service(true)
+			Payload[*TOTPUnbindReq]()
+			Result[*TOTPUnbindRsp]()
+		})
+	})
+}
