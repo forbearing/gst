@@ -184,6 +184,9 @@ func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M
 
 	// Get URL parameter name, default to "id" if not specified
 	param := mod.Param()
+	param = strings.TrimFunc(param, func(r rune) bool {
+		return r == ' ' || r == '{' || r == '}' || r == '[' || r == ']' || r == ':'
+	})
 	if len(param) == 0 {
 		param = "id"
 	}
