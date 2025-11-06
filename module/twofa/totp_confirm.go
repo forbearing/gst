@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/forbearing/gst/database"
@@ -52,7 +53,7 @@ type TOTPConfirmReq struct {
 type TOTPConfirmRsp struct {
 	DeviceID    string   `json:"device_id"`
 	Message     string   `json:"message"`
-	BackupCodes []string `json:"backup_codes"` // 8位数字备份码
+	BackupCodes []string `json:"backup_codes"` // 8-digit backup codes
 }
 
 type TOTPConfirmService struct {
@@ -140,20 +141,23 @@ func (t *TOTPConfirmService) Create(ctx *types.ServiceContext, req *TOTPConfirmR
 	return rsp, nil
 }
 
-// generateBackupCodes 生成8个备份码，每个8位数字
+// generateBackupCodes generates 8 backup codes, each of 8 numeric digits.
+//
+//lint:ignore modernize Keep classic loops and string concatenation for explicit clarity.
 func generateBackupCodes() ([]string, error) {
 	codes := make([]string, 8)
 	for i := range 8 {
 		// 生成8位随机数字
-		code := ""
+		var b strings.Builder
+		b.Grow(8)
 		for range 8 {
 			digit, err := rand.Int(rand.Reader, big.NewInt(10))
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate random digit: %w", err)
 			}
-			code += digit.String()
+			b.WriteByte('0' + byte(digit.Int64()))
 		}
-		codes[i] = code
+		codes[i] = b.String()
 	}
 	return codes, nil
 }
