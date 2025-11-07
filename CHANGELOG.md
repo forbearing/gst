@@ -1,12 +1,25 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Chore
+- **docs:** update modules docs for "column", "helloworld", "logmgmt"
+
+### Feat
+- **module:** add modules "twofa"
+
+### Fix
+- **lint:** fix modernize issues
+
+
+<a name="v0.10.0-beta.1"></a>
+## [v0.10.0-beta.1] - 2025-11-06
 ### Build
 - add test case for "model" and "util"
 
 ### Chore
 - **docs:** update README.md
 - **model:** remove empty line
+- **release:** generate CHANGEME.md
 
 ### Docs
 - **module:** update modules docs for `column`, `helloworld`, `logmgmt`
@@ -21,6 +34,9 @@
 
 ### Refactor
 - **model:** rename IsModelEmpty -> IsEmpty, and add more check in IsEmpty
+
+### Pull Requests
+- Merge pull request [#48](https://github.com/forbearing/gst/issues/48) from forbearing/dev
 
 
 <a name="v0.10.0-beta.0"></a>
@@ -2362,7 +2378,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...HEAD
+[v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
 [v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
 [v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
 [v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
