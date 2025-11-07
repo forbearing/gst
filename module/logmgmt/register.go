@@ -13,8 +13,10 @@ import (
 //   - OperationLog
 //
 // Routes:
-//   - /api/log/loginlog
-//   - /api/log/operationlog
+//   - GET /api/log/loginlog
+//   - GET /api/log/loginlog/:id
+//   - GET /api/log/operationlog
+//   - GET /api/log/operationlog/:id
 //
 // Cronjob:
 //   - cleanup operationlog and loginlog hourly.

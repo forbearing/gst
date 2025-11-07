@@ -17,7 +17,7 @@ var tableColumns = make(map[string][]string)
 // Models: no
 //
 // Routes:
-//   - /api/column/:id
+//   - GET /api/column/:id
 func Register(m map[string][]string) {
 	maps.Copy(tableColumns, m)
 

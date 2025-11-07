@@ -10,10 +10,7 @@ var _ types.Module[*Helloworld, *Req, *Rsp] = (*Module)(nil)
 
 // Helloworld is the model definition.
 type Helloworld struct {
-	Hello string `json:"hello" schema:"hello"`
-	World string `json:"world" schema:"world"`
-
-	model.Base
+	model.Empty
 }
 
 // Req is the custom request type.

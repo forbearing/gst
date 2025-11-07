@@ -13,8 +13,27 @@ import (
 //   - Helloworld2
 //
 // Routes:
-//   - /api/hello-world
-//   - /api/hello-world2
+//   - POST     /api/hello-world
+//   - DELETE   /api/hello-world/:id
+//   - PUT      /api/hello-world/:id
+//   - PATCH    /api/hello-world/:id
+//   - GET      /api/hello-world
+//   - GET      /api/hello-world/:id
+//   - POST     /api/helloworld/batch
+//   - DELETE   /api/helloworld/batch
+//   - PUT      /api/helloworld/batch
+//   - PATCH    /api/helloworld/batch
+//   - POST     /api/hello-world2
+//   - DELETE   /api/hello-world2/:id
+//   - PUT      /api/hello-world2/:id
+//   - PATCH    /api/hello-world2/:id
+//   - GET      /api/hello-world2
+//   - GET      /api/hello-world2/:id
+//   - POST     /api/helloworld2/batch
+//   - DELETE   /api/helloworld2/batch
+//   - PUT      /api/helloworld2/batch
+//   - PATCH    /api/helloworld2/batch
+
 func Register() {
 	module.Use[
 		*Helloworld,
