@@ -19,6 +19,6 @@ func Register() {
 		*VersionRsp,
 		*VersionService](
 		&VersionModule{},
-		consts.PHASE_GET,
+		consts.PHASE_LIST,
 	)
 }
