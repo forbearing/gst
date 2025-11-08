@@ -31,7 +31,22 @@ type Role struct {
 	model.Base
 }
 
-func (r *Role) CreateBefore(*types.ModelContext) error {
+func (r *Role) Purge() bool                                { return true }
+func (r *Role) CreateBefore(ctx *types.ModelContext) error { return r.validate(ctx) }
+func (r *Role) CreateAfter(ctx *types.ModelContext) error  { return rbac.RBAC().AddRole(r.Code) }
+func (r *Role) UpdateBefore(ctx *types.ModelContext) error { return rbac.RBAC().AddRole(r.Code) }
+func (r *Role) DeleteBefore(ctx *types.ModelContext) error {
+	// The delete request always don't have role id, so we should get the role from database.
+	if err := database.Database[*Role](ctx.DatabaseContext()).Get(r, r.ID); err != nil {
+		return err
+	}
+	if len(r.Code) > 0 {
+		return rbac.RBAC().RemoveRole(r.Code)
+	}
+	return nil
+}
+
+func (r *Role) validate(ctx *types.ModelContext) error {
 	r.Name = strings.TrimSpace(r.Name)
 	r.Code = strings.TrimSpace(r.Code)
 	if len(r.Name) == 0 {
@@ -46,27 +61,12 @@ func (r *Role) CreateBefore(*types.ModelContext) error {
 
 	return nil
 }
-func (r *Role) CreateAfter(*types.ModelContext) error      { return rbac.RBAC().AddRole(r.Name) }
-func (r *Role) UpdateBefore(ctx *types.ModelContext) error { return r.CreateAfter(ctx) }
-func (r *Role) DeleteBefore(ctx *types.ModelContext) error {
-	// The delete request always don't have role id, so we should get the role from database.
-	if err := database.Database[*Role](ctx.DatabaseContext()).Get(r, r.ID); err != nil {
-		return err
-	}
-	if len(r.Name) > 0 {
-		return rbac.RBAC().RemoveRole(r.Name)
-	}
-	return nil
-}
-
-func (r *Role) DeleteAfter(ctx *types.ModelContext) error {
-	return database.Database[*Role](ctx.DatabaseContext()).Cleanup()
-}
 
 func (r *Role) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	if r == nil {
 		return nil
 	}
+	enc.AddString("code", r.Code)
 	enc.AddString("name", r.Name)
 	_ = enc.AddObject("base", &r.Base)
 	return nil
