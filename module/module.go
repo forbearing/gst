@@ -176,11 +176,15 @@ func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M
 	}
 
 	// Process and normalize the route path
-	// Remove leading slashes and "api" prefix to ensure consistent routing
+	// Ensure consistent routing by trimming leading "/" and optional "api/" prefix.
+	// Note: Use TrimPrefix instead of TrimLeft("api") to avoid removing
+	//       any leading characters that happen to be in the set {'a','p','i'}.
+	//       For example, "permissions" would incorrectly become "ermissions"
+	//       with TrimLeft("api").
 	route := mod.Route()
-	route = strings.TrimLeft(route, "/")
-	route = strings.TrimLeft(route, "api")
-	route = strings.TrimLeft(route, "/")
+	route = strings.TrimPrefix(route, "/")    // trim leading slash
+	route = strings.TrimPrefix(route, "api/") // trim optional "api/" prefix
+	route = strings.TrimPrefix(route, "/")    // trim leading slash again if present
 
 	// Get URL parameter name, default to "id" if not specified
 	param := mod.Param()
