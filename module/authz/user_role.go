@@ -15,10 +15,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func init() {
-	model.Register[*UserRole]()
-}
-
 type UserRole struct {
 	UserID string `json:"user_id,omitempty" schema:"user_id"`
 	RoleID string `json:"role_id,omitempty" schema:"role_id"`
