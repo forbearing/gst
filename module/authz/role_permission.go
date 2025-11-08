@@ -9,13 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
+var _ types.Module[*RolePermission, *RolePermission, *RolePermission] = (*RolePermissionModule)(nil)
+
 type RolePermissionModule struct{}
 
 func (*RolePermissionModule) Service() types.Service[*RolePermission, *RolePermission, *RolePermission] {
 	return &RolePermissionService{}
 }
-
-func (*RolePermissionModule) Route() string { return "role-permissions" }
+func (*RolePermissionModule) Route() string { return "authz/role-permissions" }
 func (*RolePermissionModule) Pub() bool     { return false }
 func (*RolePermissionModule) Param() string { return "id" }
 

@@ -9,6 +9,17 @@ import (
 	"go.uber.org/zap"
 )
 
+var _ types.Module[*UserRole, *UserRole, *UserRole] = (*UserRoleModule)(nil)
+
+type UserRoleModule struct{}
+
+func (*UserRoleModule) Service() types.Service[*UserRole, *UserRole, *UserRole] {
+	return &UserRoleService{}
+}
+func (*UserRoleModule) Route() string { return "authz/user-roles" }
+func (*UserRoleModule) Pub() bool     { return false }
+func (*UserRoleModule) Param() string { return "id" }
+
 type UserRole = modelauthz.UserRole
 
 type UserRoleService struct {

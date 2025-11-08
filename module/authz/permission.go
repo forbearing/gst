@@ -13,7 +13,7 @@ type PermissionModule struct{}
 func (*PermissionModule) Service() types.Service[*Permission, *Permission, *Permission] {
 	return service.Base[*Permission, *Permission, *Permission]{}
 }
-func (*PermissionModule) Route() string { return "permissions" }
+func (*PermissionModule) Route() string { return "authz/permissions" }
 func (*PermissionModule) Pub() bool     { return false }
 func (*PermissionModule) Param() string { return "id" }
 
