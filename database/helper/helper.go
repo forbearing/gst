@@ -67,6 +67,10 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 					initedTable.Set(typ.String(), "")
 
 				case v := <-model.TableDBChan:
+					if v == nil {
+						continue
+					}
+
 					// create table automatically with custom database.
 					begin := time.Now()
 
@@ -85,6 +89,10 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 					initedTable.Set(typ.String(), v.DBName)
 
 				case r := <-model.RecordChan:
+					if r == nil {
+						continue
+					}
+
 					// create the table records that must be pre-exists before database curds.
 					// NOTE: we should always creates records after table migration finished.
 					//
