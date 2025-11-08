@@ -85,7 +85,7 @@ func (r *RoleService) DeleteAfter(ctx *types.ServiceContext, role *Role) error {
 	}
 
 	roles := make([]*Role, 0)
-	if err := database.Database[*Role](ctx.DatabaseContext()).WithLimit(-1).WithQuery(&Role{Name: name}).List(&roles); err != nil {
+	if err := database.Database[*Role](ctx.DatabaseContext()).WithQuery(&Role{Name: name}).List(&roles); err != nil {
 		log.Error(err)
 		return err
 	}
