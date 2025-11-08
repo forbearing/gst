@@ -1,15 +1,10 @@
 package modellog
 
 import (
+	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types/consts"
 )
-
-type OperationType string
-
-func init() {
-	model.Register[*OperationLog]()
-}
 
 type OperationLog struct {
 	User       string    `json:"user,omitempty" schema:"user"`   // 操作者, 本地账号该字段为空,例如 root
@@ -30,4 +25,14 @@ type OperationLog struct {
 	RequestID  string    `json:"request_id,omitempty" schema:"request_id"`
 
 	model.Base
+}
+
+func (OperationLog) Design() {
+	Migrate(true)
+	List(func() {
+		Enabled(true)
+	})
+	Get(func() {
+		Enabled(true)
+	})
 }

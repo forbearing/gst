@@ -9,13 +9,12 @@ import (
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
+	modellog "github.com/forbearing/gst/internal/model/log"
 	"github.com/forbearing/gst/model"
-	modellog "github.com/forbearing/gst/model/log"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
 	"github.com/gin-gonic/gin"
-	"github.com/mssola/useragent"
 	"go.uber.org/zap"
 )
 
@@ -163,21 +162,22 @@ func writeFeishuSessionAndCookie(c *gin.Context, aToken, rToken string, userInfo
 		Value:   base64.StdEncoding.EncodeToString([]byte(name)), // 中文名,需要转码
 		Expires: time.Now().Add(config.App.AccessTokenExpireDuration),
 	})
-	ua := useragent.New(c.Request.UserAgent())
-	engineName, engineVersion := ua.Engine()
-	browserName, browserVersion := ua.Browser()
+	// ua := useragent.New(c.Request.UserAgent())
+	// engineName, engineVersion := ua.Engine()
+	// browserName, browserVersion := ua.Browser()
 	err = database.Database[*modellog.LoginLog](types.NewDatabaseContext(c)).Create(&modellog.LoginLog{
 		UserID:   userInfo.UserID,
 		Username: userInfo.Name,
-		Token:    aToken,
+		// Token:    aToken,
 		Status:   modellog.LoginStatusSuccess,
 		ClientIP: c.ClientIP(),
-		UserAgent: model.UserAgent{
-			Source:   c.Request.UserAgent(),
-			Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
-			Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
-			Browser:  fmt.Sprintf("%s %s", browserName, browserVersion),
-		},
+		Source:   c.Request.UserAgent(),
+		// UserAgent: model.UserAgent{
+		// 	Source:   c.Request.UserAgent(),
+		// 	Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
+		// 	Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
+		// 	Browser:  fmt.Sprintf("%s %s", browserName, browserVersion),
+		// },
 	})
 	if err != nil {
 		zap.S().Error(err)

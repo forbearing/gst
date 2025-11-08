@@ -10,7 +10,7 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/ds/queue/circularbuffer"
-	modellog "github.com/forbearing/gst/model/log"
+	modellog "github.com/forbearing/gst/internal/model/log"
 	"github.com/forbearing/gst/types"
 	"github.com/gertd/go-pluralize"
 	"go.uber.org/zap"
