@@ -1,13 +1,9 @@
 package authz
 
 import (
-	"fmt"
-
-	"github.com/forbearing/gst/model"
+	modelauthz "github.com/forbearing/gst/internal/model/authz"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
-	"github.com/forbearing/gst/util"
-	"go.uber.org/zap/zapcore"
 )
 
 var _ types.Module[*Permission, *Permission, *Permission] = (*PermissionModule)(nil)
@@ -21,25 +17,4 @@ func (*PermissionModule) Route() string { return "permissions" }
 func (*PermissionModule) Pub() bool     { return false }
 func (*PermissionModule) Param() string { return "id" }
 
-type Permission struct {
-	Resource string `json:"resource,omitempty" schema:"resource"`
-	Action   string `json:"action,omitempty" schema:"action"`
-
-	model.Base
-}
-
-func (p *Permission) CreateBefore(*types.ModelContext) error {
-	p.SetID(util.HashID(p.Resource, p.Action))
-	p.Remark = util.ValueOf(fmt.Sprintf("%s %s", p.Action, p.Resource))
-	return nil
-}
-
-func (p *Permission) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if p == nil {
-		return nil
-	}
-	enc.AddString("resource", p.Resource)
-	enc.AddString("action", p.Action)
-	_ = enc.AddObject("base", &p.Base)
-	return nil
-}
+type Permission = modelauthz.Permission

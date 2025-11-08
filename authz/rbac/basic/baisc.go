@@ -10,8 +10,8 @@ import (
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
+	modelauthz "github.com/forbearing/gst/internal/model/authz"
 	"github.com/forbearing/gst/logger"
-	modelauthz "github.com/forbearing/gst/model/authz"
 )
 
 const (
