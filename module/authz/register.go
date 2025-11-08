@@ -11,8 +11,9 @@ func Register() {
 		*Permission,
 		*Permission,
 		*Permission,
-		service.Base[*Permission, *Permission, *Permission]](
+		*service.Base[*Permission, *Permission, *Permission]](
 		&PermissionModule{},
 		consts.PHASE_LIST,
-		consts.PHASE_GET)
+		consts.PHASE_GET,
+	)
 }
