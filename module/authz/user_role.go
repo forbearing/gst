@@ -1,4 +1,4 @@
-package modelauthz
+package authz
 
 import (
 	"fmt"
@@ -7,8 +7,11 @@ import (
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
+	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
+	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -25,6 +28,8 @@ type UserRole struct {
 
 	model.Base
 }
+
+func (*UserRole) Purge() bool { return true }
 
 func (r *UserRole) CreateBefore(ctx *types.ModelContext) error {
 	if len(r.UserID) == 0 {
@@ -85,10 +90,6 @@ func (r *UserRole) DeleteBefore(ctx *types.ModelContext) error {
 	return rbac.RBAC().UnassignRole(r.UserID, r.Role)
 }
 
-func (r *UserRole) DeleteAfter(ctx *types.ModelContext) error {
-	return database.Database[*UserRole](ctx.DatabaseContext()).Cleanup()
-}
-
 func (r *UserRole) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	if r == nil {
 		return nil
@@ -98,5 +99,30 @@ func (r *UserRole) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("user", r.User)
 	enc.AddString("role", r.Role)
 	_ = enc.AddObject("base", &r.Base)
+	return nil
+}
+
+type UserRoleService struct {
+	service.Base[*UserRole, *UserRole, *UserRole]
+}
+
+// DeleteAfter support filter and delete multiple user_roles by query parameter `user` and `role`.
+func (r *UserRoleService) DeleteAfter(ctx *types.ServiceContext, userRole *UserRole) error {
+	log := r.WithServiceContext(ctx, consts.PHASE_DELETE_AFTER)
+	user := ctx.URL.Query().Get("user")
+	role := ctx.URL.Query().Get("role")
+
+	userRoles := make([]*UserRole, 0)
+	if err := database.Database[*UserRole](ctx.DatabaseContext()).WithQuery(&UserRole{User: user, Role: role}).List(&userRoles); err != nil {
+		log.Error(err)
+		return err
+	}
+	for _, rb := range userRoles {
+		log.Infoz("will delete user role", zap.Object("user_role", rb))
+	}
+	if err := database.Database[*UserRole](ctx.DatabaseContext()).WithPurge().Delete(userRoles...); err != nil {
+		return err
+	}
+
 	return nil
 }
