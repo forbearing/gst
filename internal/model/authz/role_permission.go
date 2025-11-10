@@ -1,7 +1,8 @@
 package modelauthz
 
 import (
-	"github.com/cockroachdb/errors"
+	"errors"
+
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
@@ -9,10 +10,6 @@ import (
 	"github.com/forbearing/gst/util"
 	"go.uber.org/zap/zapcore"
 )
-
-func init() {
-	model.Register[*RolePermission]()
-}
 
 type Effect string
 
@@ -32,6 +29,8 @@ type RolePermission struct {
 
 	model.Base
 }
+
+func (RolePermission) Purge() bool { return true }
 
 func (r *RolePermission) CreateBefore(*types.ModelContext) error {
 	if len(r.Role) == 0 {
@@ -68,10 +67,6 @@ func (r *RolePermission) DeleteBefore(ctx *types.ModelContext) error {
 	}
 	// revoke the role's permission
 	return rbac.RBAC().RevokePermission(r.Role, r.Resource, r.Action)
-}
-
-func (r *RolePermission) DeleteAfter(ctx *types.ModelContext) error {
-	return database.Database[*RolePermission](ctx.DatabaseContext()).Cleanup()
 }
 
 func (r *RolePermission) MarshalLogObject(enc zapcore.ObjectEncoder) error {

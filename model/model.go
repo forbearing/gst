@@ -27,12 +27,12 @@ var (
 	// TableChan is a buffered channel for asynchronous table registration.
 	// It receives table models from Register() function for processing by InitDatabase.
 	// The channel supports concurrent registration and real-time processing during initialization.
-	TableChan = make(chan types.Model, 1024)
+	TableChan = make(chan types.Model, 10240)
 
 	// TableDBChan is a buffered channel for asynchronous table registration with custom database targeting.
 	// It receives TableDB structs from RegisterTo() function for processing by InitDatabase.
 	// The channel supports concurrent registration and real-time processing during initialization.
-	TableDBChan = make(chan TableDB, 1024)
+	TableDBChan = make(chan *TableDB, 1024)
 
 	// RecordChan is a buffered channel for asynchronous record insertion.
 	// It receives Record structs from Register() and RegisterTo() functions for processing by InitDatabase.
@@ -99,9 +99,7 @@ func Register[M types.Model](records ...M) {
 	defer mu.Unlock()
 
 	table := reflect.New(reflect.TypeOf(*new(M)).Elem()).Interface().(M) //nolint:errcheck
-	go func() {
-		TableChan <- table
-	}()
+	TableChan <- table
 
 	// NOTE: it's necessary to set id before insert.
 	for i := range records {
@@ -111,9 +109,7 @@ func Register[M types.Model](records ...M) {
 	}
 
 	if len(records) != 0 {
-		go func() {
-			RecordChan <- &Record{Table: table, Rows: records, Expands: table.Expands()}
-		}()
+		RecordChan <- &Record{Table: table, Rows: records, Expands: table.Expands()}
 	}
 }
 
@@ -143,14 +139,10 @@ func RegisterTo[M types.Model](dbname string, records ...M) {
 	dbname = strings.ToLower(dbname)
 	table := reflect.New(reflect.TypeOf(*new(M)).Elem()).Interface().(M) //nolint:errcheck
 
-	go func() {
-		TableDBChan <- TableDB{Table: table, DBName: dbname}
-	}()
+	TableDBChan <- &TableDB{Table: table, DBName: dbname}
 
 	if len(records) != 0 {
-		go func() {
-			RecordChan <- &Record{Table: table, Rows: records, Expands: table.Expands(), DBName: dbname}
-		}()
+		RecordChan <- &Record{Table: table, Rows: records, Expands: table.Expands(), DBName: dbname}
 	}
 }
 

@@ -1,9 +1,9 @@
 package modelauthz
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
@@ -11,10 +11,6 @@ import (
 	"github.com/forbearing/gst/util"
 	"go.uber.org/zap/zapcore"
 )
-
-func init() {
-	model.Register[*UserRole]()
-}
 
 type UserRole struct {
 	UserID string `json:"user_id,omitempty" schema:"user_id"`
@@ -25,6 +21,8 @@ type UserRole struct {
 
 	model.Base
 }
+
+func (*UserRole) Purge() bool { return true }
 
 func (r *UserRole) CreateBefore(ctx *types.ModelContext) error {
 	if len(r.UserID) == 0 {
@@ -83,10 +81,6 @@ func (r *UserRole) DeleteBefore(ctx *types.ModelContext) error {
 	}
 	// NOTE: must be role name not role id.
 	return rbac.RBAC().UnassignRole(r.UserID, r.Role)
-}
-
-func (r *UserRole) DeleteAfter(ctx *types.ModelContext) error {
-	return database.Database[*UserRole](ctx.DatabaseContext()).Cleanup()
 }
 
 func (r *UserRole) MarshalLogObject(enc zapcore.ObjectEncoder) error {

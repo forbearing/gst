@@ -9,10 +9,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func init() {
-	model.Register[*Permission]()
-}
-
 type Permission struct {
 	Resource string `json:"resource,omitempty" schema:"resource"`
 	Action   string `json:"action,omitempty" schema:"action"`
