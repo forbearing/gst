@@ -10,11 +10,21 @@ import (
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
 	"go.uber.org/zap/zapcore"
+	"gorm.io/datatypes"
 )
 
 type Role struct {
-	Name string `json:"name,omitempty" schema:"name"`
-	Code string `json:"code,omitempty" schema:"code"`
+	Name    string `json:"name,omitempty" schema:"name"`
+	Code    string `json:"code,omitempty" schema:"code"`
+	Default *bool  `json:"default,omitempty" schema:"default"` // default role
+
+	// Menu 相关字段指定了该角色拥有哪些菜单
+	MenuIds        datatypes.JSONSlice[string] `json:"menu_ids,omitempty"`
+	MenuPartialIds datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"` // 部分选中的角色菜单, 父节点下面的子节点被选中了, 但是没有全部选中.
+	ButtonIds      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`       // 角色拥有的按钮权限
+
+	Menus        []*Menu `json:"menus,omitempty" gorm:"-"` // 角色菜单
+	MenuPartials []*Menu `json:"menu_partials,omitempty" gorm:"-"`
 
 	model.Base
 }
