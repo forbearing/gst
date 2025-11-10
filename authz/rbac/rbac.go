@@ -16,7 +16,24 @@ type rbac struct {
 	addapter *gormadapter.Adapter
 }
 
+// noop implements a no-op RBAC that safely does nothing.
+// It is used when RBAC is disabled or the Casbin enforcer
+// has not been initialized yet to avoid nil pointer panics.
+type noop struct{}
+
+func (noop) AddRole(name string) error                                          { return nil }
+func (noop) RemoveRole(name string) error                                       { return nil }
+func (noop) GrantPermission(role string, resource string, action string) error  { return nil }
+func (noop) RevokePermission(role string, resource string, action string) error { return nil }
+func (noop) AssignRole(subject string, role string) error                       { return nil }
+func (noop) UnassignRole(subject string, role string) error                     { return nil }
+
 func RBAC() types.RBAC {
+	// When RBAC is disabled or Enforcer is not initialized,
+	// return a safe no-op implementation to prevent panics.
+	if Enforcer == nil {
+		return noop{}
+	}
 	return &rbac{
 		enforcer: Enforcer,
 		addapter: Adapter,

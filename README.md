@@ -256,16 +256,20 @@ type Service[M Model, REQ Request, RSP Response] interface {
 
 ```go
 type RBAC interface {
-	AddRole(name string) error
-	RemoveRole(name string) error
+    AddRole(name string) error
+    RemoveRole(name string) error
 
-	GrantPermission(role string, resource string, action string) error
-	RevokePermission(role string, resource string, action string) error
+    GrantPermission(role string, resource string, action string) error
+    RevokePermission(role string, resource string, action string) error
 
-	AssignRole(subject string, role string) error
-	UnassignRole(subject string, role string) error
+    AssignRole(subject string, role string) error
+    UnassignRole(subject string, role string) error
 }
 ```
+
+Disabled mode behavior:
+
+- When RBAC is disabled or not initialized, the framework returns a safe no-op RBAC implementation. All RBAC operations succeed without side effects, preventing panics and allowing normal data operations.
 
 ### Cache
 
