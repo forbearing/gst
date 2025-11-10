@@ -1,14 +1,59 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Chg
+- move module model "Role" into internal/model/authz
+- **model:** move model "Permission" into "module/authz"
+- **model:** move model `Permission` register to module
+- **service:** move role service into modules
+
+### Feat
+- **module:** add authz modules
+- **module:** add module "RolePermission"
+- **module:** add module "UserRole"
+- **module:** add "Role" module
+- **module:** add module "permission"
+
+### Fix
+- **module:** register structure of service cause panic, must register sturcture pointer
+- **module:** use `TrimPrefix` replace `TrimLeft` to normalize the route path
+
+### Refactor
+- move UserRole model from modules -> internal/model/authz
+- move "model/log" -> "internal/model/log"
+- remove "service/authz" and "service/log"
+- move module models "CasinRule" and "Permission" into internal/model
+
+
+<a name="v0.10.0-beta.3"></a>
+## [v0.10.0-beta.3] - 2025-11-08
+
+<a name="list"></a>
+## [list] - 2025-11-08
+### Chore
+- **release:** generate CHANGEME.md
+
+### Feat
+- **module:** add "version" module
+
+### Pull Requests
+- Merge pull request [#50](https://github.com/forbearing/gst/issues/50) from forbearing/dev
+
+
+<a name="v0.10.0-beta.2"></a>
+## [v0.10.0-beta.2] - 2025-11-07
 ### Chore
 - **docs:** update modules docs for "column", "helloworld", "logmgmt"
+- **release:** generate CHANGEME.md
 
 ### Feat
 - **module:** add modules "twofa"
 
 ### Fix
 - **lint:** fix modernize issues
+
+### Pull Requests
+- Merge pull request [#49](https://github.com/forbearing/gst/issues/49) from forbearing/dev
 
 
 <a name="v0.10.0-beta.1"></a>
@@ -96,11 +141,11 @@
 Plugin interface renamed to Module interface
 
 
-<a name="v0.9.7"></a>
-## [v0.9.7] - 2025-10-31
-
 <a name="v0.9.7-beta.4"></a>
 ## [v0.9.7-beta.4] - 2025-10-31
+
+<a name="v0.9.7"></a>
+## [v0.9.7] - 2025-10-31
 ### Chore
 - **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
@@ -2378,11 +2423,14 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...HEAD
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
+[v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
-[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
-[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
-[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
+[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
