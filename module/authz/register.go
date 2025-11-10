@@ -1,6 +1,7 @@
 package authz
 
 import (
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types/consts"
@@ -87,4 +88,6 @@ func Register() {
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
+
+	model.Register[*CasbinRule]()
 }
