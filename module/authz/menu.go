@@ -99,6 +99,11 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*Menu, log
 	for _, ur := range userRole {
 		roleIds = append(roleIds, ur.RoleID)
 	}
+	// Ensure the resolved roleID is included when user has no explicit role binding.
+	// This guarantees default role is applied to menu filtering.
+	if len(roleID) > 0 && !lo.Contains(roleIds, roleID) {
+		roleIds = append(roleIds, roleID)
+	}
 	// fmt.Println("----- roleIds", roleIds)
 	roles := make([]*Role, 0)
 	if err := database.Database[*Role](ctx.DatabaseContext()).WithQuery(&Role{Base: model.Base{ID: strings.Join(roleIds, ",")}}).List(&roles); err != nil {
