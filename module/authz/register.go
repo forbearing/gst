@@ -48,6 +48,12 @@ func init() {
 //   - GET    /api/authz/user-roles/:id
 //   - GET    /api/menus
 //   - GET    /api/apis
+//   - POST   /api/buttons
+//   - DELETE /api/buttons
+//   - PUT    /api/buttons
+//   - PATCH  /api/buttons
+//   - GET    /api/buttons
+//   - GET    /api/buttons/:id
 func Register() {
 	// creates table "casbin_rule".
 	model.Register[*CasbinRule]()
@@ -132,5 +138,19 @@ func Register() {
 		*ApiService](
 		&ApiModule{},
 		consts.PHASE_LIST,
+	)
+
+	module.Use[
+		*Button,
+		*Button,
+		*Button,
+		*ButtonService](
+		&ButtonModule{},
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
 	)
 }
