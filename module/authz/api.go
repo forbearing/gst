@@ -10,26 +10,26 @@ import (
 	"github.com/samber/lo"
 )
 
-var _ types.Module[*Api, *Api, ApiRsp] = (*ApiModule)(nil)
+var _ types.Module[*API, *API, APIRsp] = (*APIModule)(nil)
 
-type ApiModule struct{}
+type APIModule struct{}
 
-func (*ApiModule) Service() types.Service[*Api, *Api, ApiRsp] {
-	return &ApiService{}
+func (*APIModule) Service() types.Service[*API, *API, APIRsp] {
+	return &APIService{}
 }
-func (*ApiModule) Route() string { return "/apis" }
-func (*ApiModule) Pub() bool     { return false }
-func (*ApiModule) Param() string { return "id" }
+func (*APIModule) Route() string { return "/apis" }
+func (*APIModule) Pub() bool     { return false }
+func (*APIModule) Param() string { return "id" }
 
-type Api struct{ model.Empty }
+type API struct{ model.Empty }
 
-type ApiRsp = []string
+type APIRsp = []string
 
-type ApiService struct {
-	service.Base[*Api, *Api, ApiRsp]
+type APIService struct {
+	service.Base[*API, *API, APIRsp]
 }
 
-func (ApiService) List(ctx *types.ServiceContext, req *Api) (ApiRsp, error) {
+func (APIService) List(ctx *types.ServiceContext, req *API) (APIRsp, error) {
 	perms := make([]*Permission, 0)
 	if err := database.Database[*Permission](ctx.DatabaseContext()).List(&perms); err != nil {
 		return nil, err

@@ -132,11 +132,11 @@ func Register() {
 	)
 
 	module.Use[
-		*Api,
-		*Api,
-		ApiRsp,
-		*ApiService](
-		&ApiModule{},
+		*API,
+		*API,
+		APIRsp,
+		*APIService](
+		&APIModule{},
 		consts.PHASE_LIST,
 	)
 
