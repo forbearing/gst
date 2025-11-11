@@ -11,7 +11,7 @@ var _ types.Module[*Button, *Button, *Button] = (*ButtonModule)(nil)
 type ButtonModule struct{}
 
 func (*ButtonModule) Service() types.Service[*Button, *Button, *Button] {
-	return &buttonservice{}
+	return &ButtonService{}
 }
 func (*ButtonModule) Route() string { return "buttons" }
 func (*ButtonModule) Pub() bool     { return false }
@@ -19,6 +19,6 @@ func (*ButtonModule) Param() string { return "id" }
 
 type Button = modelauthz.Button
 
-type buttonservice struct {
+type ButtonService struct {
 	service.Base[*Button, *Button, *Button]
 }
