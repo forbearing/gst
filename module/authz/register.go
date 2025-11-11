@@ -26,26 +26,28 @@ func init() {
 //   - Menu
 //
 // Routes:
-//   - GET    authz/permissions
-//   - GET    authz/permissions/:id
-//   - POST   authz/roles
-//   - DELETE authz/roles/:id
-//   - PUT    authz/roles/:id
-//   - PATCH  authz/roles/:id
-//   - GET    authz/roles
-//   - GET    authz/roles/:id
-//   - POST   authz/role-permissions
-//   - DELETE authz/role-permissions/:id
-//   - PUT    authz/role-permissions/:id
-//   - PATCH  authz/role-permissions/:id
-//   - GET    authz/role-permissions
-//   - GET    authz/role-permissions/:id
-//   - POST   authz/user-roles
-//   - DELETE authz/user-roles/:id
-//   - PUT    authz/user-roles/:id
-//   - PATCH  authz/user-roles/:id
-//   - GET    authz/user-roles
-//   - GET    authz/user-roles/:id
+//   - GET    /api/authz/permissions
+//   - GET    /api/authz/permissions/:id
+//   - POST   /api/authz/roles
+//   - DELETE /api/authz/roles/:id
+//   - PUT    /api/authz/roles/:id
+//   - PATCH  /api/authz/roles/:id
+//   - GET    /api/authz/roles
+//   - GET    /api/authz/roles/:id
+//   - POST   /api/authz/role-permissions
+//   - DELETE /api/authz/role-permissions/:id
+//   - PUT    /api/authz/role-permissions/:id
+//   - PATCH  /api/authz/role-permissions/:id
+//   - GET    /api/authz/role-permissions
+//   - GET    /api/authz/role-permissions/:id
+//   - POST   /api/authz/user-roles
+//   - DELETE /api/authz/user-roles/:id
+//   - PUT    /api/authz/user-roles/:id
+//   - PATCH  /api/authz/user-roles/:id
+//   - GET    /api/authz/user-roles
+//   - GET    /api/authz/user-roles/:id
+//   - GET    /api/menus
+//   - GET    /api/apis
 func Register() {
 	// creates table "casbin_rule".
 	model.Register[*CasbinRule]()
@@ -121,5 +123,14 @@ func Register() {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
+	)
+
+	module.Use[
+		*Api,
+		*Api,
+		ApiRsp,
+		*ApiService](
+		&ApiModule{},
+		consts.PHASE_LIST,
 	)
 }
