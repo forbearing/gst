@@ -35,23 +35,23 @@ const (
 
 type Menu struct {
 	API     datatypes.JSONSlice[string] `json:"api,omitempty" schema:"api"`         // 后端路由, 如果为空则使用 "/api" + Path
-	Path    string                      `json:"path" schema:"path"`                 // path should not add `omitempty` tag, empty value means default router in react route6.x.
+	Path    string                      `json:"path,omitempty" schema:"path"`       // path should not add `omitempty` tag, empty value means default router in react route6.x.
 	Element string                      `json:"element,omitempty" schema:"element"` // 前端页面组件
 	Label   string                      `json:"label,omitempty" schema:"label"`     // 页面组件左侧的菜单名
 	Icon    string                      `json:"icon,omitempty" schema:"icon"`       // 页面组件左侧的菜单图标
 
-	Visiable *bool  `json:"visiable" schema:"visiable" gorm:"default:1"`                                                   // 前端页面路由是否可见
-	Default  string `json:"default,omitempty" schema:"default"`                                                            // 子路由中的默认路由, 如果有 Children, Default 才可能存在
-	Status   *uint  `json:"status" gorm:"type:smallint;default:1;comment:status(0: disabled, 1: enabled)" schema:"status"` // 该路由是否启用
+	Visiable *bool  `json:"visiable,omitempty" schema:"visiable" gorm:"default:1"`                                                   // 前端页面路由是否可见
+	Default  string `json:"default,omitempty" schema:"default"`                                                                      // 子路由中的默认路由, 如果有 Children, Default 才可能存在
+	Status   *uint  `json:"status,omitempty" gorm:"type:smallint;default:1;comment:status(0: disabled, 1: enabled)" schema:"status"` // 该路由是否启用
 
 	ParentID string  `json:"parent_id,omitempty" gorm:"size:191" schema:"parent_id"`
 	Children []*Menu `json:"children,omitempty" gorm:"foreignKey:ParentID"`             // 子路由
 	Parent   *Menu   `json:"parent,omitempty" gorm:"foreignKey:ParentID;references:ID"` // 父路由
 
 	// the empty value of `Platform` means all.
-	Platform MenuPlatform `json:"platform" schema:"platform"`
+	Platform MenuPlatform `json:"platform,omitempty" schema:"platform"`
 
-	DomainPattern string `json:"domain_pattern" schema:"domain_pattern" gorm:"default:.*"`
+	DomainPattern string `json:"domain_pattern,omitempty" schema:"domain_pattern" gorm:"default:.*"`
 
 	model.Base
 }

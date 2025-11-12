@@ -25,7 +25,7 @@ import (
 //   - POST     /api/2fa/totp/verify
 //   - POST     /api/2fa/totp/devices
 //   - DELETE   /api/2fa/totp/devices/:id
-//   - PUT      /api/2fa/totp/devices/:id
+//   - PUT      /api/2fa/totp/devices/
 //   - PATCH    /api/2fa/totp/devices/:id
 //   - GET      /api/2fa/totp/devices
 //   - GET      /api/2fa/totp/devices/:id
