@@ -34,11 +34,10 @@ const (
 )
 
 type Menu struct {
-	API     datatypes.JSONSlice[string] `json:"api,omitempty" schema:"api"`         // 后端路由, 如果为空则使用 "/api" + Path
-	Path    string                      `json:"path,omitempty" schema:"path"`       // path should not add `omitempty` tag, empty value means default router in react route6.x.
-	Element string                      `json:"element,omitempty" schema:"element"` // 前端页面组件
-	Label   string                      `json:"label,omitempty" schema:"label"`     // 页面组件左侧的菜单名
-	Icon    string                      `json:"icon,omitempty" schema:"icon"`       // 页面组件左侧的菜单图标
+	API   datatypes.JSONSlice[string] `json:"api,omitempty" schema:"api"`     // 后端路由, 如果为空则使用 "/api" + Path
+	Path  string                      `json:"path,omitempty" schema:"path"`   // path should not add `omitempty` tag, empty value means default router in react route6.x.
+	Label string                      `json:"label,omitempty" schema:"label"` // 页面组件左侧的菜单名
+	Icon  string                      `json:"icon,omitempty" schema:"icon"`   // 页面组件左侧的菜单图标
 
 	Visiable *bool  `json:"visiable,omitempty" schema:"visiable" gorm:"default:1"`                                                   // 前端页面路由是否可见
 	Default  string `json:"default,omitempty" schema:"default"`                                                                      // 子路由中的默认路由, 如果有 Children, Default 才可能存在
@@ -139,7 +138,6 @@ func (m *Menu) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	enc.AddString("api", strings.Join(m.API, ","))
 	enc.AddString("path", m.Path)
 	enc.AddString("label", m.Label)
-	enc.AddString("element", m.Element)
 	enc.AddInt("children len", len(m.Children))
 
 	return nil
