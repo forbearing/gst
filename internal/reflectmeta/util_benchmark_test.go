@@ -63,7 +63,7 @@ func BenchmarkStructFieldToMap(b *testing.B) {
 		LastLoginIP:  "last_login_ip",
 		LockExpire:   0,
 	}
-	typ := reflect.TypeOf(new(User2)).Elem()
+	typ := reflect.TypeFor[User2]()
 	val := reflect.ValueOf(u)
 	q := make(map[string]string)
 
