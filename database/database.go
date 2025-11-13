@@ -178,6 +178,17 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 	return db
 }
 
+// WithTable sets the table name for database operations, overriding the default table name
+// derived from the model type. This is useful for working with custom table names or views.
+// Often used in combination with WithDB method.
+// Example: database.Database[*model.MeetingRoom]().WithDB(mysql.Software).WithTable("meeting_rooms").List(&rooms)
+func (db *database[M]) WithTable(name string) types.Database[M] {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	db.tableName = name
+	return db
+}
+
 // WithTx returns a new database manipulator with transaction context.
 // This method allows using an existing transaction to operate on multiple resource types.
 // The tx parameter should be a *gorm.DB transaction instance or any compatible transaction type.
@@ -216,17 +227,6 @@ func (db *database[M]) WithTx(tx any) types.Database[M] {
 		NewDB:                  false,
 	})
 
-	return db
-}
-
-// WithTable sets the table name for database operations, overriding the default table name
-// derived from the model type. This is useful for working with custom table names or views.
-// Often used in combination with WithDB method.
-// Example: database.Database[*model.MeetingRoom]().WithDB(mysql.Software).WithTable("meeting_rooms").List(&rooms)
-func (db *database[M]) WithTable(name string) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.tableName = name
 	return db
 }
 
