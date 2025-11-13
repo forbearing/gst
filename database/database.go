@@ -42,7 +42,8 @@ var (
 
 // migratedModelMap records the model already migrated to
 // avoid duplicate migration and improve performance.
-// Key is the model reflect.Type's String(), value is "struct{}{}".
+// Key is "dbIdentifier:modelType", value is "struct{}{}".
+// dbIdentifier is the unique identifier of the database instance (e.g., pointer address of the underlying database connection).
 var migratedModelMap sync.Map
 
 var (
@@ -179,7 +180,11 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 	// If "db.shouldAutoMigrate" is not nil, it means the database options `WithTable` was called.
 	// If called `WithTable`, "auto migration" must be disabled.
 	if db.shouldAutoMigrate == nil {
-		if _, loaded := migratedModelMap.LoadOrStore(reflect.TypeFor[M]().String(), struct{}{}); !loaded {
+		// Use database identifier + model type as key to support multiple database instances
+		dbIdentifier := getDBIdentifier(_db)
+		modelType := reflect.TypeFor[M]().String()
+		migrationKey := fmt.Sprintf("%s:%s", dbIdentifier, modelType)
+		if _, loaded := migratedModelMap.LoadOrStore(migrationKey, struct{}{}); !loaded {
 			flag := new(bool)
 			*flag = true
 			db.shouldAutoMigrate = flag
@@ -3260,8 +3265,21 @@ func Database[M types.Model](ctx *types.DatabaseContext) types.Database[M] {
 		ins = DB.WithContext(gctx).Limit(defaultLimit)
 	}
 
-	return &database[M]{
+	db := &database[M]{
 		ins: ins,
 		ctx: dbctx,
 	}
+
+	// Set up auto migration for default database if not already migrated
+	// Use database identifier + model type as key to support multiple database instances
+	dbIdentifier := getDBIdentifier(DB)
+	modelType := reflect.TypeFor[M]().String()
+	migrationKey := fmt.Sprintf("%s:%s", dbIdentifier, modelType)
+	if _, loaded := migratedModelMap.LoadOrStore(migrationKey, struct{}{}); !loaded {
+		flag := new(bool)
+		*flag = true
+		db.shouldAutoMigrate = flag
+	}
+
+	return db
 }
