@@ -122,7 +122,7 @@ func (db *database[M]) prepare() error {
 	if db.ins == nil || db.ins == new(gorm.DB) {
 		return ErrInvalidDB
 	}
-	if db.shouldAutoMigrate {
+	if db.shouldAutoMigrate != nil && *db.shouldAutoMigrate {
 		if err := db.ins.AutoMigrate(new(M)); err != nil {
 			return err
 		}
