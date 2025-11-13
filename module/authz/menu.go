@@ -181,19 +181,3 @@ func filter(ctx *types.ServiceContext, menu *Menu, menuMap map[string]struct{}) 
 		}
 	}
 }
-
-// // 递归过滤出当前角色所拥有的菜单. 作用于 menu.Children 字段.
-// func filter(menu *Menu, menuMap map[string]struct{}) {
-// 	if len(menu.Children) > 0 {
-// 		menu.Children = lo.Filter[*Menu](menu.Children, func(item *Menu, _ int) bool {
-// 			if _, ok := menuMap[item.ID]; ok {
-// 				return true
-// 			} else {
-// 				return false
-// 			}
-// 		})
-// 		for i := range menu.Children {
-// 			filter(menu.Children[i], menuMap)
-// 		}
-// 	}
-// }

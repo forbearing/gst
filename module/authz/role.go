@@ -1,11 +1,15 @@
 package authz
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/forbearing/gst/database"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
+	"github.com/forbearing/gst/util"
 	"go.uber.org/zap"
 )
 
@@ -46,6 +50,62 @@ func (r *RoleService) DeleteAfter(ctx *types.ServiceContext, role *Role) error {
 		log.Error(err)
 		return err
 	}
+
+	return nil
+}
+
+func (r *RoleService) CreateAfter(ctx *types.ServiceContext, role *Role) error {
+	return r.remarkMenus(ctx, role)
+}
+
+func (r *RoleService) UpdateAfter(ctx *types.ServiceContext, role *Role) error {
+	return r.remarkMenus(ctx, role)
+}
+
+func (r *RoleService) PatchAfter(ctx *types.ServiceContext, role *Role) error {
+	return r.remarkMenus(ctx, role)
+}
+
+// remarkMenus remark role about menus
+func (r *RoleService) remarkMenus(ctx *types.ServiceContext, role *Role) error {
+	log := r.WithServiceContext(ctx, ctx.GetPhase())
+
+	menus := make([]*Menu, 0)
+	if err := database.Database[*Menu](ctx.DatabaseContext()).List(&menus); err != nil {
+		log.Error(err)
+		return err
+	}
+
+	menuMap := make(map[string]*Menu)
+	for _, m := range menus {
+		menuMap[m.ID] = m
+	}
+
+	var sb strings.Builder
+	if len(role.MenuPartialIds) > 0 {
+		sb.WriteString("父菜单\n")
+	}
+	for _, mid := range role.MenuPartialIds {
+		if menu, ok := menuMap[mid]; ok {
+			sb.WriteString(fmt.Sprintf("    %s\n", menu.Label))
+		}
+	}
+	if len(role.MenuIds) > 0 {
+		sb.WriteString("\n子菜单\n")
+	}
+	for _, mid := range role.MenuIds {
+		if menu, ok := menuMap[mid]; ok {
+			sb.WriteString(fmt.Sprintf("    %s\n", menu.Label))
+		}
+	}
+
+	role.Remark = util.ValueOf(strings.TrimSpace(sb.String()))
+	if err := database.Database[*Role](ctx.DatabaseContext()).Update(role); err != nil {
+		log.Error(err)
+		return err
+	}
+
+	log.Info("update remark about menus successfully")
 
 	return nil
 }
