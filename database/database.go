@@ -40,6 +40,11 @@ var (
 	ErrManualRollback      = errors.New("manual rollback requested")
 )
 
+// migratedModel records the model already migrated to
+// avoid duplicate migration and improve performance.
+// Key is the model reflect.Type's String(), value is "struct{}{}".
+var migratedModel sync.Map
+
 var (
 	DB *gorm.DB
 
@@ -141,7 +146,7 @@ func (db *database[M]) prepare() error {
 // WithDB sets the underlying GORM database instance for this database manipulator.
 // This allows switching between different database connections or configurations.
 // Only supports *gorm.DB type. Returns the same instance if invalid input is provided.
-// Example: database.Database[*model.MeetingRoom]().WithDB(mysql.Software).WithTable("meeting_rooms").List(&rooms)
+// Example: database.Database[*model.MeetingRoom]().WithDB(mydb).WithTable("meeting_rooms").List(&rooms)
 func (db *database[M]) WithDB(x any) types.Database[M] {
 	var empty *gorm.DB
 	if x == nil || x == new(gorm.DB) || x == empty {
@@ -169,7 +174,9 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 			ctx = db.ctx.Context()
 		}
 	}
-	// db.shouldAutoMigrate = true
+	if _, loaded := migratedModel.LoadOrStore(reflect.TypeFor[M]().String(), struct{}{}); !loaded {
+		db.shouldAutoMigrate = true
+	}
 	if strings.ToLower(config.App.Logger.Level) == "debug" {
 		db.ins = _db.WithContext(ctx).Debug().Limit(defaultLimit)
 	} else {
