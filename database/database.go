@@ -1969,8 +1969,8 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 //
 // Parameters:
 //   - id: The primary key of the record to update
-//   - key: The field name to update
-//   - val: The new value for the field
+//   - name: The field name to update
+//   - value: The new value for the field
 //
 // Note: Does not invoke UpdateBefore/UpdateAfter hooks for performance reasons.
 //
@@ -1978,7 +1978,20 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 //
 //	UpdateById("user123", "status", "active")  // Update user status
 //	UpdateById("order456", "amount", 99.99)    // Update order amount
-func (db *database[M]) UpdateByID(id string, key string, val any) (err error) {
+func (db *database[M]) UpdateByID(id string, name string, value any) (err error) {
+	if len(id) == 0 {
+		logger.Database.Warn("empty id")
+		return nil
+	}
+	if len(name) == 0 {
+		logger.Database.Warn("empty name")
+		return nil
+	}
+	if value == nil {
+		logger.Database.Warn("empty value")
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -2002,12 +2015,12 @@ func (db *database[M]) UpdateByID(id string, key string, val any) (err error) {
 	// 	}()
 	// }
 
-	// return db.db.Model(*new(M)).Where("id = ?", id).Update(key, val).Error
+	// return db.db.Model(*new(M)).Where("id = ?", id).Update(name, value).Error
 	tableName := db.m.GetTableName() //nolint:errcheck
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(key, val).Error; err != nil {
+	if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error; err != nil {
 		return err
 	}
 	if db.enableCache {
