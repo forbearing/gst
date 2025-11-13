@@ -40,10 +40,10 @@ var (
 	ErrManualRollback      = errors.New("manual rollback requested")
 )
 
-// migratedModel records the model already migrated to
+// migratedModelMap records the model already migrated to
 // avoid duplicate migration and improve performance.
 // Key is the model reflect.Type's String(), value is "struct{}{}".
-var migratedModel sync.Map
+var migratedModelMap sync.Map
 
 var (
 	DB *gorm.DB
@@ -87,7 +87,7 @@ type database[M types.Model] struct {
 	// rollback control
 	rollbackFunc func() error // rollback function for manual transaction control
 
-	shouldAutoMigrate bool
+	shouldAutoMigrate *bool
 }
 
 // reset resets the database instance to its initial state by clearing all query conditions,
@@ -103,7 +103,7 @@ func (db *database[M]) reset() {
 	db.batchSize = 0
 	db.noHook = false
 	db.orQuery = false
-	db.shouldAutoMigrate = false
+	db.shouldAutoMigrate = nil
 	db.tryRun = false
 
 	// reset cursor pagination fields
@@ -147,6 +147,8 @@ func (db *database[M]) prepare() error {
 // This allows switching between different database connections or configurations.
 // Only supports *gorm.DB type. Returns the same instance if invalid input is provided.
 // Example: database.Database[*model.MeetingRoom]().WithDB(mydb).WithTable("meeting_rooms").List(&rooms)
+//
+// NOTE: If called `WithTable` database option, auto migration will be disabled.
 func (db *database[M]) WithDB(x any) types.Database[M] {
 	var empty *gorm.DB
 	if x == nil || x == new(gorm.DB) || x == empty {
@@ -174,8 +176,14 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 			ctx = db.ctx.Context()
 		}
 	}
-	if _, loaded := migratedModel.LoadOrStore(reflect.TypeFor[M]().String(), struct{}{}); !loaded {
-		db.shouldAutoMigrate = true
+	// If "db.shouldAutoMigrate" is not nil, it means the database options `WithTable` was called.
+	// If called `WithTable`, "auto migration" must be disabled.
+	if db.shouldAutoMigrate == nil {
+		if _, loaded := migratedModelMap.LoadOrStore(reflect.TypeFor[M]().String(), struct{}{}); !loaded {
+			flag := new(bool)
+			*flag = true
+			db.shouldAutoMigrate = flag
+		}
 	}
 	if strings.ToLower(config.App.Logger.Level) == "debug" {
 		db.ins = _db.WithContext(ctx).Debug().Limit(defaultLimit)
@@ -188,10 +196,14 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 // WithTable sets the table name for database operations, overriding the default table name
 // derived from the model type. This is useful for working with custom table names or views.
 // Often used in combination with WithDB method.
-// Example: database.Database[*model.MeetingRoom]().WithDB(mysql.Software).WithTable("meeting_rooms").List(&rooms)
+// Example: database.Database[*model.MeetingRoom]().WithDB(mydb).WithTable("meeting_rooms").List(&rooms)
+//
+// NOTE: Called this Option menas auto migration will be disabled.
 func (db *database[M]) WithTable(name string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+
+	db.shouldAutoMigrate = new(bool)
 	db.tableName = name
 	return db
 }
