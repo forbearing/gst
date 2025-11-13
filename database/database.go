@@ -1562,7 +1562,22 @@ func (db *database[M]) WithoutHook() types.Database[M] {
 //
 //	Create(&User{Name: "John", Email: "john@example.com"})
 //	Create(user1, user2, user3)  // Batch create multiple records
-func (db *database[M]) Create(objs ...M) (err error) {
+func (db *database[M]) Create(_objs ...M) (err error) {
+	if len(_objs) == 0 {
+		return nil
+	}
+	var empty M
+	objs := make([]M, 0, len(_objs))
+	for _, obj := range _objs {
+		if reflect.DeepEqual(obj, empty) {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	if len(objs) == 0 {
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1589,7 +1604,6 @@ func (db *database[M]) Create(objs ...M) (err error) {
 	// 	}()
 	// }
 
-	var empty M // call nil value M will cause panic.
 	// Invoke model hook: CreateBefore for the entire batch.
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_CREATE_BEFORE, span, func(spanCtx context.Context) error {
@@ -1703,7 +1717,22 @@ func (db *database[M]) Create(objs ...M) (err error) {
 //	Delete(&user)  // Soft delete by primary key
 //	WithQuery(params).Delete(&User{})  // Delete with conditions
 //	WithPurge().Delete(&user)  // Permanent deletion
-func (db *database[M]) Delete(objs ...M) (err error) {
+func (db *database[M]) Delete(_objs ...M) (err error) {
+	if len(_objs) == 0 {
+		return nil
+	}
+	var empty M
+	objs := make([]M, 0, len(_objs))
+	for _, obj := range _objs {
+		if reflect.DeepEqual(obj, empty) {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	if len(objs) == 0 {
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1731,7 +1760,6 @@ func (db *database[M]) Delete(objs ...M) (err error) {
 	// 	}()
 	// }
 
-	var empty M // call nil value M will cause panic.
 	// Invoke model hook: DeleteBefore.
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_DELETE_BEFORE, span, func(spanCtx context.Context) error {
@@ -1830,7 +1858,22 @@ func (db *database[M]) Delete(objs ...M) (err error) {
 //	user.Name = "Updated Name"
 //	Update(&user)  // Update single record
 //	Update(user1, user2, user3)  // Batch update multiple records
-func (db *database[M]) Update(objs ...M) (err error) {
+func (db *database[M]) Update(_objs ...M) (err error) {
+	if len(_objs) == 0 {
+		return nil
+	}
+	var empty M
+	objs := make([]M, 0, len(_objs))
+	for _, obj := range _objs {
+		if reflect.DeepEqual(obj, empty) {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	if len(objs) == 0 {
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1857,7 +1900,6 @@ func (db *database[M]) Update(objs ...M) (err error) {
 	// 	}()
 	// }
 
-	var empty M // call nil value M will cause panic.
 	// Invoke model hook: UpdateBefore.
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_UPDATE_BEFORE, span, func(spanCtx context.Context) error {
