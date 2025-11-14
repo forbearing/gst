@@ -80,6 +80,7 @@ test:
 	go test ./util/...
 	go test ./dsl
 	go test ./client
+	go test ./database/...
 	go test ./internal/codegen/gen/
 	go test ./module/helloworld
 
@@ -90,6 +91,7 @@ testv:
 	go test -v ./util/...
 	go test -v ./dsl
 	go test -v ./client
+	go test -v ./database/...
 	go test -v ./internal/codegen/gen/
 	go test -v ./module/helloworld
 
