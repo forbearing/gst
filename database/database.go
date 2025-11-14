@@ -253,8 +253,49 @@ func (db *database[M]) WithTx(tx any) types.Database[M] {
 }
 
 // WithBatchSize sets the batch size for batch operations such as batch insert, update, or delete.
-// A larger batch size can improve performance but may consume more memory.
-// Affects Create, Update, and Delete operations.
+// Controls how many records are processed in a single database operation to optimize performance.
+//
+// Parameters:
+//   - size: The number of records to process per batch. Must be greater than 0.
+//     If set to 0 or not called, uses default batch sizes:
+//   - Create/Update: 1000 records per batch
+//   - Delete: 10000 records per batch
+//
+// Affected Operations:
+//   - Create: Batch inserts records in chunks of the specified size
+//   - Update: Batch updates records in chunks of the specified size
+//   - Delete: Batch deletes records in chunks of the specified size
+//     Note: Delete operations use a separate default (10000) if size is not set
+//
+// Performance Considerations:
+//   - Larger batch sizes improve performance by reducing database round trips
+//   - However, larger batches consume more memory and may hit database limits
+//   - Recommended range: 100-5000 for most use cases
+//   - Very large batches (>10000) may cause memory issues or exceed database limits
+//
+// Method Chaining:
+//
+//	WithBatchSize can be chained with other methods and applies to subsequent operations.
+//
+// Examples:
+//
+//	// Set batch size for Create operation
+//	database.Database[*model.User](nil).WithBatchSize(1000).Create(users...)
+//
+//	// Set batch size for Update operation
+//	database.Database[*model.User](nil).WithBatchSize(500).Update(users...)
+//
+//	// Set batch size for Delete operation
+//	database.Database[*model.User](nil).WithBatchSize(2000).Delete(users...)
+//
+//	// Combined with other methods
+//	database.Database[*model.User](nil).
+//	    WithBatchSize(1000).
+//	    WithDebug().
+//	    Create(users...)
+//
+// NOTE: If size is 0 or not set, default batch sizes are used (1000 for Create/Update, 10000 for Delete).
+// NOTE: The batch size setting persists for the database instance and affects all subsequent operations.
 func (db *database[M]) WithBatchSize(size int) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -275,20 +316,79 @@ func (db *database[M]) WithDebug() types.Database[M] {
 // WithIndex specifies database index hints for query optimization.
 // The first parameter is the index name, and the second optional parameter specifies the hint type.
 // If no hint type is provided, defaults to USE INDEX.
-// Usage:
 //
-//	WithIndex("idx_name")                           - defaults to USE INDEX
-//	WithIndex("idx_name", consts.IndexHintUse)      - suggests using the index
-//	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
-//	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
+// Parameters:
+//   - indexName: The name of the index to hint. Empty or whitespace-only names are ignored.
+//   - hint: Optional hint mode. If not provided, defaults to consts.IndexHintUse.
+//     Supported modes:
+//   - consts.IndexHintUse: Suggests the database to use the specified index
+//   - consts.IndexHintForce: Forces the database to use the specified index
+//   - consts.IndexHintIgnore: Tells the database to ignore the specified index
+//
+// Supported Query Methods:
+//   - List: Query multiple records with index hint
+//   - Get: Query a single record by ID with index hint
+//   - Count: Count records with index hint
+//   - First: Get the first record with index hint
+//   - Last: Get the last record with index hint
+//   - Take: Get any record with index hint
 //
 // IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
 // They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
 // or Delete methods will result in SQL syntax errors.
 //
-// Note: Index hints are only supported by MySQL. For SQLite, PostgreSQL, and other databases,
-// this method will log a warning and return without applying the hint.
-// Empty or whitespace-only index names are ignored.
+// Database Compatibility:
+//   - MySQL: Fully supported. All hint modes work as expected.
+//     If the index doesn't exist, MySQL may return an error.
+//   - SQLite/PostgreSQL/Other databases: Not supported.
+//     This method will log a warning and skip the hint silently.
+//     The query will execute normally without the index hint.
+//
+// Empty Index Name Handling:
+//   - Empty string ("") or whitespace-only strings are automatically trimmed and ignored.
+//   - The query will execute normally without any index hint.
+//   - This allows safe chaining even when the index name is conditionally provided.
+//
+// Method Chaining:
+//
+//	WithIndex can be chained with other query methods like WithQuery, WithSelect, etc.
+//	The index hint will be applied to the final query.
+//
+// Examples:
+//
+//	// Default USE INDEX hint
+//	database.Database[*model.User](nil).WithIndex("idx_name").List(&users)
+//
+//	// Explicit USE INDEX hint
+//	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintUse).List(&users)
+//
+//	// FORCE INDEX hint
+//	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintForce).List(&users)
+//
+//	// IGNORE INDEX hint
+//	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintIgnore).List(&users)
+//
+//	// With Get method
+//	var user *model.User
+//	database.Database[*model.User](nil).WithIndex("idx_name").Get(user, userID)
+//
+//	// With Count method
+//	var count int64
+//	database.Database[*model.User](nil).WithIndex("idx_name").Count(&count)
+//
+//	// Combined with WithQuery
+//	database.Database[*model.User](nil).
+//	    WithIndex("idx_name").
+//	    WithQuery(&model.User{Name: "John"}).
+//	    List(&users)
+//
+//	// Empty index name (ignored, query works normally)
+//	database.Database[*model.User](nil).WithIndex("").List(&users)
+//	database.Database[*model.User](nil).WithIndex("   ").List(&users)
+//
+// NOTE: Index hints are MySQL-specific. On other databases, the hint is silently ignored.
+// NOTE: Empty or whitespace-only index names are automatically ignored for safe chaining.
+// NOTE: Unknown hint modes will default to USE INDEX with a warning logged.
 func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()

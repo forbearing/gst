@@ -197,7 +197,14 @@ type DatabaseOption[M Model] interface {
 	// WithTable multiple custom table, always used with the method `WithDB`.
 	WithTable(name string) Database[M]
 
-	// WithDebug setting debug mode, the priority is higher than config.Server.LogLevel and default value(false).
+	// WithDebug enables debug mode for database operations, showing detailed SQL queries and execution info.
+	// This setting has higher priority than config.Server.LogLevel and overrides the default value (false).
+	// Useful for development, debugging, and query optimization.
+	//
+	// Examples:
+	//
+	//	WithDebug().Create(&user)
+	//	WithDebug().WithQuery(&User{Name: "John"}).List(&users)
 	WithDebug() Database[M]
 
 	// WithQuery sets query conditions based on model struct fields.
@@ -252,17 +259,45 @@ type DatabaseOption[M Model] interface {
 
 	// WithIndex specifies database index hints for query optimization.
 	// The first parameter is the index name, and the second optional parameter specifies the hint type.
-	// If no hint is provided, defaults to USE INDEX.
-	// Usage:
+	// If no hint type is provided, defaults to USE INDEX.
 	//
-	//	WithIndex("idx_name")                           - defaults to USE INDEX
-	//	WithIndex("idx_name", consts.IndexHintUse)      - suggests using the index
-	//	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
-	//	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
+	// Parameters:
+	//   - indexName: The name of the index to hint. Empty or whitespace-only names are ignored.
+	//   - hint: Optional hint mode. If not provided, defaults to consts.IndexHintUse.
+	//     Supported modes:
+	//     - consts.IndexHintUse: Suggests the database to use the specified index
+	//     - consts.IndexHintForce: Forces the database to use the specified index
+	//     - consts.IndexHintIgnore: Tells the database to ignore the specified index
+	//
+	// Supported Query Methods:
+	//   - List, Get, Count, First, Last, Take
 	//
 	// IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
 	// They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
 	// or Delete methods will result in SQL syntax errors.
+	//
+	// Database Compatibility:
+	//   - MySQL: Fully supported. All hint modes work as expected.
+	//   - SQLite/PostgreSQL/Other databases: Not supported. The hint is silently ignored.
+	//
+	// Examples:
+	//
+	//	// Default USE INDEX hint
+	//	WithIndex("idx_name").List(&users)
+	//
+	//	// Explicit hint modes
+	//	WithIndex("idx_name", consts.IndexHintUse).List(&users)
+	//	WithIndex("idx_name", consts.IndexHintForce).List(&users)
+	//	WithIndex("idx_name", consts.IndexHintIgnore).List(&users)
+	//
+	//	// Combined with other methods
+	//	WithIndex("idx_name").WithQuery(&User{Name: "John"}).List(&users)
+	//
+	//	// Empty index name (ignored)
+	//	WithIndex("").List(&users)
+	//
+	// NOTE: Index hints are MySQL-specific. On other databases, the hint is silently ignored.
+	// NOTE: Empty or whitespace-only index names are automatically ignored.
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
 
 	// WithRollback configures a rollback function for manual transaction control.
@@ -304,7 +339,22 @@ type DatabaseOption[M Model] interface {
 	//	})
 	WithLock(mode ...consts.LockMode) Database[M]
 
-	// WithBatchSize set batch size for bulk operations. affects Create, Update, Delete.
+	// WithBatchSize sets the batch size for batch operations such as batch insert, update, or delete.
+	// Controls how many records are processed in a single database operation to optimize performance.
+	//
+	// Parameters:
+	//   - size: The number of records to process per batch. Must be greater than 0.
+	//     If set to 0 or not called, uses default batch sizes:
+	//     - Create/Update: 1000 records per batch
+	//     - Delete: 10000 records per batch
+	//
+	// Affects Create, Update, and Delete operations.
+	//
+	// Examples:
+	//
+	//	WithBatchSize(1000).Create(users...)
+	//	WithBatchSize(500).Update(users...)
+	//	WithBatchSize(2000).Delete(users...)
 	WithBatchSize(size int) Database[M]
 
 	// WithPagination applies pagination parameters to the query, useful for retrieving data in pages.

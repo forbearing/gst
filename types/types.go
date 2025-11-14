@@ -9,33 +9,52 @@ type ControllerConfig[M Model] struct {
 // QueryConfig configures the behavior of WithQuery method.
 //
 // Fields:
+//
 //   - FuzzyMatch: Enable fuzzy matching (LIKE/REGEXP queries). Default: false (exact match with IN clause)
-//     - Single value: Uses LIKE pattern (WHERE name LIKE '%value%')
-//     - Multiple values (comma-separated): Uses REGEXP pattern (WHERE name REGEXP '.*value1.*|.*value2.*')
-//     - Empty strings in comma-separated values are automatically skipped
-//     - REGEXP special characters are automatically escaped
-//     - Note: REGEXP may not be available in all databases (e.g., SQLite requires extension)
+//
+//   - Single value: Uses LIKE pattern (WHERE name LIKE '%value%')
+//
+//   - Multiple values (comma-separated): Uses REGEXP pattern (WHERE name REGEXP '.*value1.*|.*value2.*')
+//
+//   - Empty strings in comma-separated values are automatically skipped
+//
+//   - REGEXP special characters are automatically escaped
+//
+//   - Note: REGEXP may not be available in all databases (e.g., SQLite requires extension)
 //
 //   - AllowEmpty: Allow empty query conditions to match all records. Default: false (blocked for safety)
-//     - When false: Empty queries are blocked (adds WHERE 1 = 0)
-//     - When true: Empty queries match all records (full table scan)
-//     - Empty query cases: nil, empty struct, all fields are zero values, all field values are empty strings
-//     - Critical: Use with caution, especially for Delete operations
+//
+//   - When false: Empty queries are blocked (adds WHERE 1 = 0)
+//
+//   - When true: Empty queries match all records (full table scan)
+//
+//   - Empty query cases: nil, empty struct, all fields are zero values, all field values are empty strings
+//
+//   - Critical: Use with caution, especially for Delete operations
 //
 //   - UseOr: Use OR logic to combine query conditions. Default: false (uses AND logic)
-//     - When false: Multiple fields use AND logic (WHERE name IN ('John') AND age IN (18))
-//     - When true: Multiple fields use OR logic (WHERE name IN ('John') OR age IN (18))
-//     - First condition always uses WHERE, subsequent conditions use OR
-//     - Works with both exact match and fuzzy match
+//
+//   - When false: Multiple fields use AND logic (WHERE name IN ('John') AND age IN (18))
+//
+//   - When true: Multiple fields use OR logic (WHERE name IN ('John') OR age IN (18))
+//
+//   - First condition always uses WHERE, subsequent conditions use OR
+//
+//   - Works with both exact match and fuzzy match
 //
 //   - RawQuery: Raw SQL query string for custom WHERE conditions. When provided, model fields are ignored
-//     - Works even when query is nil
-//     - Supports parameterized queries with RawQueryArgs
-//     - Example: "age > ? AND status = ?"
+//
+//   - Works even when query is nil
+//
+//   - Supports parameterized queries with RawQueryArgs
+//
+//   - Example: "age > ? AND status = ?"
 //
 //   - RawQueryArgs: Arguments for the raw SQL query, used with RawQuery for parameterized queries
-//     - Can be nil or empty slice if RawQuery has no placeholders
-//     - Example: []any{18, "active"}
+//
+//   - Can be nil or empty slice if RawQuery has no placeholders
+//
+//   - Example: []any{18, "active"}
 //
 // CRITICAL SAFETY FEATURE:
 // Empty query conditions (all fields are zero values) are blocked by default to prevent
