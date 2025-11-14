@@ -582,30 +582,91 @@ func TestDatabaseOptions(t *testing.T) {
 	t.Run("WithTx", func(t *testing.T) {
 		defer func() {
 			_ = database.Database[*TestUser](nil).Delete(ul...)
+			_ = database.Database[*TestProduct](nil).Delete()
 		}()
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 
-		// transaction success, created three users.
+		// Transaction success - Create operation
 		err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
 			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(ul...))
 			return nil
 		})
-		_ = err
 		require.NoError(t, err)
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
 		require.Equal(t, 3, len(users))
+		// Verify data integrity
+		var foundU1, foundU2, foundU3 bool
+		for _, u := range users {
+			switch u.ID {
+			case u1.ID:
+				foundU1 = true
+				require.Equal(t, u1.Name, u.Name)
+				require.Equal(t, u1.Age, u.Age)
+				require.Equal(t, u1.Email, u.Email)
+			case u2.ID:
+				foundU2 = true
+				require.Equal(t, u2.Name, u.Name)
+			case u3.ID:
+				foundU3 = true
+				require.Equal(t, u3.Name, u.Name)
+			}
+		}
+		require.True(t, foundU1 && foundU2 && foundU3, "all users should be found")
 
+		// Transaction success - Update operation
+		require.NoError(t, database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+			u1.Name = "user1_updated"
+			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Update(u1))
+			return nil
+		}))
+		user := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(user, u1.ID))
+		require.Equal(t, "user1_updated", user.Name)
+		u1.Name = "user1" // restore
+
+		// Transaction success - Multiple resource types
+		p1 := &TestProduct{Name: "product1", Price: 10.0, Base: model.Base{ID: "p1"}}
+		require.NoError(t, database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(u1))
+			require.NoError(t, database.Database[*TestProduct](nil).WithTx(tx).Create(p1))
+			return nil
+		}))
+		product := new(TestProduct)
+		require.NoError(t, database.Database[*TestProduct](nil).Get(product, p1.ID))
+		require.NotNil(t, product)
+		require.Equal(t, p1.Name, product.Name)
+
+		// Transaction success - List operation within transaction
+		require.NoError(t, database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+			txUsers := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).List(&txUsers))
+			require.Greater(t, len(txUsers), 0, "should find users within transaction")
+			return nil
+		}))
+
+		// Transaction failed - rollback on error
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		err = database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
 			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(ul...))
 			return errors.New("custom error")
 		})
 		require.Error(t, err)
+		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 0, len(users))
+		require.Equal(t, 0, len(users), "transaction should be rolled back, no users created")
 
-		// transaction failed, not created.
+		// Transaction with chainable methods
+		require.NoError(t, database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+			require.NoError(t, database.Database[*TestUser](nil).
+				WithTx(tx).
+				WithQuery(&TestUser{Name: u1.Name}).
+				Create(u1))
+			return nil
+		}))
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.GreaterOrEqual(t, len(users), 1, "should find created user")
 	})
 
 	t.Run("WithBatchSize", func(t *testing.T) {
