@@ -289,9 +289,6 @@ type DatabaseOption[M Model] interface {
 	//     - consts.IndexHintForce: Forces the database to use the specified index
 	//     - consts.IndexHintIgnore: Tells the database to ignore the specified index
 	//
-	// Supported Query Methods:
-	//   - List, Get, Count, First, Last, Take
-	//
 	// IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
 	// They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
 	// or Delete methods will result in SQL syntax errors.
@@ -306,15 +303,11 @@ type DatabaseOption[M Model] interface {
 	//	WithIndex("idx_name").List(&users)
 	//
 	//	// Explicit hint modes
-	//	WithIndex("idx_name", consts.IndexHintUse).List(&users)
 	//	WithIndex("idx_name", consts.IndexHintForce).List(&users)
 	//	WithIndex("idx_name", consts.IndexHintIgnore).List(&users)
 	//
 	//	// Combined with other methods
 	//	WithIndex("idx_name").WithQuery(&User{Name: "John"}).List(&users)
-	//
-	//	// Empty index name (ignored)
-	//	WithIndex("").List(&users)
 	//
 	// NOTE: Index hints are MySQL-specific. On other databases, the hint is silently ignored.
 	// NOTE: Empty or whitespace-only index names are automatically ignored.

@@ -152,11 +152,6 @@ func (db *database[M]) prepare() error {
 //   - Enables auto migration for the specified database (unless WithTable was called)
 //   - Supports multiple database instances with automatic migration tracking
 //   - Preserves context from the original database instance
-//   - Applies default limit and debug mode based on configuration
-//
-// Supported Operations:
-//   - All CRUD operations work with the specified database instance
-//   - Can be chained with other methods like WithTable, WithQuery, etc.
 //
 // Examples:
 //
@@ -234,10 +229,6 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 //   - Overrides the default table name for all subsequent operations
 //   - Often used in combination with WithDB to work with custom databases and tables
 //
-// Supported Operations:
-//   - All CRUD operations use the specified table name
-//   - Can be chained with other methods like WithDB, WithQuery, etc.
-//
 // Examples:
 //
 //	// Use custom table name
@@ -274,10 +265,7 @@ func (db *database[M]) WithTable(name string) types.Database[M] {
 //   - tx: The transaction instance (*gorm.DB) from TransactionFunc callback.
 //     If nil or invalid, logs a warning and returns the original database instance.
 //
-// Supported Operations:
-//   - All CRUD operations: Create, Update, Delete, List, Get, Count, First, Last, Take
-//   - Can be chained with other methods: WithQuery, WithSelect, WithIndex, etc.
-//   - Supports multiple resource types in the same transaction
+// Supports all CRUD operations and can be chained with other methods.
 //
 // Examples:
 //
@@ -357,10 +345,6 @@ func (db *database[M]) WithTx(tx any) types.Database[M] {
 //   - Recommended range: 100-5000 for most use cases
 //   - Very large batches (>10000) may cause memory issues or exceed database limits
 //
-// Method Chaining:
-//
-//	WithBatchSize can be chained with other methods and applies to subsequent operations.
-//
 // Examples:
 //
 //	// Set batch size for Create operation
@@ -409,14 +393,6 @@ func (db *database[M]) WithDebug() types.Database[M] {
 //   - consts.IndexHintForce: Forces the database to use the specified index
 //   - consts.IndexHintIgnore: Tells the database to ignore the specified index
 //
-// Supported Query Methods:
-//   - List: Query multiple records with index hint
-//   - Get: Query a single record by ID with index hint
-//   - Count: Count records with index hint
-//   - First: Get the first record with index hint
-//   - Last: Get the last record with index hint
-//   - Take: Get any record with index hint
-//
 // IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
 // They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
 // or Delete methods will result in SQL syntax errors.
@@ -431,44 +407,21 @@ func (db *database[M]) WithDebug() types.Database[M] {
 // Empty Index Name Handling:
 //   - Empty string ("") or whitespace-only strings are automatically trimmed and ignored.
 //   - The query will execute normally without any index hint.
-//   - This allows safe chaining even when the index name is conditionally provided.
-//
-// Method Chaining:
-//
-//	WithIndex can be chained with other query methods like WithQuery, WithSelect, etc.
-//	The index hint will be applied to the final query.
 //
 // Examples:
 //
 //	// Default USE INDEX hint
 //	database.Database[*model.User](nil).WithIndex("idx_name").List(&users)
 //
-//	// Explicit USE INDEX hint
-//	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintUse).List(&users)
-//
-//	// FORCE INDEX hint
+//	// Explicit hint modes
 //	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintForce).List(&users)
-//
-//	// IGNORE INDEX hint
 //	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintIgnore).List(&users)
 //
-//	// With Get method
-//	var user *model.User
-//	database.Database[*model.User](nil).WithIndex("idx_name").Get(user, userID)
-//
-//	// With Count method
-//	var count int64
-//	database.Database[*model.User](nil).WithIndex("idx_name").Count(&count)
-//
-//	// Combined with WithQuery
+//	// Combined with other methods
 //	database.Database[*model.User](nil).
 //	    WithIndex("idx_name").
 //	    WithQuery(&model.User{Name: "John"}).
 //	    List(&users)
-//
-//	// Empty index name (ignored, query works normally)
-//	database.Database[*model.User](nil).WithIndex("").List(&users)
-//	database.Database[*model.User](nil).WithIndex("   ").List(&users)
 //
 // NOTE: Index hints are MySQL-specific. On other databases, the hint is silently ignored.
 // NOTE: Empty or whitespace-only index names are automatically ignored for safe chaining.
