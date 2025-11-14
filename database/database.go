@@ -585,6 +585,7 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 		// eg: SELECT * FROM `assets` WHERE `category_level2_id` REGEXP '.*XS.*|.*NU.*'
 		//     SELECT count(*) FROM `assets` WHERE `category_level2_id` REGEXP '.*XS.*|.*NU.*'
 		hasValidCondition := false
+		isFirstCondition := true
 		for k, v := range q {
 			items := strings.Split(v, ",")
 			// skip the string slice which all element is empty.
@@ -601,19 +602,20 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 				}
 				regexpVal = strings.TrimPrefix(regexpVal, "|")
 				// db.db = db.db.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
-				if cfg.UseOr {
+				if cfg.UseOr && !isFirstCondition {
 					db.ins = db.ins.Or(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				} else {
 					db.ins = db.ins.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				}
 			} else { // If the query string has only one value, using LIKE
 				// db.db = db.db.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
-				if cfg.UseOr {
+				if cfg.UseOr && !isFirstCondition {
 					db.ins = db.ins.Or(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				} else {
 					db.ins = db.ins.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				}
 			}
+			isFirstCondition = false
 		}
 		// CRITICAL: Check if all query values are empty after filtering
 		// Even if query map is not empty, all values might be empty strings
@@ -636,6 +638,7 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 		// construct the 'WHERE' 'IN' SQL statement.
 		// eg: SELECT id FROM users WHERE name IN ('user01', 'user02', 'user03', 'user04')
 		hasValidCondition := false
+		isFirstCondition := true
 		for k, v := range q {
 			items := strings.Split(v, ",")
 			if len(strings.Join(items, "")) == 0 {
@@ -643,11 +646,12 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			}
 			hasValidCondition = true
 			// db.db = db.db.Where(fmt.Sprintf("`%s` IN (?)", k), items)
-			if cfg.UseOr {
+			if cfg.UseOr && !isFirstCondition {
 				db.ins = db.ins.Or(fmt.Sprintf("`%s` IN (?)", k), items)
 			} else {
 				db.ins = db.ins.Where(fmt.Sprintf("`%s` IN (?)", k), items)
 			}
+			isFirstCondition = false
 		}
 		// CRITICAL: Check if all query values are empty after filtering
 		// Even if query map is not empty, all values might be empty strings
