@@ -469,6 +469,7 @@ func TestDatabaseOptions(t *testing.T) {
 		defer func() {
 			_ = os.Remove(path2)
 			_ = os.Remove(path3)
+			_ = database.Database[*TestUser](nil).Delete(ul...)
 		}()
 
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
@@ -499,39 +500,72 @@ func TestDatabaseOptions(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
 		require.Equal(t, 0, len(users))
 
-		// create resources in `db2`.
+		// Create resources in db2
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Create(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
 		require.Equal(t, 3, len(users))
+		// Verify data integrity
+		var foundU1, foundU2, foundU3 bool
+		for _, u := range users {
+			switch u.ID {
+			case u1.ID:
+				foundU1 = true
+				require.Equal(t, u1.Name, u.Name)
+				require.Equal(t, u1.Age, u.Age)
+				require.Equal(t, u1.Email, u.Email)
+			case u2.ID:
+				foundU2 = true
+				require.Equal(t, u2.Name, u.Name)
+			case u3.ID:
+				foundU3 = true
+				require.Equal(t, u3.Name, u.Name)
+			}
+		}
+		require.True(t, foundU1 && foundU2 && foundU3, "all users should be found in db2")
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-		require.Equal(t, 0, len(users))
+		require.Equal(t, 0, len(users), "db3 should be empty")
 
-		// create resources in `db3`.
+		// Get operation with custom DB
+		user := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Get(user, u1.ID))
+		require.NotNil(t, user)
+		require.Equal(t, u1.ID, user.ID)
+		require.Equal(t, u1.Name, user.Name)
+
+		// Update operation with custom DB
+		user.Name = "user1_updated"
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Update(user))
+		updatedUser := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Get(updatedUser, u1.ID))
+		require.Equal(t, "user1_updated", updatedUser.Name)
+		user.Name = "user1" // restore
+
+		// Create resources in db3
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).Create(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-		require.Equal(t, 3, len(users))
-		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "db2 should still have 3 users")
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
+		require.Equal(t, 3, len(users), "db3 should have 3 users")
 
-		// delete resources in default db
+		// Delete resources in default db
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
 		require.Equal(t, 0, len(users))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "db2 should still have users")
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "db3 should still have users")
 
-		// delete resources in db2
+		// Delete resources in db2
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
 		require.Equal(t, 0, len(users))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
 		require.Equal(t, 0, len(users))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "db3 should still have users")
 
-		// delete resources in db3
+		// Delete resources in db3
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
 		require.Equal(t, 0, len(users))
@@ -539,6 +573,11 @@ func TestDatabaseOptions(t *testing.T) {
 		require.Equal(t, 0, len(users))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
 		require.Equal(t, 0, len(users))
+
+		// Chainable with other methods
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithQuery(&TestUser{Name: u1.Name}).Create(u1))
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
+		require.GreaterOrEqual(t, len(users), 1, "should find created user")
 	})
 
 	t.Run("WithTable", func(t *testing.T) {
@@ -566,7 +605,7 @@ func TestDatabaseOptions(t *testing.T) {
 		require.Error(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Create(u1))
 		require.Error(t, database.Database[*TestUser](nil).WithDB(db3).WithTable("test_users").Create(ul...))
 
-		// manually migrate the database.
+		// Manually migrate the database.
 		require.NoError(t, db2.AutoMigrate(TestUser{}))
 		require.NoError(t, db3.AutoMigrate(TestUser{}))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Create(ul...))
@@ -575,8 +614,55 @@ func TestDatabaseOptions(t *testing.T) {
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").List(&users))
 		require.Equal(t, 3, len(users))
+		// Verify data integrity
+		var foundU1, foundU2, foundU3 bool
+		for _, u := range users {
+			switch u.ID {
+			case u1.ID:
+				foundU1 = true
+				require.Equal(t, u1.Name, u.Name)
+				require.Equal(t, u1.Age, u.Age)
+				require.Equal(t, u1.Email, u.Email)
+			case u2.ID:
+				foundU2 = true
+				require.Equal(t, u2.Name, u.Name)
+			case u3.ID:
+				foundU3 = true
+				require.Equal(t, u3.Name, u.Name)
+			}
+		}
+		require.True(t, foundU1 && foundU2 && foundU3, "all users should be found")
+
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).WithTable("test_users").List(&users))
 		require.Equal(t, 3, len(users))
+
+		// Get operation with custom table
+		user := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Get(user, u1.ID))
+		require.NotNil(t, user)
+		require.Equal(t, u1.ID, user.ID)
+		require.Equal(t, u1.Name, user.Name)
+
+		// Update operation with custom table
+		user.Name = "user1_updated"
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Update(user))
+		updatedUser := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Get(updatedUser, u1.ID))
+		require.Equal(t, "user1_updated", updatedUser.Name)
+
+		// Delete operation with custom table
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Delete(u1))
+		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").List(&users))
+		require.Equal(t, 2, len(users), "should have 2 users after deleting u1")
+
+		// Chainable with other methods
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithDB(db2).
+			WithTable("test_users").
+			WithQuery(&TestUser{Name: u2.Name}).
+			Get(user, u2.ID))
+		require.NotNil(t, user)
+		require.Equal(t, u2.ID, user.ID)
 	})
 
 	t.Run("WithTx", func(t *testing.T) {
