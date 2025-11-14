@@ -179,18 +179,23 @@ type DatabaseOption[M Model] interface {
 
 	// WithTx returns a new database manipulator with transaction context.
 	// This method allows using an existing transaction to operate on multiple resource types.
-	// The tx parameter should be a *gorm.DB transaction instance or any compatible transaction type.
-	// Example:
+	// The tx parameter should be a *gorm.DB transaction instance obtained from TransactionFunc.
 	//
-	//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
-	//	    // Use the same transaction for different resource types
-	//	    if err := database.Database[*User](nil).WithTx(tx).Create(&user); err != nil {
+	// Supports all CRUD operations and can be chained with other methods.
+	//
+	// Examples:
+	//
+	//	// Single resource type
+	//	TransactionFunc(func(tx any) error {
+	//	    return WithTx(tx).Create(&user)
+	//	})
+	//
+	//	// Multiple resource types
+	//	TransactionFunc(func(tx any) error {
+	//	    if err := Database[*User](nil).WithTx(tx).Create(&user); err != nil {
 	//	        return err
 	//	    }
-	//	    if err := database.Database[*Order](nil).WithTx(tx).Create(&order); err != nil {
-	//	        return err
-	//	    }
-	//	    return nil
+	//	    return Database[*Order](nil).WithTx(tx).Create(&order)
 	//	})
 	WithTx(tx any) Database[M]
 

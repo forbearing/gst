@@ -213,11 +213,26 @@ func (db *database[M]) WithTable(name string) types.Database[M] {
 
 // WithTx returns a new database manipulator with transaction context.
 // This method allows using an existing transaction to operate on multiple resource types.
-// The tx parameter should be a *gorm.DB transaction instance or any compatible transaction type.
-// Example:
+// The tx parameter should be a *gorm.DB transaction instance obtained from TransactionFunc.
 //
+// Parameters:
+//   - tx: The transaction instance (*gorm.DB) from TransactionFunc callback.
+//     If nil or invalid, logs a warning and returns the original database instance.
+//
+// Supported Operations:
+//   - All CRUD operations: Create, Update, Delete, List, Get, Count, First, Last, Take
+//   - Can be chained with other methods: WithQuery, WithSelect, WithIndex, etc.
+//   - Supports multiple resource types in the same transaction
+//
+// Examples:
+//
+//	// Single resource type transaction
 //	database.Database[*User](nil).TransactionFunc(func(tx any) error {
-//	    // Use the same transaction for different resource types
+//	    return database.Database[*User](nil).WithTx(tx).Create(&user)
+//	})
+//
+//	// Multiple resource types in the same transaction
+//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
 //	    if err := database.Database[*User](nil).WithTx(tx).Create(&user); err != nil {
 //	        return err
 //	    }
@@ -226,6 +241,20 @@ func (db *database[M]) WithTable(name string) types.Database[M] {
 //	    }
 //	    return nil
 //	})
+//
+//	// Chainable with other methods
+//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
+//	    return database.Database[*User](nil).
+//	        WithTx(tx).
+//	        WithQuery(&User{Name: "John"}).
+//	        Update(&user)
+//	})
+//
+// NOTE: WithTx must be used within a TransactionFunc callback. The transaction is automatically
+//
+//	committed when the callback returns nil, or rolled back when it returns an error.
+//
+// NOTE: Invalid tx parameter (nil or wrong type) will log a warning and skip transaction context.
 func (db *database[M]) WithTx(tx any) types.Database[M] {
 	var empty *gorm.DB
 	if tx == nil || tx == new(gorm.DB) || tx == empty {
