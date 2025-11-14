@@ -595,9 +595,17 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			if len(items) > 1 { // If the query string has multiple value(separated by ','), using regexp
 				var regexpVal string
 				for _, item := range items {
+					// Skip empty items to avoid matching all records (.*.* pattern)
+					if len(item) == 0 {
+						continue
+					}
 					// WARN: not forget to escape the regexp value using regexp.QuoteMeta.
 					// eg: localhost\hello.world -> localhost\\hello\.world
 					regexpVal = regexpVal + "|.*" + regexp.QuoteMeta(item) + ".*"
+				}
+				// If all items were empty after filtering, skip this condition
+				if len(regexpVal) == 0 {
+					continue
 				}
 				regexpVal = strings.TrimPrefix(regexpVal, "|")
 				// db.db = db.db.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
