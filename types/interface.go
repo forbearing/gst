@@ -222,14 +222,6 @@ type DatabaseOption[M Model] interface {
 	//	database.Database[*model.User]().WithCursor(lastID, true, "user_id").WithLimit(10).List(&nextUsers)
 	WithCursor(string, bool, ...string) Database[M]
 
-	// WithAnd with AND query condition(default).
-	// It must be called before WithQuery.
-	WithAnd(...bool) Database[M]
-
-	// WithAnd with OR query condition.
-	// It must be called before WithQuery.
-	WithOr(...bool) Database[M]
-
 	// WithTimeRange applies a time range filter to the query based on the specified column name.
 	// It restricts the results to records where the column's value falls within the specified start and end times.
 	// This method is designed to be used in a chainable manner, allowing for the construction of complex queries.
@@ -367,9 +359,10 @@ type DatabaseOption[M Model] interface {
 	WithCache(...bool) Database[M]
 	// WithOmit omit specific columns when create/update.
 	WithOmit(...string) Database[M]
-	// WithTryRun only executes model hooks without performing actual database operations.
+	// WithDryRun enables dry-run mode to preview SQL queries without executing them.
+	// Only executes model hooks without performing actual database operations.
 	// Also logs the SQL statements that would have been executed.
-	WithTryRun(...bool) Database[M]
+	WithDryRun() Database[M]
 	// WithoutHook tells the database manipulator not invoke model hooks.
 	WithoutHook() Database[M]
 }

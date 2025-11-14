@@ -11,6 +11,7 @@ type ControllerConfig[M Model] struct {
 // Fields:
 //   - FuzzyMatch: Enable fuzzy matching (LIKE/REGEXP queries). Default: false (exact match with IN clause)
 //   - AllowEmpty: Allow empty query conditions to match all records. Default: false (blocked for safety)
+//   - UseOr: Use OR logic to combine query conditions. Default: false (uses AND logic)
 //   - RawQuery: Raw SQL query string for custom WHERE conditions. When provided, model fields are ignored
 //   - RawQueryArgs: Arguments for the raw SQL query, used with RawQuery for parameterized queries
 //
@@ -38,6 +39,9 @@ type ControllerConfig[M Model] struct {
 //	// Fuzzy match + Allow empty
 //	WithQuery(&User{}, QueryConfig{FuzzyMatch: true, AllowEmpty: true})
 //
+//	// Use OR logic to combine conditions
+//	WithQuery(&User{Name: "John", Email: "john@example.com"}, QueryConfig{UseOr: true})
+//
 //	// Raw SQL query
 //	WithQuery(&User{}, QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
 //
@@ -46,6 +50,7 @@ type ControllerConfig[M Model] struct {
 type QueryConfig struct {
 	FuzzyMatch   bool   // Enable fuzzy matching (LIKE/REGEXP). Default: false
 	AllowEmpty   bool   // Allow empty query conditions. Default: false
+	UseOr        bool   // Use OR logic to combine query conditions. Default: false (uses AND)
 	RawQuery     string // Raw SQL query string for custom WHERE conditions
 	RawQueryArgs []any  // Arguments for the raw SQL query parameters
 }

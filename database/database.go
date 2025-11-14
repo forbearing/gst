@@ -76,8 +76,7 @@ type database[M types.Model] struct {
 	tableName   string // support multiple custom table name, always used with the `WithDB` method.
 	batchSize   int    // batch size for bulk operations. affects Create, Update, Delete.
 	noHook      bool   // disable model hook.
-	orQuery     bool   // or query
-	tryRun      bool   // try run
+	dryRun      bool   // dry run mode, preview SQL without executing
 
 	// cursor pagination
 	cursorField  string // field used for cursor pagination, default is "id"
@@ -103,9 +102,8 @@ func (db *database[M]) reset() {
 	db.tableName = ""
 	db.batchSize = 0
 	db.noHook = false
-	db.orQuery = false
 	db.shouldAutoMigrate = nil
-	db.tryRun = false
+	db.dryRun = false
 
 	// reset cursor pagination fields
 	db.cursorField = ""
@@ -271,32 +269,6 @@ func (db *database[M]) WithDebug() types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.ins = db.ins.Debug()
-	return db
-}
-
-// WithAnd sets the query condition combination mode to AND (default behavior).
-// This method must be called before WithQuery to take effect.
-// All query conditions will be combined using AND logic.
-func (db *database[M]) WithAnd(flag ...bool) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.orQuery = false
-	if len(flag) > 0 {
-		db.orQuery = flag[0]
-	}
-	return db
-}
-
-// WithOr sets the query condition combination mode to OR.
-// This method must be called before WithQuery to take effect.
-// All query conditions will be combined using OR logic.
-func (db *database[M]) WithOr(flag ...bool) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.orQuery = true
-	if len(flag) > 0 {
-		db.orQuery = flag[0]
-	}
 	return db
 }
 
@@ -545,14 +517,14 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 				}
 				regexpVal = strings.TrimPrefix(regexpVal, "|")
 				// db.db = db.db.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
-				if db.orQuery {
+				if cfg.UseOr {
 					db.ins = db.ins.Or(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				} else {
 					db.ins = db.ins.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				}
 			} else { // If the query string has only one value, using LIKE
 				// db.db = db.db.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
-				if db.orQuery {
+				if cfg.UseOr {
 					db.ins = db.ins.Or(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				} else {
 					db.ins = db.ins.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
@@ -587,7 +559,7 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			}
 			hasValidCondition = true
 			// db.db = db.db.Where(fmt.Sprintf("`%s` IN (?)", k), items)
-			if db.orQuery {
+			if cfg.UseOr {
 				db.ins = db.ins.Or(fmt.Sprintf("`%s` IN (?)", k), items)
 			} else {
 				db.ins = db.ins.Where(fmt.Sprintf("`%s` IN (?)", k), items)
@@ -1533,25 +1505,21 @@ func (db *database[M]) WithOmit(columns ...string) types.Database[M] {
 	return db
 }
 
-// WithTryRun enables dry-run mode to preview SQL queries without executing them.
+// WithDryRun enables dry-run mode to preview SQL queries without executing them.
 // Useful for debugging, query optimization, and testing query generation.
 // The generated SQL will be logged but not executed against the database.
 //
 // Example:
 //
-//	WithTryRun().Create(&user)  // Preview INSERT SQL without creating record
-//	WithTryRun().WithQuery(params).List(&users)  // Preview SELECT SQL
+//	WithDryRun().Create(&user)  // Preview INSERT SQL without creating record
+//	WithDryRun().WithQuery(params).List(&users)  // Preview SELECT SQL
 //
-// WithTryRun only executes model hooks without performing actual database operations.
+// WithDryRun only executes model hooks without performing actual database operations.
 // Also logs the SQL statements that would have been executed.
-func (db *database[M]) WithTryRun(enable ...bool) types.Database[M] {
+func (db *database[M]) WithDryRun() types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-
-	db.tryRun = true
-	if len(enable) > 0 {
-		db.tryRun = enable[0]
-	}
+	db.dryRun = true
 	return db
 }
 
@@ -1670,7 +1638,7 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
-		if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
+		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
 			return err
 		}
 	}
@@ -1816,7 +1784,7 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 		}
 		for i := 0; i < len(objs); i += batchSize {
 			end := min(i+batchSize, len(objs))
-			if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Unscoped().Delete(objs[i:end]).Error; err != nil {
+			if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Unscoped().Delete(objs[i:end]).Error; err != nil {
 				return err
 			}
 			if db.enableCache {
@@ -1837,7 +1805,7 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 		}
 		for i := 0; i < len(objs); i += batchSize {
 			end := min(i+batchSize, len(objs))
-			if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Delete(objs[i:end]).Error; err != nil {
+			if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Delete(objs[i:end]).Error; err != nil {
 				return err
 			}
 			if db.enableCache {
@@ -1959,7 +1927,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
-		if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
+		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
 			zap.S().Error(err)
 			return err
 		}
@@ -2044,7 +2012,7 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error; err != nil {
+	if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error; err != nil {
 		return err
 	}
 	if db.enableCache {
@@ -3011,7 +2979,7 @@ func (db *database[M]) Cleanup() (err error) {
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	return db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0)).Error
+	return db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0)).Error
 }
 
 // Health performs comprehensive database health checks including connectivity,

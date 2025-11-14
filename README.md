@@ -148,8 +148,6 @@ type DatabaseOption[M Model] interface {
 	WithDebug() Database[M]
 	WithQuery(query M, config ...QueryConfig) Database[M]
 	WithCursor(string, bool, ...string) Database[M]
-	WithAnd(...bool) Database[M]
-	WithOr(...bool) Database[M]
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
 	WithSelect(columns ...string) Database[M]
 	WithSelectRaw(query any, args ...any) Database[M]
@@ -165,7 +163,7 @@ type DatabaseOption[M Model] interface {
 	WithPurge(...bool) Database[M]
 	WithCache(...bool) Database[M]
 	WithOmit(...string) Database[M]
-	WithTryRun(...bool) Database[M]
+	WithDryRun() Database[M]
 	WithoutHook() Database[M]
 }
 ```

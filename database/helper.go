@@ -100,7 +100,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 
 		span.SetAttributes(
 			attribute.Bool("database.cache_enabled", db.enableCache),
-			attribute.Bool("database.try_run", db.tryRun),
+			attribute.Bool("database.dry_run", db.dryRun),
 		)
 	}
 
@@ -131,7 +131,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 				zap.String("batch", strconv.Itoa(_batch)),
 				zap.String("cost", util.FormatDurationSmart(duration)),
 				zap.Bool("cache_enabled", db.enableCache),
-				zap.Bool("try_run", db.tryRun),
+				zap.Bool("dry_run", db.dryRun),
 			)
 		} else {
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase(op)).Infoz("",
@@ -139,7 +139,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 				zap.String("batch", strconv.Itoa(_batch)),
 				zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 				zap.Bool("cache_enabled", db.enableCache),
-				zap.Bool("try_run", db.tryRun),
+				zap.Bool("dry_run", db.dryRun),
 			)
 		}
 	}, ctx, span

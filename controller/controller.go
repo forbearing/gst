@@ -1339,12 +1339,12 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}
 		if err = handler(types.NewDatabaseContext(c)).
 			WithPagination(page, size).
-			WithOr(or).
 			WithIndex(index).
 			WithSelect(strings.Split(selects, ",")...).
 			WithQuery(svc.Filter(ctx, m), types.QueryConfig{
 				FuzzyMatch: fuzzy,
 				AllowEmpty: true,
+				UseOr:      or,
 				RawQuery:   svc.FilterRaw(ctx),
 			}).
 			WithCursor(cursorValue, cursorNext, cursorFields).
@@ -1381,11 +1381,11 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			if err = handler(types.NewDatabaseContext(c)).
 				// WithPagination(page, size). // NOTE: WithPagination should not apply in Count method.
 				// WithSelect(strings.Split(selects, ",")...). // NOTE: WithSelect should not apply in Count method.
-				WithOr(or).
 				WithIndex(index).
 				WithQuery(svc.Filter(ctx, m), types.QueryConfig{
 					FuzzyMatch: fuzzy,
 					AllowEmpty: true,
+					UseOr:      or,
 					RawQuery:   svc.FilterRaw(ctx),
 				}).
 				WithExclude(m.Excludes()).
@@ -2846,12 +2846,12 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if err = handler(types.NewDatabaseContext(c)).
 			// WithPagination(page, size). // 不要使用 WithPagination, 否则 WithLimit 不生效
 			WithLimit(limit).
-			WithOr(or).
 			WithIndex(index).
 			WithSelect(strings.Split(selects, ",")...).
 			WithQuery(svc.Filter(svcCtx, m), types.QueryConfig{
 				FuzzyMatch: fuzzy,
 				AllowEmpty: true,
+				UseOr:      or,
 				RawQuery:   svc.FilterRaw(svcCtx),
 			}).
 			WithExclude(m.Excludes()).

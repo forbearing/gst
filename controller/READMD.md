@@ -744,11 +744,7 @@ type User struct {
 > `Database equivalent`
 >
 > ```go
-> database.Database[*model.User]().WithAnd().WithQuery(&model.User{
->   Name:  util.ValueOf("user01"),
->   Email: util.ValueOf("user02@gmail.com"),
-> })
-> // Or
+> // By default, query conditions are combined using AND logic
 > database.Database[*model.User]().WithQuery(&model.User{
 >   Name:  util.ValueOf("user01"),
 >   Email: util.ValueOf("user02@gmail.com"),
@@ -796,9 +792,12 @@ type User struct {
 > `Database equivalent`
 >
 > ```go
-> database.Database[*model.User]().WithOr().WithQuery(&model.User{
+> // Use OR mode to combine query conditions
+> database.Database[*model.User]().WithQuery(&model.User{
 >   Name:  util.ValueOf("user01"),
 >   Email: util.ValueOf("user02@gmail.com"),
+> }, types.QueryConfig{
+>   UseOr: true,
 > })
 > ```
 
