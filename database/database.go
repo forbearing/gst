@@ -282,6 +282,12 @@ func (db *database[M]) WithDebug() types.Database[M] {
 //	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
 //	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
 //
+// IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
+// They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
+// or Delete methods will result in SQL syntax errors.
+//
+// Note: Index hints are only supported by MySQL. For SQLite, PostgreSQL, and other databases,
+// this method will log a warning and return without applying the hint.
 // Empty or whitespace-only index names are ignored.
 func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode) types.Database[M] {
 	db.mu.Lock()
@@ -290,6 +296,24 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 	// Trim whitespace from the index name
 	indexName = strings.TrimSpace(indexName)
 	if len(indexName) == 0 {
+		return db
+	}
+
+	// Check if database supports index hints (only MySQL supports them)
+	// SQLite, PostgreSQL, and other databases don't support index hints
+	if db.ins == nil {
+		return db
+	}
+
+	// Get database driver name to check if it's MySQL
+	driverName := db.ins.Name()
+	if driverName != "mysql" {
+		// Index hints are only supported by MySQL
+		// For other databases (SQLite, PostgreSQL, etc.), log a warning and skip
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithIndex")).Warnf(
+			"index hints are not supported by %s database, skipping index hint for: %s",
+			driverName, indexName,
+		)
 		return db
 	}
 

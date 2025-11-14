@@ -250,6 +250,10 @@ type DatabaseOption[M Model] interface {
 	//	WithIndex("idx_name", consts.IndexHintUse)      - suggests using the index
 	//	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
 	//	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
+	//
+	// IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
+	// They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
+	// or Delete methods will result in SQL syntax errors.
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
 
 	// WithRollback configures a rollback function for manual transaction control.
