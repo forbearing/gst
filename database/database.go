@@ -406,13 +406,12 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 
 	queryVal := reflect.ValueOf(query)
 	// Handle RawQuery first (works even if query is nil)
+	// When RawQuery is provided, model fields are ignored as per documentation
 	if len(cfg.RawQuery) > 0 {
 		db.ins = db.ins.Where(cfg.RawQuery, cfg.RawQueryArgs...)
-		// If RawQuery is provided and query is nil, we can return early
+		// If RawQuery is provided, ignore model fields and return early
 		// RawQuery alone is sufficient for query conditions
-		if queryVal.IsNil() {
-			return db
-		}
+		return db
 	}
 
 	// Check if query is nil or empty
