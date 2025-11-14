@@ -174,7 +174,15 @@ type Database[M Model] interface {
 // DatabaseOption interface.
 // WithXXX setting database options.
 type DatabaseOption[M Model] interface {
-	// WithDB returns a new database manipulator, only support *gorm.DB.
+	// WithDB sets the underlying GORM database instance for this database manipulator.
+	// Only supports *gorm.DB type. Returns the same instance if invalid input is provided.
+	//
+	// Examples:
+	//
+	//	WithDB(customDB).Create(&user)
+	//	WithDB(customDB).WithTable("users").List(&users)
+	//
+	// NOTE: If WithTable is called, auto migration will be disabled.
 	WithDB(any) Database[M]
 
 	// WithTx returns a new database manipulator with transaction context.
@@ -199,7 +207,14 @@ type DatabaseOption[M Model] interface {
 	//	})
 	WithTx(tx any) Database[M]
 
-	// WithTable multiple custom table, always used with the method `WithDB`.
+	// WithTable sets the table name for database operations, overriding the default table name.
+	// Often used in combination with WithDB method.
+	// NOTE: Calling WithTable disables auto migration. Manual migration is required.
+	//
+	// Examples:
+	//
+	//	WithTable("custom_users").List(&users)
+	//	WithDB(customDB).WithTable("users").Create(&user)
 	WithTable(name string) Database[M]
 
 	// WithDebug enables debug mode for database operations, showing detailed SQL queries and execution info.
