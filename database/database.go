@@ -359,6 +359,11 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 // NOTE: The underlying type must be pointer to struct, otherwise panic will occur.
 // NOTE: Empty query conditions are blocked by default for safety. Use QueryConfig{AllowEmpty: true} to override.
 func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Database[M] {
+	var empty M
+	if reflect.DeepEqual(query, empty) {
+		return db
+	}
+
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
