@@ -58,6 +58,20 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run ./...
 
+      # Install and run modernize analysis
+      - name: Install modernize
+        run: go install golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@v0.38.0
+
+      - name: Run modernize analysis
+        run: modernize ./...
+
+      # Install and run nilness analysis
+      - name: Install nilness
+        run: go install golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness@v0.38.0
+
+      - name: Run nilness analysis
+        run: nilness ./...
+
       # Install and run shadow analysis
       - name: Install shadow
         run: go install golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow@v0.38.0
@@ -65,12 +79,19 @@ jobs:
       - name: Run shadow analysis
         run: shadow ./...
 
-      # Install and run modernize analysis
-      - name: Install modernize
-        run: go install golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@v0.38.0
+      # Install and run lostcancel analysis
+      - name: Install lostcancel
+        run: go install golang.org/x/tools/go/analysis/passes/lostcancel/cmd/lostcancel@v0.38.0
 
-      - name: Run modernize analysis
-        run: modernize ./...
+      - name: Run lostcancel analysis
+        run: lostcancel ./...
+
+      # Install and run stringintconv analysis
+      - name: Install stringintconv
+        run: go install golang.org/x/tools/go/analysis/passes/stringintconv/cmd/stringintconv@v0.38.0
+
+      - name: Run stringintconv analysis
+        run: stringintconv ./...
 
       # Build the current project
       - name: Build project
