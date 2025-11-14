@@ -8,9 +8,11 @@ tool (
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway
 	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
+	golang.org/x/tools/go/analysis/passes/lostcancel/cmd/lostcancel
 	golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize
 	golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness
 	golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
+	golang.org/x/tools/go/analysis/passes/stringintconv/cmd/stringintconv
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )
