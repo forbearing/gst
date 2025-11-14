@@ -343,27 +343,56 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 }
 
 // WithQuery sets query conditions based on the provided model struct fields.
-// It supports exact matching, fuzzy matching (LIKE), range queries, and raw SQL queries.
+// It supports exact matching, fuzzy matching (LIKE/REGEXP), OR/AND logic, and raw SQL queries.
 // Non-zero fields in the model will be used as query conditions.
 //
 // Parameters:
-//   - query: A model instance with fields set as query conditions
-//   - config: Optional QueryConfig to control query behavior (fuzzy matching, empty queries, raw SQL)
+//   - query: A model instance with fields set as query conditions. Can be nil to indicate empty query.
+//     When nil or all fields are zero values, it's treated as an empty query.
+//   - config: Optional QueryConfig to control query behavior (fuzzy matching, empty queries, OR logic, raw SQL)
+//
+// Query Behavior:
+//   - Default: Exact match using IN clause for multiple values (comma-separated), AND logic for multiple fields
+//   - FuzzyMatch: Uses LIKE for single values, REGEXP for multiple values (comma-separated)
+//   - UseOr: Combines multiple field conditions with OR instead of AND
+//   - RawQuery: When provided, model fields are ignored and only RawQuery is used
+//   - AllowEmpty: By default, empty queries (nil or zero value) are blocked for safety
 //
 // Examples:
-//   - WithQuery(&model.JobHistory{JobID: req.ID})
-//   - WithQuery(&model.CronJobHistory{CronJobID: req.ID})
-//   - WithQuery(&model.User{Name: "John"}, types.QueryConfig{FuzzyMatch: true}) // fuzzy matching
-//   - WithQuery(&model.User{}, types.QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}}) // raw SQL
+//
+//	// Exact match (default behavior)
+//	WithQuery(&model.User{Name: "John"})  // WHERE name IN ('John')
+//	WithQuery(&model.User{Name: "John,Jack"})  // WHERE name IN ('John', 'Jack')
+//	WithQuery(&model.User{Name: "John", Age: 18})  // WHERE name IN ('John') AND age IN (18)
+//
+//	// Fuzzy matching
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name LIKE '%John%'
+//	WithQuery(&model.User{Name: "John,Jack"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name REGEXP '.*John.*|.*Jack.*'
+//
+//	// OR logic to combine conditions
+//	WithQuery(&model.User{Name: "John", Email: "john@example.com"}, types.QueryConfig{UseOr: true})
+//	// WHERE name IN ('John') OR email IN ('john@example.com')
+//
+//	// Raw SQL query (model fields are ignored)
+//	WithQuery(&model.User{}, types.QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
+//	WithQuery(nil, types.QueryConfig{RawQuery: "created_at BETWEEN ? AND ?", RawQueryArgs: []any{startDate, endDate}})
+//
+//	// Empty query (requires AllowEmpty: true)
+//	WithQuery(nil, types.QueryConfig{AllowEmpty: true})  // Returns all records
+//	WithQuery(&model.User{}, types.QueryConfig{AllowEmpty: true})  // Returns all records
+//
+//	// Combined options
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{
+//	    FuzzyMatch: true,
+//	    UseOr:      true,
+//	    AllowEmpty: false,
+//	})
 //
 // NOTE: The underlying type must be pointer to struct, otherwise panic will occur.
-// NOTE: Empty query conditions are blocked by default for safety. Use QueryConfig{AllowEmpty: true} to override.
+// NOTE: Empty query conditions (nil or zero value) are blocked by default for safety to prevent
+//
+//	catastrophic data loss (e.g., deleting all records). Use QueryConfig{AllowEmpty: true} to override.
 func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Database[M] {
-	var empty M
-	if reflect.DeepEqual(query, empty) {
-		return db
-	}
-
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
@@ -374,10 +403,34 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 	}
 	// cfg.FuzzyMatch: default false (exact match)
 	// cfg.AllowEmpty: default false (block empty queries for safety)
+
+	queryVal := reflect.ValueOf(query)
+	// Handle RawQuery first (works even if query is nil)
 	if len(cfg.RawQuery) > 0 {
 		db.ins = db.ins.Where(cfg.RawQuery, cfg.RawQueryArgs...)
+		// If RawQuery is provided and query is nil, we can return early
+		// RawQuery alone is sufficient for query conditions
+		if queryVal.IsNil() {
+			return db
+		}
 	}
 
+	// Check if query is nil or empty
+	var empty M
+	if queryVal.IsNil() || reflect.DeepEqual(query, empty) {
+		// Treat nil/empty as empty query
+		// Note: RawQuery is already handled above if provided
+		if !cfg.AllowEmpty {
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Warn("query is nil or empty, adding safety condition to prevent matching all records")
+			db.ins = db.ins.Where("1 = 0")
+			return db
+		}
+		// AllowEmpty=true: allow matching all records
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Info("query is nil or empty but AllowEmpty=true, allowing full table scan")
+		return db
+	}
+
+	// Process non-nil, non-empty query
 	typ := reflect.TypeOf(query).Elem()
 	val := reflect.ValueOf(query).Elem()
 	q := make(map[string]string)
@@ -501,12 +554,14 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 	// 2. Large datasets returned without pagination → performance/memory issues
 	//
 	// Empty Query Examples:
+	//   - WithQuery(nil)                         → nil query
 	//   - WithQuery(&User{})                    → all fields are zero values
 	//   - WithQuery(&User{Name: "", Email: ""}) → all field values are empty strings
 	//   - WithQuery(&KV{Key: ""})               → happens when removed slice is empty
 	//
-	// By default, empty queries are blocked by adding "WHERE 1 = 0" condition.
-	// To allow empty queries, use: WithQuery(&User{}, QueryConfig{AllowEmpty: true})
+	// By default, empty queries (nil or zero value) are blocked by adding "WHERE 1 = 0" condition.
+	// To allow empty queries, use: WithQuery(nil, QueryConfig{AllowEmpty: true}) or
+	//                              WithQuery(&User{}, QueryConfig{AllowEmpty: true})
 	if len(q) == 0 {
 		if !cfg.AllowEmpty {
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Warn("all query fields are empty, adding safety condition to prevent matching all records")

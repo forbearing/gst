@@ -201,8 +201,17 @@ type DatabaseOption[M Model] interface {
 	WithDebug() Database[M]
 
 	// WithQuery sets query conditions based on model struct fields.
-	// Supports exact matching, fuzzy matching, and raw SQL queries via QueryConfig.
+	// Supports exact matching, fuzzy matching (LIKE/REGEXP), OR/AND logic, and raw SQL queries via QueryConfig.
 	// Non-zero fields in the model will be used as query conditions.
+	// Query can be nil to indicate empty query (requires AllowEmpty: true to allow full table scan).
+	//
+	// Examples:
+	//
+	//	WithQuery(&User{Name: "John"})  // Exact match
+	//	WithQuery(&User{Name: "John"}, QueryConfig{FuzzyMatch: true})  // Fuzzy match
+	//	WithQuery(&User{Name: "John", Email: "john@example.com"}, QueryConfig{UseOr: true})  // OR logic
+	//	WithQuery(nil, QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // Raw SQL
+	//	WithQuery(nil, QueryConfig{AllowEmpty: true})  // Empty query (returns all records)
 	WithQuery(query M, config ...QueryConfig) Database[M]
 
 	// WithCursor enables cursor-based pagination.
