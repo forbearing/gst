@@ -349,37 +349,88 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 // Parameters:
 //   - query: A model instance with fields set as query conditions. Can be nil to indicate empty query.
 //     When nil or all fields are zero values, it's treated as an empty query.
+//     Supported field types: string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool, pointer types.
 //   - config: Optional QueryConfig to control query behavior (fuzzy matching, empty queries, OR logic, raw SQL)
 //
 // Query Behavior:
-//   - Default: Exact match using IN clause for multiple values (comma-separated), AND logic for multiple fields
-//   - FuzzyMatch: Uses LIKE for single values, REGEXP for multiple values (comma-separated)
-//   - UseOr: Combines multiple field conditions with OR instead of AND
-//   - RawQuery: When provided, model fields are ignored and only RawQuery is used
-//   - AllowEmpty: By default, empty queries (nil or zero value) are blocked for safety
+//
+//	Exact Match (Default):
+//	- Single value: Uses IN clause with one value (WHERE name IN ('John'))
+//	- Multiple values (comma-separated): Uses IN clause with multiple values (WHERE name IN ('John', 'Jack'))
+//	- Multiple fields: Uses AND logic to combine conditions (WHERE name IN ('John') AND age IN (18))
+//	- Empty strings in comma-separated values are automatically skipped
+//
+//	FuzzyMatch:
+//	- Single value: Uses LIKE pattern (WHERE name LIKE '%John%')
+//	- Multiple values (comma-separated): Uses REGEXP pattern (WHERE name REGEXP '.*John.*|.*Jack.*')
+//	- REGEXP special characters are automatically escaped using regexp.QuoteMeta
+//	- Empty strings in comma-separated values are automatically skipped to prevent matching all records
+//	- Note: REGEXP may not be available in all databases (e.g., SQLite requires extension)
+//
+//	UseOr:
+//	- When true: Combines multiple field conditions with OR instead of AND
+//	- First condition always uses WHERE, subsequent conditions use OR
+//	- Example: WHERE name IN ('John') OR email IN ('john@example.com')
+//	- Works with both exact match and fuzzy match
+//
+//	RawQuery:
+//	- When provided, model fields are completely ignored and only RawQuery is used
+//	- Works even when query is nil
+//	- Supports parameterized queries with RawQueryArgs
+//	- Example: WHERE age > ? AND status = ?
+//
+//	AllowEmpty:
+//	- By default (false): Empty queries are blocked for safety (adds WHERE 1 = 0)
+//	- When true: Allows empty queries to match all records (full table scan)
+//	- Empty query cases: nil, empty struct, all fields are zero values, all field values are empty strings
+//	- Critical: Use with caution, especially for Delete operations
 //
 // Examples:
 //
-//	// Exact match (default behavior)
+//	// Exact match - single field, single value
 //	WithQuery(&model.User{Name: "John"})  // WHERE name IN ('John')
-//	WithQuery(&model.User{Name: "John,Jack"})  // WHERE name IN ('John', 'Jack')
-//	WithQuery(&model.User{Name: "John", Age: 18})  // WHERE name IN ('John') AND age IN (18)
 //
-//	// Fuzzy matching
+//	// Exact match - single field, multiple values (comma-separated)
+//	WithQuery(&model.User{Name: "John,Jack"})  // WHERE name IN ('John', 'Jack')
+//	WithQuery(&model.User{ID: "id1,id2,id3"})  // WHERE id IN ('id1', 'id2', 'id3')
+//
+//	// Exact match - multiple fields (AND logic)
+//	WithQuery(&model.User{Name: "John", Age: 18})  // WHERE name IN ('John') AND age IN (18)
+//	WithQuery(&model.User{Name: "John", Age: 18, Email: "john@example.com"})  // WHERE name IN ('John') AND age IN (18) AND email IN ('john@example.com')
+//
+//	// Fuzzy match - single value (LIKE)
 //	WithQuery(&model.User{Name: "John"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name LIKE '%John%'
+//
+//	// Fuzzy match - multiple values (REGEXP)
 //	WithQuery(&model.User{Name: "John,Jack"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name REGEXP '.*John.*|.*Jack.*'
+//
+//	// Fuzzy match - empty strings in comma-separated values are skipped
+//	WithQuery(&model.User{Name: "John,,Jack"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name REGEXP '.*John.*|.*Jack.*'
 //
 //	// OR logic to combine conditions
 //	WithQuery(&model.User{Name: "John", Email: "john@example.com"}, types.QueryConfig{UseOr: true})
 //	// WHERE name IN ('John') OR email IN ('john@example.com')
 //
+//	// OR logic with fuzzy match
+//	WithQuery(&model.User{Name: "John", Email: "example"}, types.QueryConfig{UseOr: true, FuzzyMatch: true})
+//	// WHERE name LIKE '%John%' OR email LIKE '%example%'
+//
 //	// Raw SQL query (model fields are ignored)
 //	WithQuery(&model.User{}, types.QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
 //	WithQuery(nil, types.QueryConfig{RawQuery: "created_at BETWEEN ? AND ?", RawQueryArgs: []any{startDate, endDate}})
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // Name is ignored
 //
-//	// Empty query (requires AllowEmpty: true)
+//	// Empty query (blocked by default for safety)
+//	WithQuery(nil)  // WHERE 1 = 0 (returns no records)
+//	WithQuery(&model.User{})  // WHERE 1 = 0 (returns no records)
+//	WithQuery(&model.User{Name: "", Email: ""})  // WHERE 1 = 0 (all values are empty)
+//
+//	// Empty query with AllowEmpty=true (returns all records)
 //	WithQuery(nil, types.QueryConfig{AllowEmpty: true})  // Returns all records
 //	WithQuery(&model.User{}, types.QueryConfig{AllowEmpty: true})  // Returns all records
+//
+//	// Query with some empty and some non-empty fields (works normally)
+//	WithQuery(&model.User{Name: "John", Email: ""})  // WHERE name IN ('John') (Email is ignored)
 //
 //	// Combined options
 //	WithQuery(&model.User{Name: "John"}, types.QueryConfig{
@@ -392,6 +443,11 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 // NOTE: Empty query conditions (nil or zero value) are blocked by default for safety to prevent
 //
 //	catastrophic data loss (e.g., deleting all records). Use QueryConfig{AllowEmpty: true} to override.
+//
+// NOTE: When RawQuery is provided, all model fields are ignored regardless of their values.
+// NOTE: REGEXP function may not be available in all databases (e.g., SQLite requires extension).
+//
+//	For SQLite compatibility, consider using FuzzyMatch with single values (LIKE) or RawQuery.
 func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
