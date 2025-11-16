@@ -25,7 +25,8 @@ help:
 	@echo "  help           - Show this help message"
 
 # Run all code quality checks
-check: build format lint vet modernize nilness shadow lostcancel stringintconv
+# Order matches make install tool installation order
+check: build lint format modernize nilness shadow lostcancel stringintconv vet
 	@echo "All checks passed successfully!"
 
 # Build the project
