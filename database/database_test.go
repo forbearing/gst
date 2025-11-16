@@ -301,7 +301,7 @@ func TestDatabaseOperation(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Create(u1))
 
-		// Check the data created in the database.
+		// Test basic UpdateByID - update name field
 		u := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
 		require.NotNil(t, u)
@@ -311,6 +311,7 @@ func TestDatabaseOperation(t *testing.T) {
 		require.Equal(t, u1.Name, u.Name)
 		require.Equal(t, u1.Age, u.Age)
 		require.Equal(t, u1.Email, u.Email)
+		originalUpdatedAt := u.UpdatedAt
 
 		newName := "user1_modified"
 		require.NoError(t, database.Database[*TestUser](nil).UpdateByID(u.ID, "name", newName))
@@ -320,14 +321,48 @@ func TestDatabaseOperation(t *testing.T) {
 		require.NotEmpty(t, u.CreatedAt)
 		require.NotEmpty(t, u.UpdatedAt)
 		require.NotEmpty(t, u.ID)
-		require.Equal(t, newName, u.Name)
-		require.Equal(t, u1.Age, u.Age)
-		require.Equal(t, u1.Email, u.Email)
+		require.Equal(t, newName, u.Name, "name should be updated")
+		require.Equal(t, u1.Age, u.Age, "age should not be changed")
+		require.Equal(t, u1.Email, u.Email, "email should not be changed")
+		require.NotEqual(t, originalUpdatedAt, u.UpdatedAt, "updated_at should be updated")
 
-		// Check empty id, name and value.
-		require.NoError(t, database.Database[*TestUser](nil).UpdateByID("", "", nil))
-		require.NoError(t, database.Database[*TestUser](nil).UpdateByID("", "name", nil))
-		require.NoError(t, database.Database[*TestUser](nil).UpdateByID("id", "", nil))
+		// Test UpdateByID - update age field
+		newAge := 25
+		previousUpdatedAt := u.UpdatedAt
+		require.NoError(t, database.Database[*TestUser](nil).UpdateByID(u.ID, "age", newAge))
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Equal(t, newName, u.Name, "name should not be changed")
+		require.Equal(t, newAge, u.Age, "age should be updated")
+		require.Equal(t, u1.Email, u.Email, "email should not be changed")
+		require.NotEqual(t, previousUpdatedAt, u.UpdatedAt, "updated_at should be updated again")
+
+		// Test UpdateByID - update email field
+		newEmail := "user1_new@example.com"
+		previousUpdatedAt = u.UpdatedAt
+		require.NoError(t, database.Database[*TestUser](nil).UpdateByID(u.ID, "email", newEmail))
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Equal(t, newName, u.Name, "name should not be changed")
+		require.Equal(t, newAge, u.Age, "age should not be changed")
+		require.Equal(t, newEmail, u.Email, "email should be updated")
+		require.NotEqual(t, previousUpdatedAt, u.UpdatedAt, "updated_at should be updated again")
+
+		// Test UpdateByID with non-existent ID - should not return error
+		require.NoError(t, database.Database[*TestUser](nil).UpdateByID("non-existent-id", "name", "test"))
+
+		// Test UpdateByID with empty parameters - should return errors
+		err := database.Database[*TestUser](nil).UpdateByID("", "name", "value")
+		require.Error(t, err, "should return error when id is empty")
+		require.ErrorIs(t, err, database.ErrIDRequired, "error should be ErrIDRequired")
+
+		err = database.Database[*TestUser](nil).UpdateByID("id", "", "value")
+		require.Error(t, err, "should return error when name is empty")
+		require.ErrorIs(t, err, database.ErrEmptyFieldName, "error should be ErrEmptyFieldName")
+
+		err = database.Database[*TestUser](nil).UpdateByID("id", "name", nil)
+		require.Error(t, err, "should return error when value is nil")
+		require.ErrorIs(t, err, database.ErrNilValue, "error should be ErrNilValue")
 	})
 
 	t.Run("List", func(t *testing.T) {
