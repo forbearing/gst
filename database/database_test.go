@@ -391,15 +391,76 @@ func TestDatabaseOperation(t *testing.T) {
 		}()
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+
+		// Test basic Get - should return record by ID
 		u := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
 		require.NotNil(t, u)
 		require.NotEmpty(t, u.CreatedAt)
 		require.NotEmpty(t, u.UpdatedAt)
 		require.NotEmpty(t, u.ID)
+		require.Equal(t, u1.ID, u.ID, "should return u1 by ID")
 		require.Equal(t, u1.Name, u.Name)
 		require.Equal(t, u1.Age, u.Age)
 		require.Equal(t, u1.Email, u.Email)
+
+		// Test Get with different IDs
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u2.ID))
+		require.Equal(t, u2.ID, u.ID, "should return u2 by ID")
+		require.Equal(t, u2.Name, u.Name)
+		require.Equal(t, u2.Age, u.Age)
+		require.Equal(t, u2.Email, u.Email)
+
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u3.ID))
+		require.Equal(t, u3.ID, u.ID, "should return u3 by ID")
+		require.Equal(t, u3.Name, u.Name)
+		require.Equal(t, u3.Age, u.Age)
+		require.Equal(t, u3.Email, u.Email)
+
+		// Test Get with empty ID - should return error
+		u = new(TestUser)
+		err := database.Database[*TestUser](nil).Get(u, "")
+		require.Error(t, err, "should return error when id is empty")
+		require.ErrorIs(t, err, database.ErrIDRequired, "error should be ErrIDRequired")
+
+		// Test Get with non-existent ID - should not return error
+		u = new(TestUser)
+		err = database.Database[*TestUser](nil).Get(u, "non-existent-id")
+		require.NoError(t, err)
+		require.Empty(t, u.ID)
+		require.Empty(t, u.CreatedAt)
+		require.Empty(t, u.UpdatedAt)
+		require.Empty(t, u.Name)
+		require.Empty(t, u.Age)
+		require.Empty(t, u.Email)
+
+		// Test Get after soft delete - should not return soft-deleted records
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID)) // not returns error
+		require.Empty(t, u.ID)
+		require.Empty(t, u.CreatedAt)
+		require.Empty(t, u.UpdatedAt)
+		require.Empty(t, u.Name)
+		require.Empty(t, u.Age)
+		require.Empty(t, u.Email)
+
+		// Test Get multiple times - should be idempotent
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u2.ID))
+		require.Equal(t, u2.ID, u.ID)
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u2.ID))
+		require.Equal(t, u2.ID, u.ID)
+
+		// Test Get with different model types
+		p := new(TestProduct)
+		require.NoError(t, database.Database[*TestProduct](nil).Get(p, "non-existent-id"))
+		require.Empty(t, p.ID)
+		require.Empty(t, p.CreatedAt)
+		require.Empty(t, p.UpdatedAt)
 	})
 
 	t.Run("First", func(t *testing.T) {

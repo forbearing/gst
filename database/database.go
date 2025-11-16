@@ -2513,7 +2513,7 @@ QUERY:
 // Example:
 //
 //	var user User
-//	Get(&user, "user123")  // Get user by ID
+//	Get(&user, "user123").  // Get user by ID
 //	WithExpand("Orders").Get(&user, "user123")  // Get user with orders
 func (db *database[M]) Get(dest M, id string, _cache ...*[]byte) (err error) {
 	if len(id) == 0 {
