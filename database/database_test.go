@@ -458,7 +458,24 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Health", func(t *testing.T) {
+		// Test basic health check - should pass when database is healthy
 		require.NoError(t, database.Database[*TestUser](nil).Health())
+
+		// Test health check multiple times - should be idempotent
+		require.NoError(t, database.Database[*TestUser](nil).Health())
+		require.NoError(t, database.Database[*TestUser](nil).Health())
+
+		// Test health check after database operations - should still pass
+		defer func() {
+			_ = database.Database[*TestUser](nil).Delete(ul...)
+		}()
+		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).Health())
+
+		// Test health check with different model types - should work for all models
+		require.NoError(t, database.Database[*TestProduct](nil).Health())
+		require.NoError(t, database.Database[*TestCategory](nil).Health())
 	})
 }
 
