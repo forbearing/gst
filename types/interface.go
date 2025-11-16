@@ -163,7 +163,15 @@ type Database[M Model] interface {
 	// Health checks the database connectivity and basic operations.
 	// It returns nil if the database is healthy, otherwise returns an error.
 	Health() error
-	// TransactionFunc executes a function within a transaction with automatic rollback on error.
+	// Transaction executes a function within a transaction with automatic context injection.
+	// The transaction database instance is automatically provided to the callback function.
+	// This is the recommended method for single-model transactions as it prevents forgetting WithTx.
+	// If the function returns an error, the transaction is automatically rolled back.
+	// If the function completes successfully, the transaction is committed.
+	Transaction(fn func(txDB Database[M]) error) error
+	// TransactionFunc executes a function within a transaction with manual context management.
+	// Use this method when you need to operate on multiple model types within the same transaction.
+	// You must manually call WithTx(tx) for each database instance to ensure operations are transactional.
 	// If the function returns an error, the transaction is automatically rolled back.
 	// If the function completes successfully, the transaction is committed.
 	TransactionFunc(fn func(tx any) error) error

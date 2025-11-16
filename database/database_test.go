@@ -701,6 +701,123 @@ func TestDatabaseOperation(t *testing.T) {
 		require.Contains(t, err.Error(), "count parameter cannot be nil", "error message should indicate nil pointer issue")
 	})
 
+	t.Run("Transaction", func(t *testing.T) {
+		defer cleanupTestData()
+
+		flag := 0
+		users := make([]*TestUser, 0)
+
+		// Test Transaction - transaction success
+		// Transaction automatically injects txDB, no need for WithTx
+		err := database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+			// No need to call WithTx - txDB already has transaction context
+			return txDB.Create(ul...)
+		})
+		require.NoError(t, err, "transaction should succeed")
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 3, len(users), "should have 3 records after successful transaction")
+
+		// Verify created data integrity
+		var foundU1, foundU2, foundU3 bool
+		for _, u := range users {
+			switch u.ID {
+			case u1.ID:
+				foundU1 = true
+				require.Equal(t, u1.Name, u.Name, "u1 name should match")
+			case u2.ID:
+				foundU2 = true
+				require.Equal(t, u2.Name, u.Name, "u2 name should match")
+			case u3.ID:
+				foundU3 = true
+				require.Equal(t, u3.Name, u.Name, "u3 name should match")
+			}
+		}
+		require.True(t, foundU1 && foundU2 && foundU3, "all users should be found")
+
+		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+
+		// Test Transaction - transaction failed with rollback
+		// Rollback will execute if transaction failed, so resources will not be created
+		err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+			require.NoError(t, txDB.Create(ul...))
+			return errors.New("test error")
+		})
+		require.Error(t, err, "transaction should fail")
+		require.Contains(t, err.Error(), "test error", "error should contain test error message")
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 0, len(users), "should have 0 records after rollback")
+
+		// Test Transaction - multiple operations in transaction
+		err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+			// Create users
+			if err := txDB.Create(u1); err != nil {
+				return err
+			}
+			// Update user in the same transaction
+			u1.Name = "user1_updated"
+			if err := txDB.Update(u1); err != nil {
+				return err
+			}
+			// UpdateByID in the same transaction
+			return txDB.UpdateByID(u1.ID, "age", 25)
+		})
+		require.NoError(t, err, "transaction should succeed")
+
+		// Verify the updates were committed
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Equal(t, "user1_updated", u.Name, "name should be updated")
+		require.Equal(t, 25, u.Age, "age should be updated")
+
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
+
+		// Test Transaction - transaction success with custom rollback function
+		// Rollback function should not execute if transaction succeeds
+		err = database.Database[*TestUser](nil).WithRollback(func() {
+			flag++
+		}).Transaction(func(txDB types.Database[*TestUser]) error {
+			return txDB.Create(ul...)
+		})
+		require.NoError(t, err, "transaction should succeed")
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 3, len(users), "should have 3 records after successful transaction")
+		require.Equal(t, 0, flag, "rollback function should not be called on success")
+
+		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+
+		// Test Transaction - transaction failed with custom rollback function
+		// Rollback function should execute if transaction fails
+		err = database.Database[*TestUser](nil).WithRollback(func() {
+			flag++
+		}).Transaction(func(txDB types.Database[*TestUser]) error {
+			require.NoError(t, txDB.Create(ul...))
+			return errors.New("test error")
+		})
+		require.Error(t, err, "transaction should fail")
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 0, len(users), "should have 0 records after rollback")
+		require.Equal(t, 1, flag, "rollback function should be called on failure")
+
+		// Test Transaction - with query options (WithLock, WithQuery, etc.)
+		flag = 0
+		require.NoError(t, database.Database[*TestUser](nil).Create(u1))
+		err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+			u := new(TestUser)
+			// Test WithLock works in transaction
+			if err := txDB.WithLock(consts.LockUpdate).Get(u, u1.ID); err != nil {
+				return err
+			}
+			u.Name = "locked_update"
+			return txDB.Update(u)
+		})
+		require.NoError(t, err, "transaction with lock should succeed")
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Equal(t, "locked_update", u.Name, "name should be updated")
+
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
+	})
+
 	t.Run("TransactionFunc", func(t *testing.T) {
 		defer cleanupTestData()
 
