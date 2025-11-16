@@ -377,7 +377,7 @@ func (db *database[M]) WithBatchSize(size int) types.Database[M] {
 }
 
 // WithDebug enables debug mode for database operations, showing detailed SQL queries and execution info.
-// This setting has higher priority than config.Server.LogLevel and overrides the default value (false).
+// This setting has higher priority than config.App.Logger.Level and overrides the default value (false).
 func (db *database[M]) WithDebug() types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()

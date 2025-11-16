@@ -226,7 +226,7 @@ type DatabaseOption[M Model] interface {
 	WithTable(name string) Database[M]
 
 	// WithDebug enables debug mode for database operations, showing detailed SQL queries and execution info.
-	// This setting has higher priority than config.Server.LogLevel and overrides the default value (false).
+	// This setting has higher priority than config.App.Logger.Level and overrides the default value (false).
 	// Useful for development, debugging, and query optimization.
 	//
 	// Examples:
