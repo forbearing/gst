@@ -1838,13 +1838,20 @@ func (db *database[M]) WithoutHook() types.Database[M] {
 // Supports batch processing for large datasets using configurable batch sizes.
 //
 // Parameters:
-//   - objs: One or more model instances to create
+//   - objs: One or more model instances to create. Empty objects are automatically filtered out.
+//
+// Behavior:
+//   - Automatically generates ID if empty using SetID()
+//   - Sets created_at and updated_at timestamps to current time
+//   - Supports batch processing for performance
+//   - Clears related cache entries
+//   - Returns nil if no valid objects provided (empty slice or all objects are empty)
 //
 // Returns error if validation fails, database constraints are violated, or hooks return errors.
 //
 // Example:
 //
-//	Create(&User{Name: "John", Email: "john@example.com"})
+//	Create(&User{Name: "John", Email: "john@example.com"})  // Create single record
 //	Create(user1, user2, user3)  // Batch create multiple records
 func (db *database[M]) Create(_objs ...M) (err error) {
 	defer db.reset()

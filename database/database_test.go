@@ -121,31 +121,41 @@ func TestDatabaseOperation(t *testing.T) {
 	t.Run("Create", func(t *testing.T) {
 		defer cleanupTestData()
 
+		// Test basic Create - single record
 		require.NoError(t, database.Database[*TestUser](nil).Create(u1))
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(1), *count)
+		require.Equal(t, int64(1), *count, "should have 1 record after creating single record")
 
+		// Verify single record was created correctly
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.NotNil(t, u)
+		require.NotEmpty(t, u.ID, "id should not be empty")
+		require.NotEmpty(t, u.CreatedAt, "created_at should not be empty")
+		require.NotEmpty(t, u.UpdatedAt, "updated_at should not be empty")
+		require.Equal(t, u1.Name, u.Name, "name should match")
+		require.Equal(t, u1.Age, u.Age, "age should match")
+		require.Equal(t, u1.Email, u.Email, "email should match")
+
+		// Check the create hook result
+		require.Equal(t, remarkUserCreateBefore, *u1.Remark, "u1 should have create hook result")
+
+		// Test Create - batch create multiple records
+		u1.Remark, u2.Remark, u3.Remark = nil, nil, nil // clear remark to test hook
 		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(3), *count)
+		require.Equal(t, int64(3), *count, "should have 3 records after batch create")
 
-		clearTestData(t)
-		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(0), *count)
+		// Check the create hook results for batch create
+		require.Equal(t, remarkUserCreateBefore, *u1.Remark, "u1 should have create hook result")
+		require.Equal(t, remarkUserCreateBefore, *u2.Remark, "u2 should have create hook result")
+		require.Equal(t, remarkUserCreateBefore, *u3.Remark, "u3 should have create hook result")
 
-		// check the create hook that will effect original data.
-		require.Equal(t, remarkUserCreateBefore, *u1.Remark)
-		require.Equal(t, remarkUserCreateBefore, *u2.Remark)
-		require.Equal(t, remarkUserCreateBefore, *u3.Remark)
-
-		// check the created data is same as the original data.
-		u1.Remark, u2.Remark, u3.Remark = nil, nil, nil
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
-
+		// Verify created data in the database
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "should have 3 records")
 		var u11, u22, u33 *TestUser
 		for _, u := range users {
 			switch u.ID {
@@ -157,34 +167,32 @@ func TestDatabaseOperation(t *testing.T) {
 				u33 = u
 			}
 		}
-		// check the created data is not empty
-		require.NotNil(t, u11)
-		require.NotNil(t, u22)
-		require.NotNil(t, u33)
-		require.NotEmpty(t, u11.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u22.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u33.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u1.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u2.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u3.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u11.ID)        // id should not be empty
-		require.NotEmpty(t, u22.ID)        // id should not be empty
-		require.NotEmpty(t, u33.ID)        // id should not be empty
+		require.NotNil(t, u11, "u1 should be found")
+		require.NotNil(t, u22, "u2 should be found")
+		require.NotNil(t, u33, "u3 should be found")
+		require.NotEmpty(t, u11.CreatedAt, "u1 created_at should not be empty")
+		require.NotEmpty(t, u22.CreatedAt, "u2 created_at should not be empty")
+		require.NotEmpty(t, u33.CreatedAt, "u3 created_at should not be empty")
+		require.NotEmpty(t, u11.UpdatedAt, "u1 updated_at should not be empty")
+		require.NotEmpty(t, u22.UpdatedAt, "u2 updated_at should not be empty")
+		require.NotEmpty(t, u33.UpdatedAt, "u3 updated_at should not be empty")
+		require.NotEmpty(t, u11.ID, "u1 id should not be empty")
+		require.NotEmpty(t, u22.ID, "u2 id should not be empty")
+		require.NotEmpty(t, u33.ID, "u3 id should not be empty")
+		require.Equal(t, u1.Name, u11.Name, "u1 name should match")
+		require.Equal(t, u2.Name, u22.Name, "u2 name should match")
+		require.Equal(t, u3.Name, u33.Name, "u3 name should match")
+		require.Equal(t, u1.Age, u11.Age, "u1 age should match")
+		require.Equal(t, u2.Age, u22.Age, "u2 age should match")
+		require.Equal(t, u3.Age, u33.Age, "u3 age should match")
+		require.Equal(t, u1.Email, u11.Email, "u1 email should match")
+		require.Equal(t, u2.Email, u22.Email, "u2 email should match")
+		require.Equal(t, u3.Email, u33.Email, "u3 email should match")
+		require.Equal(t, u1.IsActive, u11.IsActive, "u1 is_active should match")
+		require.Equal(t, u2.IsActive, u22.IsActive, "u2 is_active should match")
+		require.Equal(t, u3.IsActive, u33.IsActive, "u3 is_active should match")
 
-		require.Equal(t, u1.Name, u11.Name)
-		require.Equal(t, u2.Name, u22.Name)
-		require.Equal(t, u3.Name, u33.Name)
-		require.Equal(t, u1.Age, u11.Age)
-		require.Equal(t, u2.Age, u22.Age)
-		require.Equal(t, u3.Age, u33.Age)
-		require.Equal(t, u1.Email, u11.Email)
-		require.Equal(t, u2.Email, u22.Email)
-		require.Equal(t, u3.Email, u33.Email)
-		require.Equal(t, u1.IsActive, u11.IsActive)
-		require.Equal(t, u2.IsActive, u22.IsActive)
-		require.Equal(t, u3.IsActive, u33.IsActive)
-
-		// Check create empty resources
+		// Test Create with empty resources - should not return error
 		require.NoError(t, database.Database[*TestUser](nil).Create(nil))
 		require.NoError(t, database.Database[*TestUser](nil).Create([]*TestUser{nil, nil, nil}...))
 		require.NoError(t, database.Database[*TestUser](nil).Create([]*TestUser{nil, u1, nil}...))
