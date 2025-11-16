@@ -2796,7 +2796,7 @@ QUERY:
 //
 //	var user User
 //	First(&user)  // Get first user by primary key
-//	WithQuery("status = ?", "active").First(&user)  // Get first active user
+//	WithQuery(&User{Status: "active"}).First(&user)  // Get first active user
 //	WithOrder("created_at DESC").First(&user)  // Get newest user
 func (db *database[M]) First(dest M, _cache ...*[]byte) (err error) {
 	if err = db.prepare(); err != nil {
