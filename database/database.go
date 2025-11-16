@@ -35,6 +35,8 @@ var (
 	ErrNotPtrInt64         = errors.New("not pointer to int64")
 	ErrNilCount            = errors.New("count parameter cannot be nil")
 	ErrNilDest             = errors.New("dest parameter cannot be nil")
+	ErrEmptyFieldName      = errors.New("field name cannot be empty")
+	ErrNilValue            = errors.New("value cannot be nil")
 	ErrNotAddressableModel = errors.New("model is not addressable")
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
@@ -2243,30 +2245,33 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 // Only updates the specified field without triggering validation or business logic.
 //
 // Parameters:
-//   - id: The primary key of the record to update
-//   - name: The field name to update
-//   - value: The new value for the field
+//   - id: The primary key of the record to update. Must not be empty.
+//   - name: The field name to update. Must not be empty.
+//   - value: The new value for the field. Must not be nil.
 //
-// Note: Does not invoke UpdateBefore/UpdateAfter hooks for performance reasons.
+// Behavior:
+//   - Automatically updates the updated_at timestamp
+//   - Does not invoke UpdateBefore/UpdateAfter hooks for performance reasons
+//   - Returns ErrIDRequired if id is empty
+//   - Returns ErrEmptyFieldName if name is empty
+//   - Returns ErrNilValue if value is nil
+//   - Returns nil (no error) if the record with the given ID does not exist
 //
 // Example:
 //
-//	UpdateById("user123", "status", "active")  // Update user status
-//	UpdateById("order456", "amount", 99.99)    // Update order amount
+//	UpdateByID("user123", "status", "active")  // Update user status
+//	UpdateByID("order456", "amount", 99.99)    // Update order amount
 func (db *database[M]) UpdateByID(id string, name string, value any) (err error) {
 	defer db.reset()
 
 	if len(id) == 0 {
-		logger.Database.Warn("empty id")
-		return nil
+		return ErrIDRequired
 	}
 	if len(name) == 0 {
-		logger.Database.Warn("empty name")
-		return nil
+		return ErrEmptyFieldName
 	}
 	if value == nil {
-		logger.Database.Warn("empty value")
-		return nil
+		return ErrNilValue
 	}
 
 	if err = db.prepare(); err != nil {
