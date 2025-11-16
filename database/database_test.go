@@ -193,15 +193,54 @@ func TestDatabaseOperation(t *testing.T) {
 	t.Run("Delete", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
+
+		// Test basic Delete - single record (soft delete)
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(3), *count)
+		require.Equal(t, int64(3), *count, "should have 3 records initially")
 
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count, "should have 2 records after soft delete")
+
+		// Verify soft-deleted record is not visible in List
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 2, len(users), "should have 2 records in List after soft delete")
+		var foundU1 bool
+		for _, u := range users {
+			if u.ID == u1.ID {
+				foundU1 = true
+			}
+		}
+		require.False(t, foundU1, "u1 should not be found in List after soft delete")
+
+		// Verify soft-deleted record is not accessible via Get
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Empty(t, u.ID, "soft-deleted record should not be accessible via Get")
+
+		// Test Delete - batch delete multiple records
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u2, u3))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(0), *count, "should have 0 records after batch soft delete")
+
+		// Verify all records are soft-deleted
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 0, len(users), "should have 0 records in List after all soft deleted")
+
+		// Recreate data for next test
+		setupTestData(t)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after recreate")
+
+		// Test Delete - batch delete with slice
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(0), *count)
+		require.Equal(t, int64(0), *count, "should have 0 records after batch delete with slice")
 
-		// Check delete empty resources
+		// Test Delete with empty resources - should not return error
 		require.NoError(t, database.Database[*TestUser](nil).Delete(nil))
 		require.NoError(t, database.Database[*TestUser](nil).Delete([]*TestUser{nil, nil, nil}...))
 		require.NoError(t, database.Database[*TestUser](nil).Delete([]*TestUser{nil, u1, nil}...))

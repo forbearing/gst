@@ -1987,19 +1987,25 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 // Executes DeleteBefore and DeleteAfter model hooks unless disabled with WithoutHook.
 //
 // Parameters:
-//   - objs: One or more model instances to delete
+//   - objs: One or more model instances to delete. Empty objects are automatically filtered out.
 //
 // Behavior:
-//   - Soft delete: Sets deleted_at field, records remain in database
-//   - Hard delete (with WithPurge): Permanently removes records
+//   - Soft delete (default): Sets deleted_at field, records remain in database but are hidden from normal queries
+//   - Hard delete (with WithPurge): Permanently removes records from database
+//   - Soft-deleted records are automatically excluded from List, Get, First, Last, Count, and other query operations
 //   - Supports batch processing for performance
+//   - Clears related cache entries
+//   - Returns nil if no valid objects provided (empty slice or all objects are empty)
 //
 // Example:
 //
 //	Delete(&user)  // Soft delete by primary key
+//	Delete(user1, user2, user3)  // Batch soft delete multiple records
 //	WithQuery(params).Delete(&User{})  // Delete with conditions
 //	WithPurge().Delete(&user)  // Permanent deletion
 func (db *database[M]) Delete(_objs ...M) (err error) {
+	defer db.reset()
+
 	if len(_objs) == 0 {
 		return nil
 	}
@@ -2018,7 +2024,6 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("Delete", len(objs))
 	defer done(err)
 
