@@ -2951,7 +2951,7 @@ QUERY:
 //
 //	var user User
 //	Last(&user)  // Get last user by primary key
-//	WithQuery("status = ?", "active").Last(&user)  // Get last active user
+//	WithQuery(&User{Status: "active"}).Last(&user)  // Get last active user
 //	WithOrder("created_at ASC").Last(&user)  // Get oldest user (with custom order)
 func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
 	if err = db.prepare(); err != nil {
@@ -2966,7 +2966,7 @@ func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
 	if !db.enableCache {
 		goto QUERY
 	}
-	_, _, key = buildCacheKey(db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)}).First(dest).Statement, "last")
+	_, _, key = buildCacheKey(db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)}).Last(dest).Statement, "last")
 	if _dest, e := cache.Cache[M]().WithContext(ctx).Get(key); e != nil {
 		// metrics.CacheMiss.WithLabelValues("last", db.typ.Name()).Inc()
 		goto QUERY

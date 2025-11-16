@@ -425,15 +425,46 @@ func TestDatabaseOperation(t *testing.T) {
 		}()
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+
+		// Test basic Last - should return last record ordered by primary key
 		u := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).Last(u))
 		require.NotNil(t, u)
 		require.NotEmpty(t, u.CreatedAt)
 		require.NotEmpty(t, u.UpdatedAt)
 		require.NotEmpty(t, u.ID)
-		require.Equal(t, u3.Name, u.Name)
+		require.Equal(t, u3.Name, u.Name, "should return u3 (last record)")
 		require.Equal(t, u3.Age, u.Age)
 		require.Equal(t, u3.Email, u.Email)
+
+		// Test Last with query conditions
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{Name: u2.Name}).Last(u))
+		require.NotNil(t, u)
+		require.Equal(t, u2.Name, u.Name, "should return u2 when querying by name")
+
+		// Test Last after soft delete - should not return soft-deleted records
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u3))
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Last(u))
+		require.NotNil(t, u)
+		require.Equal(t, u2.Name, u.Name, "should return u2 after u3 is soft-deleted")
+
+		// Test Last multiple times - should be idempotent
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Last(u))
+		require.Equal(t, u2.Name, u.Name)
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Last(u))
+		require.Equal(t, u2.Name, u.Name)
+
+		// Test Last with different model types
+		p := new(TestProduct)
+		err := database.Database[*TestProduct](nil).Last(p)
+		// Last may return error if no records exist, which is acceptable
+		if err != nil {
+			require.Contains(t, err.Error(), "record not found", "should return 'record not found' error when no records exist")
+		}
 	})
 
 	t.Run("Count", func(t *testing.T) {
