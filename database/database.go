@@ -33,6 +33,7 @@ var (
 	ErrNotPtrStruct        = errors.New("model is not pointer to structure")
 	ErrNotPtrSlice         = errors.New("not pointer to slice")
 	ErrNotPtrInt64         = errors.New("not pointer to int64")
+	ErrNilCount            = errors.New("count parameter cannot be nil")
 	ErrNotAddressableModel = errors.New("model is not addressable")
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
@@ -2684,11 +2685,15 @@ QUERY:
 // Example:
 //
 //	var total int64
-//	WithQuery("status = ?", "active").Count(&total)  // Count active records
+//	WithQuery(&User{Status: "active"}).Count(&total)  // Count active records
+//	WithQuery(&User{Name: "john"}).Count(&total)      // Count records matching name
 //	WithJoinRaw("LEFT JOIN orders ON users.id = orders.user_id").Count(&total)  // Count with JOIN
 //
-// Note: The underlying type must be pointer to struct, otherwise panic will occur.
+// Note: The count parameter must be a non-nil pointer to int64.
 func (db *database[M]) Count(count *int64) (err error) {
+	if count == nil {
+		return ErrNilCount
+	}
 	if err = db.prepare(); err != nil {
 		return err
 	}
