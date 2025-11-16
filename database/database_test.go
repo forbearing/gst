@@ -30,6 +30,30 @@ var (
 	ul = []*TestUser{u1, u2, u3}
 )
 
+// cleanupTestData deletes test data from database and restores original values of test users.
+// This function should be called in defer to ensure cleanup after each test.
+func cleanupTestData() {
+	_ = database.Database[*TestUser](nil).Delete(ul...)
+	// Restore original values
+	u1 = &TestUser{Name: "user1", Email: "user1@example.com", Age: 18, Base: model.Base{ID: "u1"}}
+	u2 = &TestUser{Name: "user2", Email: "user2@example.com", Age: 19, Base: model.Base{ID: "u2"}}
+	u3 = &TestUser{Name: "user3", Email: "user3@example.com", Age: 20, Base: model.Base{ID: "u3"}}
+	ul = []*TestUser{u1, u2, u3}
+}
+
+// setupTestData deletes existing test data and creates all test users (ul).
+// This is a common setup pattern used in most test cases.
+func setupTestData(t *testing.T) {
+	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+}
+
+// clearTestData deletes existing test data without creating new records.
+// This is used in test cases that need an empty database.
+func clearTestData(t *testing.T) {
+	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+}
+
 type TestUser struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
@@ -95,10 +119,8 @@ func init() {
 
 func TestDatabaseOperation(t *testing.T) {
 	t.Run("Create", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		defer cleanupTestData()
+
 		require.NoError(t, database.Database[*TestUser](nil).Create(u1))
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
@@ -108,7 +130,7 @@ func TestDatabaseOperation(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
 		require.Equal(t, int64(3), *count)
 
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
 		require.Equal(t, int64(0), *count)
 
@@ -169,12 +191,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
 		require.Equal(t, int64(3), *count)
@@ -190,24 +208,54 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Update", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test basic Update - single record
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.NotNil(t, u)
+		require.NotEmpty(t, u.CreatedAt)
+		require.NotEmpty(t, u.UpdatedAt)
+		require.NotEmpty(t, u.ID)
+		require.Equal(t, u1.Name, u.Name)
+		require.Equal(t, u1.Age, u.Age)
+		require.Equal(t, u1.Email, u.Email)
+
+		// Update single record
+		u.Name = "user1_updated"
+		u.Age = 25
+		u.Email = "user1_updated@example.com"
+		require.NoError(t, database.Database[*TestUser](nil).Update(u))
+		u = new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.NotNil(t, u)
+		require.NotEmpty(t, u.CreatedAt)
+		require.NotEmpty(t, u.UpdatedAt)
+		require.NotEmpty(t, u.ID)
+		require.Equal(t, "user1_updated", u.Name, "name should be updated")
+		require.Equal(t, 25, u.Age, "age should be updated")
+		require.Equal(t, "user1_updated@example.com", u.Email, "email should be updated")
+
+		// Test Update - batch update multiple records
+		u1.Name = "user1_batch"
+		u2.Name = "user2_batch"
+		u3.Name = "user3_batch"
+		u1.Remark, u2.Remark, u3.Remark = nil, nil, nil // clear remark to test hook
 		require.NoError(t, database.Database[*TestUser](nil).Update(ul...))
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(3), *count)
+		require.Equal(t, int64(3), *count, "should have 3 records after batch update")
 
-		// check the update hook result.
-		require.Equal(t, remarkUserUpdateBefore, *u1.Remark)
-		require.Equal(t, remarkUserUpdateBefore, *u2.Remark)
-		require.Equal(t, remarkUserUpdateBefore, *u3.Remark)
+		// Check the update hook result
+		require.Equal(t, remarkUserUpdateBefore, *u1.Remark, "u1 should have update hook result")
+		require.Equal(t, remarkUserUpdateBefore, *u2.Remark, "u2 should have update hook result")
+		require.Equal(t, remarkUserUpdateBefore, *u3.Remark, "u3 should have update hook result")
 
-		// check the data upset in the database.
+		// Verify updated data in the database
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "should have 3 records")
 		var u11, u22, u33 *TestUser
 		for _, u := range users {
 			switch u.ID {
@@ -219,88 +267,41 @@ func TestDatabaseOperation(t *testing.T) {
 				u33 = u
 			}
 		}
-		require.NotNil(t, u11)
-		require.NotNil(t, u22)
-		require.NotNil(t, u33)
-		require.NotEmpty(t, u11.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u22.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u33.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u1.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u2.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u3.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u11.ID)        // id should not be empty
-		require.NotEmpty(t, u22.ID)        // id should not be empty
-		require.NotEmpty(t, u33.ID)        // id should not be empty
-		require.Equal(t, u1.Name, u11.Name)
-		require.Equal(t, u2.Name, u22.Name)
-		require.Equal(t, u3.Name, u33.Name)
-		require.Equal(t, u1.Age, u11.Age)
-		require.Equal(t, u2.Age, u22.Age)
-		require.Equal(t, u3.Age, u33.Age)
-		require.Equal(t, u1.Email, u11.Email)
-		require.Equal(t, u2.Email, u22.Email)
-		require.Equal(t, u3.Email, u33.Email)
-		require.Equal(t, u1.IsActive, u11.IsActive)
-		require.Equal(t, u2.IsActive, u22.IsActive)
-		require.Equal(t, u3.IsActive, u33.IsActive)
+		require.NotNil(t, u11, "u1 should be found")
+		require.NotNil(t, u22, "u2 should be found")
+		require.NotNil(t, u33, "u3 should be found")
+		require.NotEmpty(t, u11.CreatedAt, "created_at should not be empty")
+		require.NotEmpty(t, u22.CreatedAt, "created_at should not be empty")
+		require.NotEmpty(t, u33.CreatedAt, "created_at should not be empty")
+		require.NotEmpty(t, u11.UpdatedAt, "updated_at should not be empty")
+		require.NotEmpty(t, u22.UpdatedAt, "updated_at should not be empty")
+		require.NotEmpty(t, u33.UpdatedAt, "updated_at should not be empty")
+		require.NotEmpty(t, u11.ID, "id should not be empty")
+		require.NotEmpty(t, u22.ID, "id should not be empty")
+		require.NotEmpty(t, u33.ID, "id should not be empty")
+		require.Equal(t, u1.Name, u11.Name, "u1 name should match")
+		require.Equal(t, u2.Name, u22.Name, "u2 name should match")
+		require.Equal(t, u3.Name, u33.Name, "u3 name should match")
+		require.Equal(t, u1.Age, u11.Age, "u1 age should match")
+		require.Equal(t, u2.Age, u22.Age, "u2 age should match")
+		require.Equal(t, u3.Age, u33.Age, "u3 age should match")
+		require.Equal(t, u1.Email, u11.Email, "u1 email should match")
+		require.Equal(t, u2.Email, u22.Email, "u2 email should match")
+		require.Equal(t, u3.Email, u33.Email, "u3 email should match")
+		require.Equal(t, u1.IsActive, u11.IsActive, "u1 is_active should match")
+		require.Equal(t, u2.IsActive, u22.IsActive, "u2 is_active should match")
+		require.Equal(t, u3.IsActive, u33.IsActive, "u3 is_active should match")
 
-		// check the data upset in the database again.
-		require.NoError(t, database.Database[*TestUser](nil).Update(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(3), *count)
-
-		users = make([]*TestUser, 0)
-		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
-		u11, u22, u33 = nil, nil, nil
-		for _, u := range users {
-			switch u.ID {
-			case u1.ID:
-				u11 = u
-			case u2.ID:
-				u22 = u
-			case u3.ID:
-				u33 = u
-			}
-		}
-		require.NotNil(t, u11)
-		require.NotNil(t, u22)
-		require.NotNil(t, u33)
-		require.NotEmpty(t, u11.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u22.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u33.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u1.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u2.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u3.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u11.ID)        // id should not be empty
-		require.NotEmpty(t, u22.ID)        // id should not be empty
-		require.NotEmpty(t, u33.ID)        // id should not be empty
-		require.Equal(t, u1.Name, u11.Name)
-		require.Equal(t, u2.Name, u22.Name)
-		require.Equal(t, u3.Name, u33.Name)
-		require.Equal(t, u1.Age, u11.Age)
-		require.Equal(t, u2.Age, u22.Age)
-		require.Equal(t, u3.Age, u33.Age)
-		require.Equal(t, u1.Email, u11.Email)
-		require.Equal(t, u2.Email, u22.Email)
-		require.Equal(t, u3.Email, u33.Email)
-		require.Equal(t, u1.IsActive, u11.IsActive)
-		require.Equal(t, u2.IsActive, u22.IsActive)
-		require.Equal(t, u3.IsActive, u33.IsActive)
-
-		// Check update empty resources.
+		// Test Update with empty resources - should not return error
 		require.NoError(t, database.Database[*TestUser](nil).Update(nil))
 		require.NoError(t, database.Database[*TestUser](nil).Update([]*TestUser{nil, nil, nil}...))
 		require.NoError(t, database.Database[*TestUser](nil).Update([]*TestUser{nil, u1, nil}...))
 	})
 
 	t.Run("UpdateByID", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(u1))
+		defer cleanupTestData()
 
+		require.NoError(t, database.Database[*TestUser](nil).Create(u1))
 		// Test basic UpdateByID - update name field
 		u := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
@@ -366,11 +367,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("List", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		// Test basic List - should return all records
 		users := make([]*TestUser, 0)
@@ -427,7 +425,7 @@ func TestDatabaseOperation(t *testing.T) {
 		require.Equal(t, 2, len(users), "should have 2 records after soft delete")
 
 		// Test List with empty result - should overwrite existing slice
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 		users = make([]*TestUser, 0)
 		users = append(users, u1, u2, u3) // Pre-populate with data
 		require.Equal(t, 3, len(users), "slice should have 3 items before List")
@@ -455,11 +453,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		// Test basic Get - should return record by ID
 		u := new(TestUser)
@@ -533,11 +528,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("First", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		// Test basic First - should return first record ordered by primary key
 		u := new(TestUser)
@@ -581,11 +573,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Last", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		// Test basic Last - should return last record ordered by primary key
 		u := new(TestUser)
@@ -629,11 +618,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Count", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		// Test basic count - should return total number of records
 		count := new(int64)
@@ -675,11 +661,8 @@ func TestDatabaseOperation(t *testing.T) {
 	})
 
 	t.Run("Cleanup", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		// Verify initial count - should have 3 records
 		count := new(int64)
@@ -739,11 +722,8 @@ func TestDatabaseOperation(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).Health())
 
 		// Test health check after database operations - should still pass
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 		require.NoError(t, database.Database[*TestUser](nil).Health())
 
 		// Test health check with different model types - should work for all models
@@ -759,10 +739,10 @@ func TestDatabaseOptions(t *testing.T) {
 		defer func() {
 			_ = os.Remove(path2)
 			_ = os.Remove(path3)
-			_ = database.Database[*TestUser](nil).Delete(ul...)
+			cleanupTestData()
 		}()
 
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
@@ -838,7 +818,7 @@ func TestDatabaseOptions(t *testing.T) {
 		require.Equal(t, 3, len(users), "db3 should have 3 users")
 
 		// Delete resources in default db
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
 		require.Equal(t, 0, len(users))
 		require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
@@ -957,10 +937,10 @@ func TestDatabaseOptions(t *testing.T) {
 
 	t.Run("WithTx", func(t *testing.T) {
 		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
+			cleanupTestData()
 			_ = database.Database[*TestProduct](nil).Delete()
 		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 
 		// Transaction success - Create operation
 		err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
@@ -1022,7 +1002,7 @@ func TestDatabaseOptions(t *testing.T) {
 		}))
 
 		// Transaction failed - rollback on error
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 		err = database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
 			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(ul...))
 			return errors.New("custom error")
@@ -1046,10 +1026,8 @@ func TestDatabaseOptions(t *testing.T) {
 	})
 
 	t.Run("WithBatchSize", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		defer cleanupTestData()
+		clearTestData(t)
 
 		require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(ul...))
 		users := make([]*TestUser, 0)
@@ -1062,10 +1040,8 @@ func TestDatabaseOptions(t *testing.T) {
 	})
 
 	t.Run("WithDebug", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		defer cleanupTestData()
+		clearTestData(t)
 
 		require.NoError(t, database.Database[*TestUser](nil).WithDebug().Create(ul...))
 		users := make([]*TestUser, 0)
@@ -1078,11 +1054,8 @@ func TestDatabaseOptions(t *testing.T) {
 	})
 
 	t.Run("WithIndex", func(t *testing.T) {
-		defer func() {
-			_ = database.Database[*TestUser](nil).Delete(ul...)
-		}()
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		defer cleanupTestData()
+		setupTestData(t)
 
 		existsIndex := "idx_test_users_created_by" // index auto created when database migration.
 		notExistsIndex := "not_exists_index"
@@ -1173,7 +1146,7 @@ func TestDatabaseOptions(t *testing.T) {
 		_ = err
 
 		// Test WithIndex with empty result set
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		clearTestData(t)
 		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithIndex(existsIndex).List(&users))
 		require.Equal(t, 0, len(users), "should return empty result when no records exist")
@@ -1208,11 +1181,8 @@ func TestDatabaseOptions(t *testing.T) {
 
 	t.Run("WithQuery", func(t *testing.T) {
 		t.Run("ExactMatch", func(t *testing.T) {
-			defer func() {
-				_ = database.Database[*TestUser](nil).Delete(ul...)
-			}()
-			require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			defer cleanupTestData()
+			setupTestData(t)
 			users := make([]*TestUser, 0)
 
 			// Test exact match by Name field: query each user by name
@@ -1357,11 +1327,8 @@ func TestDatabaseOptions(t *testing.T) {
 
 		t.Run("MultipleValues", func(t *testing.T) {
 			t.Run("multiple_id", func(t *testing.T) {
-				defer func() {
-					_ = database.Database[*TestUser](nil).Delete(ul...)
-				}()
-				require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-				require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+				defer cleanupTestData()
+				setupTestData(t)
 				users := make([]*TestUser, 0)
 
 				// Test multiple IDs with comma-separated values: ID="u1,u2"
@@ -1453,11 +1420,8 @@ func TestDatabaseOptions(t *testing.T) {
 			})
 
 			t.Run("multiple_name", func(t *testing.T) {
-				defer func() {
-					_ = database.Database[*TestUser](nil).Delete(ul...)
-				}()
-				require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-				require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+				defer cleanupTestData()
+				setupTestData(t)
 				users := make([]*TestUser, 0)
 
 				// Test multiple names with comma-separated values: Name="user2,user3"
@@ -1546,11 +1510,8 @@ func TestDatabaseOptions(t *testing.T) {
 			})
 
 			t.Run("multiple_email", func(t *testing.T) {
-				defer func() {
-					_ = database.Database[*TestUser](nil).Delete(ul...)
-				}()
-				require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-				require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+				defer cleanupTestData()
+				setupTestData(t)
 				users := make([]*TestUser, 0)
 
 				// Test multiple emails with comma-separated values: Email="user1@example.com,user2@example.com"
@@ -1611,11 +1572,8 @@ func TestDatabaseOptions(t *testing.T) {
 			})
 
 			t.Run("multiple_fields", func(t *testing.T) {
-				defer func() {
-					_ = database.Database[*TestUser](nil).Delete(ul...)
-				}()
-				require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-				require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+				defer cleanupTestData()
+				setupTestData(t)
 				users := make([]*TestUser, 0)
 
 				// Test multiple fields with comma-separated values: Name="user1,user2" AND Email="user1@example.com,user2@example.com"
@@ -1646,11 +1604,8 @@ func TestDatabaseOptions(t *testing.T) {
 		})
 
 		t.Run("FuzzyMatch", func(t *testing.T) {
-			defer func() {
-				_ = database.Database[*TestUser](nil).Delete(ul...)
-			}()
-			require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			defer cleanupTestData()
+			setupTestData(t)
 			users := make([]*TestUser, 0)
 
 			// Test FuzzyMatch=false (default, exact match): should return 0 records for partial match
@@ -2058,11 +2013,8 @@ func TestDatabaseOptions(t *testing.T) {
 		})
 
 		t.Run("AllowEmpty", func(t *testing.T) {
-			defer func() {
-				_ = database.Database[*TestUser](nil).Delete(ul...)
-			}()
-			require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			defer cleanupTestData()
+			setupTestData(t)
 			users := make([]*TestUser, 0)
 
 			// Test nil query without AllowEmpty (should return no records, blocked for safety)
@@ -2206,11 +2158,8 @@ func TestDatabaseOptions(t *testing.T) {
 		})
 
 		t.Run("UseOr", func(t *testing.T) {
-			defer func() {
-				_ = database.Database[*TestUser](nil).Delete(ul...)
-			}()
-			require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			defer cleanupTestData()
+			setupTestData(t)
 			users := make([]*TestUser, 0)
 
 			// Test UseOr=false (default, AND logic): query with multiple fields should return records matching ALL conditions
@@ -2333,11 +2282,8 @@ func TestDatabaseOptions(t *testing.T) {
 		})
 
 		t.Run("RawQuery", func(t *testing.T) {
-			defer func() {
-				_ = database.Database[*TestUser](nil).Delete(ul...)
-			}()
-			require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			defer cleanupTestData()
+			setupTestData(t)
 			users := make([]*TestUser, 0)
 
 			// Test RawQuery with nil query: age > 18

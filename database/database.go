@@ -2124,13 +2124,17 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 // Uses GORM's Save method which performs INSERT or UPDATE based on primary key existence.
 //
 // Parameters:
-//   - objs: One or more model instances to update
+//   - objs: One or more model instances to update. Empty objects are automatically filtered out.
 //
 // Behavior:
-//   - Sets ID if empty before updating
+//   - If ID is empty: Generates a new ID and creates a new record (INSERT)
+//   - If ID is not empty: Updates the existing record (UPDATE)
+//   - Automatically updates the updated_at timestamp
+//   - Preserves created_at timestamp (not modified during update)
 //   - Updates all fields of the model
 //   - Supports batch processing for performance
 //   - Clears related cache entries
+//   - Returns nil if no valid objects provided (empty slice or all objects are empty)
 //
 // Example:
 //
