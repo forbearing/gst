@@ -763,9 +763,8 @@ func TestDatabaseOperation(t *testing.T) {
 
 		// Test TransactionFunc - transaction success with custom rollback function
 		// Rollback function should not execute if transaction succeeds
-		err = database.Database[*TestUser](nil).WithRollback(func() error {
+		err = database.Database[*TestUser](nil).WithRollback(func() {
 			flag++
-			return nil
 		}).TransactionFunc(func(tx any) error {
 			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(ul...))
 			return nil
@@ -779,9 +778,8 @@ func TestDatabaseOperation(t *testing.T) {
 
 		// Test TransactionFunc - transaction failed with custom rollback function
 		// Rollback function should execute if transaction fails
-		err = database.Database[*TestUser](nil).WithRollback(func() error {
+		err = database.Database[*TestUser](nil).WithRollback(func() {
 			flag++
-			return nil
 		}).TransactionFunc(func(tx any) error {
 			require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(ul...))
 			return errors.New("test error")

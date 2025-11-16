@@ -88,7 +88,7 @@ type database[M types.Model] struct {
 	enableCursor bool   // enable cursor pagination
 
 	// rollback control
-	rollbackFunc func() error // rollback function for manual transaction control
+	rollbackFunc func() // rollback function for manual transaction control
 
 	shouldAutoMigrate *bool
 }
@@ -1189,36 +1189,25 @@ func (db *database[M]) WithSelectRaw(query any, args ...any) types.Database[M] {
 	return db
 }
 
-// WithRollback sets a rollback function for manual transaction control.
-// This method is used with TransactionFunc to enable manual rollback control.
-// To trigger a manual rollback, call the rollback function directly and return ErrManualRollback.
+// WithRollback sets a rollback callback function that will be executed when a transaction fails.
+// This method is used with TransactionFunc to enable custom rollback logic (e.g., cleaning up external resources).
+// The rollback function is only called when the transaction fails (returns an error).
+// The rollback function does not return an error - any errors should be handled internally (e.g., logged).
 //
 // Example:
 //
-//	var rollbackFunc func() error
-//	err := db.WithRollback(func() error {
-//	    // custom rollback logic
-//	    return nil
+//	err := db.WithRollback(func() {
+//	    // Custom rollback logic (e.g., cleanup external resources, send notifications)
+//	    // This function is called automatically when transaction fails
+//	    // Handle any errors internally (e.g., log them)
 //	}).TransactionFunc(func(tx any) error {
 //	    userDB := database.Database[*model.User](nil)
-//	    // Get the rollback function from the transaction context
-//	    if txDB, ok := userDB.WithTx(tx).(*database[*model.User]); ok && txDB.rollbackFunc != nil {
-//	        rollbackFunc = txDB.rollbackFunc
-//	    }
-//
 //	    if err := userDB.WithTx(tx).Create(&user); err != nil {
-//	        return err // automatic rollback
+//	        return err // automatic rollback, rollback function will be called
 //	    }
-//
-//	    if someCondition {
-//	        if rollbackFunc != nil {
-//	            rollbackFunc() // execute custom rollback logic
-//	        }
-//	        return ErrManualRollback // trigger transaction rollback
-//	    }
-//	    return nil // automatic commit
+//	    return nil // automatic commit, rollback function will NOT be called
 //	})
-func (db *database[M]) WithRollback(rollbackFunc func() error) types.Database[M] {
+func (db *database[M]) WithRollback(rollbackFunc func()) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	db.rollbackFunc = rollbackFunc
@@ -3448,30 +3437,18 @@ func (db *database[M]) Health() error {
 //	    return nil // automatic commit
 //	})
 //
-// Example with manual rollback control:
+// Example with custom rollback callback:
 //
-//	var rollbackFunc func() error
-//	err := db.WithRollback(func() error {
-//	    // custom rollback logic
-//	    return nil
+//	err := db.WithRollback(func() {
+//	    // Custom rollback logic (e.g., cleanup external resources, send notifications)
+//	    // This function is called automatically when transaction fails
+//	    // Handle any errors internally (e.g., log them)
 //	}).TransactionFunc(func(tx any) error {
 //	    userDB := database.Database[*model.User](nil)
-//	    // Get the rollback function from the transaction context
-//	    if txDB, ok := userDB.WithTx(tx).(*database[*model.User]); ok && txDB.rollbackFunc != nil {
-//	        rollbackFunc = txDB.rollbackFunc
-//	    }
-//
 //	    if err := userDB.WithTx(tx).Create(&user); err != nil {
-//	        return err // automatic rollback
+//	        return err // automatic rollback, rollback function will be called
 //	    }
-//
-//	    if someCondition {
-//	        if rollbackFunc != nil {
-//	            rollbackFunc() // execute custom rollback logic
-//	        }
-//	        return ErrManualRollback // trigger transaction rollback
-//	    }
-//	    return nil // automatic commit
+//	    return nil // automatic commit, rollback function will NOT be called
 //	})
 func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 	defer db.reset()
@@ -3487,12 +3464,7 @@ func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 		if err := fn(tx); err != nil {
 			// Execute custom rollback logic if provided
 			if db.rollbackFunc != nil {
-				if rollbackErr := db.rollbackFunc(); rollbackErr != nil {
-					logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("custom rollback function failed",
-						zap.Error(rollbackErr),
-						zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
-					)
-				}
+				db.rollbackFunc()
 			}
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("transaction rolled back due to error",
 				zap.Error(err),

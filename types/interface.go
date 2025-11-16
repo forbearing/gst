@@ -315,7 +315,7 @@ type DatabaseOption[M Model] interface {
 
 	// WithRollback configures a rollback function for manual transaction control.
 	// This method should be used with TransactionFunc to enable manual rollback capability.
-	WithRollback(rollbackFunc func() error) Database[M]
+	WithRollback(rollbackFunc func()) Database[M]
 
 	// WithJoinRaw
 	WithJoinRaw(query string, args ...any) Database[M]
