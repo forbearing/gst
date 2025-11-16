@@ -33,12 +33,19 @@ var (
 	ErrNotPtrStruct        = errors.New("model is not pointer to structure")
 	ErrNotPtrSlice         = errors.New("not pointer to slice")
 	ErrNotPtrInt64         = errors.New("not pointer to int64")
+	ErrNilCount            = errors.New("count parameter cannot be nil")
 	ErrNotAddressableModel = errors.New("model is not addressable")
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
 	ErrIDRequired          = errors.New("id is required")
 	ErrManualRollback      = errors.New("manual rollback requested")
 )
+
+// migratedModelMap records the model already migrated to
+// avoid duplicate migration and improve performance.
+// Key is "dbIdentifier:modelType", value is "struct{}{}".
+// dbIdentifier is the unique identifier of the database instance (e.g., pointer address of the underlying database connection).
+var migratedModelMap sync.Map
 
 var (
 	DB *gorm.DB
@@ -70,8 +77,7 @@ type database[M types.Model] struct {
 	tableName   string // support multiple custom table name, always used with the `WithDB` method.
 	batchSize   int    // batch size for bulk operations. affects Create, Update, Delete.
 	noHook      bool   // disable model hook.
-	orQuery     bool   // or query
-	tryRun      bool   // try run
+	dryRun      bool   // dry run mode, preview SQL without executing
 
 	// cursor pagination
 	cursorField  string // field used for cursor pagination, default is "id"
@@ -82,7 +88,7 @@ type database[M types.Model] struct {
 	// rollback control
 	rollbackFunc func() error // rollback function for manual transaction control
 
-	shouldAutoMigrate bool
+	shouldAutoMigrate *bool
 }
 
 // reset resets the database instance to its initial state by clearing all query conditions,
@@ -97,9 +103,8 @@ func (db *database[M]) reset() {
 	db.tableName = ""
 	db.batchSize = 0
 	db.noHook = false
-	db.orQuery = false
-	db.shouldAutoMigrate = false
-	db.tryRun = false
+	db.shouldAutoMigrate = nil
+	db.dryRun = false
 
 	// reset cursor pagination fields
 	db.cursorField = ""
@@ -117,7 +122,7 @@ func (db *database[M]) prepare() error {
 	if db.ins == nil || db.ins == new(gorm.DB) {
 		return ErrInvalidDB
 	}
-	if db.shouldAutoMigrate {
+	if db.shouldAutoMigrate != nil && *db.shouldAutoMigrate {
 		if err := db.ins.AutoMigrate(new(M)); err != nil {
 			return err
 		}
@@ -140,8 +145,32 @@ func (db *database[M]) prepare() error {
 
 // WithDB sets the underlying GORM database instance for this database manipulator.
 // This allows switching between different database connections or configurations.
-// Only supports *gorm.DB type. Returns the same instance if invalid input is provided.
-// Example: database.Database[*model.MeetingRoom]().WithDB(mysql.Software).WithTable("meeting_rooms").List(&rooms)
+//
+// Parameters:
+//   - x: The GORM database instance (*gorm.DB). If nil or invalid, returns the original instance.
+//
+// Behavior:
+//   - Enables auto migration for the specified database (unless WithTable was called)
+//   - Supports multiple database instances with automatic migration tracking
+//   - Preserves context from the original database instance
+//
+// Examples:
+//
+//	// Use custom database instance
+//	customDB := sqlite.New(config.Sqlite{...})
+//	database.Database[*model.User](nil).WithDB(customDB).Create(&user)
+//
+//	// Combined with WithTable
+//	database.Database[*model.User](nil).WithDB(customDB).WithTable("users").List(&users)
+//
+//	// Multiple database instances
+//	db1 := sqlite.New(config.Sqlite{Path: "/tmp/db1.db"})
+//	db2 := sqlite.New(config.Sqlite{Path: "/tmp/db2.db"})
+//	database.Database[*model.User](nil).WithDB(db1).Create(&user1)
+//	database.Database[*model.User](nil).WithDB(db2).Create(&user2)
+//
+// NOTE: If WithTable is called, auto migration will be disabled.
+// NOTE: Invalid database type (not *gorm.DB) will log a warning and return the original instance.
 func (db *database[M]) WithDB(x any) types.Database[M] {
 	var empty *gorm.DB
 	if x == nil || x == new(gorm.DB) || x == empty {
@@ -169,7 +198,19 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 			ctx = db.ctx.Context()
 		}
 	}
-	// db.shouldAutoMigrate = true
+	// If "db.shouldAutoMigrate" is not nil, it means the database options `WithTable` was called.
+	// If called `WithTable`, "auto migration" must be disabled.
+	if db.shouldAutoMigrate == nil {
+		// Use database identifier + model type as key to support multiple database instances
+		dbIdentifier := getDBIdentifier(_db)
+		modelType := reflect.TypeFor[M]().String()
+		migrationKey := fmt.Sprintf("%s:%s", dbIdentifier, modelType)
+		if _, loaded := migratedModelMap.LoadOrStore(migrationKey, struct{}{}); !loaded {
+			flag := new(bool)
+			*flag = true
+			db.shouldAutoMigrate = flag
+		}
+	}
 	if strings.ToLower(config.App.Logger.Level) == "debug" {
 		db.ins = _db.WithContext(ctx).Debug().Limit(defaultLimit)
 	} else {
@@ -178,13 +219,64 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 	return db
 }
 
+// WithTable sets the table name for database operations, overriding the default table name
+// derived from the model type. This is useful for working with custom table names or views.
+//
+// Parameters:
+//   - name: The custom table name to use. Overrides the model's GetTableName() result.
+//
+// Behavior:
+//   - Disables auto migration when called (requires manual migration)
+//   - Overrides the default table name for all subsequent operations
+//   - Often used in combination with WithDB to work with custom databases and tables
+//
+// Examples:
+//
+//	// Use custom table name
+//	database.Database[*model.User](nil).WithTable("custom_users").List(&users)
+//
+//	// Combined with WithDB
+//	customDB := sqlite.New(config.Sqlite{...})
+//	require.NoError(t, customDB.AutoMigrate(&model.User{})) // Manual migration required
+//	database.Database[*model.User](nil).WithDB(customDB).WithTable("users").Create(&user)
+//
+//	// Chainable with other methods
+//	database.Database[*model.User](nil).
+//	    WithDB(customDB).
+//	    WithTable("users").
+//	    WithQuery(&model.User{Name: "John"}).
+//	    List(&users)
+//
+// NOTE: Calling WithTable disables auto migration. You must manually migrate the table.
+// NOTE: The table must exist in the database before performing operations.
+func (db *database[M]) WithTable(name string) types.Database[M] {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	db.shouldAutoMigrate = new(bool)
+	db.tableName = name
+	return db
+}
+
 // WithTx returns a new database manipulator with transaction context.
 // This method allows using an existing transaction to operate on multiple resource types.
-// The tx parameter should be a *gorm.DB transaction instance or any compatible transaction type.
-// Example:
+// The tx parameter should be a *gorm.DB transaction instance obtained from TransactionFunc.
 //
+// Parameters:
+//   - tx: The transaction instance (*gorm.DB) from TransactionFunc callback.
+//     If nil or invalid, logs a warning and returns the original database instance.
+//
+// Supports all CRUD operations and can be chained with other methods.
+//
+// Examples:
+//
+//	// Single resource type transaction
 //	database.Database[*User](nil).TransactionFunc(func(tx any) error {
-//	    // Use the same transaction for different resource types
+//	    return database.Database[*User](nil).WithTx(tx).Create(&user)
+//	})
+//
+//	// Multiple resource types in the same transaction
+//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
 //	    if err := database.Database[*User](nil).WithTx(tx).Create(&user); err != nil {
 //	        return err
 //	    }
@@ -193,6 +285,20 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 //	    }
 //	    return nil
 //	})
+//
+//	// Chainable with other methods
+//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
+//	    return database.Database[*User](nil).
+//	        WithTx(tx).
+//	        WithQuery(&User{Name: "John"}).
+//	        Update(&user)
+//	})
+//
+// NOTE: WithTx must be used within a TransactionFunc callback. The transaction is automatically
+//
+//	committed when the callback returns nil, or rolled back when it returns an error.
+//
+// NOTE: Invalid tx parameter (nil or wrong type) will log a warning and skip transaction context.
 func (db *database[M]) WithTx(tx any) types.Database[M] {
 	var empty *gorm.DB
 	if tx == nil || tx == new(gorm.DB) || tx == empty {
@@ -219,20 +325,46 @@ func (db *database[M]) WithTx(tx any) types.Database[M] {
 	return db
 }
 
-// WithTable sets the table name for database operations, overriding the default table name
-// derived from the model type. This is useful for working with custom table names or views.
-// Often used in combination with WithDB method.
-// Example: database.Database[*model.MeetingRoom]().WithDB(mysql.Software).WithTable("meeting_rooms").List(&rooms)
-func (db *database[M]) WithTable(name string) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.tableName = name
-	return db
-}
-
 // WithBatchSize sets the batch size for batch operations such as batch insert, update, or delete.
-// A larger batch size can improve performance but may consume more memory.
-// Affects Create, Update, and Delete operations.
+// Controls how many records are processed in a single database operation to optimize performance.
+//
+// Parameters:
+//   - size: The number of records to process per batch. Must be greater than 0.
+//     If set to 0 or not called, uses default batch sizes:
+//   - Create/Update: 1000 records per batch
+//   - Delete: 10000 records per batch
+//
+// Affected Operations:
+//   - Create: Batch inserts records in chunks of the specified size
+//   - Update: Batch updates records in chunks of the specified size
+//   - Delete: Batch deletes records in chunks of the specified size
+//     Note: Delete operations use a separate default (10000) if size is not set
+//
+// Performance Considerations:
+//   - Larger batch sizes improve performance by reducing database round trips
+//   - However, larger batches consume more memory and may hit database limits
+//   - Recommended range: 100-5000 for most use cases
+//   - Very large batches (>10000) may cause memory issues or exceed database limits
+//
+// Examples:
+//
+//	// Set batch size for Create operation
+//	database.Database[*model.User](nil).WithBatchSize(1000).Create(users...)
+//
+//	// Set batch size for Update operation
+//	database.Database[*model.User](nil).WithBatchSize(500).Update(users...)
+//
+//	// Set batch size for Delete operation
+//	database.Database[*model.User](nil).WithBatchSize(2000).Delete(users...)
+//
+//	// Combined with other methods
+//	database.Database[*model.User](nil).
+//	    WithBatchSize(1000).
+//	    WithDebug().
+//	    Create(users...)
+//
+// NOTE: If size is 0 or not set, default batch sizes are used (1000 for Create/Update, 10000 for Delete).
+// NOTE: The batch size setting persists for the database instance and affects all subsequent operations.
 func (db *database[M]) WithBatchSize(size int) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -250,43 +382,51 @@ func (db *database[M]) WithDebug() types.Database[M] {
 	return db
 }
 
-// WithAnd sets the query condition combination mode to AND (default behavior).
-// This method must be called before WithQuery to take effect.
-// All query conditions will be combined using AND logic.
-func (db *database[M]) WithAnd(flag ...bool) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.orQuery = false
-	if len(flag) > 0 {
-		db.orQuery = flag[0]
-	}
-	return db
-}
-
-// WithOr sets the query condition combination mode to OR.
-// This method must be called before WithQuery to take effect.
-// All query conditions will be combined using OR logic.
-func (db *database[M]) WithOr(flag ...bool) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.orQuery = true
-	if len(flag) > 0 {
-		db.orQuery = flag[0]
-	}
-	return db
-}
-
 // WithIndex specifies database index hints for query optimization.
 // The first parameter is the index name, and the second optional parameter specifies the hint type.
 // If no hint type is provided, defaults to USE INDEX.
-// Usage:
 //
-//	WithIndex("idx_name")                           - defaults to USE INDEX
-//	WithIndex("idx_name", consts.IndexHintUse)      - suggests using the index
-//	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
-//	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
+// Parameters:
+//   - indexName: The name of the index to hint. Empty or whitespace-only names are ignored.
+//   - hint: Optional hint mode. If not provided, defaults to consts.IndexHintUse.
+//     Supported modes:
+//   - consts.IndexHintUse: Suggests the database to use the specified index
+//   - consts.IndexHintForce: Forces the database to use the specified index
+//   - consts.IndexHintIgnore: Tells the database to ignore the specified index
 //
-// Empty or whitespace-only index names are ignored.
+// IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
+// They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
+// or Delete methods will result in SQL syntax errors.
+//
+// Database Compatibility:
+//   - MySQL: Fully supported. All hint modes work as expected.
+//     If the index doesn't exist, MySQL may return an error.
+//   - SQLite/PostgreSQL/Other databases: Not supported.
+//     This method will log a warning and skip the hint silently.
+//     The query will execute normally without the index hint.
+//
+// Empty Index Name Handling:
+//   - Empty string ("") or whitespace-only strings are automatically trimmed and ignored.
+//   - The query will execute normally without any index hint.
+//
+// Examples:
+//
+//	// Default USE INDEX hint
+//	database.Database[*model.User](nil).WithIndex("idx_name").List(&users)
+//
+//	// Explicit hint modes
+//	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintForce).List(&users)
+//	database.Database[*model.User](nil).WithIndex("idx_name", consts.IndexHintIgnore).List(&users)
+//
+//	// Combined with other methods
+//	database.Database[*model.User](nil).
+//	    WithIndex("idx_name").
+//	    WithQuery(&model.User{Name: "John"}).
+//	    List(&users)
+//
+// NOTE: Index hints are MySQL-specific. On other databases, the hint is silently ignored.
+// NOTE: Empty or whitespace-only index names are automatically ignored for safe chaining.
+// NOTE: Unknown hint modes will default to USE INDEX with a warning logged.
 func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -294,6 +434,24 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 	// Trim whitespace from the index name
 	indexName = strings.TrimSpace(indexName)
 	if len(indexName) == 0 {
+		return db
+	}
+
+	// Check if database supports index hints (only MySQL supports them)
+	// SQLite, PostgreSQL, and other databases don't support index hints
+	if db.ins == nil {
+		return db
+	}
+
+	// Get database driver name to check if it's MySQL
+	driverName := db.ins.Name()
+	if driverName != "mysql" {
+		// Index hints are only supported by MySQL
+		// For other databases (SQLite, PostgreSQL, etc.), log a warning and skip
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithIndex")).Warnf(
+			"index hints are not supported by %s database, skipping index hint for: %s",
+			driverName, indexName,
+		)
 		return db
 	}
 
@@ -323,21 +481,111 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 }
 
 // WithQuery sets query conditions based on the provided model struct fields.
-// It supports exact matching, fuzzy matching (LIKE), range queries, and raw SQL queries.
+// It supports exact matching, fuzzy matching (LIKE/REGEXP), OR/AND logic, and raw SQL queries.
 // Non-zero fields in the model will be used as query conditions.
 //
 // Parameters:
-//   - query: A model instance with fields set as query conditions
-//   - config: Optional QueryConfig to control query behavior (fuzzy matching, empty queries, raw SQL)
+//   - query: A model instance with fields set as query conditions. Can be nil to indicate empty query.
+//     When nil or all fields are zero values, it's treated as an empty query.
+//     Supported field types: string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool, pointer types.
+//   - config: Optional QueryConfig to control query behavior (fuzzy matching, empty queries, OR logic, raw SQL)
+//
+// Query Behavior:
+//
+//	Exact Match (Default):
+//	- Single value: Uses IN clause with one value (WHERE name IN ('John'))
+//	- Multiple values (comma-separated): Uses IN clause with multiple values (WHERE name IN ('John', 'Jack'))
+//	- Multiple fields: Uses AND logic to combine conditions (WHERE name IN ('John') AND age IN (18))
+//	- Empty strings in comma-separated values are automatically skipped
+//
+//	FuzzyMatch:
+//	- Single value: Uses LIKE pattern (WHERE name LIKE '%John%')
+//	- Multiple values (comma-separated): Uses REGEXP pattern (WHERE name REGEXP '.*John.*|.*Jack.*')
+//	- REGEXP special characters are automatically escaped using regexp.QuoteMeta
+//	- Empty strings in comma-separated values are automatically skipped to prevent matching all records
+//	- Note: REGEXP may not be available in all databases (e.g., SQLite requires extension)
+//
+//	UseOr:
+//	- When true: Combines multiple field conditions with OR instead of AND
+//	- First condition always uses WHERE, subsequent conditions use OR
+//	- Example: WHERE name IN ('John') OR email IN ('john@example.com')
+//	- Works with both exact match and fuzzy match
+//
+//	RawQuery:
+//	- When provided, model fields are completely ignored and only RawQuery is used
+//	- Works even when query is nil
+//	- Supports parameterized queries with RawQueryArgs
+//	- Example: WHERE age > ? AND status = ?
+//
+//	AllowEmpty:
+//	- By default (false): Empty queries are blocked for safety (adds WHERE 1 = 0)
+//	- When true: Allows empty queries to match all records (full table scan)
+//	- Empty query cases: nil, empty struct, all fields are zero values, all field values are empty strings
+//	- Critical: Use with caution, especially for Delete operations
 //
 // Examples:
-//   - WithQuery(&model.JobHistory{JobID: req.ID})
-//   - WithQuery(&model.CronJobHistory{CronJobID: req.ID})
-//   - WithQuery(&model.User{Name: "John"}, types.QueryConfig{FuzzyMatch: true}) // fuzzy matching
-//   - WithQuery(&model.User{}, types.QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}}) // raw SQL
+//
+//	// Exact match - single field, single value
+//	WithQuery(&model.User{Name: "John"})  // WHERE name IN ('John')
+//
+//	// Exact match - single field, multiple values (comma-separated)
+//	WithQuery(&model.User{Name: "John,Jack"})  // WHERE name IN ('John', 'Jack')
+//	WithQuery(&model.User{ID: "id1,id2,id3"})  // WHERE id IN ('id1', 'id2', 'id3')
+//
+//	// Exact match - multiple fields (AND logic)
+//	WithQuery(&model.User{Name: "John", Age: 18})  // WHERE name IN ('John') AND age IN (18)
+//	WithQuery(&model.User{Name: "John", Age: 18, Email: "john@example.com"})  // WHERE name IN ('John') AND age IN (18) AND email IN ('john@example.com')
+//
+//	// Fuzzy match - single value (LIKE)
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name LIKE '%John%'
+//
+//	// Fuzzy match - multiple values (REGEXP)
+//	WithQuery(&model.User{Name: "John,Jack"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name REGEXP '.*John.*|.*Jack.*'
+//
+//	// Fuzzy match - empty strings in comma-separated values are skipped
+//	WithQuery(&model.User{Name: "John,,Jack"}, types.QueryConfig{FuzzyMatch: true})  // WHERE name REGEXP '.*John.*|.*Jack.*'
+//
+//	// OR logic to combine conditions
+//	WithQuery(&model.User{Name: "John", Email: "john@example.com"}, types.QueryConfig{UseOr: true})
+//	// WHERE name IN ('John') OR email IN ('john@example.com')
+//
+//	// OR logic with fuzzy match
+//	WithQuery(&model.User{Name: "John", Email: "example"}, types.QueryConfig{UseOr: true, FuzzyMatch: true})
+//	// WHERE name LIKE '%John%' OR email LIKE '%example%'
+//
+//	// Raw SQL query (model fields are ignored)
+//	WithQuery(&model.User{}, types.QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
+//	WithQuery(nil, types.QueryConfig{RawQuery: "created_at BETWEEN ? AND ?", RawQueryArgs: []any{startDate, endDate}})
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // Name is ignored
+//
+//	// Empty query (blocked by default for safety)
+//	WithQuery(nil)  // WHERE 1 = 0 (returns no records)
+//	WithQuery(&model.User{})  // WHERE 1 = 0 (returns no records)
+//	WithQuery(&model.User{Name: "", Email: ""})  // WHERE 1 = 0 (all values are empty)
+//
+//	// Empty query with AllowEmpty=true (returns all records)
+//	WithQuery(nil, types.QueryConfig{AllowEmpty: true})  // Returns all records
+//	WithQuery(&model.User{}, types.QueryConfig{AllowEmpty: true})  // Returns all records
+//
+//	// Query with some empty and some non-empty fields (works normally)
+//	WithQuery(&model.User{Name: "John", Email: ""})  // WHERE name IN ('John') (Email is ignored)
+//
+//	// Combined options
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{
+//	    FuzzyMatch: true,
+//	    UseOr:      true,
+//	    AllowEmpty: false,
+//	})
 //
 // NOTE: The underlying type must be pointer to struct, otherwise panic will occur.
-// NOTE: Empty query conditions are blocked by default for safety. Use QueryConfig{AllowEmpty: true} to override.
+// NOTE: Empty query conditions (nil or zero value) are blocked by default for safety to prevent
+//
+//	catastrophic data loss (e.g., deleting all records). Use QueryConfig{AllowEmpty: true} to override.
+//
+// NOTE: When RawQuery is provided, all model fields are ignored regardless of their values.
+// NOTE: REGEXP function may not be available in all databases (e.g., SQLite requires extension).
+//
+//	For SQLite compatibility, consider using FuzzyMatch with single values (LIKE) or RawQuery.
 func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -349,10 +597,33 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 	}
 	// cfg.FuzzyMatch: default false (exact match)
 	// cfg.AllowEmpty: default false (block empty queries for safety)
+
+	queryVal := reflect.ValueOf(query)
+	// Handle RawQuery first (works even if query is nil)
+	// When RawQuery is provided, model fields are ignored as per documentation
 	if len(cfg.RawQuery) > 0 {
 		db.ins = db.ins.Where(cfg.RawQuery, cfg.RawQueryArgs...)
+		// If RawQuery is provided, ignore model fields and return early
+		// RawQuery alone is sufficient for query conditions
+		return db
 	}
 
+	// Check if query is nil or empty
+	var empty M
+	if queryVal.IsNil() || reflect.DeepEqual(query, empty) {
+		// Treat nil/empty as empty query
+		// Note: RawQuery is already handled above if provided
+		if !cfg.AllowEmpty {
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Warn("query is nil or empty, adding safety condition to prevent matching all records")
+			db.ins = db.ins.Where("1 = 0")
+			return db
+		}
+		// AllowEmpty=true: allow matching all records
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Info("query is nil or empty but AllowEmpty=true, allowing full table scan")
+		return db
+	}
+
+	// Process non-nil, non-empty query
 	typ := reflect.TypeOf(query).Elem()
 	val := reflect.ValueOf(query).Elem()
 	q := make(map[string]string)
@@ -476,12 +747,14 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 	// 2. Large datasets returned without pagination → performance/memory issues
 	//
 	// Empty Query Examples:
+	//   - WithQuery(nil)                         → nil query
 	//   - WithQuery(&User{})                    → all fields are zero values
 	//   - WithQuery(&User{Name: "", Email: ""}) → all field values are empty strings
 	//   - WithQuery(&KV{Key: ""})               → happens when removed slice is empty
 	//
-	// By default, empty queries are blocked by adding "WHERE 1 = 0" condition.
-	// To allow empty queries, use: WithQuery(&User{}, QueryConfig{AllowEmpty: true})
+	// By default, empty queries (nil or zero value) are blocked by adding "WHERE 1 = 0" condition.
+	// To allow empty queries, use: WithQuery(nil, QueryConfig{AllowEmpty: true}) or
+	//                              WithQuery(&User{}, QueryConfig{AllowEmpty: true})
 	if len(q) == 0 {
 		if !cfg.AllowEmpty {
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Warn("all query fields are empty, adding safety condition to prevent matching all records")
@@ -505,6 +778,7 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 		// eg: SELECT * FROM `assets` WHERE `category_level2_id` REGEXP '.*XS.*|.*NU.*'
 		//     SELECT count(*) FROM `assets` WHERE `category_level2_id` REGEXP '.*XS.*|.*NU.*'
 		hasValidCondition := false
+		isFirstCondition := true
 		for k, v := range q {
 			items := strings.Split(v, ",")
 			// skip the string slice which all element is empty.
@@ -515,25 +789,34 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			if len(items) > 1 { // If the query string has multiple value(separated by ','), using regexp
 				var regexpVal string
 				for _, item := range items {
+					// Skip empty items to avoid matching all records (.*.* pattern)
+					if len(item) == 0 {
+						continue
+					}
 					// WARN: not forget to escape the regexp value using regexp.QuoteMeta.
 					// eg: localhost\hello.world -> localhost\\hello\.world
 					regexpVal = regexpVal + "|.*" + regexp.QuoteMeta(item) + ".*"
 				}
+				// If all items were empty after filtering, skip this condition
+				if len(regexpVal) == 0 {
+					continue
+				}
 				regexpVal = strings.TrimPrefix(regexpVal, "|")
 				// db.db = db.db.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
-				if db.orQuery {
+				if cfg.UseOr && !isFirstCondition {
 					db.ins = db.ins.Or(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				} else {
 					db.ins = db.ins.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				}
 			} else { // If the query string has only one value, using LIKE
 				// db.db = db.db.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
-				if db.orQuery {
+				if cfg.UseOr && !isFirstCondition {
 					db.ins = db.ins.Or(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				} else {
 					db.ins = db.ins.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				}
 			}
+			isFirstCondition = false
 		}
 		// CRITICAL: Check if all query values are empty after filtering
 		// Even if query map is not empty, all values might be empty strings
@@ -556,6 +839,7 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 		// construct the 'WHERE' 'IN' SQL statement.
 		// eg: SELECT id FROM users WHERE name IN ('user01', 'user02', 'user03', 'user04')
 		hasValidCondition := false
+		isFirstCondition := true
 		for k, v := range q {
 			items := strings.Split(v, ",")
 			if len(strings.Join(items, "")) == 0 {
@@ -563,11 +847,12 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			}
 			hasValidCondition = true
 			// db.db = db.db.Where(fmt.Sprintf("`%s` IN (?)", k), items)
-			if db.orQuery {
+			if cfg.UseOr && !isFirstCondition {
 				db.ins = db.ins.Or(fmt.Sprintf("`%s` IN (?)", k), items)
 			} else {
 				db.ins = db.ins.Where(fmt.Sprintf("`%s` IN (?)", k), items)
 			}
+			isFirstCondition = false
 		}
 		// CRITICAL: Check if all query values are empty after filtering
 		// Even if query map is not empty, all values might be empty strings
@@ -1509,25 +1794,21 @@ func (db *database[M]) WithOmit(columns ...string) types.Database[M] {
 	return db
 }
 
-// WithTryRun enables dry-run mode to preview SQL queries without executing them.
+// WithDryRun enables dry-run mode to preview SQL queries without executing them.
 // Useful for debugging, query optimization, and testing query generation.
 // The generated SQL will be logged but not executed against the database.
 //
 // Example:
 //
-//	WithTryRun().Create(&user)  // Preview INSERT SQL without creating record
-//	WithTryRun().WithQuery(params).List(&users)  // Preview SELECT SQL
+//	WithDryRun().Create(&user)  // Preview INSERT SQL without creating record
+//	WithDryRun().WithQuery(params).List(&users)  // Preview SELECT SQL
 //
-// WithTryRun only executes model hooks without performing actual database operations.
+// WithDryRun only executes model hooks without performing actual database operations.
 // Also logs the SQL statements that would have been executed.
-func (db *database[M]) WithTryRun(enable ...bool) types.Database[M] {
+func (db *database[M]) WithDryRun() types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-
-	db.tryRun = true
-	if len(enable) > 0 {
-		db.tryRun = enable[0]
-	}
+	db.dryRun = true
 	return db
 }
 
@@ -1562,7 +1843,22 @@ func (db *database[M]) WithoutHook() types.Database[M] {
 //
 //	Create(&User{Name: "John", Email: "john@example.com"})
 //	Create(user1, user2, user3)  // Batch create multiple records
-func (db *database[M]) Create(objs ...M) (err error) {
+func (db *database[M]) Create(_objs ...M) (err error) {
+	if len(_objs) == 0 {
+		return nil
+	}
+	var empty M
+	objs := make([]M, 0, len(_objs))
+	for _, obj := range _objs {
+		if reflect.DeepEqual(obj, empty) {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	if len(objs) == 0 {
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1589,7 +1885,6 @@ func (db *database[M]) Create(objs ...M) (err error) {
 	// 	}()
 	// }
 
-	var empty M // call nil value M will cause panic.
 	// Invoke model hook: CreateBefore for the entire batch.
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_CREATE_BEFORE, span, func(spanCtx context.Context) error {
@@ -1632,7 +1927,7 @@ func (db *database[M]) Create(objs ...M) (err error) {
 	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
-		if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
+		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
 			return err
 		}
 	}
@@ -1703,7 +1998,22 @@ func (db *database[M]) Create(objs ...M) (err error) {
 //	Delete(&user)  // Soft delete by primary key
 //	WithQuery(params).Delete(&User{})  // Delete with conditions
 //	WithPurge().Delete(&user)  // Permanent deletion
-func (db *database[M]) Delete(objs ...M) (err error) {
+func (db *database[M]) Delete(_objs ...M) (err error) {
+	if len(_objs) == 0 {
+		return nil
+	}
+	var empty M
+	objs := make([]M, 0, len(_objs))
+	for _, obj := range _objs {
+		if reflect.DeepEqual(obj, empty) {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	if len(objs) == 0 {
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1731,7 +2041,6 @@ func (db *database[M]) Delete(objs ...M) (err error) {
 	// 	}()
 	// }
 
-	var empty M // call nil value M will cause panic.
 	// Invoke model hook: DeleteBefore.
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_DELETE_BEFORE, span, func(spanCtx context.Context) error {
@@ -1764,7 +2073,7 @@ func (db *database[M]) Delete(objs ...M) (err error) {
 		}
 		for i := 0; i < len(objs); i += batchSize {
 			end := min(i+batchSize, len(objs))
-			if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Unscoped().Delete(objs[i:end]).Error; err != nil {
+			if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Unscoped().Delete(objs[i:end]).Error; err != nil {
 				return err
 			}
 			if db.enableCache {
@@ -1785,7 +2094,7 @@ func (db *database[M]) Delete(objs ...M) (err error) {
 		}
 		for i := 0; i < len(objs); i += batchSize {
 			end := min(i+batchSize, len(objs))
-			if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Delete(objs[i:end]).Error; err != nil {
+			if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Delete(objs[i:end]).Error; err != nil {
 				return err
 			}
 			if db.enableCache {
@@ -1830,7 +2139,22 @@ func (db *database[M]) Delete(objs ...M) (err error) {
 //	user.Name = "Updated Name"
 //	Update(&user)  // Update single record
 //	Update(user1, user2, user3)  // Batch update multiple records
-func (db *database[M]) Update(objs ...M) (err error) {
+func (db *database[M]) Update(_objs ...M) (err error) {
+	if len(_objs) == 0 {
+		return nil
+	}
+	var empty M
+	objs := make([]M, 0, len(_objs))
+	for _, obj := range _objs {
+		if reflect.DeepEqual(obj, empty) {
+			continue
+		}
+		objs = append(objs, obj)
+	}
+	if len(objs) == 0 {
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1857,7 +2181,6 @@ func (db *database[M]) Update(objs ...M) (err error) {
 	// 	}()
 	// }
 
-	var empty M // call nil value M will cause panic.
 	// Invoke model hook: UpdateBefore.
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_UPDATE_BEFORE, span, func(spanCtx context.Context) error {
@@ -1893,7 +2216,7 @@ func (db *database[M]) Update(objs ...M) (err error) {
 	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
-		if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
+		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
 			zap.S().Error(err)
 			return err
 		}
@@ -1927,8 +2250,8 @@ func (db *database[M]) Update(objs ...M) (err error) {
 //
 // Parameters:
 //   - id: The primary key of the record to update
-//   - key: The field name to update
-//   - val: The new value for the field
+//   - name: The field name to update
+//   - value: The new value for the field
 //
 // Note: Does not invoke UpdateBefore/UpdateAfter hooks for performance reasons.
 //
@@ -1936,7 +2259,20 @@ func (db *database[M]) Update(objs ...M) (err error) {
 //
 //	UpdateById("user123", "status", "active")  // Update user status
 //	UpdateById("order456", "amount", 99.99)    // Update order amount
-func (db *database[M]) UpdateByID(id string, key string, val any) (err error) {
+func (db *database[M]) UpdateByID(id string, name string, value any) (err error) {
+	if len(id) == 0 {
+		logger.Database.Warn("empty id")
+		return nil
+	}
+	if len(name) == 0 {
+		logger.Database.Warn("empty name")
+		return nil
+	}
+	if value == nil {
+		logger.Database.Warn("empty value")
+		return nil
+	}
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -1960,12 +2296,12 @@ func (db *database[M]) UpdateByID(id string, key string, val any) (err error) {
 	// 	}()
 	// }
 
-	// return db.db.Model(*new(M)).Where("id = ?", id).Update(key, val).Error
+	// return db.db.Model(*new(M)).Where("id = ?", id).Update(name, value).Error
 	tableName := db.m.GetTableName() //nolint:errcheck
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	if err = db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(key, val).Error; err != nil {
+	if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error; err != nil {
 		return err
 	}
 	if db.enableCache {
@@ -2349,11 +2685,15 @@ QUERY:
 // Example:
 //
 //	var total int64
-//	WithQuery("status = ?", "active").Count(&total)  // Count active records
+//	WithQuery(&User{Status: "active"}).Count(&total)  // Count active records
+//	WithQuery(&User{Name: "john"}).Count(&total)      // Count records matching name
 //	WithJoinRaw("LEFT JOIN orders ON users.id = orders.user_id").Count(&total)  // Count with JOIN
 //
-// Note: The underlying type must be pointer to struct, otherwise panic will occur.
+// Note: The count parameter must be a non-nil pointer to int64.
 func (db *database[M]) Count(count *int64) (err error) {
+	if count == nil {
+		return ErrNilCount
+	}
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -2611,7 +2951,7 @@ QUERY:
 //
 //	var user User
 //	Last(&user)  // Get last user by primary key
-//	WithQuery("status = ?", "active").Last(&user)  // Get last active user
+//	WithQuery(&User{Status: "active"}).Last(&user)  // Get last active user
 //	WithOrder("created_at ASC").Last(&user)  // Get oldest user (with custom order)
 func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
 	if err = db.prepare(); err != nil {
@@ -2626,7 +2966,7 @@ func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
 	if !db.enableCache {
 		goto QUERY
 	}
-	_, _, key = buildCacheKey(db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)}).First(dest).Statement, "last")
+	_, _, key = buildCacheKey(db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)}).Last(dest).Statement, "last")
 	if _dest, e := cache.Cache[M]().WithContext(ctx).Get(key); e != nil {
 		// metrics.CacheMiss.WithLabelValues("last", db.typ.Name()).Inc()
 		goto QUERY
@@ -2932,7 +3272,7 @@ func (db *database[M]) Cleanup() (err error) {
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	return db.ins.Session(&gorm.Session{DryRun: db.tryRun}).Table(tableName).Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0)).Error
+	return db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0)).Error
 }
 
 // Health performs comprehensive database health checks including connectivity,
@@ -2997,7 +3337,11 @@ func (db *database[M]) Health() error {
 	}
 
 	// 3.check database response time
-	if err := sqlDB.PingContext(context.TODO()); err != nil {
+	ctx := context.Background()
+	if db.ctx != nil {
+		ctx = db.ctx.Context()
+	}
+	if err := sqlDB.PingContext(ctx); err != nil {
 		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz("database ping failed",
 			zap.Error(err),
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
@@ -3186,8 +3530,21 @@ func Database[M types.Model](ctx *types.DatabaseContext) types.Database[M] {
 		ins = DB.WithContext(gctx).Limit(defaultLimit)
 	}
 
-	return &database[M]{
+	db := &database[M]{
 		ins: ins,
 		ctx: dbctx,
 	}
+
+	// Set up auto migration for default database if not already migrated
+	// Use database identifier + model type as key to support multiple database instances
+	dbIdentifier := getDBIdentifier(DB)
+	modelType := reflect.TypeFor[M]().String()
+	migrationKey := fmt.Sprintf("%s:%s", dbIdentifier, modelType)
+	if _, loaded := migratedModelMap.LoadOrStore(migrationKey, struct{}{}); !loaded {
+		flag := new(bool)
+		*flag = true
+		db.shouldAutoMigrate = flag
+	}
+
+	return db
 }

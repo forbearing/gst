@@ -174,35 +174,71 @@ type Database[M Model] interface {
 // DatabaseOption interface.
 // WithXXX setting database options.
 type DatabaseOption[M Model] interface {
-	// WithDB returns a new database manipulator, only support *gorm.DB.
+	// WithDB sets the underlying GORM database instance for this database manipulator.
+	// Only supports *gorm.DB type. Returns the same instance if invalid input is provided.
+	//
+	// Examples:
+	//
+	//	WithDB(customDB).Create(&user)
+	//	WithDB(customDB).WithTable("users").List(&users)
+	//
+	// NOTE: If WithTable is called, auto migration will be disabled.
 	WithDB(any) Database[M]
 
 	// WithTx returns a new database manipulator with transaction context.
 	// This method allows using an existing transaction to operate on multiple resource types.
-	// The tx parameter should be a *gorm.DB transaction instance or any compatible transaction type.
-	// Example:
+	// The tx parameter should be a *gorm.DB transaction instance obtained from TransactionFunc.
 	//
-	//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
-	//	    // Use the same transaction for different resource types
-	//	    if err := database.Database[*User](nil).WithTx(tx).Create(&user); err != nil {
+	// Supports all CRUD operations and can be chained with other methods.
+	//
+	// Examples:
+	//
+	//	// Single resource type
+	//	TransactionFunc(func(tx any) error {
+	//	    return WithTx(tx).Create(&user)
+	//	})
+	//
+	//	// Multiple resource types
+	//	TransactionFunc(func(tx any) error {
+	//	    if err := Database[*User](nil).WithTx(tx).Create(&user); err != nil {
 	//	        return err
 	//	    }
-	//	    if err := database.Database[*Order](nil).WithTx(tx).Create(&order); err != nil {
-	//	        return err
-	//	    }
-	//	    return nil
+	//	    return Database[*Order](nil).WithTx(tx).Create(&order)
 	//	})
 	WithTx(tx any) Database[M]
 
-	// WithTable multiple custom table, always used with the method `WithDB`.
+	// WithTable sets the table name for database operations, overriding the default table name.
+	// Often used in combination with WithDB method.
+	// NOTE: Calling WithTable disables auto migration. Manual migration is required.
+	//
+	// Examples:
+	//
+	//	WithTable("custom_users").List(&users)
+	//	WithDB(customDB).WithTable("users").Create(&user)
 	WithTable(name string) Database[M]
 
-	// WithDebug setting debug mode, the priority is higher than config.Server.LogLevel and default value(false).
+	// WithDebug enables debug mode for database operations, showing detailed SQL queries and execution info.
+	// This setting has higher priority than config.Server.LogLevel and overrides the default value (false).
+	// Useful for development, debugging, and query optimization.
+	//
+	// Examples:
+	//
+	//	WithDebug().Create(&user)
+	//	WithDebug().WithQuery(&User{Name: "John"}).List(&users)
 	WithDebug() Database[M]
 
 	// WithQuery sets query conditions based on model struct fields.
-	// Supports exact matching, fuzzy matching, and raw SQL queries via QueryConfig.
+	// Supports exact matching, fuzzy matching (LIKE/REGEXP), OR/AND logic, and raw SQL queries via QueryConfig.
 	// Non-zero fields in the model will be used as query conditions.
+	// Query can be nil to indicate empty query (requires AllowEmpty: true to allow full table scan).
+	//
+	// Examples:
+	//
+	//	WithQuery(&User{Name: "John"})  // Exact match
+	//	WithQuery(&User{Name: "John"}, QueryConfig{FuzzyMatch: true})  // Fuzzy match
+	//	WithQuery(&User{Name: "John", Email: "john@example.com"}, QueryConfig{UseOr: true})  // OR logic
+	//	WithQuery(nil, QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // Raw SQL
+	//	WithQuery(nil, QueryConfig{AllowEmpty: true})  // Empty query (returns all records)
 	WithQuery(query M, config ...QueryConfig) Database[M]
 
 	// WithCursor enables cursor-based pagination.
@@ -221,14 +257,6 @@ type DatabaseOption[M Model] interface {
 	//	// Next page (using last user id as cursor)
 	//	database.Database[*model.User]().WithCursor(lastID, true, "user_id").WithLimit(10).List(&nextUsers)
 	WithCursor(string, bool, ...string) Database[M]
-
-	// WithAnd with AND query condition(default).
-	// It must be called before WithQuery.
-	WithAnd(...bool) Database[M]
-
-	// WithAnd with OR query condition.
-	// It must be called before WithQuery.
-	WithOr(...bool) Database[M]
 
 	// WithTimeRange applies a time range filter to the query based on the specified column name.
 	// It restricts the results to records where the column's value falls within the specified start and end times.
@@ -251,13 +279,38 @@ type DatabaseOption[M Model] interface {
 
 	// WithIndex specifies database index hints for query optimization.
 	// The first parameter is the index name, and the second optional parameter specifies the hint type.
-	// If no hint is provided, defaults to USE INDEX.
-	// Usage:
+	// If no hint type is provided, defaults to USE INDEX.
 	//
-	//	WithIndex("idx_name")                           - defaults to USE INDEX
-	//	WithIndex("idx_name", consts.IndexHintUse)      - suggests using the index
-	//	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
-	//	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
+	// Parameters:
+	//   - indexName: The name of the index to hint. Empty or whitespace-only names are ignored.
+	//   - hint: Optional hint mode. If not provided, defaults to consts.IndexHintUse.
+	//     Supported modes:
+	//     - consts.IndexHintUse: Suggests the database to use the specified index
+	//     - consts.IndexHintForce: Forces the database to use the specified index
+	//     - consts.IndexHintIgnore: Tells the database to ignore the specified index
+	//
+	// IMPORTANT: Index hints are ONLY supported in SELECT queries (List, Get, Count, First, Last, Take).
+	// They are NOT supported in INSERT, UPDATE, DELETE operations. Using WithIndex with Create, Update,
+	// or Delete methods will result in SQL syntax errors.
+	//
+	// Database Compatibility:
+	//   - MySQL: Fully supported. All hint modes work as expected.
+	//   - SQLite/PostgreSQL/Other databases: Not supported. The hint is silently ignored.
+	//
+	// Examples:
+	//
+	//	// Default USE INDEX hint
+	//	WithIndex("idx_name").List(&users)
+	//
+	//	// Explicit hint modes
+	//	WithIndex("idx_name", consts.IndexHintForce).List(&users)
+	//	WithIndex("idx_name", consts.IndexHintIgnore).List(&users)
+	//
+	//	// Combined with other methods
+	//	WithIndex("idx_name").WithQuery(&User{Name: "John"}).List(&users)
+	//
+	// NOTE: Index hints are MySQL-specific. On other databases, the hint is silently ignored.
+	// NOTE: Empty or whitespace-only index names are automatically ignored.
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
 
 	// WithRollback configures a rollback function for manual transaction control.
@@ -299,7 +352,22 @@ type DatabaseOption[M Model] interface {
 	//	})
 	WithLock(mode ...consts.LockMode) Database[M]
 
-	// WithBatchSize set batch size for bulk operations. affects Create, Update, Delete.
+	// WithBatchSize sets the batch size for batch operations such as batch insert, update, or delete.
+	// Controls how many records are processed in a single database operation to optimize performance.
+	//
+	// Parameters:
+	//   - size: The number of records to process per batch. Must be greater than 0.
+	//     If set to 0 or not called, uses default batch sizes:
+	//     - Create/Update: 1000 records per batch
+	//     - Delete: 10000 records per batch
+	//
+	// Affects Create, Update, and Delete operations.
+	//
+	// Examples:
+	//
+	//	WithBatchSize(1000).Create(users...)
+	//	WithBatchSize(500).Update(users...)
+	//	WithBatchSize(2000).Delete(users...)
 	WithBatchSize(size int) Database[M]
 
 	// WithPagination applies pagination parameters to the query, useful for retrieving data in pages.
@@ -367,9 +435,10 @@ type DatabaseOption[M Model] interface {
 	WithCache(...bool) Database[M]
 	// WithOmit omit specific columns when create/update.
 	WithOmit(...string) Database[M]
-	// WithTryRun only executes model hooks without performing actual database operations.
+	// WithDryRun enables dry-run mode to preview SQL queries without executing them.
+	// Only executes model hooks without performing actual database operations.
 	// Also logs the SQL statements that would have been executed.
-	WithTryRun(...bool) Database[M]
+	WithDryRun() Database[M]
 	// WithoutHook tells the database manipulator not invoke model hooks.
 	WithoutHook() Database[M]
 }
