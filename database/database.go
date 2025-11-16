@@ -3332,7 +3332,11 @@ func (db *database[M]) Health() error {
 	}
 
 	// 3.check database response time
-	if err := sqlDB.PingContext(context.TODO()); err != nil {
+	ctx := context.Background()
+	if db.ctx != nil {
+		ctx = db.ctx.Context()
+	}
+	if err := sqlDB.PingContext(ctx); err != nil {
 		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz("database ping failed",
 			zap.Error(err),
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
