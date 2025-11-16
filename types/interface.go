@@ -249,21 +249,44 @@ type DatabaseOption[M Model] interface {
 	//	WithQuery(nil, QueryConfig{AllowEmpty: true})  // Empty query (returns all records)
 	WithQuery(query M, config ...QueryConfig) Database[M]
 
-	// WithCursor enables cursor-based pagination.
-	// cursorValue is the value of the last record in the previous page.
-	// next indicates the direction of pagination:
-	//   - true: fetch records after the cursor (next page)
-	//   - false: fetch records before the cursor (previous page)
+	// WithCursor enables cursor-based pagination for efficient large dataset traversal.
+	// Cursor pagination is more efficient than offset-based pagination for large datasets
+	// as it avoids performance degradation when skipping many records.
+	//
+	// Parameters:
+	//   - cursorValue: The value of the cursor field from the last record in the previous page.
+	//     For string fields (like ID), use the field value directly.
+	//     For time fields, format as "YYYY-MM-DD HH:MM:SS.ffffff".
+	//     Empty string will be ignored and cursor pagination will be disabled.
+	//   - next: The direction of pagination.
+	//     - true: Fetch records after the cursor (next page, ascending order)
+	//     - false: Fetch records before the cursor (previous page, descending order)
+	//   - fields: Optional field name(s) to use as cursor. Defaults to "id" if not specified.
+	//     Currently only the first field is used (multiple fields support is TODO).
+	//
+	// Behavior:
+	//   - When next=true: Returns records where cursorField > cursorValue, ordered by cursorField ASC
+	//   - When next=false: Returns records where cursorField < cursorValue, ordered by cursorField DESC
+	//     (results are reversed to maintain original sort order)
+	//   - Empty cursorValue: Cursor pagination is disabled, returns all records
+	//   - Default cursor field: "id" if not specified
 	//
 	// Example:
 	//
 	//	// First page (no cursor)
 	//	database.Database[*model.User]().WithLimit(10).List(&users)
+	//
 	//	// Next page (using last user's ID as cursor)
 	//	lastID := users[len(users)-1].ID
 	//	database.Database[*model.User]().WithCursor(lastID, true).WithLimit(10).List(&nextUsers)
-	//	// Next page (using last user id as cursor)
-	//	database.Database[*model.User]().WithCursor(lastID, true, "user_id").WithLimit(10).List(&nextUsers)
+	//
+	//	// Next page using custom field (created_at)
+	//	lastCreatedAt := users[len(users)-1].CreatedAt.Format("2006-01-02 15:04:05.000000")
+	//	database.Database[*model.User]().WithCursor(lastCreatedAt, true, "created_at").WithLimit(10).List(&nextUsers)
+	//
+	//	// Previous page
+	//	firstID := users[0].ID
+	//	database.Database[*model.User]().WithCursor(firstID, false).WithLimit(10).List(&prevUsers)
 	WithCursor(string, bool, ...string) Database[M]
 
 	// WithTimeRange applies a time range filter to the query based on the specified column name.

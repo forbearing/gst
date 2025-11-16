@@ -2,6 +2,7 @@ package database_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -3061,5 +3062,178 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.True(t, foundU1_3, "should find u1")
 		require.True(t, foundU2_3, "should find u2")
 		require.True(t, foundU3_3, "should find u3")
+	})
+}
+
+func TestDatabaseWithCursor(t *testing.T) {
+	defer cleanupTestData()
+
+	t.Run("NextPage", func(t *testing.T) {
+		defer cleanupTestData()
+		count := 100
+		data := make([]*TestUser, 0, count)
+		for i := range count {
+			name := fmt.Sprintf("user%05d", i)
+			data = append(data, &TestUser{Name: name, Base: model.Base{ID: name}})
+		}
+		require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(data...))
+
+		// Get first record as starting cursor
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).First(u))
+		cursorValue := u.ID
+		require.Equal(t, "user00000", cursorValue, "first record should be user00000")
+
+		// Test pagination: fetch next pages
+		users := make([]*TestUser, 0)
+		for i := 0; i < 10; i++ {
+			users = make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).
+				WithLimit(1).
+				WithCursor(cursorValue, true).
+				List(&users))
+			require.Equal(t, 1, len(users), "should return 1 record per page")
+			expectedID := fmt.Sprintf("user%05d", i+1)
+			require.Equal(t, expectedID, users[0].ID, "should fetch next record in ascending order")
+			cursorValue = users[0].ID
+		}
+	})
+
+	t.Run("PreviousPage", func(t *testing.T) {
+		defer cleanupTestData()
+		count := 100
+		data := make([]*TestUser, 0, count)
+		for i := range count {
+			name := fmt.Sprintf("user%05d", i)
+			data = append(data, &TestUser{Name: name, Base: model.Base{ID: name}})
+		}
+		require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(data...))
+
+		// Get last record as starting cursor
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Last(u))
+		cursorValue := u.ID
+		require.Equal(t, fmt.Sprintf("user%05d", count-1), cursorValue, "last record should be user00099")
+
+		// Test pagination: fetch previous pages
+		users := make([]*TestUser, 0)
+		for i := 0; i < 10; i++ {
+			users = make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).
+				WithLimit(1).
+				WithCursor(cursorValue, false).
+				List(&users))
+			require.Equal(t, 1, len(users), "should return 1 record per page")
+			expectedID := fmt.Sprintf("user%05d", count-2-i)
+			require.Equal(t, expectedID, users[0].ID, "should fetch previous record in descending order")
+			cursorValue = users[0].ID
+		}
+	})
+
+	t.Run("CustomField", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test cursor pagination with custom field (created_at)
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 3, len(users))
+
+		// Get first record's created_at as cursor
+		// Format time to match database format (YYYY-MM-DD HH:MM:SS.ffffff)
+		firstUser := users[0]
+		require.NotNil(t, firstUser.CreatedAt, "first user should have created_at")
+		cursorValue := firstUser.CreatedAt.Format("2006-01-02 15:04:05.000000")
+
+		// Fetch next page using created_at as cursor field
+		nextUsers := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithLimit(1).
+			WithCursor(cursorValue, true, "created_at").
+			List(&nextUsers))
+		if len(nextUsers) > 0 {
+			require.NotEqual(t, firstUser.ID, nextUsers[0].ID, "should fetch different record when available")
+			require.NotNil(t, nextUsers[0].CreatedAt, "next user should have created_at")
+			require.True(t, nextUsers[0].CreatedAt.After(*firstUser.CreatedAt) ||
+				nextUsers[0].CreatedAt.Equal(*firstUser.CreatedAt),
+				"next record should have created_at >= cursor value")
+		}
+	})
+
+	t.Run("EmptyCursor", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test with empty cursor value (should be ignored)
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithLimit(10).
+			WithCursor("", true).
+			List(&users))
+		require.Equal(t, 3, len(users), "empty cursor should be ignored, return all records")
+	})
+
+	t.Run("Combined", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test cursor pagination combined with WithQuery
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: u1.Name}).
+			List(&users))
+		require.Equal(t, 1, len(users))
+
+		cursorValue := users[0].ID
+		nextUsers := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: u1.Name}).
+			WithLimit(1).
+			WithCursor(cursorValue, true).
+			List(&nextUsers))
+		require.Equal(t, 0, len(nextUsers), "no more records after cursor with query condition")
+	})
+
+	t.Run("MultiplePages", func(t *testing.T) {
+		defer cleanupTestData()
+		count := 50
+		data := make([]*TestUser, 0, count)
+		for i := range count {
+			name := fmt.Sprintf("user%05d", i)
+			data = append(data, &TestUser{Name: name, Base: model.Base{ID: name}})
+		}
+		require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(data...))
+
+		// Test pagination with page size > 1
+		pageSize := 10
+		cursorValue := ""
+		allFetched := make([]string, 0)
+
+		for i := 0; i < 5; i++ {
+			users := make([]*TestUser, 0)
+			db := database.Database[*TestUser](nil).WithLimit(pageSize)
+			if cursorValue != "" {
+				db = db.WithCursor(cursorValue, true)
+			}
+			require.NoError(t, db.List(&users))
+			require.LessOrEqual(t, len(users), pageSize, "should not exceed page size")
+
+			if len(users) == 0 {
+				break
+			}
+
+			for _, u := range users {
+				allFetched = append(allFetched, u.ID)
+			}
+			cursorValue = users[len(users)-1].ID
+		}
+
+		require.Greater(t, len(allFetched), 0, "should fetch at least some records")
+		// Verify no duplicates
+		seen := make(map[string]bool)
+		for _, id := range allFetched {
+			require.False(t, seen[id], "should not have duplicate records: %s", id)
+			seen[id] = true
+		}
 	})
 }
