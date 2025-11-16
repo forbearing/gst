@@ -1866,9 +1866,6 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	defer db.reset()
 	done, ctx, span := db.trace("Create", len(objs))
 	defer done(err)
-	if len(objs) == 0 {
-		return nil
-	}
 
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
@@ -2021,9 +2018,6 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 	defer db.reset()
 	done, ctx, span := db.trace("Delete", len(objs))
 	defer done(err)
-	if len(objs) == 0 {
-		return nil
-	}
 
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
@@ -2162,9 +2156,6 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	defer db.reset()
 	done, ctx, span := db.trace("Update", len(objs))
 	defer done(err)
-	if len(objs) == 0 {
-		return nil
-	}
 
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
