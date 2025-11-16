@@ -337,33 +337,35 @@ func TestDatabaseOperation(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 
+		// Test basic List - should return all records
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Equal(t, 3, len(users), "should have 3 records")
 
+		// Verify all records are returned correctly
 		var u11, u22, u33 *TestUser
 		for _, u := range users {
 			switch u.ID {
 			case u1.ID:
 				u11 = u
 			case u2.ID:
-				u22 = u2
+				u22 = u
 			case u3.ID:
-				u33 = u3
+				u33 = u
 			}
 		}
-		require.NotNil(t, u11)
-		require.NotNil(t, u22)
-		require.NotNil(t, u33)
-		require.NotEmpty(t, u11.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u22.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u33.CreatedAt) // created_at should not be empty
-		require.NotEmpty(t, u1.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u2.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u3.UpdatedAt)  // updated_at should not be empty
-		require.NotEmpty(t, u11.ID)        // id should not be empty
-		require.NotEmpty(t, u22.ID)        // id should not be empty
-		require.NotEmpty(t, u33.ID)        // id should not be empty
+		require.NotNil(t, u11, "u1 should be found")
+		require.NotNil(t, u22, "u2 should be found")
+		require.NotNil(t, u33, "u3 should be found")
+		require.NotEmpty(t, u11.CreatedAt)
+		require.NotEmpty(t, u22.CreatedAt)
+		require.NotEmpty(t, u33.CreatedAt)
+		require.NotEmpty(t, u11.UpdatedAt)
+		require.NotEmpty(t, u22.UpdatedAt)
+		require.NotEmpty(t, u33.UpdatedAt)
+		require.NotEmpty(t, u11.ID)
+		require.NotEmpty(t, u22.ID)
+		require.NotEmpty(t, u33.ID)
 		require.Equal(t, u1.Name, u11.Name)
 		require.Equal(t, u2.Name, u22.Name)
 		require.Equal(t, u3.Name, u33.Name)
@@ -377,12 +379,44 @@ func TestDatabaseOperation(t *testing.T) {
 		require.Equal(t, u2.IsActive, u22.IsActive)
 		require.Equal(t, u3.IsActive, u33.IsActive)
 
-		// the "users" is not empty, its contains 3 objects.
-		require.Equal(t, 3, len(users))
-		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-		// the "users" will be overwritten by "List".
+		// Test List with query conditions
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{Name: u1.Name}).List(&users))
+		require.Equal(t, 1, len(users), "should have 1 record matching name")
+		require.Equal(t, u1.Name, users[0].Name)
+
+		// Test List after soft delete - should not return soft-deleted records
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
+		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 0, len(users))
+		require.Equal(t, 2, len(users), "should have 2 records after soft delete")
+
+		// Test List with empty result - should overwrite existing slice
+		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		users = make([]*TestUser, 0)
+		users = append(users, u1, u2, u3) // Pre-populate with data
+		require.Equal(t, 3, len(users), "slice should have 3 items before List")
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 0, len(users), "slice should be empty after List with no records")
+
+		// Test List multiple times - should be idempotent
+		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Equal(t, 3, len(users))
+		users2 := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users2))
+		require.Equal(t, 3, len(users2))
+
+		// Test List with different model types
+		products := make([]*TestProduct, 0)
+		require.NoError(t, database.Database[*TestProduct](nil).List(&products))
+		require.GreaterOrEqual(t, len(products), 0, "product list should be non-negative")
+
+		// Test List with nil dest - should return error
+		err := database.Database[*TestUser](nil).List(nil)
+		require.Error(t, err, "should return error when dest is nil")
+		require.ErrorIs(t, err, database.ErrNilDest, "error should be ErrNilDest")
 	})
 
 	t.Run("Get", func(t *testing.T) {

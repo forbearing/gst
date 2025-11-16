@@ -34,6 +34,7 @@ var (
 	ErrNotPtrSlice         = errors.New("not pointer to slice")
 	ErrNotPtrInt64         = errors.New("not pointer to int64")
 	ErrNilCount            = errors.New("count parameter cannot be nil")
+	ErrNilDest             = errors.New("dest parameter cannot be nil")
 	ErrNotAddressableModel = errors.New("model is not addressable")
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
@@ -2339,7 +2340,7 @@ func (db *database[M]) List(dest *[]M, _cache ...*[]byte) (err error) {
 	done, ctx, span := db.trace("List")
 	defer done(err)
 	if dest == nil {
-		return nil
+		return ErrNilDest
 	}
 
 	begin := time.Now()
