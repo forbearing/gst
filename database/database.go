@@ -41,7 +41,6 @@ var (
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
 	ErrIDRequired          = errors.New("id is required")
-	ErrManualRollback      = errors.New("manual rollback requested")
 )
 
 // migratedModelMap records the model already migrated to
@@ -3428,10 +3427,16 @@ func (db *database[M]) Health() error {
 // TransactionFunc executes a function within a database transaction.
 // The tx parameter is the underlying GORM transaction instance (*gorm.DB).
 // Use WithTx(tx) to create database instances that operate within the transaction.
-// If the function returns an error, the transaction is rolled back.
-// If the function returns nil, the transaction is committed.
-// When used with WithRollback, you can call the rollback function directly
-// to trigger a manual rollback.
+//
+// Behavior:
+//   - If the function returns nil: transaction is automatically committed
+//   - If the function returns an error: transaction is automatically rolled back
+//   - Custom rollback function (set via WithRollback) is executed only when transaction fails
+//   - All database operations must use WithTx(tx) to be part of the transaction
+//   - Operations without WithTx(tx) will execute outside the transaction context
+//
+// Important: Always use WithTx(tx) for database operations within the transaction function.
+// Operations without WithTx(tx) will not be part of the transaction and will not be rolled back.
 //
 // Example with automatic transaction management:
 //
@@ -3480,26 +3485,19 @@ func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 	return db.ins.Transaction(func(tx *gorm.DB) error {
 		// Execute the user function with the transaction gorm.DB instance
 		if err := fn(tx); err != nil {
-			// Check if this is a manual rollback request
-			if errors.Is(err, ErrManualRollback) {
-				// Execute custom rollback logic if provided
-				if db.rollbackFunc != nil {
-					if rollbackErr := db.rollbackFunc(); rollbackErr != nil {
-						logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("custom rollback function failed",
-							zap.Error(rollbackErr),
-							zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
-						)
-					}
+			// Execute custom rollback logic if provided
+			if db.rollbackFunc != nil {
+				if rollbackErr := db.rollbackFunc(); rollbackErr != nil {
+					logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("custom rollback function failed",
+						zap.Error(rollbackErr),
+						zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
+					)
 				}
-				logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Infoz("transaction rolled back manually",
-					zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
-				)
-			} else {
-				logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("transaction rolled back due to error",
-					zap.Error(err),
-					zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
-				)
 			}
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("transaction rolled back due to error",
+				zap.Error(err),
+				zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
+			)
 			return err
 		}
 
