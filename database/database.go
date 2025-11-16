@@ -1845,6 +1845,8 @@ func (db *database[M]) WithoutHook() types.Database[M] {
 //	Create(&User{Name: "John", Email: "john@example.com"})
 //	Create(user1, user2, user3)  // Batch create multiple records
 func (db *database[M]) Create(_objs ...M) (err error) {
+	defer db.reset()
+
 	if len(_objs) == 0 {
 		return nil
 	}
@@ -1863,7 +1865,6 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("Create", len(objs))
 	defer done(err)
 
@@ -2135,6 +2136,8 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 //	Update(&user)  // Update single record
 //	Update(user1, user2, user3)  // Batch update multiple records
 func (db *database[M]) Update(_objs ...M) (err error) {
+	defer db.reset()
+
 	if len(_objs) == 0 {
 		return nil
 	}
@@ -2153,7 +2156,6 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("Update", len(objs))
 	defer done(err)
 
@@ -2252,6 +2254,8 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 //	UpdateById("user123", "status", "active")  // Update user status
 //	UpdateById("order456", "amount", 99.99)    // Update order amount
 func (db *database[M]) UpdateByID(id string, name string, value any) (err error) {
+	defer db.reset()
+
 	if len(id) == 0 {
 		logger.Database.Warn("empty id")
 		return nil
@@ -2268,7 +2272,6 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, _ := db.trace("UpdateById")
 	defer done(err)
 
@@ -2324,10 +2327,11 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 //	WithQuery(&User{Status: "active"}).List(&users)  // Get active users
 //	WithLimit(10).WithOffset(20).List(&users)  // Paginated results
 func (db *database[M]) List(dest *[]M, _cache ...*[]byte) (err error) {
+	defer db.reset()
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("List")
 	defer done(err)
 	if dest == nil {
@@ -2508,13 +2512,14 @@ QUERY:
 //	Get(&user, "user123").  // Get user by ID
 //	WithExpand("Orders").Get(&user, "user123")  // Get user with orders
 func (db *database[M]) Get(dest M, id string, _cache ...*[]byte) (err error) {
+	defer db.reset()
+
 	if len(id) == 0 {
 		return ErrIDRequired
 	}
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("Get")
 	defer done(err)
 
@@ -2683,13 +2688,14 @@ QUERY:
 //
 // Note: The count parameter must be a non-nil pointer to int64.
 func (db *database[M]) Count(count *int64) (err error) {
+	defer db.reset()
+
 	if count == nil {
 		return ErrNilCount
 	}
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, _ := db.trace("Count")
 	defer done(err)
 
@@ -2791,10 +2797,11 @@ QUERY:
 //	WithQuery(&User{Status: "active"}).First(&user)  // Get first active user
 //	WithOrder("created_at DESC").First(&user)  // Get newest user
 func (db *database[M]) First(dest M, _cache ...*[]byte) (err error) {
+	defer db.reset()
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("First")
 	defer done(err)
 
@@ -2946,10 +2953,11 @@ QUERY:
 //	WithQuery(&User{Status: "active"}).Last(&user)  // Get last active user
 //	WithOrder("created_at ASC").Last(&user)  // Get oldest user (with custom order)
 func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
+	defer db.reset()
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("Last")
 	defer done(err)
 
@@ -3101,10 +3109,11 @@ QUERY:
 //	Take(&user)  // Get any user record
 //	WithQuery("status = ?", "active").Take(&user)  // Get any active user
 func (db *database[M]) Take(dest M, _cache ...*[]byte) (err error) {
+	defer db.reset()
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, ctx, span := db.trace("Take")
 	defer done(err)
 
@@ -3252,10 +3261,11 @@ QUERY:
 // Note: This operation affects the entire table and ignores any previously
 // set query conditions. Use with caution in production environments.
 func (db *database[M]) Cleanup() (err error) {
+	defer db.reset()
+
 	if err = db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 	done, _, _ := db.trace("Cleanup")
 	defer done(err)
 
@@ -3290,10 +3300,11 @@ func (db *database[M]) Cleanup() (err error) {
 //	  log.Fatal("Database unhealthy:", err)
 //	}
 func (db *database[M]) Health() error {
+	defer db.reset()
+
 	if err := db.prepare(); err != nil {
 		return err
 	}
-	defer db.reset()
 
 	begin := time.Now()
 
@@ -3437,6 +3448,8 @@ func (db *database[M]) Health() error {
 //	    return nil // automatic commit
 //	})
 func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
+	defer db.reset()
+
 	if err := db.prepare(); err != nil {
 		return err
 	}
