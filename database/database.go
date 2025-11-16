@@ -331,10 +331,11 @@ func (db *database[M]) WithTx(tx any) types.Database[M] {
 // Controls how many records are processed in a single database operation to optimize performance.
 //
 // Parameters:
-//   - size: The number of records to process per batch. Must be greater than 0.
-//     If set to 0 or not called, uses default batch sizes:
+//   - size: The number of records to process per batch.
+//     If set to 0 or negative, uses default batch sizes:
 //   - Create/Update: 1000 records per batch
 //   - Delete: 10000 records per batch
+//     If set to a positive value, uses that value for all operations.
 //
 // Affected Operations:
 //   - Create: Batch inserts records in chunks of the specified size
@@ -2075,7 +2076,9 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 				return err
 			}
 			if db.enableCache {
-				_ = cache.Cache[M]().WithContext(ctx).Delete(objs[i].GetID())
+				for j := i; j < end; j++ {
+					_ = cache.Cache[M]().WithContext(ctx).Delete(objs[j].GetID())
+				}
 			}
 		}
 	} else {
@@ -2096,7 +2099,9 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 				return err
 			}
 			if db.enableCache {
-				_ = cache.Cache[M]().WithContext(ctx).Delete(objs[i].GetID())
+				for j := i; j < end; j++ {
+					_ = cache.Cache[M]().WithContext(ctx).Delete(objs[j].GetID())
+				}
 			}
 		}
 	}
@@ -2221,7 +2226,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 			return err
 		}
 		if db.enableCache {
-			for j := range objs[i:end] {
+			for j := i; j < end; j++ {
 				_ = cache.Cache[M]().WithContext(ctx).Delete(objs[j].GetID())
 			}
 		}

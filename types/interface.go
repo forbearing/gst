@@ -364,10 +364,11 @@ type DatabaseOption[M Model] interface {
 	// Controls how many records are processed in a single database operation to optimize performance.
 	//
 	// Parameters:
-	//   - size: The number of records to process per batch. Must be greater than 0.
-	//     If set to 0 or not called, uses default batch sizes:
+	//   - size: The number of records to process per batch.
+	//     If set to 0 or negative, uses default batch sizes:
 	//     - Create/Update: 1000 records per batch
 	//     - Delete: 10000 records per batch
+	//     If set to a positive value, uses that value for all operations.
 	//
 	// Affects Create, Update, and Delete operations.
 	//

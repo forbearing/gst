@@ -1271,14 +1271,111 @@ func TestDatabaseWithTx(t *testing.T) {
 func TestDatabaseWithBatchSize(t *testing.T) {
 	defer cleanupTestData()
 
-	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(ul...))
+	// Test Create operation with different batch sizes
+	// Test with batch size 1 (small batch)
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1).Create(ul...))
 	users := make([]*TestUser, 0)
-	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).List(&users))
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 3, len(users))
+	// Verify data integrity
+	var foundU1, foundU2, foundU3 bool
+	for _, u := range users {
+		switch u.ID {
+		case u1.ID:
+			foundU1 = true
+			require.Equal(t, u1.Name, u.Name)
+			require.Equal(t, u1.Age, u.Age)
+			require.Equal(t, u1.Email, u.Email)
+		case u2.ID:
+			foundU2 = true
+			require.Equal(t, u2.Name, u.Name)
+		case u3.ID:
+			foundU3 = true
+			require.Equal(t, u3.Name, u.Name)
+		}
+	}
+	require.True(t, foundU1 && foundU2 && foundU3, "all users should be found after batch create")
+
+	// Test with batch size 2 (medium batch)
+	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(2).Create(ul...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
 	require.Equal(t, 3, len(users))
 
-	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Delete(ul...))
-	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).List(&users))
+	// Test with batch size 1000 (default batch size)
+	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(ul...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 3, len(users))
+
+	// Test with batch size 0 (should use default)
+	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(0).Create(ul...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 3, len(users))
+
+	// Test Update operation with different batch sizes
+	users[0].Age = 25
+	users[1].Age = 26
+	users[2].Age = 27
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1).Update(users...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 3, len(users))
+	require.Equal(t, 25, users[0].Age)
+	require.Equal(t, 26, users[1].Age)
+	require.Equal(t, 27, users[2].Age)
+
+	// Test Update with batch size 2
+	users[0].Age = 30
+	users[1].Age = 31
+	users[2].Age = 32
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(2).Update(users...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 3, len(users))
+	require.Equal(t, 30, users[0].Age)
+	require.Equal(t, 31, users[1].Age)
+	require.Equal(t, 32, users[2].Age)
+
+	// Test Delete operation with different batch sizes
+	// Test with batch size 1
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1).Delete(users[0]))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 2, len(users))
+
+	// Test with batch size 2
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(2).Delete(users...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
 	require.Equal(t, 0, len(users))
+
+	// Test with large batch size (larger than data size)
+	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(10000).Delete(ul...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 0, len(users))
+
+	// Test combined with other methods
+	require.NoError(t, database.Database[*TestUser](nil).
+		WithBatchSize(1000).
+		WithQuery(&TestUser{Name: u1.Name}).
+		Create(u1))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.GreaterOrEqual(t, len(users), 1, "should find created user")
+
+	// Test with negative batch size (should use default)
+	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+	require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(-1).Create(ul...))
+	users = make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users))
+	require.Equal(t, 3, len(users), "negative batch size should use default")
 }
 
 func TestDatabaseWithDebug(t *testing.T) {
