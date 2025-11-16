@@ -2,9 +2,11 @@ package types
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/url"
 
+	internalsse "github.com/forbearing/gst/internal/sse"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
 )
@@ -261,6 +263,44 @@ func (sc *ServiceContext) WithPhase(phase consts.Phase) *ServiceContext {
 
 // RequiresAuth returns whether the current API requires authentication
 func (sc *ServiceContext) RequiresAuth() bool { return sc.requiresAuth }
+
+// Encode writes an SSE event to the given writer.
+// This is a convenience method that wraps internalsse.Encode for use within
+// SSE stream callbacks.
+//
+// The event is formatted according to the SSE specification:
+//   - Fields are written in recommended order: id, event, retry, data
+//   - Each field is written as "field: value\n"
+//   - Multiple data fields are concatenated (for multi-line data)
+//   - Events are separated by a blank line (\n\n)
+//
+// If Data is a complex type (map, struct, slice), it will be JSON-encoded.
+// If Data is a primitive type, it will be converted to string.
+// If Data is nil, no data field will be written.
+//
+// Example:
+//
+//	ctx.SSE().WithInterval(1*time.Second).Stream(func(w io.Writer) bool {
+//	    _ = ctx.Encode(w, types.Event{
+//	        Event: "message",
+//	        Data:  "Hello",
+//	    })
+//	    return true
+//	})
+//
+// Parameters:
+//   - w: Writer to write the event to (typically from SSE stream callback)
+//   - event: SSE event to encode
+//
+// Returns:
+//   - error: Any error that occurred during encoding
+func (sc *ServiceContext) Encode(w io.Writer, event Event) error {
+	if sc == nil {
+		return nil
+	}
+
+	return internalsse.Encode(w, event)
+}
 
 type ModelContext struct {
 	dbctx *DatabaseContext
