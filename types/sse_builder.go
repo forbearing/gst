@@ -141,4 +141,3 @@ func sendSSEDone(sc *ServiceContext) error {
 	}
 	return internalsse.SendSSEDone(sc.ginCtx.Writer)
 }
-

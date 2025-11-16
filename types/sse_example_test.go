@@ -16,7 +16,6 @@ import (
 //     - ctx.SSE().WithInterval(duration).Stream(fn) - Stream with interval
 //     - ctx.SSE().Done() - Send [DONE] marker
 
-
 // ExampleServiceContext_SSE_stream demonstrates using the chainable API for streaming.
 func ExampleServiceContext_SSE_stream() {
 	var sc *types.ServiceContext
@@ -37,7 +36,7 @@ func ExampleServiceContext_SSE_streamWithInterval() {
 
 	// Stream with interval using the chainable API
 	counter := 0
-	sc.SSE().WithInterval(1*time.Second).Stream(func(w io.Writer) bool {
+	sc.SSE().WithInterval(1 * time.Second).Stream(func(w io.Writer) bool {
 		counter++
 
 		// Send event
