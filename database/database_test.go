@@ -443,9 +443,43 @@ func TestDatabaseOperation(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 
+		// Test basic count - should return total number of records
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
-		require.Equal(t, int64(3), *count)
+		require.Equal(t, int64(3), *count, "should have 3 records")
+
+		// Test count with query conditions
+		require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{Name: u1.Name}).Count(count))
+		require.Equal(t, int64(1), *count, "should have 1 record matching name")
+
+		require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{Age: u2.Age}).Count(count))
+		require.Equal(t, int64(1), *count, "should have 1 record matching age")
+
+		// Test count after soft delete - soft-deleted records should not be counted
+		require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count, "should have 2 records after soft delete")
+
+		// Test count with query after soft delete
+		require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{Name: u1.Name}).Count(count))
+		require.Equal(t, int64(0), *count, "soft-deleted record should not be counted")
+
+		// Test count multiple times - should be idempotent
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count)
+
+		// Test count with different model types
+		require.NoError(t, database.Database[*TestProduct](nil).Count(count))
+		require.GreaterOrEqual(t, *count, int64(0), "product count should be non-negative")
+		require.NoError(t, database.Database[*TestCategory](nil).Count(count))
+		require.GreaterOrEqual(t, *count, int64(0), "category count should be non-negative")
+
+		// Test count with nil pointer - should return error
+		err := database.Database[*TestUser](nil).Count(nil)
+		require.Error(t, err, "should return error when count is nil")
+		require.Contains(t, err.Error(), "count parameter cannot be nil", "error message should indicate nil pointer issue")
 	})
 
 	t.Run("Cleanup", func(t *testing.T) {
