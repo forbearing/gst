@@ -42,7 +42,5 @@ go install ./cmd/gg
 
 本项目在 fish shell 环境下开发。生成 shell 命令时：
 
-- 使用 fish 兼容的语法（例如：使用 `; and` 而不是 `&&`）
 - 避免 bash 特有的语法结构
-- 注意 VS Code/Cursor 的 shell integration 可能与 fish 存在兼容性问题
-- 不要使用 `&&` 来拼接多个命令, fish shell 不支持
+- 切换目录时请使用 `builtin cd mydir` 而不是直接 `cd mydir` 因为在 sandbox autorun 中, `cd` 命令有问题
