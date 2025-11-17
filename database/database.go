@@ -1176,9 +1176,10 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 //
 // Parameters:
 //   - columns: Field names to select (defaultsColumns will be automatically added)
-//     If no columns are provided, only defaultsColumns will be selected
+//     If no columns are provided, only defaultsColumns will be selected.
+//     If all provided columns are defaultsColumns, only defaultsColumns will be selected.
 //
-// Returns the same instance if no valid columns are provided after filtering.
+// Returns the same database instance for method chaining.
 //
 // WARNING: Using WithSelect may result in the removal of certain fields from table records
 // if there are multiple hooks in the service and model layers. Use with caution.
@@ -1200,12 +1201,12 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 			_columns = append(_columns, col)
 		}
 	}
-	if len(_columns) == 0 {
-		return db
-	}
 	// db.ins = db.ins.Select(append(_columns, defaultsColumns...))
-	// lazy load
-	db.selectColumns = append(db.selectColumns, _columns...)
+	// lazy load: add user-specified columns first, then always add defaultsColumns
+	if len(_columns) > 0 {
+		db.selectColumns = append(db.selectColumns, _columns...)
+	}
+	// Always add defaultsColumns to ensure essential fields are available.
 	db.selectColumns = append(db.selectColumns, defaultsColumns...)
 	return db
 }

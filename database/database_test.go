@@ -51,6 +51,22 @@ func setupTestData(t *testing.T) {
 	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 }
 
+// findUsersByID finds users from a slice by their IDs and returns them in order (u1, u2, u3).
+// Returns nil for users that are not found.
+func findUsersByID(users []*TestUser) (u11, u22, u33 *TestUser) {
+	for _, u := range users {
+		switch u.ID {
+		case u1.ID:
+			u11 = u
+		case u2.ID:
+			u22 = u
+		case u3.ID:
+			u33 = u
+		}
+	}
+	return
+}
+
 type TestUser struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
@@ -3275,41 +3291,39 @@ func TestDatabaseWithCursor(t *testing.T) {
 func TestDatabaseWithSelect(t *testing.T) {
 	defer cleanupTestData()
 
-	users := make([]*TestUser, 0)
-
 	// No effect on "Create"
 	t.Run("Create", func(t *testing.T) {
-		t.Run("exists", func(t *testing.T) {
+		t.Run("with existing column", func(t *testing.T) {
 			defer cleanupTestData()
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").Create(ul...))
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 3)
 		})
-		t.Run("notexists", func(t *testing.T) {
+		t.Run("with non-existing column", func(t *testing.T) {
 			defer cleanupTestData()
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("notexists").Create(ul...))
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 3)
 		})
 	})
 
-	// Not effect on "Delete"
+	// No effect on "Delete"
 	t.Run("Delete", func(t *testing.T) {
-		t.Run("exists", func(t *testing.T) {
+		t.Run("with existing column", func(t *testing.T) {
 			defer cleanupTestData()
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").Create(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Len(t, users, 3)
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").Delete(ul...))
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 0)
 		})
-		t.Run("notexists", func(t *testing.T) {
+		t.Run("with non-existing column", func(t *testing.T) {
 			defer cleanupTestData()
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("notexists").Create(ul...))
-			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Len(t, users, 3)
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("notexists").Delete(ul...))
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 0)
 		})
@@ -3317,34 +3331,21 @@ func TestDatabaseWithSelect(t *testing.T) {
 
 	// Effect "Update"
 	t.Run("Update", func(t *testing.T) {
-		t.Run("exists", func(t *testing.T) {
+		t.Run("with existing column", func(t *testing.T) {
 			defer cleanupTestData()
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			setupTestData(t)
 			u1.Name = "user1_modified"
 			u2.Name = "user2_modified"
 			u3.Name = "user3_modified"
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").Update(ul...))
+
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 3)
-
-			var u11, u22, u33 *TestUser
-			var foundU1, foundU2, foundU3 bool
-			for _, u := range users {
-				switch u.ID {
-				case u1.ID:
-					u11 = u
-					foundU1 = true
-				case u2.ID:
-					u22 = u
-					foundU2 = true
-				case u3.ID:
-					u33 = u
-					foundU3 = true
-				}
-			}
-			require.True(t, foundU1)
-			require.True(t, foundU2)
-			require.True(t, foundU3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
 			require.Equal(t, "user1_modified", u11.Name)
 			require.Equal(t, "user2_modified", u22.Name)
 			require.Equal(t, "user3_modified", u33.Name)
@@ -3358,38 +3359,26 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.Equal(t, u2.IsActive, u22.IsActive)
 			require.Equal(t, u3.IsActive, u33.IsActive)
 		})
-		t.Run("another column", func(t *testing.T) {
+		t.Run("with different column", func(t *testing.T) {
 			defer cleanupTestData()
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			setupTestData(t)
 			u1OldName, u2OldName, u3OldName := u1.Name, u2.Name, u3.Name
 			u1.Name = "user1_modified"
 			u2.Name = "user2_modified"
 			u3.Name = "user3_modified"
-			// only update column "age", the modified name will not updated.
+			// Only update column "age", the modified name will not be updated.
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("age").Update(ul...))
+
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 3)
-			var u11, u22, u33 *TestUser
-			var foundU1, foundU2, foundU3 bool
-			for _, u := range users {
-				switch u.ID {
-				case u1.ID:
-					u11 = u
-					foundU1 = true
-				case u2.ID:
-					u22 = u
-					foundU2 = true
-				case u3.ID:
-					u33 = u
-					foundU3 = true
-				}
-			}
-			require.True(t, foundU1)
-			require.True(t, foundU2)
-			require.True(t, foundU3)
-			require.Equal(t, u1OldName, u11.Name)
-			require.Equal(t, u2OldName, u22.Name)
-			require.Equal(t, u3OldName, u33.Name)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			require.Equal(t, u1OldName, u11.Name, "name should not be updated")
+			require.Equal(t, u2OldName, u22.Name, "name should not be updated")
+			require.Equal(t, u3OldName, u33.Name, "name should not be updated")
 			require.Equal(t, u1.Age, u11.Age)
 			require.Equal(t, u2.Age, u22.Age)
 			require.Equal(t, u3.Age, u33.Age)
@@ -3400,38 +3389,26 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.Equal(t, u2.IsActive, u22.IsActive)
 			require.Equal(t, u3.IsActive, u33.IsActive)
 		})
-		t.Run("notexists", func(t *testing.T) {
+		t.Run("with non-existing column", func(t *testing.T) {
 			defer cleanupTestData()
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+			setupTestData(t)
 			u1OldName, u2OldName, u3OldName := u1.Name, u2.Name, u3.Name
 			u1.Name = "user1_modified"
 			u2.Name = "user2_modified"
 			u3.Name = "user3_modified"
-			// the not exists fileds will ignored, and selected the default columns: "id", "created_at", "updated_at", "created_by", "updated_by"
+			// The non-existing fields will be ignored, and only default columns will be selected.
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("nonexistent").Update(ul...))
+
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
 			require.Len(t, users, 3)
-			var u11, u22, u33 *TestUser
-			var foundU1, foundU2, foundU3 bool
-			for _, u := range users {
-				switch u.ID {
-				case u1.ID:
-					u11 = u
-					foundU1 = true
-				case u2.ID:
-					u22 = u
-					foundU2 = true
-				case u3.ID:
-					u33 = u
-					foundU3 = true
-				}
-			}
-			require.True(t, foundU1)
-			require.True(t, foundU2)
-			require.True(t, foundU3)
-			require.Equal(t, u1OldName, u11.Name)
-			require.Equal(t, u2OldName, u22.Name)
-			require.Equal(t, u3OldName, u33.Name)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			require.Equal(t, u1OldName, u11.Name, "name should not be updated")
+			require.Equal(t, u2OldName, u22.Name, "name should not be updated")
+			require.Equal(t, u3OldName, u33.Name, "name should not be updated")
 			require.Equal(t, u1.Age, u11.Age)
 			require.Equal(t, u2.Age, u22.Age)
 			require.Equal(t, u3.Age, u33.Age)
@@ -3441,39 +3418,55 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.Equal(t, u1.IsActive, u11.IsActive)
 			require.Equal(t, u2.IsActive, u22.IsActive)
 			require.Equal(t, u3.IsActive, u33.IsActive)
+		})
+		t.Run("with multiple columns", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			u1.Name = "user1_modified"
+			u1.Age = 25
+			u2.Name = "user2_modified"
+			u2.Age = 26
+			u3.Name = "user3_modified"
+			u3.Age = 27
+			// Update both "name" and "age" columns.
+			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name", "age").Update(ul...))
+
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).List(&users))
+			require.Len(t, users, 3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			require.Equal(t, "user1_modified", u11.Name)
+			require.Equal(t, "user2_modified", u22.Name)
+			require.Equal(t, "user3_modified", u33.Name)
+			require.Equal(t, 25, u11.Age)
+			require.Equal(t, 26, u22.Age)
+			require.Equal(t, 27, u33.Age)
+			require.Equal(t, u1.Email, u11.Email, "email should not be updated")
+			require.Equal(t, u2.Email, u22.Email, "email should not be updated")
+			require.Equal(t, u3.Email, u33.Email, "email should not be updated")
 		})
 	})
 
 	// Effect "List"
 	t.Run("List", func(t *testing.T) {
-		t.Run("name", func(t *testing.T) {
+		t.Run("with single column", func(t *testing.T) {
 			defer cleanupTestData()
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
-			// only select column "name", another columns will be ignored.
+			setupTestData(t)
+			// Only select column "name", other columns will be ignored.
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").List(&users))
 			require.Len(t, users, 3)
-			var u11, u22, u33 *TestUser
-			var foundU1, foundU2, foundU3 bool
-			for _, u := range users {
-				switch u.ID {
-				case u1.ID:
-					u11 = u
-					foundU1 = true
-				case u2.ID:
-					u22 = u
-					foundU2 = true
-				case u3.ID:
-					u33 = u
-					foundU3 = true
-				}
-			}
-			require.True(t, foundU1)
-			require.True(t, foundU2)
-			require.True(t, foundU3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
 			require.Equal(t, u1.Name, u11.Name)
 			require.Equal(t, u2.Name, u22.Name)
 			require.Equal(t, u3.Name, u33.Name)
-			// only select "name", fields "age", "email" is empty
+			// Only select "name", fields "age" and "email" should be empty.
 			require.Empty(t, u11.Age)
 			require.Empty(t, u22.Age)
 			require.Empty(t, u33.Age)
@@ -3481,34 +3474,21 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.Empty(t, u22.Email)
 			require.Empty(t, u33.Email)
 		})
-		t.Run("age", func(t *testing.T) {
+		t.Run("with different column", func(t *testing.T) {
 			defer cleanupTestData()
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
-			// only select column "age", another columns will be ignored.
+			setupTestData(t)
+			// Only select column "age", other columns will be ignored.
+			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("age").List(&users))
 			require.Len(t, users, 3)
-			var u11, u22, u33 *TestUser
-			var foundU1, foundU2, foundU3 bool
-			for _, u := range users {
-				switch u.ID {
-				case u1.ID:
-					u11 = u
-					foundU1 = true
-				case u2.ID:
-					u22 = u
-					foundU2 = true
-				case u3.ID:
-					u33 = u
-					foundU3 = true
-				}
-			}
-			require.True(t, foundU1)
-			require.True(t, foundU2)
-			require.True(t, foundU3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
 			require.Empty(t, u11.Name)
 			require.Empty(t, u22.Name)
 			require.Empty(t, u33.Name)
-			// only select "age", fields "name", "email" is empty
+			// Only select "age", fields "name" and "email" should be empty.
 			require.Equal(t, u1.Age, u11.Age)
 			require.Equal(t, u2.Age, u22.Age)
 			require.Equal(t, u3.Age, u33.Age)
@@ -3516,21 +3496,53 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.Empty(t, u22.Email)
 			require.Empty(t, u33.Email)
 		})
-		t.Run("notexists", func(t *testing.T) {
+		t.Run("with multiple columns", func(t *testing.T) {
 			defer cleanupTestData()
-			require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
-			// select not exists column will cause error
+			setupTestData(t)
+			// Select both "name" and "age" columns.
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name", "age").List(&users))
+			require.Len(t, users, 3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			require.Equal(t, u1.Name, u11.Name)
+			require.Equal(t, u2.Name, u22.Name)
+			require.Equal(t, u3.Name, u33.Name)
+			require.Equal(t, u1.Age, u11.Age)
+			require.Equal(t, u2.Age, u22.Age)
+			require.Equal(t, u3.Age, u33.Age)
+			// Field "email" should be empty.
+			require.Empty(t, u11.Email)
+			require.Empty(t, u22.Email)
+			require.Empty(t, u33.Email)
+		})
+		t.Run("with non-existing column", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Selecting non-existing column will cause error.
+			users := make([]*TestUser, 0)
 			require.Error(t, database.Database[*TestUser](nil).WithSelect("notexists").List(&users))
 		})
-		// // Effect Get
-		// t.Run("Get", func(t *testing.T) {
-		// 	t.Run("name", func(t *testing.T) {
-		// 		defer cleanupTestData()
-		// 		var user *TestUser
-		// 		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
-		// 		// only select column "name", another columns will be ignored.
-		// 		require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").Get(user, u1.ID))
-		// 	})
-		// })
+		t.Run("with empty columns", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// WithSelect with no columns should select only default columns.
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelect().List(&users))
+			require.Len(t, users, 3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			// Default columns (id, created_at, updated_at, etc.) should be present.
+			require.NotEmpty(t, u11.ID)
+			require.NotEmpty(t, u22.ID)
+			require.NotEmpty(t, u33.ID)
+			require.NotEmpty(t, u11.CreatedAt)
+			require.NotEmpty(t, u22.CreatedAt)
+			require.NotEmpty(t, u33.CreatedAt)
+		})
 	})
 }
