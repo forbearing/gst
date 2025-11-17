@@ -1930,10 +1930,8 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_CREATE_BEFORE, span, func(spanCtx context.Context) error {
 			for i := range objs {
-				if !reflect.DeepEqual(empty, objs[i]) {
-					if err = objs[i].CreateBefore(types.NewModelContext(db.ctx, spanCtx)); err != nil {
-						return err
-					}
+				if err = objs[i].CreateBefore(types.NewModelContext(db.ctx, spanCtx)); err != nil {
+					return err
 				}
 			}
 			return nil
@@ -1942,9 +1940,7 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 		}
 	}
 	for i := range objs {
-		if !reflect.DeepEqual(empty, objs[i]) {
-			objs[i].SetID() // set id when id is empty.
-		}
+		objs[i].SetID() // set id when id is empty.
 	}
 
 	// if err = db.db.Save(objs).Error; err != nil {
@@ -2007,10 +2003,8 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_CREATE_AFTER, span, func(spanCtx context.Context) error {
 			for i := range objs {
-				if !reflect.DeepEqual(empty, objs[i]) {
-					if err = objs[i].CreateAfter(types.NewModelContext(db.ctx, spanCtx)); err != nil {
-						return err
-					}
+				if err = objs[i].CreateAfter(types.NewModelContext(db.ctx, spanCtx)); err != nil {
+					return err
 				}
 			}
 			return nil
@@ -2088,10 +2082,8 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_DELETE_BEFORE, span, func(spanCtx context.Context) error {
 			for i := range objs {
-				if !reflect.DeepEqual(empty, objs[i]) {
-					if err = objs[i].DeleteBefore(types.NewModelContext(db.ctx, spanCtx)); err != nil {
-						return err
-					}
+				if err = objs[i].DeleteBefore(types.NewModelContext(db.ctx, spanCtx)); err != nil {
+					return err
 				}
 			}
 			return nil
@@ -2153,10 +2145,8 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_DELETE_AFTER, span, func(spanCtx context.Context) error {
 			for i := range objs {
-				if !reflect.DeepEqual(empty, objs[i]) {
-					if err = objs[i].DeleteAfter(types.NewModelContext(db.ctx, spanCtx)); err != nil {
-						return err
-					}
+				if err = objs[i].DeleteAfter(types.NewModelContext(db.ctx, spanCtx)); err != nil {
+					return err
 				}
 			}
 			return nil
@@ -2234,10 +2224,8 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_UPDATE_BEFORE, span, func(spanCtx context.Context) error {
 			for i := range objs {
-				if !reflect.DeepEqual(empty, objs[i]) {
-					if err = objs[i].UpdateBefore(types.NewModelContext(db.ctx, spanCtx)); err != nil {
-						return err
-					}
+				if err = objs[i].UpdateBefore(types.NewModelContext(db.ctx, spanCtx)); err != nil {
+					return err
 				}
 			}
 			return nil
@@ -2246,9 +2234,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 		}
 	}
 	for i := range objs {
-		if !reflect.DeepEqual(empty, objs[i]) {
-			objs[i].SetID() // set id when id is empty
-		}
+		objs[i].SetID() // set id when id is empty
 	}
 	// if err = db.db.Save(objs).Error; err != nil {
 	// if err = db.db.Table(db.tableName).Save(objs).Error; err != nil {
@@ -2285,10 +2271,8 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	if !db.noHook {
 		if err = traceModelHook[M](db.ctx, consts.PHASE_UPDATE_AFTER, span, func(spanCtx context.Context) error {
 			for i := range objs {
-				if !reflect.DeepEqual(empty, objs[i]) {
-					if err = objs[i].UpdateAfter(types.NewModelContext(db.ctx, spanCtx)); err != nil {
-						return err
-					}
+				if err = objs[i].UpdateAfter(types.NewModelContext(db.ctx, spanCtx)); err != nil {
+					return err
 				}
 			}
 			return nil
