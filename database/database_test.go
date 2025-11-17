@@ -788,13 +788,13 @@ func TestDatabaseTransaction(t *testing.T) {
 	// Test Transaction - multiple operations in transaction
 	err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
 		// Create users
-		if err := txDB.Create(u1); err != nil {
-			return err
+		if txErr := txDB.Create(u1); txErr != nil {
+			return txErr
 		}
 		// Update user in the same transaction
 		u1.Name = "user1_updated"
-		if err := txDB.Update(u1); err != nil {
-			return err
+		if txErr := txDB.Update(u1); txErr != nil {
+			return txErr
 		}
 		// UpdateByID in the same transaction
 		return txDB.UpdateByID(u1.ID, "age", 25)
@@ -840,13 +840,13 @@ func TestDatabaseTransaction(t *testing.T) {
 	flag = 0
 	require.NoError(t, database.Database[*TestUser](nil).Create(u1))
 	err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
-		u := new(TestUser)
+		lockedUser := new(TestUser)
 		// Test WithLock works in transaction
-		if err := txDB.WithLock(consts.LockUpdate).Get(u, u1.ID); err != nil {
-			return err
+		if lockErr := txDB.WithLock(consts.LockUpdate).Get(lockedUser, u1.ID); lockErr != nil {
+			return lockErr
 		}
-		u.Name = "locked_update"
-		return txDB.Update(u)
+		lockedUser.Name = "locked_update"
+		return txDB.Update(lockedUser)
 	})
 	require.NoError(t, err, "transaction with lock should succeed")
 	u = new(TestUser)
