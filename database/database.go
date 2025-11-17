@@ -87,6 +87,11 @@ type database[M types.Model] struct {
 	cursorNext   bool   // direction of cursor pagination, true for next page, false for previous page
 	enableCursor bool   // enable cursor pagination
 
+	// select
+	selectColumns []string
+	selectRaw     any
+	selectRawArgs []any
+
 	// rollback control
 	rollbackFunc func() // rollback function for manual transaction control
 
@@ -113,6 +118,11 @@ func (db *database[M]) reset() {
 	db.cursorValue = ""
 	db.cursorNext = true
 	db.enableCursor = false
+
+	// reset select
+	db.selectColumns = nil
+	db.selectRaw = nil
+	db.selectRawArgs = nil
 
 	// reset rollback function
 	db.rollbackFunc = nil
@@ -1172,11 +1182,15 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 //
 // WARNING: Using WithSelect may result in the removal of certain fields from table records
 // if there are multiple hooks in the service and model layers. Use with caution.
+//
+// Affect Operations: Update, List, Get, First, Last, Take
 func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	if len(columns) == 0 {
-		db.ins = db.ins.Select(defaultsColumns)
+		// db.ins = db.ins.Select(defaultsColumns)
+		// lazy load
+		db.selectColumns = append(db.selectColumns, defaultsColumns...)
 		return db
 	}
 	_columns := make([]string, 0)
@@ -1189,7 +1203,10 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 	if len(_columns) == 0 {
 		return db
 	}
-	db.ins = db.ins.Select(append(_columns, defaultsColumns...))
+	// db.ins = db.ins.Select(append(_columns, defaultsColumns...))
+	// lazy load
+	db.selectColumns = append(db.selectColumns, _columns...)
+	db.selectColumns = append(db.selectColumns, defaultsColumns...)
 	return db
 }
 
@@ -1198,7 +1215,7 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 // Use this when you need full control over the SELECT statement.
 //
 // Parameters:
-//   - query: Raw SQL SELECT clause or column expressions
+//   - selectRaw: Raw SQL SELECT clause or column expressions
 //   - args: Optional arguments for parameterized queries
 //
 // Example:
@@ -1207,10 +1224,13 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 //	WithSelectRaw("users.name, orders.amount WHERE orders.status = ?", "completed")
 //
 // WithSelectRaw
-func (db *database[M]) WithSelectRaw(query any, args ...any) types.Database[M] {
+func (db *database[M]) WithSelectRaw(selectRaw any, args ...any) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	db.ins = db.ins.Select(query, args...)
+	// db.ins = db.ins.Select(query, args...)
+	// lazy load
+	db.selectRaw = selectRaw
+	db.selectRawArgs = args
 	return db
 }
 
@@ -2243,6 +2263,12 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	if db.batchSize > 0 {
 		batchSize = db.batchSize
 	}
+	// set selected columns.
+	if db.selectRaw != nil {
+		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+	} else if len(db.selectColumns) > 0 {
+		db.ins = db.ins.Select(db.selectColumns)
+	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
 		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
@@ -2378,6 +2404,12 @@ func (db *database[M]) List(dest *[]M, _cache ...*[]byte) (err error) {
 
 	begin := time.Now()
 	var key string
+	// set selected columns.
+	if db.selectRaw != nil {
+		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+	} else if len(db.selectColumns) > 0 {
+		db.ins = db.ins.Select(db.selectColumns)
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -2563,6 +2595,12 @@ func (db *database[M]) Get(dest M, id string, _cache ...*[]byte) (err error) {
 
 	begin := time.Now()
 	var key string
+	// set selected columns.
+	if db.selectRaw != nil {
+		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+	} else if len(db.selectColumns) > 0 {
+		db.ins = db.ins.Select(db.selectColumns)
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -2845,6 +2883,12 @@ func (db *database[M]) First(dest M, _cache ...*[]byte) (err error) {
 
 	begin := time.Now()
 	var key string
+	// set selected columns.
+	if db.selectRaw != nil {
+		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+	} else if len(db.selectColumns) > 0 {
+		db.ins = db.ins.Select(db.selectColumns)
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -3001,6 +3045,12 @@ func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
 
 	begin := time.Now()
 	var key string
+	// set selected columns.
+	if db.selectRaw != nil {
+		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+	} else if len(db.selectColumns) > 0 {
+		db.ins = db.ins.Select(db.selectColumns)
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -3157,6 +3207,12 @@ func (db *database[M]) Take(dest M, _cache ...*[]byte) (err error) {
 
 	begin := time.Now()
 	var key string
+	// set selected columns.
+	if db.selectRaw != nil {
+		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+	} else if len(db.selectColumns) > 0 {
+		db.ins = db.ins.Select(db.selectColumns)
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
