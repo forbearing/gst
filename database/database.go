@@ -1222,8 +1222,12 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 // Example:
 //
 //	WithSelectRaw("COUNT(*) as total, AVG(price) as avg_price")
-//	WithSelectRaw("users.name, orders.amount WHERE orders.status = ?", "completed")
+//	WithSelectRaw("users.name, orders.amount")
 //
+// Note: For Update operations, WithSelectRaw may not work correctly because it does not
+// automatically include id field. Use WithSelect for Update operations instead.
+//
+// Affect Operations: Update, List, Get, First, Last, Take
 // WithSelectRaw
 func (db *database[M]) WithSelectRaw(selectRaw any, args ...any) types.Database[M] {
 	db.mu.Lock()

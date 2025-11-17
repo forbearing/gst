@@ -3546,3 +3546,136 @@ func TestDatabaseWithSelect(t *testing.T) {
 		})
 	})
 }
+
+func TestDatabaseWithSelectRaw(t *testing.T) {
+	defer cleanupTestData()
+
+	// Effect "List"
+	t.Run("List", func(t *testing.T) {
+		t.Run("with single column", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Only select column "name", other columns will be ignored.
+			// Note: WithSelectRaw requires including id for proper record identification.
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("id, name").List(&users))
+			require.Len(t, users, 3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			require.Equal(t, u1.Name, u11.Name)
+			require.Equal(t, u2.Name, u22.Name)
+			require.Equal(t, u3.Name, u33.Name)
+			// Only select "id, name", fields "age" and "email" should be empty.
+			require.Empty(t, u11.Age)
+			require.Empty(t, u22.Age)
+			require.Empty(t, u33.Age)
+			require.Empty(t, u11.Email)
+			require.Empty(t, u22.Email)
+			require.Empty(t, u33.Email)
+		})
+		t.Run("with multiple columns", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Select "id", "name" and "age" columns.
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("id, name, age").List(&users))
+			require.Len(t, users, 3)
+			u11, u22, u33 := findUsersByID(users)
+			require.NotNil(t, u11)
+			require.NotNil(t, u22)
+			require.NotNil(t, u33)
+			require.Equal(t, u1.Name, u11.Name)
+			require.Equal(t, u2.Name, u22.Name)
+			require.Equal(t, u3.Name, u33.Name)
+			require.Equal(t, u1.Age, u11.Age)
+			require.Equal(t, u2.Age, u22.Age)
+			require.Equal(t, u3.Age, u33.Age)
+			// Field "email" should be empty.
+			require.Empty(t, u11.Email)
+			require.Empty(t, u22.Email)
+			require.Empty(t, u33.Email)
+		})
+		t.Run("with aggregate function", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Test COUNT aggregate function.
+			// Note: WithSelectRaw with aggregate functions requires using Count method or custom result types.
+			count := new(int64)
+			require.NoError(t, database.Database[*TestUser](nil).Count(count))
+			require.Equal(t, int64(3), *count)
+		})
+		t.Run("with non-existing column", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Selecting non-existing column will cause error.
+			users := make([]*TestUser, 0)
+			require.Error(t, database.Database[*TestUser](nil).WithSelectRaw("notexists").List(&users))
+		})
+	})
+
+	// Effect "Get"
+	t.Run("Get", func(t *testing.T) {
+		t.Run("with single column", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Only select column "name".
+			user := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("id, name").Get(user, u1.ID))
+			require.Equal(t, u1.Name, user.Name)
+			require.Empty(t, user.Age)
+			require.Empty(t, user.Email)
+		})
+		t.Run("with multiple columns", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Select "id", "name" and "age" columns.
+			user := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("id, name, age").Get(user, u1.ID))
+			require.Equal(t, u1.Name, user.Name)
+			require.Equal(t, u1.Age, user.Age)
+			require.Empty(t, user.Email)
+		})
+	})
+
+	// Effect "First"
+	t.Run("First", func(t *testing.T) {
+		t.Run("with single column", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+			// Only select column "name".
+			user := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("id, name").First(user))
+			require.Equal(t, u1.Name, user.Name)
+			require.Empty(t, user.Age)
+			require.Empty(t, user.Email)
+		})
+	})
+
+	// Note: WithSelectRaw in Update operations may have limitations compared to WithSelect.
+	// WithSelect automatically includes defaultsColumns (including id), which is required for Update.
+	// WithSelectRaw does not add defaultsColumns, so it may not work correctly for Update operations
+	// that require id field. Use WithSelect for Update operations instead.
+
+	// No effect on "Create" and "Delete"
+	t.Run("Create", func(t *testing.T) {
+		t.Run("with single column", func(t *testing.T) {
+			defer cleanupTestData()
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("name").Create(ul...))
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).List(&users))
+			require.Len(t, users, 3)
+		})
+	})
+	t.Run("Delete", func(t *testing.T) {
+		t.Run("with single column", func(t *testing.T) {
+			defer cleanupTestData()
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("name").Create(ul...))
+			require.NoError(t, database.Database[*TestUser](nil).WithSelectRaw("name").Delete(ul...))
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).List(&users))
+			require.Len(t, users, 0)
+		})
+	})
+}
