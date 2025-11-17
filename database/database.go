@@ -2584,6 +2584,10 @@ QUERY:
 func (db *database[M]) Get(dest M, id string, _cache ...*[]byte) (err error) {
 	defer db.reset()
 
+	val := reflect.ValueOf(dest)
+	if !val.IsValid() || val.IsNil() {
+		return ErrNilDest
+	}
 	if len(id) == 0 {
 		return ErrIDRequired
 	}
@@ -2875,6 +2879,10 @@ QUERY:
 func (db *database[M]) First(dest M, _cache ...*[]byte) (err error) {
 	defer db.reset()
 
+	val := reflect.ValueOf(dest)
+	if !val.IsValid() || val.IsNil() {
+		return ErrNilDest
+	}
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -3037,6 +3045,10 @@ QUERY:
 func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
 	defer db.reset()
 
+	val := reflect.ValueOf(dest)
+	if !val.IsValid() || val.IsNil() {
+		return ErrNilDest
+	}
 	if err = db.prepare(); err != nil {
 		return err
 	}
@@ -3199,6 +3211,10 @@ QUERY:
 func (db *database[M]) Take(dest M, _cache ...*[]byte) (err error) {
 	defer db.reset()
 
+	val := reflect.ValueOf(dest)
+	if !val.IsValid() || val.IsNil() {
+		return ErrNilDest
+	}
 	if err = db.prepare(); err != nil {
 		return err
 	}

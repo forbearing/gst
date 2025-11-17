@@ -570,6 +570,12 @@ func TestDatabaseGet(t *testing.T) {
 	require.Empty(t, p.ID)
 	require.Empty(t, p.CreatedAt)
 	require.Empty(t, p.UpdatedAt)
+
+	// Test Get with nil dest - should returns error
+	var uu *TestUser
+	err = database.Database[*TestUser](nil).Get(uu, u1.ID)
+	require.Error(t, err, "should return error when dest is nil")
+	require.ErrorIs(t, err, database.ErrNilDest)
 }
 
 func TestDatabaseFirst(t *testing.T) {
@@ -615,6 +621,12 @@ func TestDatabaseFirst(t *testing.T) {
 	if err != nil {
 		require.Contains(t, err.Error(), "record not found", "should return 'record not found' error when no records exist")
 	}
+
+	// Test First with nil dest - should return error
+	var nilFirst *TestUser
+	err = database.Database[*TestUser](nil).First(nilFirst)
+	require.Error(t, err, "should return error when dest is nil")
+	require.ErrorIs(t, err, database.ErrNilDest)
 }
 
 func TestDatabaseLast(t *testing.T) {
@@ -660,6 +672,28 @@ func TestDatabaseLast(t *testing.T) {
 	if err != nil {
 		require.Contains(t, err.Error(), "record not found", "should return 'record not found' error when no records exist")
 	}
+
+	// Test Last with nil dest - should return error
+	var nilLast *TestUser
+	err = database.Database[*TestUser](nil).Last(nilLast)
+	require.Error(t, err, "should return error when dest is nil")
+	require.ErrorIs(t, err, database.ErrNilDest)
+}
+
+func TestDatabaseTake(t *testing.T) {
+	defer cleanupTestData()
+	setupTestData(t)
+
+	// Test Take - should return a record
+	u := new(TestUser)
+	require.NoError(t, database.Database[*TestUser](nil).Take(u))
+	require.NotEmpty(t, u.ID)
+
+	// Test Take with nil dest - should return error
+	var nilTake *TestUser
+	err := database.Database[*TestUser](nil).Take(nilTake)
+	require.Error(t, err, "should return error when dest is nil")
+	require.ErrorIs(t, err, database.ErrNilDest)
 }
 
 func TestDatabaseCount(t *testing.T) {
