@@ -1858,6 +1858,7 @@ func (db *database[M]) WithCache(enable ...bool) types.Database[M] {
 // Behavior:
 //   - Create/Update: Excludes specified fields from INSERT/UPDATE statements
 //   - Query operations (List, Get, First, Last, Take): Excludes specified fields from SELECT statements
+//   - Delete: Not affected (delete operations are based on WHERE conditions, not fields)
 //   - Count: Not affected (counts records, not fields)
 //
 // Example:
@@ -1866,6 +1867,7 @@ func (db *database[M]) WithCache(enable ...bool) types.Database[M] {
 //	WithOmit("id").Update(&user)                        // Skip ID field during update
 //	WithOmit("password").List(&users)                   // Exclude password from query results
 //	WithOmit("sensitive_data").Get(&user, id)          // Exclude sensitive data from query
+//	WithOmit("name", "age").Delete(&user)              // Delete works normally (WithOmit has no effect)
 func (db *database[M]) WithOmit(columns ...string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -1877,12 +1879,20 @@ func (db *database[M]) WithOmit(columns ...string) types.Database[M] {
 // Useful for debugging, query optimization, and testing query generation.
 // The generated SQL will be logged but not executed against the database.
 //
+// Behavior:
+//   - Create/Update/Delete/UpdateByID: Previews SQL without modifying database
+//   - Query operations (List, Get, Count, First, Last, Take): Not affected (queries still execute normally)
+//   - Model hooks are still executed even in dry-run mode
+//
 // Example:
 //
-//	WithDryRun().Create(&user)  // Preview INSERT SQL without creating record
-//	WithDryRun().WithQuery(params).List(&users)  // Preview SELECT SQL
+//	WithDryRun().Create(&user)              // Preview INSERT SQL without creating record
+//	WithDryRun().Update(&user)              // Preview UPDATE SQL without updating record
+//	WithDryRun().Delete(&user)              // Preview DELETE SQL without deleting record
+//	WithDryRun().UpdateByID(id, "name", v)  // Preview UPDATE SQL without updating record
+//	WithDryRun().List(&users)               // List still returns results (dry-run doesn't affect queries)
 //
-// WithDryRun only executes model hooks without performing actual database operations.
+// WithDryRun only executes model hooks without performing actual database write operations.
 // Also logs the SQL statements that would have been executed.
 func (db *database[M]) WithDryRun() types.Database[M] {
 	db.mu.Lock()

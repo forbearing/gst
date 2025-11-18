@@ -5059,6 +5059,46 @@ func TestDatabaseWithOmit(t *testing.T) {
 		})
 	})
 
+	t.Run("Delete", func(t *testing.T) {
+		t.Run("SoftDelete", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			// WithOmit should not affect Delete operation (soft delete)
+			count := new(int64)
+			require.NoError(t, database.Database[*TestUser](nil).Count(count))
+			require.Equal(t, int64(3), *count, "should have 3 records initially")
+
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("name", "age").Delete(u1))
+			require.NoError(t, database.Database[*TestUser](nil).Count(count))
+			require.Equal(t, int64(2), *count, "should have 2 records after soft delete")
+
+			// Verify record is soft-deleted (not accessible via Get)
+			uu := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
+			require.Empty(t, uu.ID, "soft-deleted record should not be accessible via Get")
+		})
+
+		t.Run("HardDelete", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			// WithOmit should not affect Delete operation (hard delete)
+			count := new(int64)
+			require.NoError(t, database.Database[*TestUser](nil).Count(count))
+			require.Equal(t, int64(3), *count, "should have 3 records initially")
+
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("name", "age").WithPurge().Delete(u1))
+			require.NoError(t, database.Database[*TestUser](nil).Count(count))
+			require.Equal(t, int64(2), *count, "should have 2 records after hard delete")
+
+			// Verify record is permanently deleted (not accessible via Get)
+			uu := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
+			require.Empty(t, uu.ID, "hard-deleted record should not be accessible via Get")
+		})
+	})
+
 	t.Run("List", func(t *testing.T) {
 		t.Run("OmitName", func(t *testing.T) {
 			defer cleanupTestData()
@@ -5153,5 +5193,126 @@ func TestDatabaseWithOmit(t *testing.T) {
 		require.Empty(t, uu.Name, "name should be omitted")
 		require.NotEmpty(t, uu.Age, "age should not be empty")
 		require.NotEmpty(t, uu.Email, "email should not be empty")
+	})
+}
+
+func TestDatabaseWithDryRun(t *testing.T) {
+	defer cleanupTestData()
+
+	t.Run("Create", func(t *testing.T) {
+		defer cleanupTestData()
+
+		// WithDryRun should not actually create records
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Create(ul...))
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users))
+		require.Len(t, users, 0, "records should not be created in dry-run mode")
+	})
+
+	t.Run("Delete", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not actually delete records
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records initially")
+
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Delete(u1))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "records should not be deleted in dry-run mode")
+	})
+
+	t.Run("Update", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not actually update records
+		originalName := u1.Name
+		u1.Name = "updated_name"
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Update(u1))
+
+		// Verify record is not updated
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
+		require.Equal(t, originalName, uu.Name, "name should not be updated in dry-run mode")
+	})
+
+	t.Run("UpdateByID", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not actually update records
+		originalName := u1.Name
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().UpdateByID(u1.ID, "name", "updated_name"))
+
+		// Verify record is not updated
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
+		require.Equal(t, originalName, uu.Name, "name should not be updated in dry-run mode")
+	})
+
+	t.Run("List", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not affect query operations (List still returns results)
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().List(&users))
+		require.Len(t, users, 3, "List should return results even in dry-run mode")
+	})
+
+	t.Run("Get", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not affect query operations (Get still returns results)
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Get(uu, u1.ID))
+		require.NotNil(t, uu)
+		require.Equal(t, u1.ID, uu.ID, "Get should return results even in dry-run mode")
+	})
+
+	t.Run("Count", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not affect query operations (Count still returns results)
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Count(count))
+		require.Equal(t, int64(3), *count, "Count should return results even in dry-run mode")
+	})
+
+	t.Run("First", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not affect query operations (First still returns results)
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().First(uu))
+		require.NotNil(t, uu)
+		require.NotEmpty(t, uu.ID, "First should return results even in dry-run mode")
+	})
+
+	t.Run("Last", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not affect query operations (Last still returns results)
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Last(uu))
+		require.NotNil(t, uu)
+		require.NotEmpty(t, uu.ID, "Last should return results even in dry-run mode")
+	})
+
+	t.Run("Take", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithDryRun should not affect query operations (Take still returns results)
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Take(uu))
+		require.NotNil(t, uu)
+		require.NotEmpty(t, uu.ID, "Take should return results even in dry-run mode")
 	})
 }
