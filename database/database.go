@@ -1654,31 +1654,20 @@ func (db *database[M]) WithLimit(limit int) types.Database[M] {
 
 // WithExpand enables eager loading of specified associations.
 // Preloads related data to avoid N+1 query problems.
-//
-// Parameters:
-//   - query: Association name or nested association path
-//   - args: Optional conditions for the preloaded association
-//
-// Example:
-//
-//	WithExpand("Orders")  // Preload user's orders
-//	WithExpand("Orders.Items")  // Preload nested associations
-//	WithExpand("Orders", "status = ?", "completed")  // Conditional preload
-//
-// WithExpand preload associations with given conditions.
-// order: preload with order.
-// eg: [Children.Children.Children Parent.Parent.Parent]
-// eg: [Children Parent]
-//
-// NOTE: WithExpand only workds on mysql foreign key relationship.
-// If you want expand the custom field that without gorm tag about foreign key definition,
-// you should define the GetAfter/ListAfter in model layer or service layoer.
-// WithExpand enables eager loading of related models with optional ordering.
 // It uses GORM's Preload functionality to load associated data in a single query.
 //
 // Parameters:
 //   - expand: Slice of relationship names to preload (e.g., ["Children", "Parent"])
-//   - order: Optional ordering for the preloaded relationships
+//     Nested relationships can be specified using dot notation (e.g., ["Parent.Parent", "Children.Children"])
+//   - order: Optional ordering for the preloaded relationships (e.g., "created_at desc")
+//     The first field in the order string will be wrapped with backticks to handle SQL keywords properly.
+//
+// Behavior:
+//   - Supports nested relationships using dot notation (e.g., "Parent.Parent")
+//   - Automatically expands intermediate relationships for nested paths
+//   - If specified depth exceeds available relationships, only expands available depth
+//   - Association names are case sensitive
+//   - Only works with GORM foreign key relationships
 //
 // Example:
 //
@@ -1691,8 +1680,12 @@ func (db *database[M]) WithLimit(limit int) types.Database[M] {
 //	// Load nested relationships
 //	db.WithExpand([]string{"Posts.Comments", "Profile"})
 //
-// Note: The first field in the order string will be wrapped with backticks
-// to handle SQL keywords properly.
+//	// Load category with parent and children (two levels)
+//	db.WithExpand([]string{"Parent.Parent", "Children.Children"})
+//
+// Note: WithExpand only affects SELECT queries (List, Get, First, Last, etc.).
+// It does not work with Create, Update, or Delete operations.
+// Note: For custom fields without GORM foreign key definitions, use GetAfter/ListAfter hooks instead.
 func (db *database[M]) WithExpand(expand []string, order ...string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -1710,9 +1703,8 @@ func (db *database[M]) WithExpand(expand []string, order ...string) types.Databa
 	withOrder := func(db *gorm.DB) *gorm.DB {
 		if len(_orders) > 0 {
 			return db.Order(_orders)
-		} else {
-			return db
 		}
+		return db
 	}
 	// FIXME: 前端加了 _depth 查询参数, 但是层数不匹配就无法递归排序,
 	// _depth 的作用:

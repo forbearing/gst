@@ -444,7 +444,11 @@ type DatabaseOption[M Model] interface {
 	//   - Direction keywords (ASC/DESC) are case-insensitive and will be converted to uppercase.
 	WithOrder(order string) Database[M]
 
-	// WithExpand, for "foreign key".
+	// WithExpand enables eager loading of specified associations.
+	// Preloads related data to avoid N+1 query problems.
+	// Supports nested relationships using dot notation (e.g., "Parent.Parent").
+	// Only works with GORM foreign key relationships.
+	// Only affects SELECT queries (List, Get, First, Last, etc.).
 	WithExpand(expand []string, order ...string) Database[M]
 
 	// WithPurge tells the database manipulator to delete resource in database permanently.

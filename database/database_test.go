@@ -10,6 +10,7 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
+	"github.com/forbearing/gst/database/helper"
 	"github.com/forbearing/gst/database/sqlite"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
@@ -29,6 +30,20 @@ var (
 	u3 = &TestUser{Name: "user3", Email: "user3@example.com", Age: 20, Base: model.Base{ID: "u3"}}
 
 	ul = []*TestUser{u1, u2, u3}
+
+	categoryRootID = "root"
+	categoryRoot   = &TestCategory{
+		Name:     categoryRootID,
+		ParentID: categoryRootID, // parent is itself
+		Base:     model.Base{ID: categoryRootID},
+	}
+
+	categoryParentID = "parent"
+	categoryParent   = &TestCategory{
+		Name:     categoryParentID,
+		ParentID: categoryRootID, // parent is "root"
+		Base:     model.Base{ID: categoryParentID},
+	}
 )
 
 // cleanupTestData deletes test data from database and restores original values of test users.
@@ -42,6 +57,39 @@ func cleanupTestData() {
 	u2 = &TestUser{Name: "user2", Email: "user2@example.com", Age: 19, Base: model.Base{ID: "u2"}}
 	u3 = &TestUser{Name: "user3", Email: "user3@example.com", Age: 20, Base: model.Base{ID: "u3"}}
 	ul = []*TestUser{u1, u2, u3}
+
+	categories := make([]*TestCategory, 0)
+	err := database.Database[*TestCategory](nil).List(&categories)
+	if err != nil {
+		panic(err)
+	}
+
+	// disable foreign key check
+	switch config.App.Database.Type {
+	case config.DBMySQL:
+		database.DB.Exec("SET FOREIGN_KEY_CHECKS=0")
+	case config.DBPostgres:
+		database.DB.Exec("SET CONSTRAINTS ALL DEFERRED")
+	case config.DBSqlite:
+		database.DB.Exec("PRAGMA foreign_keys = OFF")
+	}
+	defer func() {
+		// enable foreign key check
+		switch config.App.Database.Type {
+		case config.DBMySQL:
+			database.DB.Exec("SET FOREIGN_KEY_CHECKS=1")
+		case config.DBSqlite:
+			database.DB.Exec("PRAGMA foreign_keys = ON")
+		}
+	}()
+	// delete all categories, we must temporarily disable foreign key check
+	if err = database.Database[*TestCategory](nil).Delete(categories...); err != nil {
+		panic(err)
+	}
+
+	products := make([]*TestProduct, 0)
+	_ = database.Database[*TestProduct](nil).List(&products)
+	_ = database.Database[*TestProduct](nil).Delete(products...)
 }
 
 // setupTestData deletes existing test data and creates all test users (ul).
@@ -99,9 +147,10 @@ type TestProduct struct {
 func (*TestProduct) Purge() bool { return true }
 
 type TestCategory struct {
-	Name     string `json:"name"`
-	ParentID string `json:"parent_id"`
-
+	Name     string          `json:"name"`
+	ParentID string          `json:"parent_id" gorm:"not null;index:idx_parent_id,length:191"`
+	Children []*TestCategory `json:"children,omitempty" gorm:"foreignKey:ParentID"`
+	Parent   *TestCategory   `json:"parent,omitempty" gorm:"foreignKey:ParentID;references:ID"`
 	model.Base
 }
 
@@ -124,6 +173,9 @@ func init() {
 	model.Register[*TestUser]()
 	model.Register[*TestProduct]()
 	model.Register[*TestCategory]()
+
+	// block here until database migration is ready
+	helper.Wait()
 
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
@@ -4184,5 +4236,259 @@ func TestDatabaseWithLimit(t *testing.T) {
 		require.Equal(t, users1[0].ID, users2[0].ID)
 		require.Equal(t, users1[1].ID, users2[1].ID)
 		require.Equal(t, users1[2].ID, users2[2].ID)
+	})
+}
+
+func TestDatabaseWithExpand(t *testing.T) {
+	defer cleanupTestData()
+
+	setupCategoryData := func(t *testing.T) {
+		t.Helper()
+		require.NoError(t, database.Database[*TestCategory](nil).Create(categoryRoot))
+		require.NoError(t, database.Database[*TestCategory](nil).Create(categoryParent))
+
+		children := []*TestCategory{
+			{
+				Name:     "child1",
+				ParentID: categoryParentID,
+				Base:     model.Base{ID: "child1"},
+			},
+			{
+				Name:     "child2",
+				ParentID: categoryParentID,
+				Base:     model.Base{ID: "child2"},
+			},
+		}
+		require.NoError(t, database.Database[*TestCategory](nil).Create(children...))
+	}
+
+	t.Run("Parent", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		categories := make([]*TestCategory, 0)
+		// Expand parent with single depth
+		require.NoError(t, database.Database[*TestCategory](nil).
+			WithQuery(&TestCategory{Name: "child"}, types.QueryConfig{FuzzyMatch: true}).
+			WithExpand([]string{"Parent"}).
+			List(&categories))
+
+		require.Len(t, categories, 2)
+		require.NotNil(t, categories[0])
+		require.NotNil(t, categories[1])
+		require.NotNil(t, categories[0].Parent)
+		require.NotNil(t, categories[1].Parent)
+		require.Equal(t, categoryParentID, categories[0].Parent.ID)
+		require.Equal(t, categoryParentID, categories[1].Parent.ID)
+
+		// Only expand 1 depth, Parent.Parent should be nil
+		require.Nil(t, categories[0].Parent.Parent)
+		require.Nil(t, categories[1].Parent.Parent)
+	})
+
+	t.Run("ParentWithTwoDepth", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		categories := make([]*TestCategory, 0)
+		// Expand parent with two depth (Parent.Parent)
+		require.NoError(t, database.Database[*TestCategory](nil).
+			WithQuery(&TestCategory{Name: "child"}, types.QueryConfig{FuzzyMatch: true}).
+			WithExpand([]string{"Parent.Parent"}).
+			List(&categories))
+
+		require.Len(t, categories, 2)
+		require.NotNil(t, categories[0])
+		require.NotNil(t, categories[1])
+		require.NotNil(t, categories[0].Parent)
+		require.NotNil(t, categories[1].Parent)
+		require.Equal(t, categoryParentID, categories[0].Parent.ID)
+		require.Equal(t, categoryParentID, categories[1].Parent.ID)
+
+		// Expand root (Parent.Parent)
+		require.NotNil(t, categories[0].Parent.Parent)
+		require.NotNil(t, categories[1].Parent.Parent)
+		require.Equal(t, categoryRootID, categories[0].Parent.Parent.ID)
+		require.Equal(t, categoryRootID, categories[1].Parent.Parent.ID)
+	})
+
+	t.Run("ParentWithMoreDepth", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		categories := make([]*TestCategory, 0)
+		// Expand with more depth than available (should only expand available depth)
+		require.NoError(t, database.Database[*TestCategory](nil).
+			WithQuery(&TestCategory{Name: "child"}, types.QueryConfig{FuzzyMatch: true}).
+			WithExpand([]string{"Parent.Parent.Parent.Parent"}).
+			List(&categories))
+
+		require.Len(t, categories, 2)
+		require.NotNil(t, categories[0])
+		require.NotNil(t, categories[1])
+		require.NotNil(t, categories[0].Parent)
+		require.NotNil(t, categories[1].Parent)
+		require.Equal(t, categoryParentID, categories[0].Parent.ID)
+		require.Equal(t, categoryParentID, categories[1].Parent.ID)
+
+		// Should only expand available depth (2 levels: parent -> root)
+		require.NotNil(t, categories[0].Parent.Parent)
+		require.NotNil(t, categories[1].Parent.Parent)
+		require.Equal(t, categoryRootID, categories[0].Parent.Parent.ID)
+		require.Equal(t, categoryRootID, categories[1].Parent.Parent.ID)
+	})
+
+	t.Run("ParentCaseSensitive", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		categories := make([]*TestCategory, 0)
+		// Association names are case sensitive
+		require.Error(t, database.Database[*TestCategory](nil).
+			WithQuery(&TestCategory{Name: "child"}, types.QueryConfig{FuzzyMatch: true}).
+			WithExpand([]string{"parent"}).
+			List(&categories))
+	})
+
+	t.Run("Children", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		c := new(TestCategory)
+		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Children"}).Get(c, categoryRootID))
+		require.Len(t, c.Children, 2)
+		// Root has two children: itself and "parent"
+		require.NotNil(t, c.Children[0])
+		var r, p *TestCategory
+		var foundR, foundP bool
+		for _, child := range c.Children {
+			switch child.ID {
+			case categoryRootID:
+				foundR = true
+				r = child
+			case categoryParentID:
+				foundP = true
+				p = child
+			}
+		}
+		require.True(t, foundR)
+		require.True(t, foundP)
+		require.NotNil(t, r)
+		require.NotNil(t, p)
+		require.Equal(t, categoryRootID, r.ID)
+		require.Equal(t, categoryParentID, p.ID)
+		// Only one depth, no children
+		require.Nil(t, r.Children)
+		require.Nil(t, p.Children)
+	})
+
+	t.Run("ChildrenWithTwoDepth", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		c := new(TestCategory)
+		require.NoError(t, database.Database[*TestCategory](nil).Get(c, categoryRootID))
+		require.Len(t, c.Children, 0)
+
+		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Children.Children"}).Get(c, categoryRootID))
+		require.Len(t, c.Children, 2)
+		// Root has two children: itself and "parent"
+		require.NotNil(t, c.Children[0])
+		var root, parent *TestCategory
+		var foundR, foundP bool
+		for _, child := range c.Children {
+			switch child.ID {
+			case categoryRootID:
+				foundR = true
+				root = child
+			case categoryParentID:
+				foundP = true
+				parent = child
+			}
+		}
+		require.True(t, foundR)
+		require.True(t, foundP)
+		require.NotNil(t, root)
+		require.NotNil(t, parent)
+		require.Equal(t, categoryRootID, root.ID)
+		require.Equal(t, categoryParentID, parent.ID)
+
+		// With two depth
+		require.NotNil(t, root.Children)
+		require.NotNil(t, parent.Children)
+		require.Len(t, root.Children, 2)   // Root has two children: itself and "parent"
+		require.Len(t, parent.Children, 2) // Parent has two children: "child1" and "child2"
+		require.NotNil(t, root.Children[0])
+		require.NotNil(t, root.Children[1])
+		require.NotNil(t, parent.Children[0])
+		require.NotNil(t, parent.Children[1])
+	})
+
+	t.Run("ChildrenWithMoreDepth", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		c := new(TestCategory)
+		require.NoError(t, database.Database[*TestCategory](nil).Get(c, categoryRootID))
+		require.Len(t, c.Children, 0)
+
+		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Children.Children.Children.Children"}).Get(c, categoryRootID))
+		require.Len(t, c.Children, 2)
+		// Root has two children: itself and "parent"
+		require.NotNil(t, c.Children[0])
+		var root, parent *TestCategory
+		var foundR, foundP bool
+		for _, child := range c.Children {
+			switch child.ID {
+			case categoryRootID:
+				foundR = true
+				root = child
+			case categoryParentID:
+				foundP = true
+				parent = child
+			}
+		}
+		require.True(t, foundR)
+		require.True(t, foundP)
+		require.NotNil(t, root)
+		require.NotNil(t, parent)
+		require.Equal(t, categoryRootID, root.ID)
+		require.Equal(t, categoryParentID, parent.ID)
+
+		// Should only expand available depth (2 levels)
+		require.NotNil(t, root.Children)
+		require.NotNil(t, parent.Children)
+		require.Len(t, root.Children, 2)   // Root has two children: itself and "parent"
+		require.Len(t, parent.Children, 2) // Parent has two children: "child1" and "child2"
+		require.NotNil(t, root.Children[0])
+		require.NotNil(t, root.Children[1])
+		require.NotNil(t, parent.Children[0])
+		require.NotNil(t, parent.Children[1])
+	})
+
+	t.Run("ChildrenCaseSensitive", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		c := new(TestCategory)
+		// Association names are case sensitive
+		require.Error(t, database.Database[*TestCategory](nil).WithExpand([]string{"children"}).Get(c, categoryRootID))
+	})
+
+	t.Run("ParentAndChildren", func(t *testing.T) {
+		defer cleanupTestData()
+		setupCategoryData(t)
+
+		c := new(TestCategory)
+		require.NoError(t, database.Database[*TestCategory](nil).Get(c, categoryParentID))
+		require.Len(t, c.Children, 0)
+		require.Nil(t, c.Parent)
+
+		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Parent", "Children"}).Get(c, categoryParentID))
+		require.Len(t, c.Children, 2)
+		require.NotNil(t, c.Children[0])
+		require.NotNil(t, c.Children[1])
+		require.NotNil(t, c.Parent)
+		require.Equal(t, categoryRootID, c.Parent.ID)
 	})
 }
