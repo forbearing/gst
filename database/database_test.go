@@ -3767,3 +3767,127 @@ func TestDatabaseWithRollback(t *testing.T) {
 		})
 	})
 }
+
+func TestDatabaseWithLock(t *testing.T) {
+	defer cleanupTestData()
+
+	t.Run("TransactionFunc", func(t *testing.T) {
+		t.Run("with LockUpdate", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+				// Get and lock user with FOR UPDATE
+				user := new(TestUser)
+				require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).WithLock(consts.LockUpdate).Get(user, u1.ID))
+				require.Equal(t, u1.ID, user.ID)
+				require.Equal(t, u1.Name, user.Name)
+
+				// Update the locked user
+				user.Name = "locked_update"
+				return database.Database[*TestUser](nil).WithTx(tx).Update(user)
+			})
+			require.NoError(t, err)
+
+			// Verify update was successful
+			user := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).Get(user, u1.ID))
+			require.Equal(t, "locked_update", user.Name)
+		})
+
+		t.Run("with LockUpdateNoWait", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+				// Get and lock user with FOR UPDATE NOWAIT
+				user := new(TestUser)
+				require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).WithLock(consts.LockUpdateNoWait).Get(user, u1.ID))
+				require.Equal(t, u1.ID, user.ID)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+
+		t.Run("with LockShare", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+				// Get user with FOR SHARE lock
+				user := new(TestUser)
+				require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).WithLock(consts.LockShare).Get(user, u1.ID))
+				require.Equal(t, u1.ID, user.ID)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+
+		t.Run("with List", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+				// List users with lock
+				users := make([]*TestUser, 0)
+				require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).WithLock(consts.LockUpdate).List(&users))
+				require.Len(t, users, 3)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("Transaction", func(t *testing.T) {
+		t.Run("with LockUpdate", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+				// Get and lock user with FOR UPDATE
+				user := new(TestUser)
+				require.NoError(t, txDB.WithLock(consts.LockUpdate).Get(user, u1.ID))
+				require.Equal(t, u1.ID, user.ID)
+				require.Equal(t, u1.Name, user.Name)
+
+				// Update the locked user
+				user.Name = "locked_update"
+				return txDB.Update(user)
+			})
+			require.NoError(t, err)
+
+			// Verify update was successful
+			user := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).Get(user, u1.ID))
+			require.Equal(t, "locked_update", user.Name)
+		})
+
+		t.Run("with default lock mode", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+				// Get user with default lock (FOR UPDATE)
+				user := new(TestUser)
+				require.NoError(t, txDB.WithLock().Get(user, u1.ID))
+				require.Equal(t, u1.ID, user.ID)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+
+		t.Run("with List", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			err := database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+				// List users with lock
+				users := make([]*TestUser, 0)
+				require.NoError(t, txDB.WithLock(consts.LockUpdate).List(&users))
+				require.Len(t, users, 3)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+	})
+}

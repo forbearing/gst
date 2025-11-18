@@ -1277,18 +1277,10 @@ func (db *database[M]) WithRollback(rollbackFunc func()) types.Database[M] {
 
 // WithLock adds row-level locking to the query for concurrent access control.
 // Uses SELECT ... FOR UPDATE to prevent other transactions from modifying selected rows.
-// Should be used within a transaction to be effective.
+// Must be used within a transaction (Transaction or TransactionFunc) to be effective.
 //
-// Example:
-//
-//	DB.Transaction(func(tx *gorm.DB) error {
-//	    return Database[*User]().
-//	        WithLock().
-//	        Get(&user, userID)
-//	})
-//
-// WithLock adds locking clause to SELECT statement.
-// It must be used within a transaction.
+// Important: WithLock only applies to SELECT queries (Get, First, List, etc.).
+// It does not work with Create, Update, or Delete operations.
 //
 // Lock modes:
 //   - consts.LockUpdate (default): SELECT ... FOR UPDATE
@@ -1298,20 +1290,33 @@ func (db *database[M]) WithRollback(rollbackFunc func()) types.Database[M] {
 //   - consts.LockUpdateSkipLocked: SELECT ... FOR UPDATE SKIP LOCKED
 //   - consts.LockShareSkipLocked: SELECT ... FOR SHARE SKIP LOCKED
 //
-// Example:
+// Example with Transaction:
 //
-//	DB.Transaction(func(tx *gorm.DB) error {
-//	    // Default FOR UPDATE lock
-//	    err := Database[*Order]().
-//	        WithTx(tx).
-//	        WithLock().
-//	        Get(&order, orderID)
+//	err := database.Database[*model.User](nil).Transaction(func(txDB types.Database[*model.User]) error {
+//	    // Get and lock user with FOR UPDATE
+//	    user := new(model.User)
+//	    if err := txDB.WithLock(consts.LockUpdate).Get(user, userID); err != nil {
+//	        return err
+//	    }
+//	    // Update the locked user
+//	    user.Name = "updated"
+//	    return txDB.Update(user)
+//	})
 //
-//	    // FOR UPDATE NOWAIT
-//	    err = Database[*Order]().
+// Example with TransactionFunc:
+//
+//	err := database.Database[*model.Order](nil).TransactionFunc(func(tx any) error {
+//	    // Get and lock order with FOR UPDATE NOWAIT
+//	    order := new(model.Order)
+//	    if err := database.Database[*model.Order](nil).
 //	        WithTx(tx).
 //	        WithLock(consts.LockUpdateNoWait).
-//	        Get(&order, orderID)
+//	        Get(order, orderID); err != nil {
+//	        return err
+//	    }
+//	    // Update the locked order
+//	    order.Status = "processed"
+//	    return database.Database[*model.Order](nil).WithTx(tx).Update(order)
 //	})
 func (db *database[M]) WithLock(mode ...consts.LockMode) types.Database[M] {
 	db.mu.Lock()
