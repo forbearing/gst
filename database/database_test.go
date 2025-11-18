@@ -17,6 +17,7 @@ import (
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 const (
@@ -4591,5 +4592,203 @@ func TestDatabaseWithExclude(t *testing.T) {
 		require.NotNil(t, u11)
 		require.NotNil(t, u22)
 		require.NotNil(t, u33)
+	})
+}
+
+func TestDatabaseWithPurge(t *testing.T) {
+	defer cleanupTestData()
+
+	t.Run("HardDeleteDefault", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithPurge() defaults to true (hard delete)
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge().Delete(u1))
+
+		// Verify record is permanently deleted (not visible in normal queries)
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count, "should have 2 records after hard delete")
+
+		// Verify record is not accessible via Get
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Empty(t, u.ID, "hard-deleted record should not be accessible via Get")
+
+		// Verify record is permanently deleted (not found even with Unscoped)
+		var unscopedUser TestUser
+		err := database.DB.Unscoped().Where("id = ?", u1.ID).First(&unscopedUser).Error
+		require.Error(t, err, "hard-deleted record should not exist even with Unscoped")
+		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	})
+
+	t.Run("HardDeleteExplicit", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithPurge(true) explicitly enables hard delete
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(true).Delete(u1, u2))
+
+		// Verify records are permanently deleted
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(1), *count, "should have 1 record after hard delete")
+
+		// Verify records are not found even with Unscoped
+		var unscopedUser TestUser
+		err := database.DB.Unscoped().Where("id = ?", u1.ID).First(&unscopedUser).Error
+		require.Error(t, err)
+		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+
+		err = database.DB.Unscoped().Where("id = ?", u2.ID).First(&unscopedUser).Error
+		require.Error(t, err)
+		require.ErrorIs(t, err, gorm.ErrRecordNotFound)
+
+		// Verify u3 still exists
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u3.ID))
+		require.Equal(t, u3.ID, u.ID)
+	})
+
+	t.Run("SoftDeleteExplicit", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithPurge(false) explicitly enables soft delete (overrides model.Purge())
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).Delete(u1))
+
+		// Verify record is soft-deleted (not visible in normal queries)
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count, "should have 2 records after soft delete")
+
+		// Verify record is not accessible via Get
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u, u1.ID))
+		require.Empty(t, u.ID, "soft-deleted record should not be accessible via Get")
+
+		// Verify record still exists in database (found with Unscoped)
+		var unscopedUser TestUser
+		require.NoError(t, database.DB.Unscoped().Where("id = ?", u1.ID).First(&unscopedUser).Error)
+		require.Equal(t, u1.ID, unscopedUser.ID, "soft-deleted record should exist with Unscoped")
+		require.NotNil(t, unscopedUser.DeletedAt, "soft-deleted record should have deleted_at set")
+	})
+
+	t.Run("BatchHardDelete", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Batch hard delete all records
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(true).Delete(ul...))
+
+		// Verify all records are permanently deleted
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(0), *count, "should have 0 records after batch hard delete")
+
+		// Verify all records are not found even with Unscoped
+		var countUnscoped int64
+		require.NoError(t, database.DB.Unscoped().Model(&TestUser{}).Count(&countUnscoped).Error)
+		require.Equal(t, int64(0), countUnscoped, "all records should be permanently deleted")
+	})
+
+	t.Run("BatchSoftDelete", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Batch soft delete all records
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).Delete(ul...))
+
+		// Verify all records are soft-deleted (not visible in normal queries)
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(0), *count, "should have 0 records after batch soft delete")
+
+		// Verify all records still exist in database (found with Unscoped)
+		var countUnscoped int64
+		require.NoError(t, database.DB.Unscoped().Model(&TestUser{}).Count(&countUnscoped).Error)
+		require.Equal(t, int64(3), countUnscoped, "all records should still exist with Unscoped")
+
+		// Verify all records have deleted_at set
+		var users []TestUser
+		require.NoError(t, database.DB.Unscoped().Find(&users).Error)
+		require.Len(t, users, 3)
+		for _, u := range users {
+			require.NotNil(t, u.DeletedAt, "soft-deleted record should have deleted_at set")
+		}
+	})
+
+	t.Run("DoesNotAffectCreate", func(t *testing.T) {
+		defer cleanupTestData()
+
+		// WithPurge should not affect Create operations
+		// Create with WithPurge() - should work normally
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge().Create(ul...))
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after Create with WithPurge()")
+
+		// Create with WithPurge(true) - should work normally
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(true).Create(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after Create with WithPurge(true)")
+
+		// Create with WithPurge(false) - should work normally
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).Create(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after Create with WithPurge(false)")
+	})
+
+	t.Run("DoesNotAffectUpdate", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithPurge should not affect Update operations
+		u1.Name = "updated1"
+		u2.Name = "updated2"
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge().Update(u1, u2))
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(true).Update(u1, u2))
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).Update(u1, u2))
+
+		// Verify records are updated successfully
+		u11 := new(TestUser)
+		u22 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u11, u1.ID))
+		require.NoError(t, database.Database[*TestUser](nil).Get(u22, u2.ID))
+		require.Equal(t, "updated1", u11.Name)
+		require.Equal(t, "updated2", u22.Name)
+	})
+
+	t.Run("DoesNotAffectList", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithPurge should not affect List operations
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge().List(&users))
+		require.Len(t, users, 3, "WithPurge should not affect List")
+
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(true).List(&users))
+		require.Len(t, users, 3, "WithPurge(true) should not affect List")
+
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).List(&users))
+		require.Len(t, users, 3, "WithPurge(false) should not affect List")
+	})
+
+	t.Run("DoesNotAffectGet", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithPurge should not affect Get operations
+		u := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge().Get(u, u1.ID))
+		require.NotNil(t, u)
+		require.Equal(t, u1.ID, u.ID)
+
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(true).Get(u, u2.ID))
+		require.Equal(t, u2.ID, u.ID)
+
+		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).Get(u, u3.ID))
+		require.Equal(t, u3.ID, u.ID)
 	})
 }

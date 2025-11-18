@@ -446,7 +446,10 @@ type DatabaseOption[M Model] interface {
 	// Only affects SELECT queries (List, Get, First, Last, etc.).
 	WithExpand(expand []string, order ...string) Database[M]
 
-	// WithPurge tells the database manipulator to delete resource in database permanently.
+	// WithPurge explicitly controls whether to permanently delete records (hard delete).
+	// This option has the HIGHEST PRIORITY and overrides the model's default Purge() behavior.
+	// Only works on 'Delete' method. Does not affect Create, Update, List, Get, or other operations.
+	// Parameters: enable (optional, default: true) - true for hard delete, false for soft delete.
 	WithPurge(...bool) Database[M]
 	// WithCache tells the database manipulator to retrieve resource from cache.
 	WithCache(...bool) Database[M]
