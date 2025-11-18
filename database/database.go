@@ -1628,19 +1628,26 @@ func (db *database[M]) WithPagination(page, size int) types.Database[M] {
 // Used for pagination and controlling result set size.
 //
 // Parameters:
-//   - limit: Maximum number of records to return (must be positive)
+//   - limit: Maximum number of records to return.
+//     If limit <= 0, uses defaultLimit (-1, unlimited) to return all records.
 //
-// Returns the same instance if limit is not positive.
+// Returns the same database instance for method chaining.
 //
 // Example:
 //
 //	WithLimit(10)  // Return at most 10 records
 //	WithLimit(100).WithOffset(20)  // Pagination: skip 20, take 100
+//	WithLimit(0)   // Returns all records (unlimited)
 //
-// WithLimit specifies the number of record to be retrieved.
+// Note: WithLimit only affects SELECT queries (List, Get, First, Last, etc.).
+// GORM ignores Limit clause in Create, Update, and Delete operations for cross-database
+// compatibility, as INSERT statements don't support LIMIT in most databases.
 func (db *database[M]) WithLimit(limit int) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	if limit <= 0 {
+		limit = defaultLimit
+	}
 	db.ins = db.ins.Limit(limit)
 	return db
 }

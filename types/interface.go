@@ -402,8 +402,9 @@ type DatabaseOption[M Model] interface {
 	// Returns: A modified Database instance that includes pagination parameters in its query conditions.
 	WithPagination(page, size int) Database[M]
 
-	// WithLimit determines how much record should retrieve.
-	// limit is 0 or -1 means no limit.
+	// WithLimit adds LIMIT clause to restrict the number of returned records.
+	// If limit <= 0, uses defaultLimit (-1, unlimited) to return all records.
+	// Only affects SELECT queries (List, Get, First, Last, etc.).
 	WithLimit(limit int) Database[M]
 
 	// WithExclude excludes records that matchs a condition within a list.

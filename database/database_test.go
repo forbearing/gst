@@ -4058,3 +4058,131 @@ func TestDatabaseWithPagination(t *testing.T) {
 		assertIDs(t, runPage(t, 2, 50), []string{})
 	})
 }
+
+func TestDatabaseWithLimit(t *testing.T) {
+	defer cleanupTestData()
+
+	newSeqUsers := func(prefix string, count int) ([]*TestUser, []string) {
+		users := make([]*TestUser, 0, count)
+		ids := make([]string, 0, count)
+		for i := range count {
+			id := fmt.Sprintf("%s_%05d", prefix, i)
+			users = append(users, &TestUser{
+				Name:  fmt.Sprintf("%s_name_%05d", prefix, i),
+				Email: fmt.Sprintf("%s_%05d@example.com", prefix, i),
+				Age:   18 + i,
+				Base:  model.Base{ID: id},
+			})
+			ids = append(ids, id)
+		}
+		return users, ids
+	}
+	assertIDs := func(t *testing.T, users []*TestUser, expected []string) {
+		t.Helper()
+		require.Equal(t, len(expected), len(users))
+		for i := range expected {
+			require.Equal(t, expected[i], users[i].ID)
+		}
+	}
+
+	t.Run("BasicLimit", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, testIDs := newSeqUsers("test", 10)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(3).List(&users))
+		require.Len(t, users, 3)
+		assertIDs(t, users, testIDs[0:3])
+	})
+
+	t.Run("WithOrderAsc", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, testIDs := newSeqUsers("test", 10)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(5).List(&users))
+		require.Len(t, users, 5)
+		assertIDs(t, users, testIDs[0:5])
+	})
+
+	t.Run("WithOrderDesc", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, testIDs := newSeqUsers("test", 10)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id desc").WithLimit(5).List(&users))
+		require.Len(t, users, 5)
+		// Reverse expected IDs for desc order
+		expected := make([]string, 5)
+		for i := range 5 {
+			expected[i] = testIDs[9-i]
+		}
+		assertIDs(t, users, expected)
+	})
+
+	t.Run("LimitExceedsTotal", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, testIDs := newSeqUsers("test", 5)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(10).List(&users))
+		require.Len(t, users, 5)
+		assertIDs(t, users, testIDs)
+	})
+
+	t.Run("NonPositiveLimitUsesDefault", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, testIDs := newSeqUsers("test", 10)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		users := make([]*TestUser, 0)
+		// limit <= 0 should use defaultLimit (-1, unlimited)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(0).List(&users))
+		require.Len(t, users, 10)
+		assertIDs(t, users, testIDs)
+
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(-1).List(&users))
+		require.Len(t, users, 10)
+		assertIDs(t, users, testIDs)
+
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(-99).List(&users))
+		require.Len(t, users, 10)
+		assertIDs(t, users, testIDs)
+	})
+
+	t.Run("LimitOne", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, testIDs := newSeqUsers("test", 5)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id asc").WithLimit(1).List(&users))
+		require.Len(t, users, 1)
+		assertIDs(t, users, testIDs[0:1])
+	})
+
+	t.Run("ChainOrder", func(t *testing.T) {
+		defer cleanupTestData()
+		testUsers, _ := newSeqUsers("test", 10)
+		require.NoError(t, database.Database[*TestUser](nil).Create(testUsers...))
+
+		// Test that WithOrder can be chained before or after WithLimit
+		users1 := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("id desc").WithLimit(3).List(&users1))
+
+		users2 := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithLimit(3).WithOrder("id desc").List(&users2))
+
+		// Both should produce the same result
+		require.Equal(t, len(users1), len(users2))
+		require.Equal(t, users1[0].ID, users2[0].ID)
+		require.Equal(t, users1[1].ID, users2[1].ID)
+		require.Equal(t, users1[2].ID, users2[2].ID)
+	})
+}
