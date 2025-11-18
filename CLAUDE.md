@@ -43,4 +43,4 @@ go install ./cmd/gg
 本项目在 fish shell 环境下开发。生成 shell 命令时：
 
 - 避免 bash 特有的语法结构
-- 切换目录时请使用 `builtin cd mydir` 而不是直接 `cd mydir` 因为在 sandbox autorun 中, `cd` 命令有问题
+- 切换目录时请使用如果使用到了 `cd` 命令时必须使用 `builtin cd mydir` 而不是直接 `cd mydir` 因为在 sandbox autorun 中, `cd` 命令有问题
