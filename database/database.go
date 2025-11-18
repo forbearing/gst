@@ -1849,18 +1849,23 @@ func (db *database[M]) WithCache(enable ...bool) types.Database[M] {
 	return db
 }
 
-// WithOmit excludes specified fields from INSERT and UPDATE operations.
+// WithOmit excludes specified fields from INSERT, UPDATE, and SELECT operations.
 // Useful for skipping auto-generated fields or fields that shouldn't be modified.
 //
 // Parameters:
 //   - columns: Field names to omit from the operation
 //
+// Behavior:
+//   - Create/Update: Excludes specified fields from INSERT/UPDATE statements
+//   - Query operations (List, Get, First, Last, Take): Excludes specified fields from SELECT statements
+//   - Count: Not affected (counts records, not fields)
+//
 // Example:
 //
-//	WithOmit("created_at", "updated_at").Create(&user)  // Skip timestamp fields
-//	WithOmit("id").Update(&user)  // Skip ID field during update
-//
-// WithOmit omit specific columns when create/update/query.
+//	WithOmit("created_at", "updated_at").Create(&user)  // Skip timestamp fields on create
+//	WithOmit("id").Update(&user)                        // Skip ID field during update
+//	WithOmit("password").List(&users)                   // Exclude password from query results
+//	WithOmit("sensitive_data").Get(&user, id)          // Exclude sensitive data from query
 func (db *database[M]) WithOmit(columns ...string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()

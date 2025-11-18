@@ -4985,3 +4985,173 @@ func TestDatabaseWithCache(t *testing.T) {
 		require.True(t, reflect.DeepEqual(uu1, uu3), "results should be identical")
 	})
 }
+
+func TestDatabaseWithOmit(t *testing.T) {
+	defer cleanupTestData()
+
+	t.Run("Create", func(t *testing.T) {
+		t.Run("OmitName", func(t *testing.T) {
+			defer cleanupTestData()
+
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("name").Create(ul...))
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).List(&users))
+			require.Len(t, users, 3)
+
+			for _, u := range users {
+				require.NotNil(t, u)
+				require.Empty(t, u.Name, "name should be omitted")
+				require.NotEmpty(t, u.Age, "age should not be empty")
+				require.NotEmpty(t, u.Email, "email should not be empty")
+				require.NotEmpty(t, u.CreatedAt, "created_at should not be empty")
+				require.NotEmpty(t, u.UpdatedAt, "updated_at should not be empty")
+			}
+		})
+
+		t.Run("OmitAge", func(t *testing.T) {
+			defer cleanupTestData()
+
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("age").Create(ul...))
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).List(&users))
+			require.Len(t, users, 3)
+
+			for _, u := range users {
+				require.NotNil(t, u)
+				require.Empty(t, u.Age, "age should be omitted")
+				require.NotEmpty(t, u.Name, "name should not be empty")
+				require.NotEmpty(t, u.Email, "email should not be empty")
+				require.NotEmpty(t, u.CreatedAt, "created_at should not be empty")
+				require.NotEmpty(t, u.UpdatedAt, "updated_at should not be empty")
+			}
+		})
+	})
+
+	t.Run("Update", func(t *testing.T) {
+		t.Run("OmitName", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			// Update with omit name - name should remain unchanged
+			originalName := u1.Name
+			u1.Age = 25
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("name").Update(u1))
+
+			uu := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
+			require.Equal(t, originalName, uu.Name, "name should remain unchanged when omitted")
+			require.Equal(t, int(25), uu.Age, "age should be updated")
+		})
+
+		t.Run("OmitAge", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			// Update with omit age - age should remain unchanged
+			originalAge := u1.Age
+			u1.Name = "updated_name"
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("age").Update(u1))
+
+			uu := new(TestUser)
+			require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
+			require.Equal(t, originalAge, uu.Age, "age should remain unchanged when omitted")
+			require.Equal(t, "updated_name", uu.Name, "name should be updated")
+		})
+	})
+
+	t.Run("List", func(t *testing.T) {
+		t.Run("OmitName", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("name").List(&users))
+			require.Len(t, users, 3)
+
+			for _, u := range users {
+				require.NotNil(t, u)
+				require.Empty(t, u.Name, "name should be omitted")
+				require.NotEmpty(t, u.Age, "age should not be empty")
+				require.NotEmpty(t, u.Email, "email should not be empty")
+			}
+		})
+
+		t.Run("OmitAge", func(t *testing.T) {
+			defer cleanupTestData()
+			setupTestData(t)
+
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithOmit("age").List(&users))
+			require.Len(t, users, 3)
+
+			for _, u := range users {
+				require.NotNil(t, u)
+				require.NotEmpty(t, u.Name, "name should not be empty")
+				require.Empty(t, u.Age, "age should be omitted")
+				require.NotEmpty(t, u.Email, "email should not be empty")
+			}
+		})
+	})
+
+	t.Run("Get", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithOmit("name").Get(uu, u1.ID))
+		require.NotNil(t, uu)
+		require.Equal(t, u1.ID, uu.ID)
+		require.Empty(t, uu.Name, "name should be omitted")
+		require.NotEmpty(t, uu.Age, "age should not be empty")
+		require.NotEmpty(t, uu.Email, "email should not be empty")
+	})
+
+	t.Run("Count", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// WithOmit should not affect Count operation
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).WithOmit("name", "age").Count(count))
+		require.Equal(t, int64(3), *count, "count should not be affected by WithOmit")
+	})
+
+	t.Run("First", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithOmit("name").First(uu))
+		require.NotNil(t, uu)
+		require.NotEmpty(t, uu.ID)
+		require.Empty(t, uu.Name, "name should be omitted")
+		require.NotEmpty(t, uu.Age, "age should not be empty")
+		require.NotEmpty(t, uu.Email, "email should not be empty")
+	})
+
+	t.Run("Last", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithOmit("age").Last(uu))
+		require.NotNil(t, uu)
+		require.NotEmpty(t, uu.ID)
+		require.NotEmpty(t, uu.Name, "name should not be empty")
+		require.Empty(t, uu.Age, "age should be omitted")
+		require.NotEmpty(t, uu.Email, "email should not be empty")
+	})
+
+	t.Run("Take", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		uu := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithOmit("name").Take(uu))
+		require.NotNil(t, uu)
+		require.NotEmpty(t, uu.ID)
+		require.Empty(t, uu.Name, "name should be omitted")
+		require.NotEmpty(t, uu.Age, "age should not be empty")
+		require.NotEmpty(t, uu.Email, "email should not be empty")
+	})
+}
