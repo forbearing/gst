@@ -2911,7 +2911,7 @@ QUERY:
 //	First(&user)  // Get first user by primary key
 //	WithQuery(&User{Status: "active"}).First(&user)  // Get first active user
 //	WithOrder("created_at DESC").First(&user)  // Get newest user
-func (db *database[M]) First(dest M, _cache ...*[]byte) (err error) {
+func (db *database[M]) First(dest M) (err error) {
 	defer db.reset()
 
 	val := reflect.ValueOf(dest)
@@ -3077,7 +3077,7 @@ QUERY:
 //	Last(&user)  // Get last user by primary key
 //	WithQuery(&User{Status: "active"}).Last(&user)  // Get last active user
 //	WithOrder("created_at ASC").Last(&user)  // Get oldest user (with custom order)
-func (db *database[M]) Last(dest M, _cache ...*[]byte) (err error) {
+func (db *database[M]) Last(dest M) (err error) {
 	defer db.reset()
 
 	val := reflect.ValueOf(dest)
@@ -3243,7 +3243,7 @@ QUERY:
 //	var user User
 //	Take(&user)  // Get any user record
 //	WithQuery("status = ?", "active").Take(&user)  // Get any active user
-func (db *database[M]) Take(dest M, _cache ...*[]byte) (err error) {
+func (db *database[M]) Take(dest M) (err error) {
 	defer db.reset()
 
 	val := reflect.ValueOf(dest)
