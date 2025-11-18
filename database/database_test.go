@@ -4801,34 +4801,187 @@ func TestDatabaseWithPurge(t *testing.T) {
 func TestDatabaseWithCache(t *testing.T) {
 	defer cleanupTestData()
 
-	// No Effect on "Create"
-	t.Run("Create", func(t *testing.T) {
+	t.Run("DoesNotAffectCreate", func(t *testing.T) {
 		defer cleanupTestData()
+
+		// WithCache should not affect Create operations
 		require.NoError(t, database.Database[*TestUser](nil).WithCache().Create(ul...))
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after Create with WithCache()")
+
+		// Create with WithCache(true) - should work normally
+		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(true).Create(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after Create with WithCache(true)")
+
+		// Create with WithCache(false) - should work normally
+		require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).Create(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records after Create with WithCache(false)")
 	})
 
-	// No Effect on "Delete"
-	t.Run("Delete", func(t *testing.T) {
+	t.Run("DoesNotAffectDelete", func(t *testing.T) {
 		defer cleanupTestData()
-		require.NoError(t, database.Database[*TestUser](nil).WithCache().Create(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).WithCache().Delete(ul...))
+		setupTestData(t)
+
+		// WithCache should not affect Delete operations (but Delete clears cache)
+		count := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(3), *count, "should have 3 records initially")
+
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Delete(u1))
+		require.NoError(t, database.Database[*TestUser](nil).Count(count))
+		require.Equal(t, int64(2), *count, "should have 2 records after Delete with WithCache()")
 	})
 
-	t.Run("Update", func(t *testing.T) {
+	t.Run("DoesNotAffectUpdate", func(t *testing.T) {
 		defer cleanupTestData()
-		require.NoError(t, database.Database[*TestUser](nil).WithCache().Update(ul...))
-		require.NoError(t, database.Database[*TestUser](nil).WithCache().UpdateByID(u1.ID, "name", "new_name"))
+		setupTestData(t)
+
+		// WithCache should not affect Update operations (but Update clears cache)
+		u1.Name = "updated1"
+		u2.Name = "updated2"
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Update(u1, u2))
+
+		// Verify records are updated successfully
+		u11 := new(TestUser)
+		u22 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(u11, u1.ID))
+		require.NoError(t, database.Database[*TestUser](nil).Get(u22, u2.ID))
+		require.Equal(t, "updated1", u11.Name)
+		require.Equal(t, "updated2", u22.Name)
 	})
 
 	t.Run("List", func(t *testing.T) {
 		defer cleanupTestData()
-		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		setupTestData(t)
+
+		// Test List with cache enabled - results should be consistent
 		users1 := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users1))
-		require.Len(t, users1, 3)
+		require.Len(t, users1, 3, "should have 3 records without cache")
+
 		users2 := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithCache().List(&users2))
-		require.Len(t, users2, 3)
-		require.True(t, reflect.DeepEqual(users1, users2))
+		require.Len(t, users2, 3, "should have 3 records with cache enabled")
+		require.True(t, reflect.DeepEqual(users1, users2), "results should be identical")
+
+		// Test List with cache disabled - should still work
+		users3 := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).List(&users3))
+		require.Len(t, users3, 3, "should have 3 records with cache disabled")
+		require.True(t, reflect.DeepEqual(users1, users3), "results should be identical")
+	})
+
+	t.Run("Get", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test Get with cache enabled - results should be consistent
+		uu1 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Get(uu1, u1.ID))
+		require.NotNil(t, uu1)
+		require.Equal(t, u1.ID, uu1.ID)
+
+		uu2 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Get(uu2, u1.ID))
+		require.NotNil(t, uu2)
+		require.True(t, reflect.DeepEqual(uu1, uu2), "results should be identical")
+
+		// Test Get with cache disabled - should still work
+		uu3 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).Get(uu3, u1.ID))
+		require.NotNil(t, uu3)
+		require.True(t, reflect.DeepEqual(uu1, uu3), "results should be identical")
+	})
+
+	t.Run("Count", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test Count with cache enabled
+		count1 := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).Count(count1))
+		require.Equal(t, int64(3), *count1, "should have 3 records without cache")
+
+		count2 := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Count(count2))
+		require.Equal(t, int64(3), *count2, "should have 3 records with cache enabled")
+		require.Equal(t, *count1, *count2, "counts should be identical")
+
+		// Test Count with cache disabled - should still work
+		count3 := new(int64)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).Count(count3))
+		require.Equal(t, int64(3), *count3, "should have 3 records with cache disabled")
+		require.Equal(t, *count1, *count3, "counts should be identical")
+	})
+
+	t.Run("First", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test First with cache enabled - results should be consistent
+		uu1 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).First(uu1))
+		require.NotNil(t, uu1)
+		require.NotEmpty(t, uu1.ID)
+
+		uu2 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().First(uu2))
+		require.NotNil(t, uu2)
+		require.True(t, reflect.DeepEqual(uu1, uu2), "results should be identical")
+
+		// Test First with cache disabled - should still work
+		uu3 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).First(uu3))
+		require.NotNil(t, uu3)
+		require.True(t, reflect.DeepEqual(uu1, uu3), "results should be identical")
+	})
+
+	t.Run("Last", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test Last with cache enabled - results should be consistent
+		uu1 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Last(uu1))
+		require.NotNil(t, uu1)
+		require.NotEmpty(t, uu1.ID)
+
+		uu2 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Last(uu2))
+		require.NotNil(t, uu2)
+		require.True(t, reflect.DeepEqual(uu1, uu2), "results should be identical")
+
+		// Test Last with cache disabled - should still work
+		uu3 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).Last(uu3))
+		require.NotNil(t, uu3)
+		require.True(t, reflect.DeepEqual(uu1, uu3), "results should be identical")
+	})
+
+	t.Run("Take", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		// Test Take with cache enabled - results should be consistent
+		uu1 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).Take(uu1))
+		require.NotNil(t, uu1)
+		require.NotEmpty(t, uu1.ID)
+
+		uu2 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Take(uu2))
+		require.NotNil(t, uu2)
+		require.True(t, reflect.DeepEqual(uu1, uu2), "results should be identical")
+
+		// Test Take with cache disabled - should still work
+		uu3 := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache(false).Take(uu3))
+		require.NotNil(t, uu3)
+		require.True(t, reflect.DeepEqual(uu1, uu3), "results should be identical")
 	})
 }
