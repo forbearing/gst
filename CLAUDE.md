@@ -27,6 +27,7 @@ go install ./cmd/gg
 ### 任务完成检查清单：
 
 - 确保代码检查能通过 `make check`
+- 确保代码能测试通过 `make test`
 
 ### 优先使用的包
 
