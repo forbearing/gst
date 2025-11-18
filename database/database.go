@@ -1746,9 +1746,16 @@ func (db *database[M]) WithExpand(expand []string, order ...string) types.Databa
 
 // WithExclude excludes records that match specified conditions.
 // It adds NOT conditions to the query to filter out records with matching values.
+// Multiple fields can be excluded, and each field can have multiple values to exclude.
 //
 // Parameters:
-//   - excludes: Map where keys are field names and values are slices of values to exclude
+//   - excludes: Map where keys are field names and values are slices of values to exclude.
+//     Empty map will not filter any records.
+//
+// Behavior:
+//   - Multiple values for the same field are combined with OR logic (exclude if matches any value)
+//   - Multiple fields are combined with AND logic (exclude if matches all field conditions)
+//   - Empty exclude map has no effect
 //
 // Example:
 //
@@ -1756,17 +1763,20 @@ func (db *database[M]) WithExpand(expand []string, order ...string) types.Databa
 //	excludes := map[string][]any{
 //		"id": {"user1", "user2", "user3"},
 //	}
-//	db.WithExclude(excludes)
+//	db.WithExclude(excludes).List(&users)
 //
-//	// Exclude users with specific IDs and names
+//	// Exclude users with specific IDs and names (AND logic)
 //	excludes := map[string][]any{
 //		"id":   {"user1", "user2"},
 //		"name": {"admin", "root"},
 //	}
-//	db.WithExclude(excludes)
+//	db.WithExclude(excludes).List(&users)
 //
 // Note: This method affects the WHERE clause, not the SELECT clause.
 // Use WithOmit() to exclude fields from SELECT queries.
+// Note: WithExclude affects SELECT queries (List, Get, First, Last, etc.) and
+// also affects Update and Delete operations by adding NOT conditions to WHERE clause.
+// It does not affect Create operations (INSERT statements don't support WHERE clause).
 func (db *database[M]) WithExclude(excludes map[string][]any) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()

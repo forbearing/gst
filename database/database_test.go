@@ -4492,3 +4492,104 @@ func TestDatabaseWithExpand(t *testing.T) {
 		require.Equal(t, categoryRootID, c.Parent.ID)
 	})
 }
+
+func TestDatabaseWithExclude(t *testing.T) {
+	defer cleanupTestData()
+
+	t.Run("ExcludeByID", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithExclude(map[string][]any{
+			"id": {u1.ID},
+		}).List(&users))
+
+		require.Len(t, users, 2)
+		u11, u22, u33 := findUsersByID(users)
+		require.Nil(t, u11, "u1 should be excluded")
+		require.NotNil(t, u22)
+		require.NotNil(t, u33)
+		require.Equal(t, u2.ID, u22.ID)
+		require.Equal(t, u3.ID, u33.ID)
+	})
+
+	t.Run("ExcludeByName", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithExclude(map[string][]any{
+			"name": {u2.Name},
+		}).List(&users))
+
+		require.Len(t, users, 2)
+		u11, u22, u33 := findUsersByID(users)
+		require.NotNil(t, u11)
+		require.Nil(t, u22, "u2 should be excluded")
+		require.NotNil(t, u33)
+		require.Equal(t, u1.ID, u11.ID)
+		require.Equal(t, u3.ID, u33.ID)
+	})
+
+	t.Run("ExcludeMultipleIDs", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithExclude(map[string][]any{
+			"id": {u1.ID, u2.ID},
+		}).List(&users))
+
+		require.Len(t, users, 1)
+		u11, u22, u33 := findUsersByID(users)
+		require.Nil(t, u11, "u1 should be excluded")
+		require.Nil(t, u22, "u2 should be excluded")
+		require.NotNil(t, u33)
+		require.Equal(t, u3.ID, u33.ID)
+	})
+
+	t.Run("ExcludeMultipleFields", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithExclude(map[string][]any{
+			"id":   {u1.ID},
+			"name": {u2.Name},
+		}).List(&users))
+
+		require.Len(t, users, 1)
+		u11, u22, u33 := findUsersByID(users)
+		require.Nil(t, u11, "u1 should be excluded by id")
+		require.Nil(t, u22, "u2 should be excluded by name")
+		require.NotNil(t, u33)
+		require.Equal(t, u3.ID, u33.ID)
+	})
+
+	t.Run("ExcludeAll", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithExclude(map[string][]any{
+			"id": {u1.ID, u2.ID, u3.ID},
+		}).List(&users))
+
+		require.Len(t, users, 0, "all users should be excluded")
+	})
+
+	t.Run("ExcludeEmptyMap", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithExclude(map[string][]any{}).List(&users))
+
+		require.Len(t, users, 3, "empty exclude map should not filter any records")
+		u11, u22, u33 := findUsersByID(users)
+		require.NotNil(t, u11)
+		require.NotNil(t, u22)
+		require.NotNil(t, u33)
+	})
+}

@@ -407,16 +407,11 @@ type DatabaseOption[M Model] interface {
 	// Only affects SELECT queries (List, Get, First, Last, etc.).
 	WithLimit(limit int) Database[M]
 
-	// WithExclude excludes records that matchs a condition within a list.
-	// For example:
-	//   - If you want exclude users with specific ids from your query,
-	//     you can use WithExclude(excludes),
-	//     excludes: "id" as key, ["myid1", "myid2", "myid3"] as value.
-	//   - If you want excludes users that id not ["myid1", "myid2"] and not not ["root", "noname"],
-	//     the `excludes` should be:
-	//     excludes := make(map[string][]any)
-	//     excludes["id"] = []any{"myid1", "myid2"}
-	//     excludes["name"] = []any{"root", "noname"}.
+	// WithExclude excludes records that match specified conditions.
+	// Adds NOT conditions to filter out records with matching values.
+	// Multiple fields can be excluded, and each field can have multiple values.
+	// Affects SELECT queries (List, Get, First, Last, etc.) and Update/Delete operations.
+	// Does not affect Create operations (INSERT doesn't support WHERE clause).
 	WithExclude(map[string][]any) Database[M]
 
 	// WithOrder adds ORDER BY clause to sort query results (List, Get, First, Last, etc.).
