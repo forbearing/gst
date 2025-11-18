@@ -3586,7 +3586,7 @@ func TestDatabaseWithSelect(t *testing.T) {
 		t.Run("with empty columns", func(t *testing.T) {
 			defer cleanupTestData()
 			setupTestData(t)
-			// WithSelect with no columns should select only default columns.
+			// WithSelect with no columns is a no-op, so all columns should be selected (default behavior).
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect().List(&users))
 			require.Len(t, users, 3)
@@ -3594,13 +3594,17 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.NotNil(t, u11)
 			require.NotNil(t, u22)
 			require.NotNil(t, u33)
-			// Default columns (id, created_at, updated_at, etc.) should be present.
+			// All columns should be present since WithSelect() with no args is a no-op.
 			require.NotEmpty(t, u11.ID)
 			require.NotEmpty(t, u22.ID)
 			require.NotEmpty(t, u33.ID)
 			require.NotEmpty(t, u11.CreatedAt)
 			require.NotEmpty(t, u22.CreatedAt)
 			require.NotEmpty(t, u33.CreatedAt)
+			// Verify that other fields are also present (not just default columns)
+			require.NotEmpty(t, u11.Name)
+			require.NotEmpty(t, u22.Name)
+			require.NotEmpty(t, u33.Name)
 		})
 	})
 }

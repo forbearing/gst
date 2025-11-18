@@ -1176,8 +1176,9 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 //
 // Parameters:
 //   - columns: Field names to select (defaultsColumns will be automatically added)
-//     If no columns are provided, only defaultsColumns will be selected.
-//     If all provided columns are defaultsColumns, only defaultsColumns will be selected.
+//     If no columns are provided, this is a no-op operation and no columns will be selected (returns all columns).
+//     If all provided columns are defaultsColumns or empty/whitespace, this is also a no-op (returns all columns).
+//     Only when valid non-default columns are provided will Select be applied (valid columns + defaultsColumns).
 //
 // Returns the same database instance for method chaining.
 //
@@ -1189,9 +1190,7 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	if len(columns) == 0 {
-		// db.ins = db.ins.Select(defaultsColumns)
-		// lazy load
-		db.selectColumns = append(db.selectColumns, defaultsColumns...)
+		// No-op: return without selecting any columns
 		return db
 	}
 	_columns := make([]string, 0)
@@ -1202,11 +1201,10 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 		}
 	}
 	// db.ins = db.ins.Select(append(_columns, defaultsColumns...))
-	// lazy load: add user-specified columns first, then always add defaultsColumns
-	if len(_columns) > 0 {
-		db.selectColumns = append(db.selectColumns, _columns...)
+	if len(_columns) == 0 {
+		return db
 	}
-	// Always add defaultsColumns to ensure essential fields are available.
+	db.selectColumns = append(db.selectColumns, _columns...)
 	db.selectColumns = append(db.selectColumns, defaultsColumns...)
 	return db
 }
