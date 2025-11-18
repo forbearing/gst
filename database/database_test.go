@@ -3976,3 +3976,85 @@ func TestDatabaseWithOrder(t *testing.T) {
 		require.Error(t, database.Database[*TestUser](nil).WithOrder("name invalid_direction").List(&users))
 	})
 }
+
+func TestDatabaseWithPagination(t *testing.T) {
+	defer cleanupTestData()
+
+	newSeqUsers := func(prefix string, count int) ([]*TestUser, []string) {
+		users := make([]*TestUser, 0, count)
+		ids := make([]string, 0, count)
+		for i := range count {
+			id := fmt.Sprintf("%s_%05d", prefix, i)
+			users = append(users, &TestUser{
+				Name:  fmt.Sprintf("%s_name_%05d", prefix, i),
+				Email: fmt.Sprintf("%s_%05d@example.com", prefix, i),
+				Age:   18 + i,
+				Base:  model.Base{ID: id},
+			})
+			ids = append(ids, id)
+		}
+		return users, ids
+	}
+	assertIDs := func(t *testing.T, users []*TestUser, expected []string) {
+		t.Helper()
+		require.Equal(t, len(expected), len(users))
+		for i := range expected {
+			require.Equal(t, expected[i], users[i].ID)
+		}
+	}
+	runPage := func(t *testing.T, page, size int) []*TestUser {
+		t.Helper()
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithOrder("id asc").
+			WithPagination(page, size).
+			List(&users))
+		return users
+	}
+
+	t.Run("BasicPaging", func(t *testing.T) {
+		defer cleanupTestData()
+		records, ids := newSeqUsers("pg_basic", 10)
+		require.NoError(t, database.Database[*TestUser](nil).Create(records...))
+
+		assertIDs(t, runPage(t, 1, 3), ids[:3])
+		assertIDs(t, runPage(t, 2, 3), ids[3:6])
+		assertIDs(t, runPage(t, 4, 3), ids[9:])
+	})
+
+	t.Run("PageOutOfRange", func(t *testing.T) {
+		defer cleanupTestData()
+		records, ids := newSeqUsers("pg_out_of_range", 5)
+		require.NoError(t, database.Database[*TestUser](nil).Create(records...))
+
+		assertIDs(t, runPage(t, 2, 3), ids[3:])
+		assertIDs(t, runPage(t, 3, 3), []string{})
+	})
+
+	t.Run("NonPositivePageDefaultsToOne", func(t *testing.T) {
+		defer cleanupTestData()
+		records, ids := newSeqUsers("pg_non_positive", 6)
+		require.NoError(t, database.Database[*TestUser](nil).Create(records...))
+
+		assertIDs(t, runPage(t, 0, 3), ids[:3])
+		assertIDs(t, runPage(t, -5, 3), ids[:3])
+	})
+
+	t.Run("NonPositiveSizeUsesDefaultLimit", func(t *testing.T) {
+		defer cleanupTestData()
+		records, ids := newSeqUsers("pg_size", 7)
+		require.NoError(t, database.Database[*TestUser](nil).Create(records...))
+
+		assertIDs(t, runPage(t, 1, 0), ids)
+		assertIDs(t, runPage(t, 1, -10), ids)
+	})
+
+	t.Run("LargePageSize", func(t *testing.T) {
+		defer cleanupTestData()
+		records, ids := newSeqUsers("pg_large_size", 8)
+		require.NoError(t, database.Database[*TestUser](nil).Create(records...))
+
+		assertIDs(t, runPage(t, 1, 50), ids)
+		assertIDs(t, runPage(t, 2, 50), []string{})
+	})
+}
