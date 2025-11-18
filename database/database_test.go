@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -4790,5 +4791,40 @@ func TestDatabaseWithPurge(t *testing.T) {
 
 		require.NoError(t, database.Database[*TestUser](nil).WithPurge(false).Get(u, u3.ID))
 		require.Equal(t, u3.ID, u.ID)
+	})
+}
+
+func TestDatabaseWithCache(t *testing.T) {
+	defer cleanupTestData()
+
+	// No Effect on "Create"
+	t.Run("Create", func(t *testing.T) {
+		defer cleanupTestData()
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Create(ul...))
+	})
+
+	// No Effect on "Delete"
+	t.Run("Delete", func(t *testing.T) {
+		defer cleanupTestData()
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Create(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Delete(ul...))
+	})
+
+	t.Run("Update", func(t *testing.T) {
+		defer cleanupTestData()
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().Update(ul...))
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().UpdateByID(u1.ID, "name", "new_name"))
+	})
+
+	t.Run("List", func(t *testing.T) {
+		defer cleanupTestData()
+		require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
+		users1 := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).List(&users1))
+		require.Len(t, users1, 3)
+		users2 := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithCache().List(&users2))
+		require.Len(t, users2, 3)
+		require.True(t, reflect.DeepEqual(users1, users2))
 	})
 }
