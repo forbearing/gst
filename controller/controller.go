@@ -1669,21 +1669,16 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			return
 		}
 		// 2.Get resource from database.
-		cache := make([]byte, 0)
-		cached := false
 		if err = handler(types.NewDatabaseContext(c)).
 			WithIndex(index).
 			WithSelect(strings.Split(selects, ",")...).
 			WithExpand(expands).
 			WithCache(!nocache).
-			Get(m, param, &cache); err != nil {
+			Get(m, param); err != nil {
 			log.Error(err)
 			ResponseJSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
-		}
-		if len(cache) > 0 {
-			cached = true
 		}
 		// 3.Perform business logic processing after get resource.
 		var serviceCtxAfter *types.ServiceContext
@@ -1698,13 +1693,11 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}
 		// It will returns a empty types.Model if found nothing from database,
 		// we should response status code "CodeNotFound".
-		if !cached {
-			if len(m.GetID()) == 0 || (m.GetCreatedAt().Equal(time.Time{})) {
-				log.Error(CodeNotFound)
-				ResponseJSON(c, CodeNotFound)
-				otel.RecordError(span, errors.New(CodeNotFound.Msg()))
-				return
-			}
+		if len(m.GetID()) == 0 || (m.GetCreatedAt().Equal(time.Time{})) {
+			log.Error(CodeNotFound)
+			ResponseJSON(c, CodeNotFound)
+			otel.RecordError(span, errors.New(CodeNotFound.Msg()))
+			return
 		}
 
 		// 4.record operation log to database.
@@ -1732,11 +1725,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			log.Warn(err)
 		}
 
-		if cached {
-			ResponseBytes(c, CodeSuccess, cache)
-		} else {
-			ResponseJSON(c, CodeSuccess, m)
-		}
+		ResponseJSON(c, CodeSuccess, m)
 	}
 }
 
