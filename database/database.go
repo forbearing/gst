@@ -1240,16 +1240,27 @@ func (db *database[M]) WithSelectRaw(selectRaw any, args ...any) types.Database[
 }
 
 // WithRollback sets a rollback callback function that will be executed when a transaction fails.
-// This method is used with TransactionFunc to enable custom rollback logic (e.g., cleaning up external resources).
+// This method works with both Transaction and TransactionFunc to enable custom rollback logic
+// (e.g., cleaning up external resources, sending notifications).
 // The rollback function is only called when the transaction fails (returns an error).
 // The rollback function does not return an error - any errors should be handled internally (e.g., logged).
 //
-// Example:
+// Example with Transaction:
 //
 //	err := db.WithRollback(func() {
 //	    // Custom rollback logic (e.g., cleanup external resources, send notifications)
 //	    // This function is called automatically when transaction fails
-//	    // Handle any errors internally (e.g., log them)
+//	}).Transaction(func(txDB types.Database[*model.User]) error {
+//	    if err := txDB.Create(&user); err != nil {
+//	        return err // automatic rollback, rollback function will be called
+//	    }
+//	    return nil // automatic commit, rollback function will NOT be called
+//	})
+//
+// Example with TransactionFunc:
+//
+//	err := db.WithRollback(func() {
+//	    // Custom rollback logic
 //	}).TransactionFunc(func(tx any) error {
 //	    userDB := database.Database[*model.User](nil)
 //	    if err := userDB.WithTx(tx).Create(&user); err != nil {
