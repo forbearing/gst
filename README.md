@@ -129,8 +129,8 @@ type Database[M Model] interface {
 	Delete(objs ...M) error
 	Update(objs ...M) error
 	UpdateById(id string, key string, value any) error
-	List(dest *[]M, cache ...*[]byte) error
-	Get(dest M, id string, cache ...*[]byte) error
+	List(dest *[]M) error
+	Get(dest M, id string) error
 	First(dest M, cache ...*[]byte) error
 	Last(dest M, cache ...*[]byte) error
 	Take(dest M, cache ...*[]byte) error

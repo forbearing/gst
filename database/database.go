@@ -2577,7 +2577,6 @@ QUERY:
 // Parameters:
 //   - dest: Pointer to model instance where the result will be stored
 //   - id: Primary key value of the record to retrieve
-//   - _cache: Optional cache parameter for advanced caching control
 //
 // Returns ErrIDRequired if id is empty, or database errors if record not found.
 //
@@ -2592,7 +2591,7 @@ QUERY:
 //	var user User
 //	Get(&user, "user123").  // Get user by ID
 //	WithExpand("Orders").Get(&user, "user123")  // Get user with orders
-func (db *database[M]) Get(dest M, id string, _cache ...*[]byte) (err error) {
+func (db *database[M]) Get(dest M, id string) (err error) {
 	defer db.reset()
 
 	val := reflect.ValueOf(dest)

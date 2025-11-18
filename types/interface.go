@@ -149,7 +149,7 @@ type Database[M Model] interface {
 	// List all records and write to dest.
 	List(dest *[]M) error
 	// Get one record with specific id and write to dest.
-	Get(dest M, id string, cache ...*[]byte) error
+	Get(dest M, id string) error
 	// First finds the first record ordered by primary key.
 	First(dest M, cache ...*[]byte) error
 	// Last finds the last record ordered by primary key
