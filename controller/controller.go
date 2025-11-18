@@ -1332,8 +1332,6 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}
 		sortBy, _ := c.GetQuery(consts.QUERY_SORTBY)
 		// 2.List resources from database.
-		cache := make([]byte, 0)
-		cached := false
 		if size == 0 {
 			size = defaultLimit
 		}
@@ -1353,14 +1351,11 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			WithOrder(sortBy).
 			WithTimeRange(columnName, startTime, endTime).
 			WithCache(!nocache).
-			List(&data, &cache); err != nil {
+			List(&data); err != nil {
 			log.Error(err)
 			ResponseJSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
-		}
-		if len(cache) > 0 {
-			cached = true
 		}
 		// 3.Perform business logic processing after list resources.
 		var serviceCtxAfter *types.ServiceContext
@@ -1425,19 +1420,15 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}
 
 		log.Infoz(fmt.Sprintf("%s: length: %d, total: %d", typ.Name(), len(data), *total), zap.Object(typ.Name(), m))
-		if cached {
-			ResponseBytesList(c, CodeSuccess, *total, cache)
+		if !nototal {
+			ResponseJSON(c, CodeSuccess, gin.H{
+				"items": data,
+				"total": *total,
+			})
 		} else {
-			if !nototal {
-				ResponseJSON(c, CodeSuccess, gin.H{
-					"items": data,
-					"total": *total,
-				})
-			} else {
-				ResponseJSON(c, CodeSuccess, gin.H{
-					"items": data,
-				})
-			}
+			ResponseJSON(c, CodeSuccess, gin.H{
+				"items": data,
+			})
 		}
 	}
 }

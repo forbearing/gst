@@ -147,7 +147,7 @@ type Database[M Model] interface {
 	// its not invoke model hook.
 	UpdateByID(id string, key string, value any) error
 	// List all records and write to dest.
-	List(dest *[]M, cache ...*[]byte) error
+	List(dest *[]M) error
 	// Get one record with specific id and write to dest.
 	Get(dest M, id string, cache ...*[]byte) error
 	// First finds the first record ordered by primary key.

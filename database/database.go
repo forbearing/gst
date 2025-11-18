@@ -2387,7 +2387,6 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 //
 // Parameters:
 //   - dest: Pointer to slice where results will be stored
-//   - _cache: Optional cache parameter for advanced caching control
 //
 // Features:
 //   - Automatic result caching when enabled
@@ -2402,7 +2401,7 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 //	List(&users)  // Get all users
 //	WithQuery(&User{Status: "active"}).List(&users)  // Get active users
 //	WithLimit(10).WithOffset(20).List(&users)  // Paginated results
-func (db *database[M]) List(dest *[]M, _cache ...*[]byte) (err error) {
+func (db *database[M]) List(dest *[]M) (err error) {
 	defer db.reset()
 
 	if err = db.prepare(); err != nil {
