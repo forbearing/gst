@@ -1544,7 +1544,7 @@ func (db *database[M]) WithHaving(query any, args ...any) types.Database[M] {
 	return db
 }
 
-// WithOrder adds ORDER BY clause to sort query results.
+// WithOrder adds ORDER BY clause to sort query results (List, Get, First, Last, etc.).
 // Supports multiple sorting criteria and directions (ASC/DESC).
 // Column names are automatically wrapped with backticks to handle SQL keywords.
 //
@@ -1573,9 +1573,9 @@ func (db *database[M]) WithOrder(order string) types.Database[M] {
 	// 可以多多个字段进行排序, 每个字段之间通过逗号分隔,
 	// order 的值比如: "field1, field2 desc, field3 asc"
 	items := strings.SplitSeq(order, ",")
-	for _order := range items {
-		if len(order) != 0 {
-			items := strings.Fields(_order)
+	for item := range items {
+		if len(item) > 0 {
+			items := strings.Fields(item)
 			for i := range items {
 				if strings.EqualFold(items[i], "asc") || strings.EqualFold(items[i], "desc") {
 					items[i] = strings.ToUpper(items[i])
@@ -1587,8 +1587,8 @@ func (db *database[M]) WithOrder(order string) types.Database[M] {
 					items[i] = "`" + items[i] + "`"
 				}
 			}
-			_orders := strings.Join(items, " ")
-			db.ins = db.ins.Order(_orders)
+			db.ins = db.ins.Order(strings.Join(items, " "))
+			// fmt.Printf("====== %q\n", strings.Join(items, " "))
 		}
 	}
 	return db

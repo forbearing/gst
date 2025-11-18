@@ -3891,3 +3891,88 @@ func TestDatabaseWithLock(t *testing.T) {
 		})
 	})
 }
+
+func TestDatabaseWithJoinRaw(t *testing.T) {}
+
+func TestDatabaseWithGroup(t *testing.T) {}
+
+func TestDatabaseWithHaving(t *testing.T) {}
+func TestDatabaseWithOrder(t *testing.T) {
+	assertNameOrder := func(t *testing.T, users []*TestUser, expected []string) {
+		require.Equal(t, len(expected), len(users))
+		for i := range expected {
+			require.Equal(t, expected[i], users[i].Name)
+		}
+	}
+	assertIDOrder := func(t *testing.T, users []*TestUser, expected []string) {
+		require.Equal(t, len(expected), len(users))
+		for i := range expected {
+			require.Equal(t, expected[i], users[i].ID)
+		}
+	}
+
+	t.Run("SingleField", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("name").List(&users))
+		assertNameOrder(t, users, []string{u1.Name, u2.Name, u3.Name})
+
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("name asc").List(&users))
+		assertNameOrder(t, users, []string{u1.Name, u2.Name, u3.Name})
+
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("name desc").List(&users))
+		assertNameOrder(t, users, []string{u3.Name, u2.Name, u1.Name})
+
+		// WithOrder should also affect First/Last style queries.
+		user := new(TestUser)
+		require.NoError(t, database.Database[*TestUser](nil).WithOrder("name desc").First(user))
+		require.Equal(t, u3.ID, user.ID)
+	})
+
+	t.Run("MultipleFields", func(t *testing.T) {
+		t.Run("two-level sort", func(t *testing.T) {
+			defer cleanupTestData()
+			u1.Age = 30
+			u2.Age = 30
+			u3.Age = 18
+			u1.Name = "anna"
+			u2.Name = "beth"
+			u3.Name = "charlie"
+			setupTestData(t)
+
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithOrder("age desc, name asc").List(&users))
+			assertNameOrder(t, users, []string{u1.Name, u2.Name, u3.Name})
+		})
+
+		t.Run("three-level sort", func(t *testing.T) {
+			defer cleanupTestData()
+			u1.Age = 30
+			u2.Age = 30
+			u3.Age = 25
+			u1.Name = "alex"
+			u2.Name = "alex"
+			u3.Name = "zack"
+			u1.Email = "alex1@example.com"
+			u2.Email = "alex2@example.com"
+			u3.Email = "zack@example.com"
+			setupTestData(t)
+
+			users := make([]*TestUser, 0)
+			require.NoError(t, database.Database[*TestUser](nil).WithOrder("age DESC, name asc, email desc").List(&users))
+			assertIDOrder(t, users, []string{u2.ID, u1.ID, u3.ID})
+		})
+	})
+
+	t.Run("InvalidOrder", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		users := make([]*TestUser, 0)
+		require.Error(t, database.Database[*TestUser](nil).WithOrder("name invalid_direction").List(&users))
+	})
+}

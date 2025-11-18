@@ -418,7 +418,7 @@ type DatabaseOption[M Model] interface {
 	//     excludes["name"] = []any{"root", "noname"}.
 	WithExclude(map[string][]any) Database[M]
 
-	// WithOrder adds ORDER BY clause to sort query results.
+	// WithOrder adds ORDER BY clause to sort query results (List, Get, First, Last, etc.).
 	// Supports multiple sorting criteria and directions (ASC/DESC).
 	// Column names are automatically wrapped with backticks to handle SQL keywords.
 	//
