@@ -9,10 +9,52 @@ type ControllerConfig[M Model] struct {
 // QueryConfig configures the behavior of WithQuery method.
 //
 // Fields:
+//
 //   - FuzzyMatch: Enable fuzzy matching (LIKE/REGEXP queries). Default: false (exact match with IN clause)
+//
+//   - Single value: Uses LIKE pattern (WHERE name LIKE '%value%')
+//
+//   - Multiple values (comma-separated): Uses REGEXP pattern (WHERE name REGEXP '.*value1.*|.*value2.*')
+//
+//   - Empty strings in comma-separated values are automatically skipped
+//
+//   - REGEXP special characters are automatically escaped
+//
+//   - Note: REGEXP may not be available in all databases (e.g., SQLite requires extension)
+//
 //   - AllowEmpty: Allow empty query conditions to match all records. Default: false (blocked for safety)
+//
+//   - When false: Empty queries are blocked (adds WHERE 1 = 0)
+//
+//   - When true: Empty queries match all records (full table scan)
+//
+//   - Empty query cases: nil, empty struct, all fields are zero values, all field values are empty strings
+//
+//   - Critical: Use with caution, especially for Delete operations
+//
+//   - UseOr: Use OR logic to combine query conditions. Default: false (uses AND logic)
+//
+//   - When false: Multiple fields use AND logic (WHERE name IN ('John') AND age IN (18))
+//
+//   - When true: Multiple fields use OR logic (WHERE name IN ('John') OR age IN (18))
+//
+//   - First condition always uses WHERE, subsequent conditions use OR
+//
+//   - Works with both exact match and fuzzy match
+//
 //   - RawQuery: Raw SQL query string for custom WHERE conditions. When provided, model fields are ignored
+//
+//   - Works even when query is nil
+//
+//   - Supports parameterized queries with RawQueryArgs
+//
+//   - Example: "age > ? AND status = ?"
+//
 //   - RawQueryArgs: Arguments for the raw SQL query, used with RawQuery for parameterized queries
+//
+//   - Can be nil or empty slice if RawQuery has no placeholders
+//
+//   - Example: []any{18, "active"}
 //
 // CRITICAL SAFETY FEATURE:
 // Empty query conditions (all fields are zero values) are blocked by default to prevent
@@ -29,23 +71,47 @@ type ControllerConfig[M Model] struct {
 //	WithQuery(&User{Name: "John"})
 //	WithQuery(&User{Name: "John"}, QueryConfig{})
 //
-//	// Fuzzy match
-//	WithQuery(&User{Name: "John"}, QueryConfig{FuzzyMatch: true})
+//	// Exact match with multiple values (comma-separated)
+//	WithQuery(&User{Name: "John,Jack"})  // WHERE name IN ('John', 'Jack')
+//	WithQuery(&User{ID: "id1,id2,id3"})  // WHERE id IN ('id1', 'id2', 'id3')
+//
+//	// Fuzzy match - single value (LIKE)
+//	WithQuery(&User{Name: "John"}, QueryConfig{FuzzyMatch: true})  // WHERE name LIKE '%John%'
+//
+//	// Fuzzy match - multiple values (REGEXP)
+//	WithQuery(&User{Name: "John,Jack"}, QueryConfig{FuzzyMatch: true})  // WHERE name REGEXP '.*John.*|.*Jack.*'
 //
 //	// Allow empty query (ListFactory with pagination)
-//	WithQuery(&User{}, QueryConfig{AllowEmpty: true})
+//	WithQuery(&User{}, QueryConfig{AllowEmpty: true})  // Returns all records
 //
 //	// Fuzzy match + Allow empty
 //	WithQuery(&User{}, QueryConfig{FuzzyMatch: true, AllowEmpty: true})
 //
-//	// Raw SQL query
+//	// Use OR logic to combine conditions
+//	WithQuery(&User{Name: "John", Email: "john@example.com"}, QueryConfig{UseOr: true})
+//	// WHERE name IN ('John') OR email IN ('john@example.com')
+//
+//	// OR logic with fuzzy match
+//	WithQuery(&User{Name: "John", Email: "example"}, QueryConfig{UseOr: true, FuzzyMatch: true})
+//	// WHERE name LIKE '%John%' OR email LIKE '%example%'
+//
+//	// Raw SQL query (model fields are ignored)
 //	WithQuery(&User{}, QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
+//	WithQuery(nil, QueryConfig{RawQuery: "created_at BETWEEN ? AND ?", RawQueryArgs: []any{startDate, endDate}})
 //
 //	// Raw SQL with complex conditions
 //	WithQuery(&User{}, QueryConfig{RawQuery: "created_at BETWEEN ? AND ? OR priority IN (?)", RawQueryArgs: []any{startDate, endDate, priorities}})
+//
+//	// Combined options
+//	WithQuery(&User{Name: "John"}, QueryConfig{
+//	    FuzzyMatch: true,
+//	    UseOr:      true,
+//	    AllowEmpty: false,
+//	})
 type QueryConfig struct {
 	FuzzyMatch   bool   // Enable fuzzy matching (LIKE/REGEXP). Default: false
 	AllowEmpty   bool   // Allow empty query conditions. Default: false
+	UseOr        bool   // Use OR logic to combine query conditions. Default: false (uses AND)
 	RawQuery     string // Raw SQL query string for custom WHERE conditions
 	RawQueryArgs []any  // Arguments for the raw SQL query parameters
 }

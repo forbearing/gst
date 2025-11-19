@@ -128,15 +128,16 @@ type Database[M Model] interface {
 	Create(objs ...M) error
 	Delete(objs ...M) error
 	Update(objs ...M) error
-	UpdateById(id string, key string, value any) error
-	List(dest *[]M, cache ...*[]byte) error
-	Get(dest M, id string, cache ...*[]byte) error
-	First(dest M, cache ...*[]byte) error
-	Last(dest M, cache ...*[]byte) error
-	Take(dest M, cache ...*[]byte) error
+	UpdateByID(id string, key string, value any) error
+	List(dest *[]M) error
+	Get(dest M, id string) error
+	First(dest M) error
+	Last(dest M) error
+	Take(dest M) error
 	Count(*int64) error
 	Cleanup() error
 	Health() error
+	Transaction(fn func(txDB Database[M]) error) error
 	TransactionFunc(fn func(tx any) error) error
 
 	DatabaseOption[M]
@@ -144,16 +145,16 @@ type Database[M Model] interface {
 
 type DatabaseOption[M Model] interface {
 	WithDB(any) Database[M]
+	WithTx(tx any) Database[M]
 	WithTable(name string) Database[M]
 	WithDebug() Database[M]
 	WithQuery(query M, config ...QueryConfig) Database[M]
 	WithCursor(string, bool, ...string) Database[M]
-	WithAnd(...bool) Database[M]
-	WithOr(...bool) Database[M]
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
 	WithSelect(columns ...string) Database[M]
 	WithSelectRaw(query any, args ...any) Database[M]
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
+	WithRollback(rollbackFunc func()) Database[M]
 	WithJoinRaw(query string, args ...any) Database[M]
 	WithLock(mode ...consts.LockMode) Database[M]
 	WithBatchSize(size int) Database[M]
@@ -165,7 +166,7 @@ type DatabaseOption[M Model] interface {
 	WithPurge(...bool) Database[M]
 	WithCache(...bool) Database[M]
 	WithOmit(...string) Database[M]
-	WithTryRun(...bool) Database[M]
+	WithDryRun() Database[M]
 	WithoutHook() Database[M]
 }
 ```

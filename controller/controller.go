@@ -1332,19 +1332,17 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}
 		sortBy, _ := c.GetQuery(consts.QUERY_SORTBY)
 		// 2.List resources from database.
-		cache := make([]byte, 0)
-		cached := false
 		if size == 0 {
 			size = defaultLimit
 		}
 		if err = handler(types.NewDatabaseContext(c)).
 			WithPagination(page, size).
-			WithOr(or).
 			WithIndex(index).
 			WithSelect(strings.Split(selects, ",")...).
 			WithQuery(svc.Filter(ctx, m), types.QueryConfig{
 				FuzzyMatch: fuzzy,
 				AllowEmpty: true,
+				UseOr:      or,
 				RawQuery:   svc.FilterRaw(ctx),
 			}).
 			WithCursor(cursorValue, cursorNext, cursorFields).
@@ -1353,14 +1351,11 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			WithOrder(sortBy).
 			WithTimeRange(columnName, startTime, endTime).
 			WithCache(!nocache).
-			List(&data, &cache); err != nil {
+			List(&data); err != nil {
 			log.Error(err)
 			ResponseJSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
-		}
-		if len(cache) > 0 {
-			cached = true
 		}
 		// 3.Perform business logic processing after list resources.
 		var serviceCtxAfter *types.ServiceContext
@@ -1381,11 +1376,11 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			if err = handler(types.NewDatabaseContext(c)).
 				// WithPagination(page, size). // NOTE: WithPagination should not apply in Count method.
 				// WithSelect(strings.Split(selects, ",")...). // NOTE: WithSelect should not apply in Count method.
-				WithOr(or).
 				WithIndex(index).
 				WithQuery(svc.Filter(ctx, m), types.QueryConfig{
 					FuzzyMatch: fuzzy,
 					AllowEmpty: true,
+					UseOr:      or,
 					RawQuery:   svc.FilterRaw(ctx),
 				}).
 				WithExclude(m.Excludes()).
@@ -1425,19 +1420,15 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}
 
 		log.Infoz(fmt.Sprintf("%s: length: %d, total: %d", typ.Name(), len(data), *total), zap.Object(typ.Name(), m))
-		if cached {
-			ResponseBytesList(c, CodeSuccess, *total, cache)
+		if !nototal {
+			ResponseJSON(c, CodeSuccess, gin.H{
+				"items": data,
+				"total": *total,
+			})
 		} else {
-			if !nototal {
-				ResponseJSON(c, CodeSuccess, gin.H{
-					"items": data,
-					"total": *total,
-				})
-			} else {
-				ResponseJSON(c, CodeSuccess, gin.H{
-					"items": data,
-				})
-			}
+			ResponseJSON(c, CodeSuccess, gin.H{
+				"items": data,
+			})
 		}
 	}
 }
@@ -1678,21 +1669,16 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			return
 		}
 		// 2.Get resource from database.
-		cache := make([]byte, 0)
-		cached := false
 		if err = handler(types.NewDatabaseContext(c)).
 			WithIndex(index).
 			WithSelect(strings.Split(selects, ",")...).
 			WithExpand(expands).
 			WithCache(!nocache).
-			Get(m, param, &cache); err != nil {
+			Get(m, param); err != nil {
 			log.Error(err)
 			ResponseJSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
-		}
-		if len(cache) > 0 {
-			cached = true
 		}
 		// 3.Perform business logic processing after get resource.
 		var serviceCtxAfter *types.ServiceContext
@@ -1707,13 +1693,11 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}
 		// It will returns a empty types.Model if found nothing from database,
 		// we should response status code "CodeNotFound".
-		if !cached {
-			if len(m.GetID()) == 0 || (m.GetCreatedAt().Equal(time.Time{})) {
-				log.Error(CodeNotFound)
-				ResponseJSON(c, CodeNotFound)
-				otel.RecordError(span, errors.New(CodeNotFound.Msg()))
-				return
-			}
+		if len(m.GetID()) == 0 || (m.GetCreatedAt().Equal(time.Time{})) {
+			log.Error(CodeNotFound)
+			ResponseJSON(c, CodeNotFound)
+			otel.RecordError(span, errors.New(CodeNotFound.Msg()))
+			return
 		}
 
 		// 4.record operation log to database.
@@ -1741,11 +1725,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			log.Warn(err)
 		}
 
-		if cached {
-			ResponseBytes(c, CodeSuccess, cache)
-		} else {
-			ResponseJSON(c, CodeSuccess, m)
-		}
+		ResponseJSON(c, CodeSuccess, m)
 	}
 }
 
@@ -2846,12 +2826,12 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if err = handler(types.NewDatabaseContext(c)).
 			// WithPagination(page, size). // 不要使用 WithPagination, 否则 WithLimit 不生效
 			WithLimit(limit).
-			WithOr(or).
 			WithIndex(index).
 			WithSelect(strings.Split(selects, ",")...).
 			WithQuery(svc.Filter(svcCtx, m), types.QueryConfig{
 				FuzzyMatch: fuzzy,
 				AllowEmpty: true,
+				UseOr:      or,
 				RawQuery:   svc.FilterRaw(svcCtx),
 			}).
 			WithExclude(m.Excludes()).

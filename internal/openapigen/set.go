@@ -1894,7 +1894,7 @@ func addSchemaTitle[T any](schemaRef *openapi3.SchemaRef) {
 	}
 
 	// Process Base model fields
-	baseType := reflect.TypeOf(*new(model.Base))
+	baseType := reflect.TypeFor[model.Base]()
 	for i := range baseType.NumField() {
 		field := baseType.Field(i)
 		jsonTag := getFieldTag(field, consts.TAG_JSON)
@@ -1968,7 +1968,7 @@ func addQueryParameters[M types.Model, REQ types.Request, RSP types.Response](op
 	// Get field descriptions of model.Base (using cache)
 	baseDocs := getBaseModelDocs()
 
-	baseType := reflect.TypeOf(*new(model.Base))
+	baseType := reflect.TypeFor[model.Base]()
 	for i := range baseType.NumField() {
 		field := baseType.Field(i)
 		schemaTag := getFieldTag(field, consts.TAG_SCHEMA)

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -99,7 +100,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 
 		span.SetAttributes(
 			attribute.Bool("database.cache_enabled", db.enableCache),
-			attribute.Bool("database.try_run", db.tryRun),
+			attribute.Bool("database.dry_run", db.dryRun),
 		)
 	}
 
@@ -130,7 +131,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 				zap.String("batch", strconv.Itoa(_batch)),
 				zap.String("cost", util.FormatDurationSmart(duration)),
 				zap.Bool("cache_enabled", db.enableCache),
-				zap.Bool("try_run", db.tryRun),
+				zap.Bool("dry_run", db.dryRun),
 			)
 		} else {
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase(op)).Infoz("",
@@ -138,7 +139,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 				zap.String("batch", strconv.Itoa(_batch)),
 				zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 				zap.Bool("cache_enabled", db.enableCache),
-				zap.Bool("try_run", db.tryRun),
+				zap.Bool("dry_run", db.dryRun),
 			)
 		}
 	}, ctx, span
@@ -361,4 +362,18 @@ func indirectTypeAndValue(t reflect.Type, v reflect.Value) (reflect.Type, reflec
 		v = v.Elem()
 	}
 	return t, v, true
+}
+
+// getDBIdentifier returns a unique identifier for the database instance.
+// It uses the pointer address of the underlying database connection to distinguish different database instances.
+func getDBIdentifier(db *gorm.DB) string {
+	if db == nil {
+		return "nil"
+	}
+	sqlDB, err := db.DB()
+	if err != nil || sqlDB == nil {
+		// Fallback to gorm.DB pointer address if we can't get the underlying database connection
+		return fmt.Sprintf("%p", db)
+	}
+	return fmt.Sprintf("%p", sqlDB)
 }

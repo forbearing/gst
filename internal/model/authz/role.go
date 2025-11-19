@@ -9,12 +9,23 @@ import (
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gorm.io/datatypes"
 )
 
 type Role struct {
-	Name string `json:"name,omitempty" schema:"name"`
-	Code string `json:"code,omitempty" schema:"code"`
+	Name    string `json:"name,omitempty" schema:"name"`
+	Code    string `json:"code,omitempty" schema:"code"`
+	Default *bool  `json:"default,omitempty" schema:"default"` // default role
+
+	// Menu 相关字段指定了该角色拥有哪些菜单
+	MenuIds        datatypes.JSONSlice[string] `json:"menu_ids,omitempty"`
+	MenuPartialIds datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"` // 部分选中的角色菜单, 父节点下面的子节点被选中了, 但是没有全部选中.
+	ButtonIds      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`       // 角色拥有的按钮权限
+
+	Menus        []*Menu `json:"menus,omitempty" gorm:"-"` // 角色菜单
+	MenuPartials []*Menu `json:"menu_partials,omitempty" gorm:"-"`
 
 	model.Base
 }
@@ -31,6 +42,33 @@ func (r *Role) DeleteBefore(ctx *types.ModelContext) error {
 	if len(r.Code) > 0 {
 		return rbac.RBAC().RemoveRole(r.Code)
 	}
+	return nil
+}
+
+func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
+	if err := database.Database[*Role](ctx.DatabaseContext()).Get(r, r.ID); err != nil {
+		zap.S().Error(err)
+		return err
+	}
+
+	// We should always iterate role's "MenuIds", not "MenuPartialIds".
+	// "MenuIds" is the frontend menus, "MenuPartialIds" is the frontend menus group that has no menus.
+	// A "Menu" contains one or multiple backend apis, each api binding one or multiple permissions.
+	//
+	// query all menus binding to the role.
+	menus := make([]*Menu, 0)
+	query := new(Menu)
+	query.ID = strings.Join(r.MenuIds, ",")
+	if err := database.Database[*Menu](ctx.DatabaseContext()).WithQuery(query).List(&menus); err != nil {
+		zap.S().Error(err)
+		return err
+	}
+	for _, m := range menus {
+		zap.S().Infow("menu", "label", m.Label, "api", m.API)
+	}
+
+	// permissions := make([]*Permission, 0)
+
 	return nil
 }
 

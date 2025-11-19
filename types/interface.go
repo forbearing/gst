@@ -113,295 +113,113 @@ type Logger interface {
 	ZapLogger
 }
 
-// Database interface provides comprehensive database operations for any model type.
-// This interface is constrained by the Model interface, ensuring type safety
-// for database operations across different model implementations.
+// Database provides comprehensive database operations for any model type.
+// Supports CRUD operations, flexible querying, transactions, and advanced features.
 //
-// Generic constraint:
+// Type Parameters:
+//   - M: Model type that implements Model interface
 //
-//	M must implement the Model interface (typically by embedding model.Base)
-//
-// Core operations:
+// Features:
 //   - CRUD operations with automatic timestamp management
 //   - Flexible querying with various finder methods
+//   - Transaction support for single and multi-model operations
 //   - Health monitoring and cleanup capabilities
 //   - Optional caching support for improved performance
 //
 // The interface embeds DatabaseOption[M] to provide chainable query building.
 type Database[M Model] interface {
-	// Create one or multiple record.
-	// Pass M to create one record,
-	// Pass []M to create multiple record.
-	// It will update the "created_at" and "updated_at" field.
+	// Create inserts one or multiple records into the database.
 	Create(objs ...M) error
-	// Delete one or multiple record.
-	// Pass M to delete one record.
-	// Pass []M to delete multiple record.
+	// Delete removes one or multiple records from the database.
 	Delete(objs ...M) error
-	// Update one or multiple record, if record doesn't exist, it will be created.
-	// Pass M to update one record.
-	// Pass []M to update multiple record.
-	// It will just update the "updated_at" field.
+	// Update modifies one or multiple records in the database.
 	Update(objs ...M) error
-	// UpdateByID only update one record with specific id.
-	// its not invoke model hook.
+	// UpdateByID updates a single field of a record by its ID.
 	UpdateByID(id string, key string, value any) error
-	// List all records and write to dest.
-	List(dest *[]M, cache ...*[]byte) error
-	// Get one record with specific id and write to dest.
-	Get(dest M, id string, cache ...*[]byte) error
-	// First finds the first record ordered by primary key.
-	First(dest M, cache ...*[]byte) error
-	// Last finds the last record ordered by primary key
-	Last(dest M, cache ...*[]byte) error
-	// Take finds the first record returned by the database in no specified order.
-	Take(dest M, cache ...*[]byte) error
-	// Count returns the total number of records with the given query condition.
+	// List retrieves multiple records matching the query conditions.
+	List(dest *[]M) error
+	// Get retrieves a single record by its ID.
+	Get(dest M, id string) error
+	// First retrieves the first record ordered by primary key.
+	First(dest M) error
+	// Last retrieves the last record ordered by primary key.
+	Last(dest M) error
+	// Take retrieves the first record in no specified order.
+	Take(dest M) error
+	// Count returns the total number of records matching the query conditions.
 	Count(*int64) error
-	// Cleanup delete all records that column 'deleted_at' is not null.
+	// Cleanup permanently deletes all soft-deleted records.
 	Cleanup() error
 	// Health checks the database connectivity and basic operations.
-	// It returns nil if the database is healthy, otherwise returns an error.
 	Health() error
-	// TransactionFunc executes a function within a transaction with automatic rollback on error.
-	// If the function returns an error, the transaction is automatically rolled back.
-	// If the function completes successfully, the transaction is committed.
+	// Transaction executes a function within a transaction (single-model, recommended).
+	Transaction(fn func(txDB Database[M]) error) error
+	// TransactionFunc executes a function within a transaction (multi-model, requires WithTx).
 	TransactionFunc(fn func(tx any) error) error
 
 	DatabaseOption[M]
 }
 
-// DatabaseOption interface.
-// WithXXX setting database options.
+// DatabaseOption provides chainable query building methods for database operations.
+// All methods return Database[M] to support method chaining.
 type DatabaseOption[M Model] interface {
-	// WithDB returns a new database manipulator, only support *gorm.DB.
+	// WithDB sets a custom database instance for operations.
 	WithDB(any) Database[M]
-
-	// WithTx returns a new database manipulator with transaction context.
-	// This method allows using an existing transaction to operate on multiple resource types.
-	// The tx parameter should be a *gorm.DB transaction instance or any compatible transaction type.
-	// Example:
-	//
-	//	database.Database[*User](nil).TransactionFunc(func(tx any) error {
-	//	    // Use the same transaction for different resource types
-	//	    if err := database.Database[*User](nil).WithTx(tx).Create(&user); err != nil {
-	//	        return err
-	//	    }
-	//	    if err := database.Database[*Order](nil).WithTx(tx).Create(&order); err != nil {
-	//	        return err
-	//	    }
-	//	    return nil
-	//	})
+	// WithTx sets transaction context for operations (used with TransactionFunc).
 	WithTx(tx any) Database[M]
-
-	// WithTable multiple custom table, always used with the method `WithDB`.
+	// WithTable sets a custom table name for operations.
 	WithTable(name string) Database[M]
-
-	// WithDebug setting debug mode, the priority is higher than config.Server.LogLevel and default value(false).
+	// WithDebug enables debug mode to show detailed SQL queries.
 	WithDebug() Database[M]
-
-	// WithQuery sets query conditions based on model struct fields.
-	// Supports exact matching, fuzzy matching, and raw SQL queries via QueryConfig.
-	// Non-zero fields in the model will be used as query conditions.
+	// WithQuery sets query conditions based on model fields or raw SQL.
 	WithQuery(query M, config ...QueryConfig) Database[M]
-
-	// WithCursor enables cursor-based pagination.
-	// cursorValue is the value of the last record in the previous page.
-	// next indicates the direction of pagination:
-	//   - true: fetch records after the cursor (next page)
-	//   - false: fetch records before the cursor (previous page)
-	//
-	// Example:
-	//
-	//	// First page (no cursor)
-	//	database.Database[*model.User]().WithLimit(10).List(&users)
-	//	// Next page (using last user's ID as cursor)
-	//	lastID := users[len(users)-1].ID
-	//	database.Database[*model.User]().WithCursor(lastID, true).WithLimit(10).List(&nextUsers)
-	//	// Next page (using last user id as cursor)
-	//	database.Database[*model.User]().WithCursor(lastID, true, "user_id").WithLimit(10).List(&nextUsers)
+	// WithCursor enables cursor-based pagination for efficient large dataset traversal.
 	WithCursor(string, bool, ...string) Database[M]
-
-	// WithAnd with AND query condition(default).
-	// It must be called before WithQuery.
-	WithAnd(...bool) Database[M]
-
-	// WithAnd with OR query condition.
-	// It must be called before WithQuery.
-	WithOr(...bool) Database[M]
-
-	// WithTimeRange applies a time range filter to the query based on the specified column name.
-	// It restricts the results to records where the column's value falls within the specified start and end times.
-	// This method is designed to be used in a chainable manner, allowing for the construction of complex queries.
-	//
-	// Parameters:
-	// - columnName: The name of the column to apply the time range filter on. This should be a valid date/time column in the database.
-	// - startTime: The beginning of the time range. Records with the column's value equal to or later than this time will be included.
-	// - endTime: The end of the time range. Records with the column's value equal to or earlier than this time will be included.
-	//
-	// Returns: A modified Database instance that includes the time range filter in its query conditions.
+	// WithTimeRange applies a time range filter to the query.
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
-
-	// WithSelect specify fields that you want when querying, creating, updating
-	// default select all fields.
+	// WithSelect specifies fields to select in queries.
 	WithSelect(columns ...string) Database[M]
-
-	// WithSelectRaw
+	// WithSelectRaw specifies raw SQL for field selection.
 	WithSelectRaw(query any, args ...any) Database[M]
-
-	// WithIndex specifies database index hints for query optimization.
-	// The first parameter is the index name, and the second optional parameter specifies the hint type.
-	// If no hint is provided, defaults to USE INDEX.
-	// Usage:
-	//
-	//	WithIndex("idx_name")                           - defaults to USE INDEX
-	//	WithIndex("idx_name", consts.IndexHintUse)      - suggests using the index
-	//	WithIndex("idx_name", consts.IndexHintForce)    - forces using the index
-	//	WithIndex("idx_name", consts.IndexHintIgnore)   - ignores the index
+	// WithIndex specifies database index hints for query optimization (MySQL only).
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
-
 	// WithRollback configures a rollback function for manual transaction control.
-	// This method should be used with TransactionFunc to enable manual rollback capability.
-	WithRollback(rollbackFunc func() error) Database[M]
-
-	// WithJoinRaw
+	WithRollback(rollbackFunc func()) Database[M]
+	// WithJoinRaw adds a raw JOIN clause to the query.
 	WithJoinRaw(query string, args ...any) Database[M]
-
-	// TODO:
-	// WithGroup(name string) Database[M]
-	// WithHaving(query any, args ...any) Database[M]
-
-	// WithLock adds locking clause to SELECT statement.
-	// It must be used within a transaction.
-	//
-	// Lock modes:
-	//   - consts.LockUpdate (default): SELECT ... FOR UPDATE
-	//   - consts.LockShare: SELECT ... FOR SHARE
-	//   - consts.LockUpdateNoWait: SELECT ... FOR UPDATE NOWAIT
-	//   - consts.LockShareNoWait: SELECT ... FOR SHARE NOWAIT
-	//   - consts.LockUpdateSkipLocked: SELECT ... FOR UPDATE SKIP LOCKED
-	//   - consts.LockShareSkipLocked: SELECT ... FOR SHARE SKIP LOCKED
-	//
-	// Example:
-	//
-	//	DB.Transaction(func(tx *gorm.DB) error {
-	//	    // Default FOR UPDATE lock
-	//	    err := Database[*Order]().
-	//	        WithTx(tx).
-	//	        WithLock().
-	//	        Get(&order, orderID)
-	//
-	//	    // FOR UPDATE NOWAIT
-	//	    err = Database[*Order]().
-	//	        WithTx(tx).
-	//	        WithLock(consts.LockUpdateNoWait).
-	//	        Get(&order, orderID)
-	//	})
+	// WithLock adds row-level locking to SELECT queries (must be used within a transaction).
 	WithLock(mode ...consts.LockMode) Database[M]
-
-	// WithBatchSize set batch size for bulk operations. affects Create, Update, Delete.
+	// WithBatchSize sets the batch size for bulk operations.
 	WithBatchSize(size int) Database[M]
-
-	// WithPagination applies pagination parameters to the query, useful for retrieving data in pages.
-	// This method enables front-end applications to request a specific subset of records,
-	// based on the desired page number and the number of records per page.
-	//
-	// Parameters:
-	// - page: The page number being requested. Page numbers typically start at 1.
-	// - size: The number of records to return per page. This determines the "size" of each page.
-	//
-	// The pagination logic calculates the offset based on the page number and size,
-	// and applies it along with the limit (size) to the query. This facilitates efficient
-	// data fetching suitable for front-end pagination displays.
-	//
-	// Returns: A modified Database instance that includes pagination parameters in its query conditions.
+	// WithPagination applies pagination parameters (page, size) to the query.
 	WithPagination(page, size int) Database[M]
-
-	// WithLimit determines how much record should retrieve.
-	// limit is 0 or -1 means no limit.
+	// WithLimit restricts the number of returned records.
 	WithLimit(limit int) Database[M]
-
-	// WithExclude excludes records that matchs a condition within a list.
-	// For example:
-	//   - If you want exclude users with specific ids from your query,
-	//     you can use WithExclude(excludes),
-	//     excludes: "id" as key, ["myid1", "myid2", "myid3"] as value.
-	//   - If you want excludes users that id not ["myid1", "myid2"] and not not ["root", "noname"],
-	//     the `excludes` should be:
-	//     excludes := make(map[string][]any)
-	//     excludes["id"] = []any{"myid1", "myid2"}
-	//     excludes["name"] = []any{"root", "noname"}.
+	// WithExclude excludes records matching specified conditions.
 	WithExclude(map[string][]any) Database[M]
-
 	// WithOrder adds ORDER BY clause to sort query results.
-	// Supports multiple sorting criteria and directions (ASC/DESC).
-	// Column names are automatically wrapped with backticks to handle SQL keywords.
-	//
-	// Parameters:
-	//   - order: Column name(s) with optional direction. Multiple columns separated by commas.
-	//            Direction can be "ASC" (default) or "DESC" (case-insensitive).
-	//
-	// Examples:
-	//
-	//	WithOrder("name")                        // Sort by name ascending (default)
-	//	WithOrder("name ASC")                    // Sort by name ascending (explicit)
-	//	WithOrder("name asc")                    // Sort by name ascending (case-insensitive)
-	//	WithOrder("created_at DESC")             // Sort by creation date descending
-	//	WithOrder("created_at desc")             // Sort by creation date descending (case-insensitive)
-	//	WithOrder("priority DESC, name ASC")     // Multiple sort criteria
-	//	WithOrder("priority desc, name asc")     // Multiple sort criteria (case-insensitive)
-	//	WithOrder("order DESC, limit ASC")       // Handles SQL keywords safely
-	//
-	// Note:
-	//   - Column names are automatically escaped with backticks to prevent SQL injection
-	//     and handle reserved keywords like "order", "limit", etc.
-	//   - Direction keywords (ASC/DESC) are case-insensitive and will be converted to uppercase.
 	WithOrder(order string) Database[M]
-
-	// WithExpand, for "foreign key".
+	// WithExpand enables eager loading of specified associations.
 	WithExpand(expand []string, order ...string) Database[M]
-
-	// WithPurge tells the database manipulator to delete resource in database permanently.
+	// WithPurge controls whether to permanently delete records (hard delete).
 	WithPurge(...bool) Database[M]
-	// WithCache tells the database manipulator to retrieve resource from cache.
+	// WithCache enables query result caching.
 	WithCache(...bool) Database[M]
-	// WithOmit omit specific columns when create/update.
+	// WithOmit excludes specified fields from operations.
 	WithOmit(...string) Database[M]
-	// WithTryRun only executes model hooks without performing actual database operations.
-	// Also logs the SQL statements that would have been executed.
-	WithTryRun(...bool) Database[M]
-	// WithoutHook tells the database manipulator not invoke model hooks.
+	// WithDryRun enables dry-run mode to preview SQL without executing.
+	WithDryRun() Database[M]
+	// WithoutHook disables model hooks for the operation.
 	WithoutHook() Database[M]
 }
 
-// Model interface defines the contract for all data models in the framework.
-// This interface ensures consistent behavior across different model implementations
-// and provides comprehensive functionality for database operations, logging, and lifecycle hooks.
+// Model defines the contract for all data models in the framework.
+// Provides database operations, audit trail, lifecycle hooks, and logging support.
 //
-// Implementation requirements:
-//  1. Must be a pointer to a struct (e.g., *User, not User) - otherwise causes panic
-//  2. Must have an "ID" field as the primary key in the database
-//  3. Should embed model.Base to inherit common fields and methods
-//
-// Example implementation:
-//
-//	type User struct {
-//	    model.Base
-//	    Name  string `json:"name"`
-//	    Email string `json:"email"`
-//	}
-//
-//	func (u *User) GetTableName() string {
-//	    return "users"
-//	}
-//
-// Core functionality:
-//   - Table and ID management for database operations
-//   - Audit trail with created/updated timestamps and user tracking
-//   - Relationship management through Expands() for foreign key preloading
-//   - Query filtering through Excludes() for conditional operations
-//   - Structured logging support via zap.ObjectMarshaler
-//   - Lifecycle hooks for custom business logic during CRUD operations
+// Type Requirements:
+//   - Must be a pointer to struct (e.g., *User)
+//   - Must have an "ID" field as primary key
+//   - Should embed model.Base for common functionality
 type Model interface {
 	GetTableName() string // GetTableName returns the table name.
 	GetID() string
@@ -437,35 +255,19 @@ type (
 	Response any
 )
 
-// Service interface provides comprehensive business logic operations for model types.
-// This interface defines the service layer that sits between controllers and database operations,
-// implementing business rules, validation, complex operations, and lifecycle management.
+// Service provides business logic operations for model types.
+// Defines the service layer between controllers and database operations.
 //
-// Implementation requirements:
-//   - The implementing object must be a pointer to struct
-//
-// Generic constraints:
-//   - M: Must implement the Model interface
+// Type Parameters:
+//   - M: Model type that implements Model interface
 //   - REQ: Request type (typically DTOs or request structures)
 //   - RSP: Response type (typically DTOs or response structures)
 //
-// Core operations:
-//   - CRUD operations: Create, Delete, Update, Patch, List, Get
-//   - Batch operations: CreateMany, DeleteMany, UpdateMany, PatchMany
-//   - Lifecycle hooks: Before/After methods for each operation
-//   - Data operations: Import/Export for bulk data management
-//   - Filtering: Custom filtering logic for queries
-//
-// ServiceContext provides:
-//   - HTTP request/response context
-//   - Database transaction management
-//   - User authentication and authorization context
-//   - Request validation and data binding
-//   - Logging and tracing capabilities
-//
-// Hook methods allow custom business logic:
-//   - Before hooks: Validation, authorization, data transformation
-//   - After hooks: Notifications, caching, audit logging, cleanup
+// Features:
+//   - CRUD and batch operations
+//   - Lifecycle hooks (Before/After methods)
+//   - Data import/export
+//   - Custom filtering logic
 type Service[M Model, REQ Request, RSP Response] interface {
 	Create(*ServiceContext, REQ) (RSP, error)
 	Delete(*ServiceContext, REQ) (RSP, error)
@@ -510,39 +312,15 @@ type Service[M Model, REQ Request, RSP Response] interface {
 	Logger
 }
 
-// Cache interface provides a unified caching abstraction with consistent error handling.
-// This interface supports various cache operations with proper error reporting and
-// distributed tracing capabilities.
+// Cache provides a unified caching abstraction with consistent error handling.
+// Supports TTL, context-aware operations, and distributed tracing.
 //
-// Generic type T can be any serializable data type.
+// Type Parameters:
+//   - T: Serializable data type
 //
 // Error Handling:
-//
-//	All operations return an error to provide comprehensive error information.
-//	For Get/Peek operations, ErrEntryNotFound is returned when the key doesn't exist.
-//	This design follows Go best practices and aligns with standard library patterns.
-//
-// Operations:
-//   - Set: Store value with TTL, returns error on failure
-//   - Get: Retrieve value and mark as accessed, returns ErrEntryNotFound if key doesn't exist
-//   - Peek: Retrieve value without affecting access order, returns ErrEntryNotFound if key doesn't exist
-//   - Delete: Remove specific key, returns error on failure
-//   - Exists: Check if key exists, returns bool
-//   - Len: Get current number of cached items, returns int
-//   - Clear: Remove all cached items
-//   - WithContext: Returns cache instance with tracing context for distributed tracing
-//
-// Key features:
-//   - Type-safe operations with generics
-//   - Consistent error handling across all operations
-//   - TTL support for expirable entries
-//   - Context-aware operations for tracing
-//   - Thread-safe operations
-//
-// Error handling:
-//   - Returns ErrEntryNotFound when cache entries are not found
+//   - Get/Peek return ErrEntryNotFound when key doesn't exist
 //   - All operations return errors for proper error handling
-//   - Supports graceful degradation in distributed environments
 type Cache[T any] interface {
 	// Get retrieves a value from the cache by key.
 	// Returns ErrEntryNotFound if the key does not exist.
@@ -574,94 +352,38 @@ type Cache[T any] interface {
 	WithContext(ctx context.Context) Cache[T]
 }
 
-// DistributedCache defines a two-level distributed caching system that combines local memory cache
-// with Redis backend for high-performance, synchronized caching across multiple nodes.
+// DistributedCache provides a two-level distributed caching system combining local memory cache
+// with Redis backend for synchronized caching across multiple nodes.
 //
-// Architecture:
-//   - Local Cache: High-speed in-memory cache for immediate access
-//   - Redis Cache: Distributed persistent storage for cross-node data sharing
-//   - Kafka Events: Real-time cache synchronization and invalidation across nodes
-//   - State Node: Coordinates cache operations and ensures consistency
+// Type Parameters:
+//   - T: Serializable data type
 //
-// Key Features:
+// Features:
 //   - Automatic cache synchronization across multiple application instances
 //   - Configurable TTL for both local and distributed cache layers
 //   - Event-driven cache invalidation using Kafka messaging
-//   - Performance metrics tracking (hits, misses, operations)
-//   - Goroutine pool for efficient concurrent operations
-//   - Type-safe generic implementation
-//
-// Usage Patterns:
-//   - Use SetWithSync/GetWithSync/DeleteWithSync for data that needs cross-node synchronization
-//   - Use regular Cache[T] methods (Set/Get/Delete) for local-only operations
-//   - Configure appropriate TTL values: localTTL <= remoteTTL for optimal performance
-//
-// Thread Safety:
-//   - All operations are thread-safe and can be called concurrently
-//   - Internal synchronization handles concurrent access to cache maps
-//
-// Performance Considerations:
-//   - Local cache provides sub-microsecond access times
-//   - Redis operations add network latency but ensure data consistency
-//   - Kafka events enable near real-time cache synchronization
-//   - Goroutine pool prevents resource exhaustion under high load
+//   - Thread-safe concurrent operations
 type DistributedCache[T any] interface {
 	Cache[T]
 
 	// SetWithSync stores a value in both local and distributed cache with synchronization.
-	//
-	// Operation flow:
-	//	1. Set value in local cache with localTTL expiration
-	//	2. Send 'Set' event to state node
-	//	3. State node sets Redis cache with remoteTTL expiration (Cache.Set method does not set Redis cache)
-	//	4. State node sends 'SetDone' event
-	//	5. Current node updates local cache
 	SetWithSync(key string, value T, localTTL time.Duration, remoteTTL time.Duration) error
 
 	// GetWithSync retrieves a value from local cache first, then from distributed cache if not found.
-	//
-	// Operation flow:
-	//	1. Retrieve from local cache
-	//	2. If not found in local cache, retrieve from Redis
-	//	3. If found in Redis, backfill to local cache with localTTL expiration
-	//	   Note: Backfilling local cache does not send 'Set' event to state node
 	GetWithSync(key string, localTTL time.Duration) (T, error)
 
 	// DeleteWithSync removes a value from both local and distributed cache with synchronization.
-	//
-	// Operation flow:
-	//	1. Delete from local cache
-	//	2. Send 'Del' event to state node
-	//	3. State node deletes Redis cache (Cache.Delete method does not delete Redis cache)
-	//	4. State node sends 'DelDone' event
-	//	5. Current node deletes from local cache
 	DeleteWithSync(key string) error
 }
 
-// RBAC interface defines comprehensive role-based access control operations.
-// This interface provides a complete RBAC system supporting roles, permissions,
-// and subject assignments with flexible resource and action management.
+// RBAC provides role-based access control operations.
+// Supports roles, permissions, and subject assignments with flexible resource and action management.
 //
-// RBAC Model Components:
-//   - Subject: Users or entities that need access (e.g., "user:123", "service:api")
-//   - Role: Named collection of permissions (e.g., "admin", "editor", "viewer")
-//   - Resource: Protected objects or endpoints (e.g., "users", "posts", "/api/v1/users")
-//   - Action: Operations on resources (e.g., "read", "write", "delete", "create")
-//
-// Permission Model:
-//   - Permissions are defined as (role, resource, action) tuples
-//   - Subjects are assigned roles, inheriting all role permissions
-//   - Supports hierarchical roles and resource patterns
-//
-// Implementation:
-//   - Typically backed by Casbin for policy enforcement
-//   - Supports both file-based and database-backed policy storage
-//   - Can integrate with external identity providers
-//
-// Usage patterns:
-//   - API endpoint authorization
-//   - Resource-level access control
-//   - Multi-tenant permission management
+// RBAC Model:
+//   - Subject: Users or entities that need access
+//   - Role: Named collection of permissions
+//   - Resource: Protected objects or endpoints
+//   - Action: Operations on resources
 type RBAC interface {
 	AddRole(name string) error
 	RemoveRole(name string) error
@@ -673,70 +395,29 @@ type RBAC interface {
 	UnassignRole(subject string, role string) error
 }
 
-// Module interface defines a comprehensive module system for creating modular API endpoints
+// Module defines a module system for creating modular API endpoints
 // with automatic CRUD operations, routing, and service layer integration.
 //
-// The Module interface enables developers to create reusable, self-contained modules
-// that automatically register models, services, and routes with the framework.
-// Each module encapsulates a complete API resource with customizable behavior.
+// Type Parameters:
+//   - M: Model type that implements Model interface
+//   - REQ: Request type for API operations
+//   - RSP: Response type for API operations
 //
-// Generic constraints:
-//   - M: Must implement the Model interface (typically a pointer to struct)
-//   - REQ: Request type for API operations (can be any serializable type)
-//   - RSP: Response type for API operations (can be any serializable type)
-//
-// Implementation requirements:
-//  1. Must provide a Service instance that handles business logic
-//  2. Must define the API route path for the resource
-//  3. Can optionally customize URL parameter names
-//  4. Can optionally make endpoints public (bypass authentication)
-//
-// Usage example:
-//
-//	type HelloworldModule struct{}
-//
-//	func (HelloworldModule) Service() types.Service[*Helloworld, *Req, *Rsp] {
-//	    return &HelloworldService{}
-//	}
-//	func (HelloworldModule) Pub() bool     { return false }  // requires auth
-//	func (HelloworldModule) Route() string { return "hello-world" }
-//	func (HelloworldModule) Param() string { return "id" }   // URL param name
-//
-//	// Register the module with specific CRUD phases
-//	module.Use[*Helloworld, *Req, *Rsp, *HelloworldService](
-//	    &HelloworldModule{},
-//	    consts.PHASE_CREATE,
-//	    consts.PHASE_LIST,
-//	    consts.PHASE_GET,
-//	)
-//
-// This will automatically create the following routes:
-//   - POST   /hello-world        (create)
-//   - GET    /hello-world        (list)
-//   - GET    /hello-world/:id    (get by id)
-//
-// Authentication behavior:
-//   - If Pub() returns true: endpoints are publicly accessible
-//   - If Pub() returns false: endpoints require authentication/authorization
+// Features:
+//   - Automatic route registration
+//   - Service layer integration
+//   - Configurable authentication
 type Module[M Model, REQ Request, RSP Response] interface {
 	// Service returns the service instance that handles business logic for this module.
-	// The service must implement all CRUD operations and lifecycle hooks.
 	Service() Service[M, REQ, RSP]
 
 	// Pub determines whether the API endpoints are public or require authentication.
-	// Returns true for public endpoints, false for authenticated endpoints.
-	// Default behavior should return false (require authentication).
 	Pub() bool
 
 	// Route returns the base API path for this module's endpoints.
-	// The path should not include leading/trailing slashes or "api" prefix.
-	// Example: "users", "hello-world", "products"
 	Route() string
 
 	// Param returns the URL parameter name used for resource identification.
-	// If empty string is returned, defaults to "id".
-	// This parameter is used in routes like: GET /resource/:param
-	// Example: "id", "uuid", "slug"
 	Param() string
 }
 
