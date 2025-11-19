@@ -201,7 +201,7 @@ func benchmarkDatabaseCreateBatch(b *testing.B, size int) {
 	for b.Loop() {
 		baseID := time.Now().UnixNano()
 
-		for i := 0; i < size; i++ {
+		for i := range users {
 			id := strconv.FormatInt(baseID+int64(i), 10)
 			users[i] = &TestUser{
 				Name: id,
@@ -221,7 +221,7 @@ func benchmarkDatabaseDeleteBatch(b *testing.B, size int) {
 	for b.Loop() {
 		baseID := time.Now().UnixNano()
 
-		for i := 0; i < size; i++ {
+		for i := range users {
 			id := strconv.FormatInt(baseID+int64(i), 10)
 			users[i] = &TestUser{
 				Name: id,
@@ -242,7 +242,7 @@ func benchmarkDatabaseUpdateBatch(b *testing.B, size int) {
 	for b.Loop() {
 		baseID := time.Now().UnixNano()
 
-		for i := 0; i < size; i++ {
+		for i := range users {
 			id := strconv.FormatInt(baseID+int64(i), 10)
 			users[i] = &TestUser{
 				Name: id,
@@ -252,7 +252,7 @@ func benchmarkDatabaseUpdateBatch(b *testing.B, size int) {
 
 		_ = database.Database[*TestUser](nil).Create(users...)
 
-		for i := 0; i < size; i++ {
+		for i := range users {
 			users[i].Name = users[i].Name + "_updated"
 		}
 
