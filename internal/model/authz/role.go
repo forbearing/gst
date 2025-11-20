@@ -90,24 +90,17 @@ func (r *Role) DeleteBefore(ctx *types.ModelContext) error {
 	return nil
 }
 
-// UpdatePermission must in "UpdateBefore" hook, because "UpdateBefore" hook contains
-// the old and new rol's information.
-// Then we can query the role's old "name" and "code" from database.
-// the UpdatePermission process must delete the old role's RolePermissions
-// and add the new role's RolePermissions.
-//
-// If the role "code" not changed, "UpdateBefore" and "UpdateAfter" has some effect.
-// If the role "code" changed, "UpdateAfter" cannot get the old role's "code",
-// thats causes we cannot deletes the old role's RolePermissions.
+// UpdatePermission must run in the "UpdateBefore" hook.
+// It uses a brute-force strategy: revoke all existing policies for the role,
+// then grant permissions derived from the current menus. This avoids any
+// unknown leftovers in the casbin_rule table and ensures strong consistency.
 func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 	// We should always iterate role's "MenuIds", not "MenuPartialIds".
 	// "MenuIds" is the frontend menus, "MenuPartialIds" is the frontend menus group that has no menus.
 	// A "Menu" contains one or multiple backend apis, each api binding one or multiple permissions.
 
 	var (
-		oldMenus       = make([]*Menu, 0)
 		newMenus       = make([]*Menu, 0)
-		oldPermissions = make([]*Permission, 0)
 		newPermissions = make([]*Permission, 0)
 	)
 
@@ -117,12 +110,7 @@ func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 		return err
 	}
 
-	if err := database.Database[*Menu](ctx.DatabaseContext()).
-		WithQuery(&Menu{Base: model.Base{ID: strings.Join(o.MenuIds, ",")}}).
-		List(&oldMenus); err != nil {
-		zap.S().Error(err)
-		return err
-	}
+	// query the new role's menus
 	if err := database.Database[*Menu](ctx.DatabaseContext()).
 		WithQuery(&Menu{Base: model.Base{ID: strings.Join(r.MenuIds, ",")}}).
 		List(&newMenus); err != nil {
@@ -130,17 +118,7 @@ func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 		return err
 	}
 
-	for _, m := range oldMenus {
-		// zap.S().Infow("menu", "label", m.Label, "api", m.API)
-		result := make([]*Permission, 0)
-		if err := database.Database[*Permission](ctx.DatabaseContext()).
-			WithQuery(&Permission{Resource: strings.Join(m.API, ",")}).
-			List(&result); err != nil {
-			zap.S().Error(err)
-			return err
-		}
-		oldPermissions = append(oldPermissions, result...)
-	}
+	// query the new role's permissions
 	for _, m := range newMenus {
 		// zap.S().Infow("menu", "label", m.Label, "api", m.API)
 		result := make([]*Permission, 0)
@@ -154,21 +132,21 @@ func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 		newPermissions = append(newPermissions, result...)
 	}
 
-	for _, p := range oldPermissions {
-		zap.S().Infow("old permission", "role", r.Code, "resource", p.Resource, "action", p.Action, "effect", EffectAllow)
-	}
 	for _, p := range newPermissions {
 		zap.S().Infow("new permission", "role", r.Code, "resource", p.Resource, "action", p.Action, "effect", EffectAllow)
 	}
 
-	// revoke the old role's permissions
-	for _, p := range oldPermissions {
-		rbac.RBAC().RevokePermission(r.Code, p.Resource, p.Action)
+	// revoke all existing policies for this role to avoid leftovers
+	if err := rbac.RBAC().RevokePermission(r.Code, "", ""); err != nil {
+		zap.S().Error(err)
+		return err
 	}
-
 	// grant the new role's permissions
 	for _, p := range newPermissions {
-		rbac.RBAC().GrantPermission(r.Code, p.Resource, p.Action)
+		if err := rbac.RBAC().GrantPermission(r.Code, p.Resource, p.Action); err != nil {
+			zap.S().Error(err)
+			return err
+		}
 	}
 
 	zap.S().Infow("update role", "old", o.Code, "new", r.Code)
