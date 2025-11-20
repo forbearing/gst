@@ -100,7 +100,10 @@ func (r *RoleService) remarkMenus(ctx *types.ServiceContext, role *Role) error {
 	}
 
 	role.Remark = util.ValueOf(strings.TrimSpace(sb.String()))
-	if err := database.Database[*Role](ctx.DatabaseContext()).Update(role); err != nil {
+
+	// NOTE: Role has "UpdateBefore" hook to update role's permissions.
+	// this service operations just update role's remark, so we should not invoke any "hooks" here.
+	if err := database.Database[*Role](ctx.DatabaseContext()).WithoutHook().Update(role); err != nil {
 		log.Error(err)
 		return err
 	}

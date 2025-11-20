@@ -2,10 +2,22 @@ package modelauthz
 
 import "github.com/forbearing/gst/model"
 
-// CasbinRule
+// CasbinRule 对象
 // RBAC 包中会通过 gormadapter.NewAdapterByDBWithCustomTable(database.DB, &model.CasbinRule{})
 // 或 gormadapter.NewAdapterByDB(database.DB) 来创建;
 // NOTE: ID 类型必须是整型
+//
+// -- 权限策略
+// INSERT INTO casbin_rule (ptype, v0, v1, v2, v3) VALUES
+// ('p', 'role_admin', '/api/config/*', 'GET', 'allow'),
+// ('p', 'role_admin', '/api/config/*', 'POST', 'allow'),
+// ('p', 'role_user', '/api/config/file', 'GET', 'allow');
+//
+// -- 角色关系
+// INSERT INTO casbin_rule (ptype, v0, v1) VALUES
+// ('g', 'alice', 'role_admin'),
+// ('g', 'bob', 'role_user'),
+// ('g', 'role_admin', 'admin');  -- admin 超级角色
 type CasbinRule struct {
 	// ID uint64 `json:"id" gorm:"primaryKey"`
 	ID    uint64 `json:"id" gorm:"primaryKey;autoIncrement:true"`
@@ -18,7 +30,7 @@ type CasbinRule struct {
 	V5    string `json:"v5,omitempty" gorm:"size:100" schema:"v5"`
 
 	User string `json:"user,omitempty" schema:"user"` // 只是用来记录一些信息, V0 为 user_id
-	Role string `json:"role,omitempty" schema:"role"` // 只是用来记录一些信息, V1 为 role name
+	Role string `json:"role,omitempty" schema:"role"` // 只是用来记录一些信息, V1 为 role code
 
 	model.Base
 }
