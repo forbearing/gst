@@ -59,11 +59,34 @@ func (r *rbac) GrantPermission(role string, resource string, action string) erro
 	return r.enforcer.SavePolicy()
 }
 
+// RevokePermission removes policies for the given role with flexible behaviors:
+// - resource=="" && action=="" : remove all policies for the role
+// - resource=="" && action!="" : remove policies matching the role and action
+// - resource!="" && action=="" : remove policies matching the role and resource
+// - resource!="" && action!="" : remove the exact (role, resource, action, "allow") policy
 func (r *rbac) RevokePermission(role string, resource string, action string) error {
-	if _, err := r.enforcer.DeletePermissionForUser(role, resource, action, "allow"); err != nil {
-		return err
-	}
-	return r.enforcer.SavePolicy()
+    if len(resource) == 0 && len(action) == 0 {
+        if _, err := r.enforcer.RemoveFilteredPolicy(0, role); err != nil {
+            return err
+        }
+        return r.enforcer.SavePolicy()
+    }
+    if len(resource) == 0 && len(action) > 0 {
+        if _, err := r.enforcer.RemoveFilteredPolicy(0, role, "", action); err != nil {
+            return err
+        }
+        return r.enforcer.SavePolicy()
+    }
+    if len(action) == 0 && len(resource) > 0 {
+        if _, err := r.enforcer.RemoveFilteredPolicy(0, role, resource); err != nil {
+            return err
+        }
+        return r.enforcer.SavePolicy()
+    }
+    if _, err := r.enforcer.DeletePermissionForUser(role, resource, action, "allow"); err != nil {
+        return err
+    }
+    return r.enforcer.SavePolicy()
 }
 
 func (r *rbac) AssignRole(subject string, role string) error {

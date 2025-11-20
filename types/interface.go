@@ -385,14 +385,19 @@ type DistributedCache[T any] interface {
 //   - Resource: Protected objects or endpoints
 //   - Action: Operations on resources
 type RBAC interface {
-	AddRole(name string) error
-	RemoveRole(name string) error
+    AddRole(name string) error
+    RemoveRole(name string) error
 
-	GrantPermission(role string, resource string, action string) error
-	RevokePermission(role string, resource string, action string) error
+    GrantPermission(role string, resource string, action string) error
+    // RevokePermission removes policies for the given role with flexible behaviors:
+    // - resource=="" && action=="" : remove all policies for the role
+    // - resource=="" && action!="" : remove policies matching the role and action
+    // - resource!="" && action=="" : remove policies matching the role and resource
+    // - resource!="" && action!="" : remove the exact (role, resource, action, "allow") policy
+    RevokePermission(role string, resource string, action string) error
 
-	AssignRole(subject string, role string) error
-	UnassignRole(subject string, role string) error
+    AssignRole(subject string, role string) error
+    UnassignRole(subject string, role string) error
 }
 
 // Module defines a module system for creating modular API endpoints
