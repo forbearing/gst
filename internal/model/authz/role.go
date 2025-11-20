@@ -123,7 +123,7 @@ func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 		// zap.S().Infow("menu", "label", m.Label, "api", m.API)
 		result := make([]*Permission, 0)
 		if err := database.Database[*Permission](ctx.DatabaseContext()).
-			// query the menu's permissions, multiple resources seperated by ","
+			// query the menu's permissions, multiple resources separated by ","
 			WithQuery(&Permission{Resource: strings.Join(m.API, ",")}).
 			List(&result); err != nil {
 			zap.S().Error(err)

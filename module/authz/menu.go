@@ -14,7 +14,6 @@ import (
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
 	"github.com/samber/lo"
-	"go.uber.org/zap"
 )
 
 var _ types.Module[*Menu, *Menu, *Menu] = (*MenuModule)(nil)
@@ -44,118 +43,97 @@ func (m *MenuService) ListAfter(ctx *types.ServiceContext, data *[]*Menu) error 
 }
 
 func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*Menu, log types.Logger) error {
-	// 本地账号 root 是超级管理员, 不对其进行过滤
+	// If Username is "root" or "admin", return directly
 	if ctx.Username == "root" || ctx.Username == "admin" {
 		return nil
 	}
 
-	user := new(User)
+	var (
+		user      = new(User)
+		userRoles = make([]*UserRole, 0)
+		roles     = make([]*Role, 0)
+	)
+
+	// query the current user
 	if err := database.Database[*User](ctx.DatabaseContext()).Get(user, ctx.UserID); err != nil {
 		log.Error(err)
 		return err
 	}
 
-	// 通过 UserRole 来找到 role
-	userRole := make([]*UserRole, 0)
-	if err := database.Database[*UserRole](ctx.DatabaseContext()).WithQuery(&UserRole{UserID: ctx.UserID}).List(&userRole); err != nil {
+	// query all "UserRole" according to the current user id.
+	if err := database.Database[*UserRole](ctx.DatabaseContext()).
+		WithQuery(&UserRole{UserID: ctx.UserID}).
+		List(&userRoles); err != nil {
 		log.Error(err)
 		return err
 	}
 
-	var roleID string
-	if len(userRole) > 0 {
-		if len(userRole[0].RoleID) > 0 {
-			roleID = userRole[0].RoleID
+	// query all "Role" according to the "UserRole"
+	if len(userRoles) > 0 {
+		roleIds := make([]string, 0)
+		for _, ur := range userRoles {
+			if len(ur.RoleID) > 0 {
+				roleIds = append(roleIds, ur.RoleID)
+			}
 		}
-	}
-	if len(userRole) > 0 {
-		log.Infoz("", zap.Object("userRole", userRole[0]))
-	}
-
-	// 如果通过 rolebinding 没找到 role, 则使用默认的 role
-	if len(roleID) == 0 {
-		roles := make([]*Role, 0)
-		if err := database.Database[*Role](ctx.DatabaseContext()).WithQuery(&Role{Default: util.ValueOf(true)}).WithLimit(1).List(&roles); err != nil {
+		if err := database.Database[*Role](ctx.DatabaseContext()).
+			WithQuery(&Role{Base: model.Base{ID: strings.Join(roleIds, ",")}}).List(&roles); err != nil {
 			log.Error(err)
 			return err
 		}
-		if len(roles) == 0 {
-			log.Error("not found default role")
-			return errors.New("not found default role")
-		}
-		if len(roles[0].ID) == 0 {
-			log.Error("not found default role")
-			return errors.New("not found default role")
-		}
-		roleID = roles[0].ID
-		log.Infoz("", zap.Object("role", roles[0]))
 	}
-
-	// fmt.Println("----- rolebindings", rolebindings)
-
-	// 获取多个 role
-	// 找出所有 rolebindings 中的 role.
-	roleIds := make([]string, 0)
-	for _, ur := range userRole {
-		roleIds = append(roleIds, ur.RoleID)
-	}
-	// Ensure the resolved roleID is included when user has no explicit role binding.
-	// This guarantees default role is applied to menu filtering.
-	if len(roleID) > 0 && !lo.Contains(roleIds, roleID) {
-		roleIds = append(roleIds, roleID)
-	}
-	// fmt.Println("----- roleIds", roleIds)
-	roles := make([]*Role, 0)
-	if err := database.Database[*Role](ctx.DatabaseContext()).WithQuery(&Role{Base: model.Base{ID: strings.Join(roleIds, ",")}}).List(&roles); err != nil {
-		log.Error(err)
-		return err
-	}
-	// fmt.Println("---- roles", roles)
-
-	// 只获取一个 role
-	// role := new(Role)
-	// if err := database.Database[*Role]().Get(role, roleID); err != nil {
-	// 	log.Error(err)
-	// 	return err
-	// }
-	// if len(role.ID) == 0 {
-	// 	log.Error("not found role")
-	// 	return errors.New("not found role")
-	// }
-
-	menuMap := make(map[string]struct{})
-	for _, role := range roles {
-		for _, id := range role.MenuIds {
-			menuMap[id] = struct{}{}
-		}
-		// 这里需要把 MenuPartialIds 加进去, 父菜单下面有多个菜单, 如果只选中了部分, 则是将 id 放在 MenuPartialIds.
-		for _, id := range role.MenuPartialIds {
-			menuMap[id] = struct{}{}
+	// the user has no roles, use the default role.
+	if len(roles) == 0 {
+		if err := database.Database[*Role](ctx.DatabaseContext()).
+			WithQuery(&Role{Default: util.ValueOf(true)}).
+			List(&roles); err != nil {
+			log.Error(err)
+			return err
 		}
 	}
-	// fmt.Println("---- menuMap", len(menuMap))
+	if len(roles) == 0 {
+		log.Error("user has no roles and don't have default role")
+		return errors.New("user has no roles and don't have default role")
+	}
+	for _, r := range roles {
+		log.Infow("role", "username", ctx.Username, "role_name", r.Name, "role_code", r.Code)
+	}
 
-	_data := lo.Filter[*Menu](*data, func(item *Menu, _ int) bool {
-		var exists, matched, ok bool
-		_, exists = menuMap[item.ID]
-		if exists {
-			if matched, _ = regexp.MatchString(item.DomainPattern, ctx.Request.Host); matched {
-				ok = true
+	{
+		menuMap := make(map[string]struct{})
+		for _, role := range roles {
+			for _, id := range role.MenuIds {
+				menuMap[id] = struct{}{}
+			}
+			// 这里需要把 MenuPartialIds 加进去, 父菜单下面有多个菜单, 如果只选中了部分, 则是将 id 放在 MenuPartialIds.
+			for _, id := range role.MenuPartialIds {
+				menuMap[id] = struct{}{}
 			}
 		}
-		return ok
-		// if _, ok := menuMap[item.ID]; ok {
-		// 	return true
-		// } else {
-		// 	return false
-		// }
-	})
-	for i := range _data {
-		filter(ctx, _data[i], menuMap)
+		// fmt.Println("---- menuMap", len(menuMap))
+
+		_data := lo.Filter[*Menu](*data, func(item *Menu, _ int) bool {
+			var exists, matched, ok bool
+			_, exists = menuMap[item.ID]
+			if exists {
+				if matched, _ = regexp.MatchString(item.DomainPattern, ctx.Request.Host); matched {
+					ok = true
+				}
+			}
+			return ok
+			// if _, ok := menuMap[item.ID]; ok {
+			// 	return true
+			// } else {
+			// 	return false
+			// }
+		})
+		for i := range _data {
+			filter(ctx, _data[i], menuMap)
+		}
+		val := reflect.ValueOf(data)
+		val.Elem().Set(reflect.ValueOf(_data))
+		return nil
 	}
-	val := reflect.ValueOf(data)
-	val.Elem().Set(reflect.ValueOf(_data))
-	return nil
 }
 
 // 递归过滤出当前角色所拥有的菜单. 作用于 menu.Children 字段.
