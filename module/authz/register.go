@@ -34,12 +34,6 @@ func init() {
 //   - PATCH  /api/authz/roles/:id
 //   - GET    /api/authz/roles
 //   - GET    /api/authz/roles/:id
-//   - POST   /api/authz/role-permissions
-//   - DELETE /api/authz/role-permissions/:id
-//   - PUT    /api/authz/role-permissions
-//   - PATCH  /api/authz/role-permissions/:id
-//   - GET    /api/authz/role-permissions
-//   - GET    /api/authz/role-permissions/:id
 //   - POST   /api/authz/user-roles
 //   - DELETE /api/authz/user-roles/:id
 //   - PUT    /api/authz/user-roles
@@ -87,20 +81,6 @@ func Register() {
 		*Role,
 		*RoleService](
 		&RoleModule{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-	)
-
-	module.Use[
-		*RolePermission,
-		*RolePermission,
-		*RolePermission,
-		*RolePermissionService](
-		&RolePermissionModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
