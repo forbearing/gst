@@ -14,27 +14,14 @@ import (
 // ErrEntryNotFound is returned when a cache entry is not found.
 var ErrEntryNotFound = errors.New("cache entry not found")
 
-// Initializer interface is used to initialize configuration, flag arguments, logger, or other components.
-// This interface is commonly implemented by bootstrap components that need to perform
-// initialization tasks during application startup.
-//
-// Example implementations:
-//   - Configuration loaders
-//   - Logger initializers
-//   - Database connection setup
-//   - Cache initialization
+// Initializer defines components that perform one-time application setup.
+// Typical implementations include config loaders, logger setup, and resource init.
 type Initializer interface {
 	Init() error
 }
 
-// StandardLogger interface provides standard logging methods for custom logger implementations.
-// This interface follows the traditional logging pattern with both simple and formatted logging methods.
-//
-// Usage:
-//   - Implement this interface to create custom loggers
-//   - Use Debug/Info/Warn/Error for simple logging
-//   - Use Debugf/Infof/Warnf/Errorf for formatted logging
-//   - Fatal methods should terminate the program after logging
+// StandardLogger provides leveled logging and formatted variants.
+// Fatal/Fatalf should exit after logging.
 type StandardLogger interface {
 	Debug(args ...any)
 	Info(args ...any)
@@ -49,16 +36,8 @@ type StandardLogger interface {
 	Fatalf(format string, args ...any)
 }
 
-// StructuredLogger interface provides structured logging methods with key-value pairs.
-// This interface is designed for structured logging where additional context can be
-// attached to log messages as key-value pairs.
-//
-// Usage:
-//
-//	logger.Infow("User login", "userID", 123, "ip", "192.168.1.1")
-//	logger.Errorw("Database error", "error", err, "query", sql)
-//
-// The 'w' suffix stands for "with" (structured data).
+// StructuredLogger logs with key-value pairs (msg plus fields).
+// Methods with suffix 'w' mean "with fields".
 type StructuredLogger interface {
 	Debugw(msg string, keysAndValues ...any)
 	Infow(msg string, keysAndValues ...any)
@@ -67,16 +46,8 @@ type StructuredLogger interface {
 	Fatalw(msg string, keysAndValues ...any)
 }
 
-// ZapLogger interface provides zap-specific logging methods with structured fields.
-// This interface is designed for integration with the uber-go/zap logging library,
-// offering high-performance structured logging capabilities.
-//
-// Usage:
-//
-//	logger.Infoz("Request processed", zap.String("method", "GET"), zap.Int("status", 200))
-//	logger.Errorz("Database connection failed", zap.Error(err), zap.String("host", dbHost))
-//
-// The 'z' suffix distinguishes these methods from other logging interfaces.
+// ZapLogger logs with typed zap fields.
+// Methods with suffix 'z' use zap.Field values.
 type ZapLogger interface {
 	Debugz(msg string, fields ...zap.Field)
 	Infoz(msg string, fields ...zap.Field)
@@ -85,19 +56,8 @@ type ZapLogger interface {
 	Fatalz(msg string, fields ...zap.Field)
 }
 
-// Logger interface combines all logging capabilities into a unified interface.
-// This interface provides comprehensive logging functionality by embedding
-// StandardLogger, StructuredLogger, and ZapLogger interfaces, along with
-// context-aware logging methods.
-//
-// Key features:
-//   - Standard logging (Debug, Info, Warn, Error, Fatal)
-//   - Structured logging with key-value pairs (Debugw, Infow, etc.)
-//   - Zap-specific structured logging with typed fields
-//   - Context-aware logging for controllers, services, and database operations
-//   - Support for complex object and array marshaling
-//
-// This unified approach allows flexible logging usage throughout the application.
+// Logger combines standard, structured, and zap logging with context helpers.
+// With* methods attach fields, objects/arrays, and request/service/db context.
 type Logger interface {
 	With(fields ...string) Logger
 
@@ -385,19 +345,19 @@ type DistributedCache[T any] interface {
 //   - Resource: Protected objects or endpoints
 //   - Action: Operations on resources
 type RBAC interface {
-    AddRole(name string) error
-    RemoveRole(name string) error
+	AddRole(name string) error
+	RemoveRole(name string) error
 
-    GrantPermission(role string, resource string, action string) error
-    // RevokePermission removes policies for the given role with flexible behaviors:
-    // - resource=="" && action=="" : remove all policies for the role
-    // - resource=="" && action!="" : remove policies matching the role and action
-    // - resource!="" && action=="" : remove policies matching the role and resource
-    // - resource!="" && action!="" : remove the exact (role, resource, action, "allow") policy
-    RevokePermission(role string, resource string, action string) error
+	GrantPermission(role string, resource string, action string) error
+	// RevokePermission removes policies for the given role with flexible behaviors:
+	// - resource=="" && action=="" : remove all policies for the role
+	// - resource=="" && action!="" : remove policies matching the role and action
+	// - resource!="" && action=="" : remove policies matching the role and resource
+	// - resource!="" && action!="" : remove the exact (role, resource, action, "allow") policy
+	RevokePermission(role string, resource string, action string) error
 
-    AssignRole(subject string, role string) error
-    UnassignRole(subject string, role string) error
+	AssignRole(subject string, role string) error
+	UnassignRole(subject string, role string) error
 }
 
 // Module defines a module system for creating modular API endpoints
