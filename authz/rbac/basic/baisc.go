@@ -12,34 +12,51 @@ import (
 	"github.com/forbearing/gst/database"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
 	"github.com/forbearing/gst/logger"
+	"github.com/forbearing/gst/types/consts"
 )
-
-const (
-	Root = "root"
-)
-
-var adminRole = "admin"
 
 var defaultAdmins = []string{
-	"admin",
-	"root",
+	consts.AUTHZ_USER_ROOT,
+	consts.AUTHZ_USER_ADMIN,
 }
+var defaultAdminRole = consts.AUTHZ_ROLE_ADMIN
 
 var modelData = []byte(`
 [request_definition]
+# r defines the incoming request tuple:
+# sub: subject (user or role identifier)
+# obj: object (requested resource path, e.g., /api/users/123)
+# act: action (HTTP method, e.g., GET/POST/PUT/DELETE/PATCH)
 r = sub, obj, act
 
 [policy_definition]
+# p defines the stored policy tuple:
+# sub: policy subject (typically a role name, e.g., "editor")
+# obj: policy object (resource template, e.g., /api/users/{id})
+# act: policy action (HTTP method)
+# eft: effect ("allow" or "deny")
 p = sub, obj, act, eft
 
 [role_definition]
+# g defines role membership:
+# g(user, role) means "user" belongs to "role"
 g = _, _
 
 [policy_effect]
-#e = priority(p.eft) || some(where (p.eft == allow))
+# Effect aggregator: allow if any matched policy’s eft is "allow".
+# With this, explicit "deny" does not override an existing allow.
+# Alternative examples (commented):
+# - priority-based: e = priority(p_eft) || some(where (p_eft == allow))
+# - deny-precedence: e = some(where (p_eft == deny)) == false && some(where (p_eft == allow))
 e = some(where (p.eft == allow))
 
 [matchers]
+# Matcher logic:
+# 1) Admin bypass: if subject belongs to "admin", allow
+# 2) Otherwise: require role match AND path match AND method match
+#    - g(r.sub, p.sub): subject belongs to policy role
+#    - keyMatch3(r.obj, p.obj): REST path template matches (e.g., /api/users/{id})
+#    - r.act == p.act: HTTP method equals
 m = g(r.sub, "admin") || (g(r.sub, p.sub) && keyMatch3(r.obj, p.obj) && r.act == p.act)
 `)
 
@@ -68,8 +85,9 @@ func Init() (err error) {
 	rbac.Enforcer.EnableEnforce(true)
 
 	for _, user := range defaultAdmins {
-		_, _ = rbac.Enforcer.AddGroupingPolicy(user, adminRole)
+		_, _ = rbac.Enforcer.AddGroupingPolicy(user, defaultAdminRole)
 	}
+	_, _ = rbac.Enforcer.AddGroupingPolicy(consts.AUTHZ_USER_BLOCKED, consts.AUTHZ_ROLE_BLOCKED)
 
 	return rbac.Enforcer.LoadPolicy()
 }

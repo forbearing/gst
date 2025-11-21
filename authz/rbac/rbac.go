@@ -4,6 +4,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/forbearing/gst/types"
+	"github.com/forbearing/gst/types/consts"
 )
 
 var (
@@ -83,7 +84,7 @@ func (r *rbac) RevokePermission(role string, resource string, action string) err
 		}
 		return r.enforcer.SavePolicy()
 	}
-	if _, err := r.enforcer.DeletePermissionForUser(role, resource, action, "allow"); err != nil {
+	if _, err := r.enforcer.DeletePermissionForUser(role, resource, action, string(consts.EffectAllow)); err != nil {
 		return err
 	}
 	return r.enforcer.SavePolicy()

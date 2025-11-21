@@ -35,7 +35,7 @@ func Authz() gin.HandlerFunc {
 			}
 		}
 		if len(sub) == 0 {
-			sub = consts.AUTHZ_USER_DEFAULT
+			sub = consts.AUTHZ_USER_BLOCKED
 		}
 		if allow, err = rbac.Enforcer.Enforce(sub, obj, act); err != nil {
 			zap.S().Error(err)
