@@ -50,6 +50,8 @@ func Authz() gin.HandlerFunc {
 				zap.String("obj", obj),
 				zap.String("act", act),
 				zap.String("eft", string(consts.EffectAllow)),
+				zap.String("username", c.GetString(consts.CTX_USERNAME)),
+				zap.String("trace_id", c.GetString(consts.TRACE_ID)),
 			)
 		} else {
 			ResponseJSON(c, CodeForbidden)
