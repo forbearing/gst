@@ -17,9 +17,9 @@ import (
 	"go.uber.org/zap"
 )
 
-func Recovery(filename ...string) gin.HandlerFunc {
+func Recovery(filename string) gin.HandlerFunc {
 	// TODO: replace it using custom logger.
-	return ginzap.RecoveryWithZap(pkgzap.NewGin(filename...), true)
+	return ginzap.RecoveryWithZap(pkgzap.NewGin(filename), true)
 }
 
 // RecoveryWithTracing returns a gin.HandlerFunc (middleware)

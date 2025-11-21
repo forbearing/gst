@@ -56,7 +56,7 @@ var (
 )
 
 func Bootstrap() error {
-	_, _ = maxprocs.Set(maxprocs.Logger(pkgzap.New().Infof))
+	_, _ = maxprocs.Set(maxprocs.Logger(pkgzap.New("").Infof))
 
 	mu.Lock()
 	defer mu.Unlock()

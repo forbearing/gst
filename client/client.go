@@ -84,7 +84,7 @@ func New(addr string, opts ...Option) (*Client, error) {
 		header:     http.Header{},
 		addr:       strings.TrimRight(addr, "/"),
 		ctx:        context.Background(),
-		Logger:     zap.New(),
+		Logger:     zap.New(""),
 	}
 	client.header.Set("User-Agent", consts.FrameworkName)
 	client.header.Set("Content-Type", "application/json")
