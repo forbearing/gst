@@ -1,8 +1,6 @@
 package authz
 
 import (
-	"strings"
-
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
@@ -37,11 +35,12 @@ func (APIService) List(ctx *types.ServiceContext, req *API) (APIRsp, error) {
 
 	apis := make([]string, 0)
 	for _, pem := range perms {
-		api := strings.TrimRight(pem.Resource, "/{id}")
-		api = strings.TrimSuffix(api, "/id")
-		api = strings.TrimSuffix(api, "/batch")
-		api = strings.TrimSuffix(api, "/")
-		apis = append(apis, api)
+		// api := strings.TrimSuffix(pem.Resource, "/{id}")
+		// api = strings.TrimSuffix(api, "/id")
+		// api = strings.TrimSuffix(api, "/batch")
+		// api = strings.TrimSuffix(api, "/")
+		// apis = append(apis, api)
+		apis = append(apis, pem.Resource)
 	}
 
 	return lo.Uniq(apis), nil

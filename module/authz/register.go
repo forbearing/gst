@@ -13,14 +13,16 @@ import (
 func init() {
 	// Enable RBAC
 	os.Setenv(config.AUTH_RBAC_ENABLE, "true")
+
+	// Enable authz middleware
+	os.Setenv(config.MIDDLEWARE_ENABLE_AUTHZ, "true")
 }
 
-// Register register modules: Permission, Role, RolePermission, UserRole.
+// Register register modules: Permission, Role, UserRole.
 //
 // Modules:
 //   - Permission
 //   - Role
-//   - RolePermission
 //   - UserRole
 //   - CasbinRule
 //   - Menu
@@ -34,12 +36,6 @@ func init() {
 //   - PATCH  /api/authz/roles/:id
 //   - GET    /api/authz/roles
 //   - GET    /api/authz/roles/:id
-//   - POST   /api/authz/role-permissions
-//   - DELETE /api/authz/role-permissions/:id
-//   - PUT    /api/authz/role-permissions
-//   - PATCH  /api/authz/role-permissions/:id
-//   - GET    /api/authz/role-permissions
-//   - GET    /api/authz/role-permissions/:id
 //   - POST   /api/authz/user-roles
 //   - DELETE /api/authz/user-roles/:id
 //   - PUT    /api/authz/user-roles
@@ -52,7 +48,6 @@ func init() {
 //   - PATCH  /api/menus/:id
 //   - GET    /api/menus
 //   - GET    /api/menus/:id
-//   - PATCH  /api/menus/batch
 //   - GET    /api/apis
 //   - POST   /api/buttons
 //   - DELETE /api/buttons/:id
@@ -96,20 +91,6 @@ func Register() {
 	)
 
 	module.Use[
-		*RolePermission,
-		*RolePermission,
-		*RolePermission,
-		*RolePermissionService](
-		&RolePermissionModule{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-	)
-
-	module.Use[
 		*UserRole,
 		*UserRole,
 		*UserRole,
@@ -135,7 +116,6 @@ func Register() {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
-		consts.PHASE_PATCH_MANY,
 	)
 
 	module.Use[

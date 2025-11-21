@@ -1,11 +1,14 @@
 package modelauthz
 
 import (
+	"slices"
 	"strings"
 
+	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gorm.io/datatypes"
 )
@@ -55,36 +58,92 @@ type Menu struct {
 	model.Base
 }
 
+func (m *Menu) Purge() bool                                      { return true }
 func (m *Menu) CreateBefore(ctx *types.ModelContext) (err error) { return m.validate() }
 func (m *Menu) UpdateBefore(ctx *types.ModelContext) error       { return m.validate() }
+
+// UpdateAfter will query all roles and check whether the role contains the current menu.
+// If role contains current menu and the menu's API changed,
+// then call "role.UpdatePermission" to updates the role's permissions.
+func (m *Menu) UpdateAfter(ctx *types.ModelContext) error {
+	// // // if update not contains "API", skip update role's permissions
+	// // if len(m.API) == 0 {
+	// // 	return nil
+	// // }
+	//
+	// // update "API" but we should check whether the original menu's API and
+	// // current updates menu's API are the same.
+	// //
+	// // query the original menu from database.
+	// orig := new(Menu)
+	// if err := database.Database[*Menu](ctx.DatabaseContext()).Get(orig, m.ID); err != nil {
+	// 	return err
+	// }
+	//
+	// // // if the original menu's API and current updates menu's API are the same,
+	// // // skip update role's permissions
+	// // if reflect.DeepEqual(orig.API, m.API) {
+	// // 	zap.S().Info("menu's api not changed, skip update role's permissions")
+	// // 	return nil
+	// // }
+
+	roles := make([]*Role, 0)
+	if err := database.Database[*Role](ctx.DatabaseContext()).List(&roles); err != nil {
+		return err
+	}
+	for _, r := range roles {
+		// If the role contains the current menu, then update role's permissions
+		if slices.Contains(r.MenuIds, m.ID) {
+			if err := r.UpdatePermission(ctx); err != nil {
+				return err
+			} else {
+				zap.L().Info("successfully update role's permissions", zap.Object("role", r))
+			}
+		}
+	}
+
+	return nil
+}
+
+// DeleteBefore will delete the role's permissions
+func (m *Menu) DeleteBefore(ctx *types.ModelContext) error {
+	roles := make([]*Role, 0)
+	if err := database.Database[*Role](ctx.DatabaseContext()).List(&roles); err != nil {
+		return err
+	}
+	for _, r := range roles {
+		// If the role contains the current menu, then update role's permissions
+		if slices.Contains(r.MenuIds, m.ID) {
+			// update the role's MenuIDs to remove the current menu
+			menuIds := make([]string, 0)
+			for _, mid := range r.MenuIds {
+				if mid != m.ID {
+					menuIds = append(menuIds, mid)
+				}
+			}
+			r.MenuIds = menuIds
+			// update the role's MenuPartialIds to remove the current menu
+			menuPartialIds := make([]string, 0)
+			for _, mid := range r.MenuPartialIds {
+				if mid != m.ID {
+					menuPartialIds = append(menuPartialIds, mid)
+				}
+			}
+			r.MenuPartialIds = menuPartialIds
+
+			if err := database.Database[*Role](ctx.DatabaseContext()).Update(r); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
 
 func (m *Menu) Expands() []string { return []string{"Children", "Parent"} }
 func (m *Menu) Excludes() map[string][]any {
 	return map[string][]any{KeyID: {RootID, UnknownID, NoneID}}
 }
-
-// // ListAfter 可能是只查询最顶层的 Menu,并不能拿到最顶层的 Menu
-// func (m *Menu) ListAfter(ctx *types.ModelContext) (err error) {
-// 	oldPath, oldAPI := m.Path, m.API
-// 	if err = m.checkPathAndAPI(); err != nil {
-// 		return err
-// 	}
-// 	if m.Path != oldPath || m.API != oldAPI {
-// 		return database.Database[*Menu](ctx.DatabaseContext()).WithoutHook().Update(m)
-// 	}
-// 	return nil
-// }
-
-// func (m *Menu) GetAfter(ctx *types.ModelContext) (err error) {
-// 	oldPath, oldAPI := m.Path, m.API
-// 	if err = m.checkPathAndAPI(); err != nil {
-// 		return err
-// 	}
-// 	if m.Path != oldPath || m.API != oldAPI {
-// 		return database.Database[*Menu](ctx.DatabaseContext()).WithoutHook().Update(m)
-// 	}
-// 	return nil
-// }
 
 func (m *Menu) validate() error {
 	if len(m.ParentID) == 0 {
@@ -101,35 +160,6 @@ func (m *Menu) validate() error {
 	}
 	return nil
 }
-
-// func (m *Menu) checkPathAndAPI() (err error) {
-// 	// 去除空格和尾部所有的 /
-// 	m.Path = strings.TrimSpace(m.Path)
-// 	m.Path = strings.TrimRight(m.Path, "/")
-//
-// 	// 检查是否是有效的 url
-// 	var newPath string
-// 	if newPath, err = url.JoinPath("/", m.Path); err != nil {
-// 		return err
-// 	}
-//
-// 	// m.Path 可能为空,如果这是一个父级菜单的话,则Path为空
-// 	if len(m.Path) == 0 {
-// 		m.API = ""
-// 	}
-// 	if len(m.Path) > 0 && len(m.API) == 0 {
-// 		if m.API, err = url.JoinPath("/api", m.Path); err != nil {
-// 			return err
-// 		}
-// 	}
-//
-// 	// 有一些 path 不是以 / 开头的, 我们需要手动加上
-// 	if len(m.Path) > 0 {
-// 		m.Path = newPath
-// 	}
-//
-// 	return nil
-// }
 
 func (m *Menu) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	if m == nil {

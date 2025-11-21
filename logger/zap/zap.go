@@ -31,15 +31,17 @@ var (
 	logMaxBackups int
 )
 
-// option contains logger constructor options.
-type option struct {
-	disableMsg   bool   // disable field "msg".
-	disableLevel bool   // disable field "level".
-	tsLayout     string // fields "ts" layout.
+// Option configures encoder behavior for constructors.
+// DisableMsg/DisableLevel hide "msg" and "level" fields; TSLayout sets time format.
+type Option struct {
+	DisableMsg    bool
+	DisableLevel  bool
+	DisableCaller bool
+	TSLayout      string
 }
 
-// Init will initial global *zap.Logger according to Server/Client configurations.
-// log file default to config.Server.LoggerConfig.LogFile or config.Client.LoggerConfig.LogFile.
+// Init initializes global loggers from config and wires subsystem loggers.
+// Returns error on configuration or initialization failure.
 func Init() error {
 	readConf()
 	zap.ReplaceGlobals(zap.New(
@@ -59,7 +61,7 @@ func Init() error {
 	logger.Dcache = New("dcache.log")
 	logger.Redis = New("redis.log")
 
-	logger.Authz = New("authz.log")
+	logger.Authz = New("authz.log", Option{DisableMsg: true, DisableCaller: true})
 	logger.OTEL = New("otel.log")
 	logger.Cassandra = New("cassandra.log")
 	logger.Elastic = New("elastic.log")
@@ -155,109 +157,99 @@ func Clean() {
 	}
 }
 
-// New returns *Logger instance that contains *zap.Logger and *zap.SugaredLogger
-// and implements types.Logger.
-func New(filename ...string) *Logger {
+// New builds a types.Logger backed by *zap.Logger.
+// filename: target log file name ("/dev/stdout" for console)
+// opts: optional encoder options
+func New(filename string, opts ...Option) *Logger {
 	readConf()
 	if len(filename) > 0 {
-		if len(filename[0]) > 0 {
-			logFile = filename[0]
-		}
+		logFile = filename
 	}
 	logger := zap.New(
-		zapcore.NewCore(newLogEncoder(), newLogWriter(), newLogLevel()),
+		zapcore.NewCore(newLogEncoder(opts...), newLogWriter(opts...), newLogLevel(opts...)),
 		zap.AddCaller(),
-		zap.AddCallerSkip(1), // 这里别忘了
+		zap.AddCallerSkip(1),
 		zap.AddStacktrace(zapcore.FatalLevel),
 	)
 	return &Logger{zlog: logger}
 }
 
-// NewGorm returns a *GormLogger instance that implements gorm logger.Interface.
-func NewGorm(filename ...string) gorml.Interface {
+// NewGorm builds a gorm logger.Interface.
+// filename: target log file name ("/dev/stdout" for console)
+func NewGorm(filename string) gorml.Interface {
 	readConf()
 	if len(filename) > 0 {
-		if len(filename[0]) > 0 {
-			logFile = filename[0]
-		}
+		logFile = filename
 	}
 	logger := zap.New(
 		zapcore.NewCore(newLogEncoder(), newLogWriter(), newLogLevel()),
 		zap.AddCaller(),
-		zap.AddCallerSkip(5), // 这个值是后期调出来的.
+		zap.AddCallerSkip(5),
 		zap.AddStacktrace(zapcore.FatalLevel),
 	)
 	return &GormLogger{l: &Logger{zlog: logger}}
 }
 
-// NewCasbin returns a *GormLogger instance that implements casbin Logger interface.
-// This logger without 'caller' field.
-func NewCasbin(filename ...string) casbinl.Logger {
+// NewCasbin builds a casbin Logger (no caller field).
+// filename: target log file name ("/dev/stdout" for console)
+func NewCasbin(filename string) casbinl.Logger {
 	readConf()
 	if len(filename) > 0 {
-		if len(filename[0]) > 0 {
-			logFile = filename[0]
-		}
+		logFile = filename
 	}
 	logger := zap.New(
-		zapcore.NewCore(newLogEncoder(), newLogWriter(), newLogLevel()),
+		zapcore.NewCore(newLogEncoder(Option{DisableMsg: true}), newLogWriter(), newLogLevel()),
 		zap.AddStacktrace(zapcore.FatalLevel),
 	)
 	return &CasbinLogger{l: &Logger{zlog: logger}}
 }
 
-// NewGin returns a *Logger instance that contains *zap.Logger.
-func NewGin(filename ...string) *zap.Logger {
+// NewGin builds a *zap.Logger for Gin access logs.
+// filename: target log file name ("/dev/stdout" for console)
+func NewGin(filename string) *zap.Logger {
 	readConf()
 	if len(filename) > 0 {
-		if len(filename[0]) > 0 {
-			logFile = filename[0]
-		}
+		logFile = filename
 	}
-	return zap.New(zapcore.NewCore(newLogEncoder(option{disableMsg: true, disableLevel: true}), newLogWriter(), newLogLevel()))
+	return zap.New(zapcore.NewCore(newLogEncoder(Option{DisableMsg: true, DisableLevel: true}), newLogWriter(), newLogLevel()))
 }
 
-// NewStdLog returns a *log.Logger instance that contains *zap.Logger.
+// NewStdLog builds a *log.Logger backed by *zap.Logger.
 func NewStdLog() *log.Logger {
-	return zap.NewStdLog(NewZap())
+	return zap.NewStdLog(NewZap(""))
 }
 
-// NewZap new a *zap.Logger instance according to Server/Client configurations.
-// The instance implements types.Logger interface.
-// log file default to config.Server.LoggerConfig.LogFile or config.Client.LoggerConfig.LogFile,
-// you can create a custom *zap.Logger by pass log filename to this function.
-func NewZap(filename ...string) *zap.Logger {
+// NewZap builds a *zap.Logger with optional filename and options.
+// filename: target log file name ("/dev/stdout" for console)
+// opts: optional encoder options
+func NewZap(filename string, opts ...Option) *zap.Logger {
 	readConf()
 	if len(filename) > 0 {
-		if len(filename[0]) > 0 {
-			logFile = filename[0]
-		}
+		logFile = filename
 	}
 	return zap.New(
-		zapcore.NewCore(newLogEncoder(), newLogWriter(), newLogLevel()),
+		zapcore.NewCore(newLogEncoder(opts...), newLogWriter(opts...), newLogLevel(opts...)),
 		zap.AddCaller(),
 		zap.AddStacktrace(zapcore.FatalLevel))
 }
 
-// NewSugared new a *zap.SugaredLogger instance according to Server/Client configurations.
-// The instance implements types.Logger and types.StructuredLogger interface.
-// log file default to config.Server.LoggerConfig.LogFile or config.Client.LoggerConfig.LogFile,
-// you can create a custom *zap.SugaredLogger by pass log filename to this function.
-func NewSugared(filename ...string) *zap.SugaredLogger {
+// NewSugared builds a *zap.SugaredLogger with optional filename and options.
+// filename: target log file name ("/dev/stdout" for console)
+// opts: optional encoder options
+func NewSugared(filename string, opts ...Option) *zap.SugaredLogger {
 	readConf()
 	if len(filename) > 0 {
-		if len(filename[0]) > 0 {
-			logFile = filename[0]
-		}
+		logFile = filename
 	}
 	return zap.New(
-		zapcore.NewCore(newLogEncoder(), newLogWriter(), newLogLevel()),
+		zapcore.NewCore(newLogEncoder(opts...), newLogWriter(opts...), newLogLevel(opts...)),
 		zap.AddCaller(),
 		zap.AddStacktrace(zapcore.FatalLevel)).Sugar()
 }
 
-// newLogWriter
-func newLogWriter(_ ...option) zapcore.WriteSyncer {
+// newLogWriter selects log sink (stdout/stderr or rolling file).
+// opts: reserved for future expansion
+func newLogWriter(_ ...Option) zapcore.WriteSyncer {
 	switch strings.TrimSpace(logFile) {
 	case "/dev/stdout":
 		return zapcore.AddSync(os.Stdout)
@@ -277,8 +269,9 @@ func newLogWriter(_ ...option) zapcore.WriteSyncer {
 	}
 }
 
-// newLogLevel
-func newLogLevel(_ ...option) zapcore.Level {
+// newLogLevel parses configured level; defaults to Info.
+// opts: reserved for future expansion
+func newLogLevel(_ ...Option) zapcore.Level {
 	if len(logLevel) == 0 {
 		return zapcore.InfoLevel
 	}
@@ -289,8 +282,9 @@ func newLogLevel(_ ...option) zapcore.Level {
 	return *level
 }
 
-// newLogEncoder
-func newLogEncoder(opt ...option) zapcore.Encoder {
+// newLogEncoder builds JSON/console encoder with optional field suppression and time layout.
+// opt: encoder options
+func newLogEncoder(opt ...Option) zapcore.Encoder {
 	encConfig := zap.NewProductionEncoderConfig()
 	// encConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 	// encConfig.EncodeTime = zapcore.ISO8601TimeEncoder
@@ -306,14 +300,17 @@ func newLogEncoder(opt ...option) zapcore.Encoder {
 	// encConfig.EncodeLevel = colorfulLevelEncoder
 	if len(opt) > 0 {
 		o := opt[0]
-		if o.disableMsg {
+		if o.DisableMsg {
 			encConfig.MessageKey = ""
 		}
-		if o.disableLevel {
+		if o.DisableLevel {
 			encConfig.LevelKey = ""
 		}
-		if len(o.tsLayout) > 0 {
-			encConfig.EncodeTime = zapcore.TimeEncoderOfLayout(o.tsLayout)
+		if o.DisableCaller {
+			encConfig.CallerKey = ""
+		}
+		if len(o.TSLayout) > 0 {
+			encConfig.EncodeTime = zapcore.TimeEncoderOfLayout(o.TSLayout)
 		}
 	}
 	switch strings.ToLower(logFormat) {
@@ -338,7 +335,7 @@ func readConf() {
 	logMaxBackups = config.App.Logger.MaxBackups
 }
 
-// colorfulLevelEncoder 自定义 Level Encoder，为不同的日志级别添加颜色
+// colorfulLevelEncoder encodes levels with ANSI colors.
 func colorfulLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
 	var color string
 	switch level {
@@ -355,7 +352,6 @@ func colorfulLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder
 	default:
 		color = "\033[0m" // Reset
 	}
-	// 使用颜色代码包装原始 Level 字符串
 	enc.AppendString(color + level.String() + "\033[0m")
 }
 

@@ -38,7 +38,7 @@ func createLogger(b *testing.B, filename string) types.Logger {
 	if err := config.Init(); err != nil {
 		b.Fatal(err)
 	}
-	l := zap.New()
+	l := zap.New("")
 	return l
 }
 
@@ -48,7 +48,7 @@ func TestLogger(b *testing.T) {
 	if err := config.Init(); err != nil {
 		b.Fatal(err)
 	}
-	l := zap.New()
+	l := zap.New("")
 	l.With("key1", "value1", "key2", "value2").Info("hello world")
 }
 

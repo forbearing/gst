@@ -16,6 +16,7 @@ type Permission struct {
 	model.Base
 }
 
+func (p *Permission) Purge() bool { return true }
 func (p *Permission) CreateBefore(*types.ModelContext) error {
 	p.SetID(util.HashID(p.Resource, p.Action))
 	p.Remark = util.ValueOf(fmt.Sprintf("%s %s", p.Action, p.Resource))
