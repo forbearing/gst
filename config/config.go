@@ -47,6 +47,7 @@ var (
 type Config struct {
 	AppInfo       `json:"app" mapstructure:"app" ini:"app" yaml:"app"`
 	Server        `json:"server" mapstructure:"server" ini:"server" yaml:"server"`
+	Middleware    `json:"middleware" mapstructure:"middleware" ini:"middleware" yaml:"middleware"`
 	Grpc          `json:"grpc" mapstructure:"grpc" ini:"grpc" yaml:"grpc"`
 	Auth          `json:"auth" mapstructure:"auth" ini:"auth" yaml:"auth"`
 	Database      `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
@@ -83,6 +84,7 @@ type Config struct {
 func (c *Config) setDefault() {
 	c.AppInfo.setDefault()
 	c.Server.setDefault()
+	c.Middleware.setDefault()
 	c.Grpc.setDefault()
 	c.Auth.setDefault()
 	c.Logger.setDefault()

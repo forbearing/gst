@@ -65,7 +65,13 @@ func Init() error {
 
 	auth.Use(middleware.CommonMiddlewares...)
 	auth.Use(middleware.AuthMiddlewares...)
-	auth.Use(middleware.AuthMarker()) // Mark authenticated routes
+	if config.App.Middleware.EnableJwtAuth {
+		auth.Use(middleware.JwtAuth())
+	}
+	if config.App.Middleware.EnableAuthz {
+		auth.Use(middleware.Authz())
+	}
+	auth.Use(middleware.AuthMarker())
 	pub.Use(middleware.CommonMiddlewares...)
 
 	return nil
