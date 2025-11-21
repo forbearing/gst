@@ -1,11 +1,151 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Build
+- add analysis tools and update Makefile
+
+### Chg
+- **logger:** move "CasbinLogger" implementation to dedicated file
+- **logger:** move "GormLogger" implementation to dedicated file
+- **logger:** authz logger disable "caller" field and two fields: "username", "trace_id"
+- **model:** disable soft-delete for model "Menu", "Button"
+- **model:** remove soft-delete for "Permission"
+- **router:** re-create permission in transaction
+
+### Chore
+- **ai:** update CLAUDE.md
+- **ai:** update CLAUDE.md
+- **ai:** update CLAUDE.md
+- **ai:** update CLAUDE.md
+- **ai:** add CLAUDE.md
+- **build:** adjust check sequences
+- **database:** change `WithTable` and `WithTx` position
+- **deps:** go mod tidy
+- **model:** remove "Menu", that replace by internal/model/authz/menu.go
+
+### Ci
+- sync analysis tools with Makefile
+- ensure github ci tools version match to go.mod
+
+### Docs
+- **database:** concise comments
+- **database:** update docs for `WithDB` and `WithTable`
+- **database:** update docs for `WithTx`
+- **database:** update docs
+- **database:** enhance WithQuery and QueryConfig documentation
+- **middleware:** update docs for "Authz"
+- **types:** update documents for `Initializer`, `StandardLogger`, `StructuredLogger`, `ZapLogger`, `Logger`
+
+### Enh
+- **database:** enhance docs and add test cases for `WithDryRun`
+- **database:** enhance docs and add test cases for `WithOmit`
+- **database:** enhance docs and add test cases for `WithCache`
+- **database:** enhance docs and add test coverage for `WithPurge`
+- **database:** enhance docs and add test coverage for `WithExclude`
+- **database:** enhance docs and add test coverage for `WithOrder`
+- **database:** enhance docs and add test coverage for `WithLock`
+- **database:** enhance docs and add test coverage for `WithRollback`
+- **database:** enhance docs and test coverage for `WithSelectRaw`
+- **database:** enhance docs and test coverage for `WithCursor`
+- **database:** enhance docs and test coverage for `WithDebug`
+- **database:** enhance `Create` docs and test coverage
+- **database:** enhance `Delete` docs and test coverage
+- **database:** enhance `Update` docs and test coverage
+- **database:** check passed parameter is nil in `List` and enhance test coverage
+- **database:** enhance `Get` docs and its test coverage
+- **database:** enhance `Last` docs and its test coverage
+- **database:** enhance `Last` method and its test coverage
+
+### Feat
+- add noop RBAC
+- add User model in "internal/model"
+- **config:** add config "middleware"
+- **database:** add `Transaction` for single model transaction
+- **logger:** "Option" add feild "DisableCaller"
+- **module:** "Menu" add route "PATCH_MANY" and update docs
+- **module:** add "Button" module
+- **module:** add "Api" module
+- **module:** add menu module
+- **rbac:** enable "blocked" role to support deny all request
+
+### Fix
+- **controller:** remove `List` second parameter "cache"
+- **database:** ignore model fields when RawQuery is provided
+- **database:** always rollback if transaction failed in `TransactionFunc` and add test cases for `TransactionFunc`
+- **database:** fix UseOr to use Where() for first condition
+- **database:** check query condition is nil in `WithQuery`
+- **database:** improve WithQuery nil handling and documentation
+- **database:** ensure state cleanup on early returns
+- **database:** check count is nil in `Count`
+- **database:** properly uses database context for PingContext in `Health`
+- **database:** skip empty items in FuzzyMatch REGEXP pattern
+- **database:** always add defaultColumns in `WithSelect` and enhance `WithSelect` test cases
+- **database:** apply WithSelect lazily and respect select columns
+- **database:** check nil dest in `Get`, `First`, `Last`, `Take`
+- **database:** fix cache delection bug in `Delete` and `Update` options and improve docs and test coverage for `WithBatchSize`
+- **database:** restrict WithIndex to MySQL SELECT queries only
+- **database:** support auto migration for multiple database instances
+- **database:** check "db.shouldAutoMigrate" in `prepare`
+- **database:** check "id", "name", "value" in `UpdateByID`
+- **database:** check empty resource before "Create", "Delete", "Update"
+- **golangci-lint:** fix issues
+- **module:** fix golangci-lint issues: rename module "Api" -> "API"
+- **module:** forget save the rename "buttonservice" -> "ButtonService"
+
+### Perf
+- **database:** remove check empty or nil model in `Create`, `Delete` and `Update`
+- **database:** remove redundant check in `Create`, `Delete` and `Update`
+- **database:** add "Sync.Map" to avoid model multiple migration
+
+### Refactor
+- optimize interface documentation and remove unused cache parameters
+- **database:** remove second parameter "cache" in `Get`
+- **database:** remove second parameter in `List
+- **database:** in `WithSelect` if columns is empty or all includes in "defaultColumns", its a no-op options
+- **database:** `WithRollback` no longer returns error
+- **database:** check empty parameters to returns error in "UpdateByID"
+- **database:** optimize query option functions
+- **database:** call `WithTable` will always disable "auto migration"
+- **logger:** unify zap constructors and introduce typed Option for configuration
+
+### Style
+- **modernize:** fix modernize issues
+- **modernize:** reflect.TypeOf simplified using TypeFor for package "internal/reflectmeta"
+- **modernize:** reflect.TypeOf simplified using TypeFor
+- **shadow:** reslove shadow issues
+
+### Test
+- add database package to test targets
+- **database:** enhance test coverage for `Count`
+- **database:** enhance test coverage for `Health`
+- **database:** add test cases for `WithPagination`
+- **database:** refactor test style
+- **database:** enhance test coverage for `UpdateByID`
+- **database:** add benchmark test for database
+- **database:** enhance test coverage for `Cleanup`
+- **database:** add test cases for `WithLimit`
+- **database:** update test cases for `WithDB` and `WithTable`
+- **database:** update test cases for `WithTx`
+- **database:** update test cases
+- **database:** add test cases for `WithExpand`
+- **database:** rewrite database test cases
+- **model:** fix test cases aftr remove Menu"
+
+### Wip
+- **module:** role binding permissions
+- **test:** add test cases for `WithCache`
+
+
+<a name="v0.10.0-beta.4"></a>
+## [v0.10.0-beta.4] - 2025-11-10
 ### Chg
 - move module model "Role" into internal/model/authz
 - **model:** move model "Permission" into "module/authz"
 - **model:** move model `Permission` register to module
 - **service:** move role service into modules
+
+### Chore
+- **release:** generate CHANGEME.md
 
 ### Feat
 - **module:** add authz modules
@@ -24,12 +164,15 @@
 - remove "service/authz" and "service/log"
 - move module models "CasinRule" and "Permission" into internal/model
 
+### Pull Requests
+- Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
-<a name="v0.10.0-beta.3"></a>
-## [v0.10.0-beta.3] - 2025-11-08
 
 <a name="list"></a>
 ## [list] - 2025-11-08
+
+<a name="v0.10.0-beta.3"></a>
+## [v0.10.0-beta.3] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -141,11 +284,11 @@
 Plugin interface renamed to Module interface
 
 
-<a name="v0.9.7-beta.4"></a>
-## [v0.9.7-beta.4] - 2025-10-31
-
 <a name="v0.9.7"></a>
 ## [v0.9.7] - 2025-10-31
+
+<a name="v0.9.7-beta.4"></a>
+## [v0.9.7-beta.4] - 2025-10-31
 ### Chore
 - **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
@@ -828,11 +971,11 @@ Configuration field names changed from Jaeger to OTEL
 - Merge pull request [#5](https://github.com/forbearing/gst/issues/5) from forbearing/dev
 
 
-<a name="v0.7.0"></a>
-## [v0.7.0] - 2025-08-20
-
 <a name="v0.7.0-beta.3"></a>
 ## [v0.7.0-beta.3] - 2025-08-20
+
+<a name="v0.7.0"></a>
+## [v0.7.0] - 2025-08-20
 ### Chore
 - update CHANGELOG.md
 - **model:** remove zap debug logging from `setID`
@@ -2423,14 +2566,15 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...HEAD
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...HEAD
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
-[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
-[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
-[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
+[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
@@ -2455,9 +2599,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.7.4]: https://github.com/forbearing/gst/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/forbearing/gst/compare/v0.7.2...v0.7.3
 [v0.7.2]: https://github.com/forbearing/gst/compare/v0.7.1...v0.7.2
-[v0.7.1]: https://github.com/forbearing/gst/compare/v0.7.0...v0.7.1
-[v0.7.0]: https://github.com/forbearing/gst/compare/v0.7.0-beta.3...v0.7.0
-[v0.7.0-beta.3]: https://github.com/forbearing/gst/compare/v0.7.0-beta.2...v0.7.0-beta.3
+[v0.7.1]: https://github.com/forbearing/gst/compare/v0.7.0-beta.3...v0.7.1
+[v0.7.0-beta.3]: https://github.com/forbearing/gst/compare/v0.7.0...v0.7.0-beta.3
+[v0.7.0]: https://github.com/forbearing/gst/compare/v0.7.0-beta.2...v0.7.0
 [v0.7.0-beta.2]: https://github.com/forbearing/gst/compare/v0.7.0-beta.1...v0.7.0-beta.2
 [v0.7.0-beta.1]: https://github.com/forbearing/gst/compare/v0.6.2...v0.7.0-beta.1
 [v0.6.2]: https://github.com/forbearing/gst/compare/v0.6.1...v0.6.2
