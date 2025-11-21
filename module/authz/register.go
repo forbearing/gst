@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/service"
@@ -57,6 +58,7 @@ func init() {
 func Register() {
 	// creates table "casbin_rule".
 	model.Register[*CasbinRule]()
+	middleware.Register(middleware.Authz())
 
 	// create table "menus" and creates three records.
 	model.Register[*Menu](

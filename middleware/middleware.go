@@ -21,10 +21,9 @@ var (
 	AuthMiddlewares   = []gin.HandlerFunc{}
 )
 
-// Register adds global middlewares that apply to all routes with automatic tracing wrapper.
-// Call this if a middlewares should run for every requests.
-// All middlewares registered through this function will be automatically wrapped for performance tracking.
-// The middleware name is automatically extracted from the function name using reflection.
+// Register adds global middlewares that apply to all routes.
+// Must be called before router.Init.
+// Middlewares are auto-wrapped for tracing; name is inferred via reflection.
 func Register(middlewares ...gin.HandlerFunc) {
 	for _, middleware := range middlewares {
 		if middleware == nil {
@@ -38,11 +37,9 @@ func Register(middlewares ...gin.HandlerFunc) {
 	}
 }
 
-// RegisterAuth adds authentication/authorization middlewares with automatic tracing wrapper,
-// which are only appied to routes that requests authentication/authorization.
-// Call this if a route must be protected by auth logic.
-// All middlewares registered through this function will be automatically wrapped for performance tracking.
-// The middleware name is automatically extracted from the function name using reflection.
+// RegisterAuth adds authentication/authorization middlewares.
+// Must be called before router.Init.
+// Middlewares are auto-wrapped for tracing; name is inferred via reflection.
 func RegisterAuth(middlewares ...gin.HandlerFunc) {
 	for _, middleware := range middlewares {
 		if middleware == nil {

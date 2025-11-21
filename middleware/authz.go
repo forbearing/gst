@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// Authz 中间件开启时必须也开启 JwtAuth 中间件, 并且位于 JwtAuth 之后.
-// 要不然 username 会为空则则 isAllow 总是为 false.
+// Authz requires JwtAuth and must run after it, otherwise username will be empty
+// and authorization will always be denied.
 func Authz() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var allow bool
