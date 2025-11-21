@@ -444,3 +444,19 @@ const (
 	OP_UPDATE_MANY OP = update_many
 	OP_PATCH_MANY  OP = patch_many
 )
+
+const (
+	AUTHZ_USER_ROOT    = "root"
+	AUTHZ_USER_ADMIN   = "admin"
+	AUTHZ_USER_DEFAULT = "default"
+
+	AUTHZ_ROLE_ADMIN   = "admin"
+	AUTHZ_ROLE_BLOCKED = "blocked"
+)
+
+type Effect string
+
+const (
+	EffectAllow Effect = "allow"
+	EffectDeny  Effect = "deny"
+)

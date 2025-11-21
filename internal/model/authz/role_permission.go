@@ -7,15 +7,9 @@ import (
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
+	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
 	"go.uber.org/zap/zapcore"
-)
-
-type Effect string
-
-const (
-	EffectAllow Effect = "allow"
-	EffectDeny  Effect = "deny"
 )
 
 // RolePermission is a permission for a role
@@ -26,9 +20,9 @@ const (
 type RolePermission struct {
 	Role string `json:"role" schema:"role"`
 
-	Resource string `json:"resource" schema:"resource"`
-	Action   string `json:"action" schema:"action"`
-	Effect   Effect `json:"effect" schema:"effect"`
+	Resource string        `json:"resource" schema:"resource"`
+	Action   string        `json:"action" schema:"action"`
+	Effect   consts.Effect `json:"effect" schema:"effect"`
 
 	model.Base
 }
@@ -48,9 +42,9 @@ func (r *RolePermission) CreateBefore(*types.ModelContext) error {
 
 	// default effect is allow.
 	switch r.Effect {
-	case EffectAllow, EffectDeny:
+	case consts.EffectAllow, consts.EffectDeny:
 	default:
-		r.Effect = EffectAllow
+		r.Effect = consts.EffectAllow
 	}
 	// If the role already has the permission(Resource+Action), set same id to just update it.
 	r.SetID(util.HashID(r.Role, r.Resource, r.Action))

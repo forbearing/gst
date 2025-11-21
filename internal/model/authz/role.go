@@ -8,6 +8,7 @@ import (
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
+	"github.com/forbearing/gst/types/consts"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gorm.io/datatypes"
@@ -133,7 +134,7 @@ func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 	}
 
 	for _, p := range newPermissions {
-		zap.S().Infow("new permission", "role", r.Code, "resource", p.Resource, "action", p.Action, "effect", EffectAllow)
+		zap.S().Infow("new permission", "role", r.Code, "resource", p.Resource, "action", p.Action, "effect", consts.EffectAllow)
 	}
 
 	// revoke all existing policies for this role to avoid leftovers

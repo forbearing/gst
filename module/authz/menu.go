@@ -1,7 +1,6 @@
 package authz
 
 import (
-	"errors"
 	"reflect"
 	"regexp"
 	"strings"
@@ -92,8 +91,9 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*Menu, log
 		}
 	}
 	if len(roles) == 0 {
-		log.Error("user has no roles and don't have default role")
-		return errors.New("user has no roles and don't have default role")
+		log.Warn("user has no roles and don't have default role")
+		data = nil
+		return nil
 	}
 	for _, r := range roles {
 		log.Infow("role", "username", ctx.Username, "role_name", r.Name, "role_code", r.Code)

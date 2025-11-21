@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/service"
@@ -14,6 +13,9 @@ import (
 func init() {
 	// Enable RBAC
 	os.Setenv(config.AUTH_RBAC_ENABLE, "true")
+
+	// Enable authz middleware
+	os.Setenv(config.MIDDLEWARE_ENABLE_AUTHZ, "true")
 }
 
 // Register register modules: Permission, Role, RolePermission, UserRole.
@@ -58,7 +60,6 @@ func init() {
 func Register() {
 	// creates table "casbin_rule".
 	model.Register[*CasbinRule]()
-	middleware.Register(middleware.Authz())
 
 	// create table "menus" and creates three records.
 	model.Register[*Menu](
