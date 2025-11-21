@@ -49,7 +49,6 @@ func init() {
 //   - PATCH  /api/menus/:id
 //   - GET    /api/menus
 //   - GET    /api/menus/:id
-//   - PATCH  /api/menus/batch
 //   - GET    /api/apis
 //   - POST   /api/buttons
 //   - DELETE /api/buttons/:id
@@ -118,7 +117,6 @@ func Register() {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
-		consts.PHASE_PATCH_MANY,
 	)
 
 	module.Use[
