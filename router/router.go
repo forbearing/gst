@@ -84,27 +84,38 @@ func Run() error {
 		return err
 	}
 
-	// Delete all permissions in database
-	permissions := make([]*modelauthz.Permission, 0)
-	if err := database.Database[*modelauthz.Permission](nil).WithLimit(-1).List(&permissions); err != nil {
-		log.Error(err)
-		return err
-	}
-	if err := database.Database[*modelauthz.Permission](nil).WithLimit(-1).WithBatchSize(100).WithPurge().Delete(permissions...); err != nil {
-		log.Error(err)
-		return err
-	}
-	// Create permissions in database
-	permissions = make([]*modelauthz.Permission, 0)
-	for endpoint, methods := range model.Routes {
-		for _, method := range methods {
-			permissions = append(permissions, &modelauthz.Permission{
-				Resource: convertGinPathToCasbinKeyMatch3(endpoint),
-				Action:   method,
-			})
+	// re-create all permissions
+	if err := database.Database[*modelauthz.Permission](nil).Transaction(func(tx types.Database[*modelauthz.Permission]) error {
+		// list all permissions.
+		permissions := make([]*modelauthz.Permission, 0)
+		if err := tx.List(&permissions); err != nil {
+			log.Error(err)
+			return err
 		}
-	}
-	if err := database.Database[*modelauthz.Permission](nil).WithLimit(-1).WithBatchSize(100).Create(permissions...); err != nil {
+
+		// delete all permissions
+		if err := tx.WithBatchSize(100).WithPurge().Delete(permissions...); err != nil {
+			log.Error(err)
+			return err
+		}
+
+		// create permissions.
+		permissions = make([]*modelauthz.Permission, 0)
+		for endpoint, methods := range model.Routes {
+			for _, method := range methods {
+				permissions = append(permissions, &modelauthz.Permission{
+					Resource: convertGinPathToCasbinKeyMatch3(endpoint),
+					Action:   method,
+				})
+			}
+		}
+		if err := tx.WithBatchSize(100).Create(permissions...); err != nil {
+			log.Error(err)
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		log.Error(err)
 		return err
 	}
