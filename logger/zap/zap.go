@@ -34,9 +34,10 @@ var (
 // Option configures encoder behavior for constructors.
 // DisableMsg/DisableLevel hide "msg" and "level" fields; TSLayout sets time format.
 type Option struct {
-	DisableMsg   bool
-	DisableLevel bool
-	TSLayout     string
+	DisableMsg    bool
+	DisableLevel  bool
+	DisableCaller bool
+	TSLayout      string
 }
 
 // Init initializes global loggers from config and wires subsystem loggers.
@@ -60,7 +61,7 @@ func Init() error {
 	logger.Dcache = New("dcache.log")
 	logger.Redis = New("redis.log")
 
-	logger.Authz = New("authz.log", Option{DisableMsg: true})
+	logger.Authz = New("authz.log", Option{DisableMsg: true, DisableCaller: true})
 	logger.OTEL = New("otel.log")
 	logger.Cassandra = New("cassandra.log")
 	logger.Elastic = New("elastic.log")
@@ -304,6 +305,9 @@ func newLogEncoder(opt ...Option) zapcore.Encoder {
 		}
 		if o.DisableLevel {
 			encConfig.LevelKey = ""
+		}
+		if o.DisableCaller {
+			encConfig.CallerKey = ""
 		}
 		if len(o.TSLayout) > 0 {
 			encConfig.EncodeTime = zapcore.TimeEncoderOfLayout(o.TSLayout)
