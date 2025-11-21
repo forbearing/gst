@@ -92,7 +92,8 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*Menu, log
 	}
 	if len(roles) == 0 {
 		log.Warn("user has no roles and don't have default role")
-		data = nil
+		// Clear the slice by dereferencing the pointer and assigning a new empty slice
+		*data = make([]*Menu, 0)
 		return nil
 	}
 	for _, r := range roles {
