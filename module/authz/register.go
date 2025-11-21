@@ -18,12 +18,11 @@ func init() {
 	os.Setenv(config.MIDDLEWARE_ENABLE_AUTHZ, "true")
 }
 
-// Register register modules: Permission, Role, RolePermission, UserRole.
+// Register register modules: Permission, Role, UserRole.
 //
 // Modules:
 //   - Permission
 //   - Role
-//   - RolePermission
 //   - UserRole
 //   - CasbinRule
 //   - Menu
