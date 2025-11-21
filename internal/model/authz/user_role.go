@@ -23,8 +23,7 @@ type UserRole struct {
 	model.Base
 }
 
-func (*UserRole) Purge() bool { return true }
-
+func (r *UserRole) Purge() bool { return true }
 func (r *UserRole) CreateBefore(ctx *types.ModelContext) error {
 	if len(r.UserID) == 0 {
 		return errors.New("user_id is required")

@@ -27,8 +27,7 @@ type RolePermission struct {
 	model.Base
 }
 
-func (RolePermission) Purge() bool { return true }
-
+func (r *RolePermission) Purge() bool { return true }
 func (r *RolePermission) CreateBefore(*types.ModelContext) error {
 	if len(r.Role) == 0 {
 		return errors.New("role_id is required")

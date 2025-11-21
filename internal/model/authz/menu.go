@@ -58,6 +58,7 @@ type Menu struct {
 	model.Base
 }
 
+func (m *Menu) Purge() bool                                      { return true }
 func (m *Menu) CreateBefore(ctx *types.ModelContext) (err error) { return m.validate() }
 func (m *Menu) UpdateBefore(ctx *types.ModelContext) error       { return m.validate() }
 

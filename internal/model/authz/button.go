@@ -14,3 +14,5 @@ type Button struct {
 
 	model.Base
 }
+
+func (Button) Purge() bool { return true }
