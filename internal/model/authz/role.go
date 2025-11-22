@@ -1,8 +1,10 @@
 package modelauthz
 
 import (
-	"errors"
+	serrors "errors"
 	"strings"
+
+	"github.com/cockroachdb/errors"
 
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/database"
@@ -17,14 +19,18 @@ import (
 type Role struct {
 	Name    string `json:"name,omitempty" schema:"name" gorm:"size:191;unique"`
 	Code    string `json:"code,omitempty" schema:"code" gorm:"size:191;unique"`
-	Default *bool  `json:"default,omitempty" schema:"default"` // default role
+	Default *bool  `json:"default,omitempty" schema:"default"`
 
-	// Menu 相关字段指定了该角色拥有哪些菜单
+	// Scope holds generic constraints for regional roles.
+	// Keys and values are user-defined and framework-agnostic.
+	Scope datatypes.JSONMap `json:"scope,omitempty"`
+
+	// Menu permissions owned by this role
 	MenuIds        datatypes.JSONSlice[string] `json:"menu_ids,omitempty"`
-	MenuPartialIds datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"` // 部分选中的角色菜单, 父节点下面的子节点被选中了, 但是没有全部选中.
-	ButtonIds      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`       // 角色拥有的按钮权限
+	MenuPartialIds datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"`
+	ButtonIds      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`
 
-	Menus        []*Menu `json:"menus,omitempty" gorm:"-"` // 角色菜单
+	Menus        []*Menu `json:"menus,omitempty" gorm:"-"`
 	MenuPartials []*Menu `json:"menu_partials,omitempty" gorm:"-"`
 
 	model.Base
@@ -40,7 +46,7 @@ func (r *Role) CreateAfter(ctx *types.ModelContext) error {
 	}
 	e1 := r.UpdatePermission(ctx)
 	e2 := rbac.RBAC().AddRole(r.Code)
-	return errors.Join(e1, e2)
+	return serrors.Join(e1, e2)
 }
 
 // UpdateBefore will delete the old role's permissions and create the new role's permissions.
@@ -48,7 +54,7 @@ func (r *Role) CreateAfter(ctx *types.ModelContext) error {
 func (r *Role) UpdateBefore(ctx *types.ModelContext) error {
 	e1 := r.UpdatePermission(ctx)
 	e2 := rbac.RBAC().AddRole(r.Code)
-	return errors.Join(e1, e2)
+	return serrors.Join(e1, e2)
 }
 
 // DeleteBefore will delete the role's permissions
@@ -165,7 +171,8 @@ func (r *Role) validate(ctx *types.ModelContext) error {
 	if len(r.Code) == 0 {
 		return errors.New("role code is required")
 	}
-	// check the role whether exists.
+
+	// Ensure uniqueness on (name, code)
 	roles := make([]*Role, 0)
 	if err := database.Database[*Role](ctx.DatabaseContext()).
 		WithLimit(1).
@@ -177,13 +184,6 @@ func (r *Role) validate(ctx *types.ModelContext) error {
 		return errors.New("role already exists")
 	}
 
-	// role "code" support changed, so the generated hash ID cannot be used.
-	{
-		// // Ensure the role with the same name/code share the same ID.
-		// // If the role already exists, set same id to just update it.
-		// r.SetID(util.HashID(r.Code))
-	}
-
 	return nil
 }
 
@@ -193,6 +193,6 @@ func (r *Role) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	}
 	enc.AddString("code", r.Code)
 	enc.AddString("name", r.Name)
-	_ = enc.AddObject("base", &r.Base)
+	enc.AddString("id", r.ID)
 	return nil
 }
