@@ -3,6 +3,8 @@ package gen
 import (
 	"go/ast"
 	"go/token"
+	"path/filepath"
+	"strings"
 
 	"github.com/forbearing/gst/dsl"
 )
@@ -333,4 +335,196 @@ func applyServiceTypeParam(indexListExpr *ast.IndexListExpr, paramIndex int, act
 	}
 
 	return false
+}
+
+// ApplyServiceFileWithModelSync extends ApplyServiceFile to handle import path and package name updates.
+// It will update import statements and package references when model packages are renamed.
+//
+// Design Philosophy:
+// This function uses AST manipulation instead of regenerating files to preserve user's code formatting
+// and custom modifications. Different developers have different code formatting preferences, and we
+// should not force our formatting on their existing code. We only update the necessary parts
+// (imports and type references) while keeping everything else intact.
+//
+// Example transformation when "model/oldpkg" is renamed to "model/newpkg":
+// - Import statement: "myproject/model/oldpkg" -> "myproject/model/newpkg"
+// - Type references: oldpkg.User -> newpkg.User, oldpkg.UserReq -> newpkg.UserReq, oldpkg.UserRsp -> newpkg.UserRsp
+//
+// Parameters:
+// - file: The AST file to process
+// - action: The DSL action configuration
+// - servicePkgName: The expected service package name
+// - correctModelImportPath: The correct model import path (e.g., "myproject/model/auth")
+// - correctModelPkgName: The correct model package name (e.g., "auth")
+//
+// Returns true if any changes were made to the file.
+func ApplyServiceFileWithModelSync(file *ast.File, action *dsl.Action, servicePkgName, correctModelImportPath, correctModelPkgName string) bool {
+	if file == nil || action == nil {
+		return false
+	}
+
+	// First apply the original ApplyServiceFile logic
+	changed := ApplyServiceFile(file, action, servicePkgName)
+
+	// Build a map of old package names to new package names
+	// by comparing current imports with the correct model import path
+	importMapping := buildModelImportMapping(file, correctModelImportPath, correctModelPkgName)
+
+	if len(importMapping) == 0 {
+		// No import changes needed
+		return changed
+	}
+
+	// Update import statements
+	if syncModelImports(file, correctModelImportPath, importMapping) {
+		changed = true
+	}
+
+	// Update package references in the code (e.g., identity.Login -> iam.Login)
+	if syncModelPackageReferences(file, importMapping) {
+		changed = true
+	}
+
+	return changed
+}
+
+// buildModelImportMapping builds a mapping from old package names to new package names
+// by comparing import paths with the correct model import path.
+//
+// This function only maps imports that share the same parent directory path with correctModelImportPath
+// to avoid accidentally updating unrelated model packages. For example:
+// - Will map: "model/oldpkg" -> "model/newpkg" (same parent: "model")
+// - Won't map: "model/config/setting" (different parent: "model/config")
+//
+// Returns a map where key is the old package name, and value is the new package name.
+func buildModelImportMapping(file *ast.File, correctModelImportPath, correctModelPkgName string) map[string]string {
+	mapping := make(map[string]string)
+
+	// Get the parent directory of the correct import path
+	// e.g., "nebula/model/iam" -> "nebula/model"
+	correctParentPath := filepath.Dir(correctModelImportPath)
+
+	// Scan existing imports to find model imports that differ from the correct path
+	// but have the same parent directory
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.IMPORT {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			importSpec, ok := spec.(*ast.ImportSpec)
+			if !ok || importSpec.Path == nil {
+				continue
+			}
+
+			// Get the import path without quotes
+			importPath := strings.Trim(importSpec.Path.Value, `"`)
+
+			// Skip if this is already the correct import path
+			if importPath == correctModelImportPath {
+				continue
+			}
+
+			// Check if this import has the same parent directory as the correct path
+			// This ensures we only update sibling packages (e.g., model/identity -> model/iam)
+			// and don't touch unrelated packages (e.g., model/config/namespace)
+			importParentPath := filepath.Dir(importPath)
+			if importParentPath != correctParentPath {
+				continue
+			}
+
+			// Extract the old package name from the import path
+			oldPkgName := filepath.Base(importPath)
+
+			// If there's an explicit import alias, use it as the old package name
+			if importSpec.Name != nil && importSpec.Name.Name != "" && importSpec.Name.Name != "_" {
+				oldPkgName = importSpec.Name.Name
+			}
+
+			// Map old package name to new package name
+			mapping[oldPkgName] = correctModelPkgName
+		}
+	}
+
+	return mapping
+}
+
+// syncModelImports updates import statements based on the import mapping.
+// This function precisely modifies only the import path values in the AST,
+// preserving all other aspects of the code including formatting, comments, and structure.
+// Returns true if any imports were updated.
+func syncModelImports(file *ast.File, correctModelImportPath string, mapping map[string]string) bool {
+	changed := false
+
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.IMPORT {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			importSpec, ok := spec.(*ast.ImportSpec)
+			if !ok || importSpec.Path == nil {
+				continue
+			}
+
+			// Get the import path without quotes
+			importPath := strings.Trim(importSpec.Path.Value, `"`)
+
+			// Check if we need to update this import
+			shouldUpdate := false
+
+			// Check if the current import path's base name is in the mapping
+			baseName := filepath.Base(importPath)
+			if _, found := mapping[baseName]; found {
+				shouldUpdate = true
+			}
+
+			// Also check if there's an explicit alias that's in the mapping
+			if importSpec.Name != nil && importSpec.Name.Name != "" && importSpec.Name.Name != "_" {
+				if _, found := mapping[importSpec.Name.Name]; found {
+					shouldUpdate = true
+				}
+			}
+
+			if shouldUpdate {
+				// Update the import path to the correct one
+				importSpec.Path.Value = `"` + correctModelImportPath + `"`
+				changed = true
+
+				// Remove the explicit alias since the import path now has the correct name
+				importSpec.Name = nil
+			}
+		}
+	}
+
+	return changed
+}
+
+// syncModelPackageReferences updates package references in the code.
+// This function walks the AST and updates only the package identifier names in selector expressions,
+// preserving all other code structure, formatting, and logic.
+//
+// Example: oldpkg.User -> newpkg.User, oldpkg.UserReq -> newpkg.UserReq
+// Returns true if any references were updated.
+func syncModelPackageReferences(file *ast.File, mapping map[string]string) bool {
+	changed := false
+
+	// Walk the AST and update all SelectorExpr nodes where X is an Ident
+	// that matches one of the old package names
+	ast.Inspect(file, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok {
+			if ident, ok := sel.X.(*ast.Ident); ok {
+				// Check if this identifier matches one of the old package names
+				if newPkg, found := mapping[ident.Name]; found {
+					ident.Name = newPkg
+					changed = true
+				}
+			}
+		}
+		return true
+	})
+
+	return changed
 }
