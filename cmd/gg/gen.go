@@ -249,7 +249,7 @@ func genRun() {
 	logSection("Apply Actions To Services")
 
 	fset := token.NewFileSet()
-	applyFile := func(filename string, code string, action *dsl.Action, servicePkgName string) {
+	applyFile := func(filename string, code string, action *dsl.Action, servicePkgName string, modelInfo *gen.ModelInfo) {
 		if fileExists(filename) {
 			// Read original file content to preserve comments and formatting
 			src, err := os.ReadFile(filename)
@@ -257,8 +257,12 @@ func genRun() {
 			f, err := parser.ParseFile(fset, filename, src, parser.ParseComments)
 			checkErr(err)
 
-			// Apply changes
-			changed := gen.ApplyServiceFile(f, action, servicePkgName)
+			// Calculate the correct model import path and package name
+			correctModelImportPath := filepath.Join(modelInfo.ModulePath, modelInfo.ModelFileDir)
+			correctModelPkgName := modelInfo.ModelPkgName
+
+			// Apply changes and sync model imports to handle import path and package name updates
+			changed := gen.ApplyServiceFileWithModelSync(f, action, servicePkgName, correctModelImportPath, correctModelPkgName)
 
 			if changed {
 				// Only reformat and write file when there are changes
@@ -293,7 +297,7 @@ func genRun() {
 				// with service registration logic and maintain original naming style
 				// For example: ModelName "ConfigSetting" -> package name "configsetting"
 				servicePkgName := strings.ToLower(m.ModelName)
-				applyFile(filename, code, act, servicePkgName)
+				applyFile(filename, code, act, servicePkgName, m)
 			}
 		})
 	}
