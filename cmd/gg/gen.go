@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/forbearing/gst/ds/tree/trie"
@@ -362,6 +363,40 @@ func scanExistingServiceFiles(serviceDir string) []string {
 	return files
 }
 
+// filterIgnoredFiles filters out files that match any ignore pattern
+// Supports both string matching (contains) and regex matching
+// Returns filtered files and ignored files
+func filterIgnoredFiles(files []string, ignorePatterns []string) (filtered []string, ignored []string) {
+	if len(ignorePatterns) == 0 {
+		return files, []string{}
+	}
+
+	for _, file := range files {
+		shouldIgnore := false
+
+		for _, pattern := range ignorePatterns {
+			// Try regex match first
+			if matched, err := regexp.MatchString(pattern, file); err == nil && matched {
+				shouldIgnore = true
+				break
+			}
+			// Fallback to string contains match
+			if strings.Contains(file, pattern) {
+				shouldIgnore = true
+				break
+			}
+		}
+
+		if shouldIgnore {
+			ignored = append(ignored, file)
+		} else {
+			filtered = append(filtered, file)
+		}
+	}
+
+	return filtered, ignored
+}
+
 // pruneServiceFiles prunes disabled service files
 func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 	// Get list of service files that should currently exist
@@ -385,8 +420,27 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 		}
 	}
 
+	// Apply ignore patterns from config
+	ignorePatterns := getPruneIgnorePatterns()
+	var ignoredFiles []string
+	if len(ignorePatterns) > 0 {
+		filesToDelete, ignoredFiles = filterIgnoredFiles(filesToDelete, ignorePatterns)
+	}
+
+	// Display ignored files if any
+	if len(ignoredFiles) > 0 {
+		fmt.Printf("\n%s Files ignored by config:\n", gray("→"))
+		for _, file := range ignoredFiles {
+			fmt.Printf("  %s %s\n", gray("→ IGNORE"), file)
+		}
+	}
+
 	if len(filesToDelete) == 0 {
-		fmt.Printf("  %s No disabled service files to prune\n", green("✔"))
+		if len(ignoredFiles) > 0 {
+			fmt.Printf("\n  %s No disabled service files to prune (all files are ignored)\n", green("✔"))
+		} else {
+			fmt.Printf("  %s No disabled service files to prune\n", green("✔"))
+		}
 		// Still check for empty directories even if no files to delete
 		removeEmptyDirectories(serviceDir)
 		return
