@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/forbearing/gst/database"
-	internalmodel "github.com/forbearing/gst/internal/model"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
+	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -19,7 +19,7 @@ var _ types.Module[*Menu, *Menu, *Menu] = (*MenuModule)(nil)
 
 type (
 	Menu = modelauthz.Menu
-	User = internalmodel.User
+	User = modeliam.User
 )
 
 type MenuModule struct {
