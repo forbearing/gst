@@ -9,8 +9,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v3"
 )
@@ -282,4 +284,66 @@ func convertStructToINI(section *ini.Section, value any) error {
 	}
 
 	return nil
+}
+
+// GGConfig represents the configuration for gg command
+type GGConfig struct {
+	Prune PruneConfig `mapstructure:"prune" yaml:"prune"`
+}
+
+// PruneConfig represents the prune configuration
+type PruneConfig struct {
+	Ignore []string `mapstructure:"ignore" yaml:"ignore"`
+}
+
+var ggConfig *GGConfig
+
+// loadGGConfig loads the .gg.yaml configuration file
+func loadGGConfig() (*GGConfig, error) {
+	if ggConfig != nil {
+		return ggConfig, nil
+	}
+
+	// Initialize viper
+	v := viper.New()
+	v.SetConfigName(".gg")
+	v.SetConfigType("yaml")
+
+	// Look for config file in current directory
+	v.AddConfigPath(".")
+
+	// Try to read the config file
+	if err := v.ReadInConfig(); err != nil {
+		// Config file not found is not an error, return default config
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if errors.As(err, &configFileNotFoundError) {
+			ggConfig = &GGConfig{
+				Prune: PruneConfig{
+					Ignore: []string{},
+				},
+			}
+			return ggConfig, nil
+		}
+		// Other errors should be returned
+		return nil, errors.Wrap(err, "failed to read config file")
+	}
+
+	// Unmarshal config
+	cfg := &GGConfig{}
+	if err := v.Unmarshal(cfg); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal config")
+	}
+
+	ggConfig = cfg
+	return ggConfig, nil
+}
+
+// getPruneIgnorePatterns returns the list of ignore patterns from config
+func getPruneIgnorePatterns() []string {
+	cfg, err := loadGGConfig()
+	if err != nil {
+		// If config loading fails, return empty list
+		return []string{}
+	}
+	return cfg.Prune.Ignore
 }
