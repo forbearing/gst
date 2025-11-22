@@ -1,7 +1,7 @@
 package modeliam
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 
@@ -54,7 +54,7 @@ func (ou *OnlineUser) UpdateBefore(ctx *types.ModelContext) error { return ou.va
 
 func (ou *OnlineUser) validate(_ *types.ModelContext) error {
 	// Uniquely identifies an active online user by combining userID, clientIP and source(UserAgent).
-	sum := md5.Sum(fmt.Appendf(nil, "%s:%s:%s", ou.UserID, ou.ClientIP, ou.Source))
+	sum := sha256.Sum256(fmt.Appendf(nil, "%s:%s:%s", ou.UserID, ou.ClientIP, ou.Source))
 	id := hex.EncodeToString(sum[:])
 	ou.SetID(id)
 
