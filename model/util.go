@@ -58,7 +58,10 @@ func GetTableName[M types.Model]() string {
 }
 
 // AreTypesEqual checks if the types of M, REQ and RSP are equal
-// If the M is a struct only has field model.Empty, always return false.
+//
+// If M "Empty" or "Any", return false directly.
+//
+// NOTE: "Empty" or "Any" will cause always use custom controller operations.
 func AreTypesEqual[M types.Model, REQ types.Request, RSP types.Response]() bool {
 	if IsEmpty[M]() {
 		return false
