@@ -24,6 +24,7 @@ type Config struct {
 //   - PATCH  /api/iam/groups/:id
 //   - GET    /api/iam/groups
 //   - GET    /api/iam/groups/:id
+//   - POST   /api/iam/heartbeat
 //   - POST   /api/iam/login
 //   - POST   /api/iam/logout
 //   - GET    /api/iam/me
@@ -51,6 +52,16 @@ func Register(...Config) {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
+	)
+
+	// Use module "HeartbeatModule"
+	module.Use[
+		*Heartbeat,
+		*Heartbeat,
+		*Heartbeat,
+		*HeartbeatService](
+		&HeartbeatModule{},
+		consts.PHASE_CREATE,
 	)
 
 	// Use module "LoginModule"
