@@ -23,7 +23,7 @@ func (ChangePassword) Design() {
 	dsl.Create(func() {
 		dsl.Enabled(true)
 		dsl.Service(true)
-		dsl.Public(false) // Requires authentication
+		dsl.Public(false)
 		dsl.Payload[*ChangePasswordReq]()
 		dsl.Result[*ChangePasswordRsp]()
 	})

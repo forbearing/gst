@@ -3,6 +3,7 @@ package modeliam
 import (
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
+	"github.com/forbearing/gst/service"
 )
 
 var DefaultGroup = Group{
@@ -94,3 +95,7 @@ func (Group) Design() {
 }
 
 func (Group) Purge() bool { return true }
+
+type GroupService struct {
+	service.Base[*Group, *Group, *Group]
+}

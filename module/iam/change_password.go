@@ -8,11 +8,11 @@ import (
 var _ types.Module[*ChangePassword, *ChangePasswordReq, *ChangePasswordRsp] = (*ChangePasswordModule)(nil)
 
 type (
-	ChangePasswordModule  struct{}
 	ChangePassword        = modeliam.ChangePassword
 	ChangePasswordReq     = modeliam.ChangePasswordReq
 	ChangePasswordRsp     = modeliam.ChangePasswordRsp
 	ChangePasswordService = modeliam.ChangePasswordService
+	ChangePasswordModule  struct{}
 )
 
 func (*ChangePasswordModule) Service() types.Service[*ChangePassword, *ChangePasswordReq, *ChangePasswordRsp] {
