@@ -24,7 +24,7 @@ type Config struct {
 //   - PATCH  /api/iam/groups/:id
 //   - GET    /api/iam/groups
 //   - GET    /api/iam/groups/:id
-//   - POST   /api/iam/heartbeat
+//   - POST   /api/heartbeat
 //   - POST   /api/iam/login
 //   - POST   /api/iam/logout
 //   - GET    /api/iam/me

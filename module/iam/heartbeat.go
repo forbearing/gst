@@ -16,6 +16,6 @@ type (
 func (*HeartbeatModule) Service() types.Service[*Heartbeat, *Heartbeat, *Heartbeat] {
 	return &HeartbeatService{}
 }
-func (*HeartbeatModule) Route() string { return "/iam/heartbeat" }
+func (*HeartbeatModule) Route() string { return "/heartbeat" }
 func (*HeartbeatModule) Pub() bool     { return false }
 func (*HeartbeatModule) Param() string { return "id" }
