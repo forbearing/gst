@@ -27,7 +27,8 @@ type Config struct {
 //   - POST   /api/heartbeat
 //   - POST   /api/iam/login
 //   - POST   /api/iam/logout
-//   - GET    /api/iam/me
+//   - POST   /api/offline
+//   - GET    /api/me
 //   - GET    /api/online-users
 func Register(...Config) {
 	// Use module "ChangePasswordModule"
@@ -93,6 +94,16 @@ func Register(...Config) {
 		*MeService](
 		&MeModule{},
 		consts.PHASE_GET,
+	)
+
+	// Use module "OfflineModule"
+	module.Use[
+		*Offline,
+		*OfflineReq,
+		*Offline,
+		*OfflineService](
+		&OfflineModule{},
+		consts.PHASE_CREATE,
 	)
 
 	// Use module "OnlineUserModule"

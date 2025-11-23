@@ -16,7 +16,6 @@ func (Heartbeat) Design() {
 		Create(func() {
 			Enabled(true)
 			Service(true)
-			Payload[OnlineUserReq]()
 		})
 	})
 }
