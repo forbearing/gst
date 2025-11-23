@@ -24,6 +24,7 @@ type Config struct {
 //   - PATCH  /api/iam/groups/:id
 //   - GET    /api/iam/groups
 //   - GET    /api/iam/groups/:id
+//   - POST   /api/iam/login
 func Register(...Config) {
 	// Use module "ChangePasswordModule"
 	module.Use[
@@ -34,6 +35,7 @@ func Register(...Config) {
 		&ChangePasswordModule{},
 		consts.PHASE_CREATE,
 	)
+
 	// Use module "GroupModule"
 	module.Use[
 		*Group,
@@ -47,5 +49,15 @@ func Register(...Config) {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
+	)
+
+	// Use module "LoginModule"
+	module.Use[
+		*Login,
+		*LoginReq,
+		*LoginRsp,
+		*LoginService](
+		&LoginModule{},
+		consts.PHASE_CREATE,
 	)
 }
