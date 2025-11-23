@@ -17,6 +17,6 @@ type (
 func (*MeModule) Service() types.Service[*Me, *Me, *MeRsp] {
 	return &MeService{}
 }
-func (*MeModule) Route() string { return "/iam/me" }
+func (*MeModule) Route() string { return "/me" }
 func (*MeModule) Pub() bool     { return false }
 func (*MeModule) Param() string { return "id" }
