@@ -16,7 +16,7 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/ds/queue/circularbuffer"
-	modellog "github.com/forbearing/gst/internal/model/log"
+	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/pkg/auditmanager"
@@ -77,7 +77,7 @@ var (
 	pluralizeCli = pluralize.NewClient()
 
 	// Global circular buffer for controller logger
-	cb *circularbuffer.CircularBuffer[*modellog.OperationLog]
+	cb *circularbuffer.CircularBuffer[*modellogmgmt.OperationLog]
 
 	// Global audit manager instance
 	am *auditmanager.AuditManager
@@ -85,7 +85,7 @@ var (
 
 func Init() (err error) {
 	// Initialize circular buffer
-	if cb, err = circularbuffer.New(int(config.App.Server.CircularBuffer.SizeOperationLog), circularbuffer.WithSafe[*modellog.OperationLog]()); err != nil {
+	if cb, err = circularbuffer.New(int(config.App.Server.CircularBuffer.SizeOperationLog), circularbuffer.WithSafe[*modellogmgmt.OperationLog]()); err != nil {
 		return err
 	}
 
@@ -99,13 +99,13 @@ func Init() (err error) {
 }
 
 func Clean() {
-	operationLogs := make([]*modellog.OperationLog, 0, config.App.Server.CircularBuffer.SizeOperationLog)
+	operationLogs := make([]*modellogmgmt.OperationLog, 0, config.App.Server.CircularBuffer.SizeOperationLog)
 	for !cb.IsEmpty() {
 		ol, _ := cb.Dequeue()
 		operationLogs = append(operationLogs, ol)
 	}
 	if len(operationLogs) > 0 {
-		if err := database.Database[*modellog.OperationLog](nil).WithLimit(-1).WithBatchSize(100).Create(operationLogs...); err != nil {
+		if err := database.Database[*modellogmgmt.OperationLog](nil).WithLimit(-1).WithBatchSize(100).Create(operationLogs...); err != nil {
 			zap.S().Error(err)
 		}
 	}
@@ -269,7 +269,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		record, _ := json.Marshal(req)
 		reqData, _ := json.Marshal(req)
 		respData, _ := json.Marshal(req)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_CREATE,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -284,7 +284,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// 	Method:    c.Request.Method,
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
-		if err = am.RecordOperation(types.NewDatabaseContext(c), req, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), req, &modellogmgmt.OperationLog{
 			OP:        consts.OP_CREATE,
 			Model:     typ.Name(),
 			RecordID:  req.GetID(),
@@ -511,7 +511,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// 4.record operation log to database.
 		for i := range ml {
 			record, _ := json.Marshal(copied[i])
-			// cb.Enqueue(&modellog.OperationLog{
+			// cb.Enqueue(&modellogmgmt.OperationLog{
 			// 	OP:        consts.OP_DELETE,
 			// 	Model:     typ.Name(),
 			// 	Table:     tableName,
@@ -525,7 +525,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			// 	UserAgent: c.Request.UserAgent(),
 			// })
 			m := reflect.New(typ).Interface().(M) //nolint:errcheck
-			if err := am.RecordOperation(types.NewDatabaseContext(c), m, &modellog.OperationLog{
+			if err := am.RecordOperation(types.NewDatabaseContext(c), m, &modellogmgmt.OperationLog{
 				OP:        consts.OP_DELETE,
 				Model:     typ.Name(),
 				RecordID:  ml[i].GetID(),
@@ -757,7 +757,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		record, _ := json.Marshal(req)
 		reqData, _ := json.Marshal(req)
 		respData, _ := json.Marshal(req)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_UPDATE,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -772,7 +772,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// 	Method:    c.Request.Method,
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
-		if err = am.RecordOperation(types.NewDatabaseContext(c), req, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), req, &modellogmgmt.OperationLog{
 			OP:        consts.OP_UPDATE,
 			Model:     typ.Name(),
 			RecordID:  req.GetID(),
@@ -1008,7 +1008,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		record, _ := json.Marshal(req)
 		reqData, _ := json.Marshal(req)
 		respData, _ := json.Marshal(cur)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_PATCH,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -1023,7 +1023,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		// 	Method:    c.Request.Method,
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
-		if err := am.RecordOperation(types.NewDatabaseContext(c), req, &modellog.OperationLog{
+		if err := am.RecordOperation(types.NewDatabaseContext(c), req, &modellogmgmt.OperationLog{
 			OP:        consts.OP_PATCH,
 			Model:     typ.Name(),
 			RecordID:  req.GetID(),
@@ -1395,7 +1395,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}
 
 		// 4.record operation log to database.
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_LIST,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -1406,7 +1406,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		// 	Method:    c.Request.Method,
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
-		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellogmgmt.OperationLog{
 			OP:        consts.OP_LIST,
 			Model:     typ.Name(),
 			IP:        c.ClientIP(),
@@ -1701,7 +1701,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}
 
 		// 4.record operation log to database.
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_GET,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -1712,7 +1712,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		// 	Method:    c.Request.Method,
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
-		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellogmgmt.OperationLog{
 			OP:        consts.OP_GET,
 			Model:     typ.Name(),
 			IP:        c.ClientIP(),
@@ -2014,7 +2014,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		record, _ := json.Marshal(req)
 		reqData, _ := json.Marshal(req)
 		respData, _ := json.Marshal(req)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_CREATE_MANY,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -2028,7 +2028,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		// 	Method:    c.Request.Method,
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
-		if err = am.RecordOperation(types.NewDatabaseContext(c), val, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), val, &modellogmgmt.OperationLog{
 			OP:        consts.OP_CREATE_MANY,
 			Model:     typ.Name(),
 			Record:    util.BytesToString(record),
@@ -2229,7 +2229,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 
 		// 4.record operation log to database.
 		record, _ := json.Marshal(req)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_DELETE_MANY,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -2242,7 +2242,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
 		m := reflect.New(typ).Interface().(M) //nolint:errcheck
-		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellogmgmt.OperationLog{
 			OP:        consts.OP_DELETE_MANY,
 			Model:     typ.Name(),
 			Record:    util.BytesToString(record),
@@ -2417,7 +2417,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		record, _ := json.Marshal(req)
 		reqData, _ := json.Marshal(req)
 		respData, _ := json.Marshal(req)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_UPDATE_MANY,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -2432,7 +2432,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
 		m := reflect.New(typ).Interface().(M) //nolint:errcheck
-		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellogmgmt.OperationLog{
 			OP:        consts.OP_UPDATE_MANY,
 			Model:     typ.Name(),
 			Record:    util.BytesToString(record),
@@ -2632,7 +2632,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 		record, _ := json.Marshal(req)
 		reqData, _ := json.Marshal(req)
 		respData, _ := json.Marshal(req)
-		// cb.Enqueue(&modellog.OperationLog{
+		// cb.Enqueue(&modellogmgmt.OperationLog{
 		// 	OP:        consts.OP_PATCH_MANY,
 		// 	Model:     typ.Name(),
 		// 	Table:     tableName,
@@ -2647,7 +2647,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 		// 	UserAgent: c.Request.UserAgent(),
 		// })
 		m := reflect.New(typ).Interface().(M) //nolint:errcheck
-		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellog.OperationLog{
+		if err = am.RecordOperation(types.NewDatabaseContext(c), m, &modellogmgmt.OperationLog{
 			OP:        consts.OP_PATCH_MANY,
 			Model:     typ.Name(),
 			Record:    util.BytesToString(record),
