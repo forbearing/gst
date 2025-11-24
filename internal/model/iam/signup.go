@@ -3,7 +3,6 @@ package modeliam
 import (
 	"github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 type Signup struct {
@@ -33,8 +32,4 @@ func (Signup) Design() {
 		dsl.Payload[*SignupReq]()
 		dsl.Result[*SignupRsp]()
 	})
-}
-
-type SignupService struct {
-	service.Base[*Signup, *SignupReq, *SignupRsp]
 }

@@ -2,6 +2,7 @@ package iam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	"github.com/forbearing/gst/types"
 )
 
@@ -11,7 +12,7 @@ type (
 	Signup        = modeliam.Signup
 	SignupReq     = modeliam.SignupReq
 	SignupRsp     = modeliam.SignupRsp
-	SignupService = modeliam.SignupService
+	SignupService = serviceiam.SignupService
 	SignupModule  struct{}
 )
 
