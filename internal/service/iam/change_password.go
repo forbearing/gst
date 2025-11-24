@@ -15,8 +15,8 @@ type ChangePasswordService struct {
 	service.Base[*modeliam.ChangePassword, *modeliam.ChangePasswordReq, *modeliam.ChangePasswordRsp]
 }
 
-func (c *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliam.ChangePasswordReq) (rsp *modeliam.ChangePasswordRsp, err error) {
-	log := c.WithServiceContext(ctx, ctx.GetPhase())
+func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliam.ChangePasswordReq) (rsp *modeliam.ChangePasswordRsp, err error) {
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("changepassword create")
 
 	// Get session_id from cookie
