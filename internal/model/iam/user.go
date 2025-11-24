@@ -5,6 +5,8 @@ import (
 
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
+	"github.com/forbearing/gst/types"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // UserStatus 用户状态枚举
@@ -59,6 +61,7 @@ type User struct {
 	Gender      *string    `json:"gender" gorm:"type:varchar(10)"`
 
 	// 认证信息
+	Password         string `json:"password" gorm:"-"`
 	PasswordHash     string `json:"-" gorm:"type:varchar(255)"`
 	Salt             string `json:"-" gorm:"type:varchar(50)"`
 	EmailVerified    *bool  `json:"email_verified" gorm:"default:false"`
@@ -122,3 +125,19 @@ func (User) Design() {
 	})
 }
 func (User) Purge() bool { return true }
+
+func (u *User) CreateBefore(ctx *types.ModelContext) error { return u.generateHashPasswd(ctx) }
+func (u *User) UpdateBefore(ctx *types.ModelContext) error { return u.generateHashPasswd(ctx) }
+
+// generateHashPasswd used in the scene: create user with default password.
+func (u *User) generateHashPasswd(_ *types.ModelContext) error {
+	if len(u.Password) > 0 && len(u.PasswordHash) == 0 {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		u.PasswordHash = string(hashedPassword)
+		return nil
+	}
+	return nil
+}
