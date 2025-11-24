@@ -62,10 +62,14 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *modeliam.Logo
 	}
 
 	// Delete session from Redis
-	redis.Cache[modeliam.Session]().Delete(prefixedSessionID)
+	if delErr := redis.Cache[modeliam.Session]().Delete(prefixedSessionID); delErr != nil {
+		log.Warnz("failed to delete session from redis", zap.Error(delErr))
+	}
 	// Delete session id from redis
 	prefixedUserID := SessionRedisKey(modeliam.SessionNamespace, userID)
-	redis.Cache[string]().Delete(prefixedUserID)
+	if delErr := redis.Cache[string]().Delete(prefixedUserID); delErr != nil {
+		log.Warnz("failed to delete session id from redis", zap.Error(delErr))
+	}
 
 	// Clear the session cookie
 	ctx.SetCookie("session_id", "", -1, "/", "", false, true)
