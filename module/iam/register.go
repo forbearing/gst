@@ -36,6 +36,12 @@ type Config struct {
 //   - PATCH  /api/iam/tenants/:id
 //   - GET    /api/iam/tenants
 //   - GET    /api/iam/tenants/:id
+//   - POST   /api/iam/users
+//   - DELETE /api/iam/users/:id
+//   - PUT    /api/iam/users/:id
+//   - PATCH  /api/iam/users/:id
+//   - GET    /api/iam/users
+//   - GET    /api/iam/users/:id
 func Register(...Config) {
 	// Use module "ChangePasswordModule"
 	module.Use[
@@ -139,6 +145,21 @@ func Register(...Config) {
 		*Tenant,
 		*TenantService](
 		&TenantModule{},
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+	)
+
+	// Use module "UserModule"
+	module.Use[
+		*User,
+		*User,
+		*User,
+		*UserService](
+		&UserModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
