@@ -14,6 +14,11 @@ var (
 	SessionID       = serviceiam.SessionID
 )
 
+type (
+	Session = modeliam.Session
+	Token   = modeliam.Token
+)
+
 type Config struct {
 	EnableTenant bool // default disable tenant.
 }
