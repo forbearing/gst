@@ -30,6 +30,7 @@ type Config struct {
 //   - POST   /api/offline
 //   - GET    /api/me
 //   - GET    /api/online-users
+//   - POST   /api/iam/signup
 func Register(...Config) {
 	// Use module "ChangePasswordModule"
 	module.Use[
@@ -114,5 +115,15 @@ func Register(...Config) {
 		*OnlineUserService](
 		&OnlineUserModule{},
 		consts.PHASE_LIST,
+	)
+
+	// Use module "SignupModule"
+	module.Use[
+		*Signup,
+		*SignupReq,
+		*SignupRsp,
+		*SignupService](
+		&SignupModule{},
+		consts.PHASE_CREATE,
 	)
 }
