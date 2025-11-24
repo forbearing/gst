@@ -25,6 +25,7 @@ type OnlineUser struct {
 	model.Base
 }
 
+func (ou *OnlineUser) Purge() bool                                { return true }
 func (ou *OnlineUser) CreateBefore(ctx *types.ModelContext) error { return ou.validate(ctx) }
 func (ou *OnlineUser) UpdateBefore(ctx *types.ModelContext) error { return ou.validate(ctx) }
 
