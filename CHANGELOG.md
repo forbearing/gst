@@ -1,6 +1,10 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Chore
+- cleanup cover file
+- **release:** generate CHANGEME.md
+
 ### Refactor
 - **logmgmt:** move log models and services into internal packages
 
