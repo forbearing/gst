@@ -6,7 +6,7 @@ import (
 
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/database"
-	internalmodel "github.com/forbearing/gst/internal/model"
+	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
@@ -32,8 +32,8 @@ func (r *UserRole) CreateBefore(ctx *types.ModelContext) error {
 		return errors.New("role_id is required")
 	}
 	// expands field: user and role
-	user, role := new(internalmodel.User), new(Role)
-	if err := database.Database[*internalmodel.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
+	user, role := new(modeliam.User), new(Role)
+	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
 		return err
 	}
 	if err := database.Database[*Role](ctx.DatabaseContext()).Get(role, r.RoleID); err != nil {
@@ -57,8 +57,8 @@ func (r *UserRole) CreateAfter(ctx *types.ModelContext) error {
 	}
 
 	// update casbin_rule field: `user`, `role`, `remark`
-	user := new(internalmodel.User)
-	if err := database.Database[*internalmodel.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
+	user := new(modeliam.User)
+	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
 		return err
 	}
 	casbinRules := make([]*CasbinRule, 0)

@@ -376,11 +376,11 @@ type Module[M Model, REQ Request, RSP Response] interface {
 	// Service returns the service instance that handles business logic for this module.
 	Service() Service[M, REQ, RSP]
 
-	// Pub determines whether the API endpoints are public or require authentication.
-	Pub() bool
-
 	// Route returns the base API path for this module's endpoints.
 	Route() string
+
+	// Pub determines whether the API endpoints are public or require authentication.
+	Pub() bool
 
 	// Param returns the URL parameter name used for resource identification.
 	Param() string

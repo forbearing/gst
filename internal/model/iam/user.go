@@ -1,4 +1,4 @@
-package model
+package modeliam
 
 import (
 	"time"
@@ -6,8 +6,7 @@ import (
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
-	. "github.com/forbearing/gst/util"
-	"gorm.io/datatypes"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // UserStatus 用户状态枚举
@@ -43,16 +42,12 @@ type UserReq struct {
 	IsSuperuser      bool       `json:"is_superuser"`
 }
 
-// User 用户模型
 type User struct {
-	// 核心信息
 	Username string     `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
 	Status   UserStatus `json:"status" gorm:"type:varchar(20);default:'active';index"`
 	Type     UserType   `json:"type" gorm:"type:varchar(20);default:'regular';index"`
 	GroupID  string     `json:"group_id" gorm:"type:varchar(100);index"`
-
-	// 为了防止循环引用，不指定具体的类型, 在 Service 层代码中查找该用户的 Group
-	Group any `json:"group,omitempty" gorm:"-"`
+	Group    *Group     `json:"group,omitempty" gorm:"-"`
 
 	// 个人信息
 	Email       *string    `json:"email" gorm:"type:varchar(100);uniqueIndex"`
@@ -66,6 +61,7 @@ type User struct {
 	Gender      *string    `json:"gender" gorm:"type:varchar(10)"`
 
 	// 认证信息
+	Password         string `json:"password" gorm:"-"`
 	PasswordHash     string `json:"-" gorm:"type:varchar(255)"`
 	Salt             string `json:"-" gorm:"type:varchar(50)"`
 	EmailVerified    *bool  `json:"email_verified" gorm:"default:false"`
@@ -77,7 +73,8 @@ type User struct {
 	IsSuperuser *bool `json:"is_superuser" gorm:"default:false"`
 
 	// 多租户支持
-	TenantID *uint `json:"tenant_id" gorm:"index"`
+	TenantID *string `json:"tenant_id" gorm:"index"`
+	Tenant   *Tenant `json:"tenant,omitempty" gorm:"-"`
 
 	// 登录信息
 	LastLoginAt      *time.Time `json:"last_login_at"`
@@ -86,17 +83,17 @@ type User struct {
 	FailedLoginCount int        `json:"failed_login_count" gorm:"default:0"`
 	LockedUntil      *time.Time `json:"locked_until"`
 
-	// 验证状态
-	EmailVerificationToken  *string    `json:"-" gorm:"type:varchar(255)"`
-	EmailVerificationExpiry *time.Time `json:"-"`
-	PhoneVerificationCode   *string    `json:"-" gorm:"type:varchar(10)"`
-	PhoneVerificationExpiry *time.Time `json:"-"`
-	PasswordResetToken      *string    `json:"-" gorm:"type:varchar(255)"`
-	PasswordResetExpiry     *time.Time `json:"-"`
+	// // 验证状态
+	// EmailVerificationToken  *string    `json:"-" gorm:"type:varchar(255)"`
+	// EmailVerificationExpiry *time.Time `json:"-"`
+	// PhoneVerificationCode   *string    `json:"-" gorm:"type:varchar(10)"`
+	// PhoneVerificationExpiry *time.Time `json:"-"`
+	// PasswordResetToken      *string    `json:"-" gorm:"type:varchar(255)"`
+	// PasswordResetExpiry     *time.Time `json:"-"`
 
-	// 扩展字段
-	Preferences datatypes.JSONMap `json:"preferences"`
-	Metadata    datatypes.JSONMap `json:"metadata"`
+	// // 扩展字段
+	// Preferences datatypes.JSONMap `json:"preferences"`
+	// Metadata    datatypes.JSONMap `json:"metadata"`
 
 	model.Base
 }
@@ -127,17 +124,20 @@ func (User) Design() {
 		Service(true)
 	})
 }
+func (User) Purge() bool { return true }
 
-// CreateBefore 创建前的钩子函数
-func (u *User) CreateBefore(ctx *types.ModelContext) error {
-	if u.Status == "" {
-		u.Status = UserStatusActive
-	}
-	if u.Type == "" {
-		u.Type = UserTypeRegular
-	}
-	if u.DisplayName == nil || len(Deref(u.DisplayName)) == 0 {
-		u.DisplayName = ValueOf(u.Username)
+func (u *User) CreateBefore(ctx *types.ModelContext) error { return u.generateHashPasswd(ctx) }
+func (u *User) UpdateBefore(ctx *types.ModelContext) error { return u.generateHashPasswd(ctx) }
+
+// generateHashPasswd used in the scene: create user with default password.
+func (u *User) generateHashPasswd(_ *types.ModelContext) error {
+	if len(u.Password) > 0 && len(u.PasswordHash) == 0 {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		u.PasswordHash = string(hashedPassword)
+		return nil
 	}
 	return nil
 }
