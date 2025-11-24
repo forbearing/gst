@@ -18,6 +18,6 @@ type (
 func (*LogoutModule) Service() types.Service[*Logout, *Logout, *LogoutRsp] {
 	return &LogoutService{}
 }
-func (*LogoutModule) Route() string { return "/iam/logout" }
+func (*LogoutModule) Route() string { return "/logout" }
 func (*LogoutModule) Pub() bool     { return false }
 func (*LogoutModule) Param() string { return "id" }

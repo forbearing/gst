@@ -38,8 +38,8 @@ type Config struct {
 //   - GET    /api/iam/groups
 //   - GET    /api/iam/groups/:id
 //   - POST   /api/heartbeat
-//   - POST   /api/iam/login
-//   - POST   /api/iam/logout
+//   - POST   /api/login
+//   - POST   /api/logout
 //   - POST   /api/offline
 //   - GET    /api/me
 //   - GET    /api/online-users
