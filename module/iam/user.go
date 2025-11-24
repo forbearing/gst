@@ -2,6 +2,7 @@ package iam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	"github.com/forbearing/gst/types"
 )
 
@@ -9,7 +10,7 @@ var _ types.Module[*User, *User, *User] = (*UserModule)(nil)
 
 type (
 	User        = modeliam.User
-	UserService = modeliam.UserService
+	UserService = serviceiam.UserService
 	UserModule  struct{}
 )
 

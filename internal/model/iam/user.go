@@ -5,7 +5,6 @@ import (
 
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 // UserStatus 用户状态枚举
@@ -123,7 +122,3 @@ func (User) Design() {
 	})
 }
 func (User) Purge() bool { return true }
-
-type UserService struct {
-	service.Base[*User, *User, *User]
-}
