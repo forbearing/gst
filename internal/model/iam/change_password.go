@@ -3,7 +3,6 @@ package modeliam
 import (
 	"github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 type ChangePassword struct {
@@ -27,8 +26,4 @@ func (ChangePassword) Design() {
 		dsl.Payload[*ChangePasswordReq]()
 		dsl.Result[*ChangePasswordRsp]()
 	})
-}
-
-type ChangePasswordService struct {
-	service.Base[*ChangePassword, *ChangePasswordReq, *ChangePasswordRsp]
 }

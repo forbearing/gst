@@ -2,6 +2,7 @@ package iam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	"github.com/forbearing/gst/types"
 )
 
@@ -11,7 +12,7 @@ type (
 	ChangePassword        = modeliam.ChangePassword
 	ChangePasswordReq     = modeliam.ChangePasswordReq
 	ChangePasswordRsp     = modeliam.ChangePasswordRsp
-	ChangePasswordService = modeliam.ChangePasswordService
+	ChangePasswordService = serviceiam.ChangePasswordService
 	ChangePasswordModule  struct{}
 )
 
