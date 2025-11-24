@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
 
@@ -36,8 +35,4 @@ func (ou *OnlineUser) validate(_ *types.ModelContext) error {
 	ou.SetID(id)
 
 	return nil
-}
-
-type OnlineUserService struct {
-	service.Base[*OnlineUser, *OnlineUser, *OnlineUser]
 }
