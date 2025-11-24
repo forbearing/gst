@@ -1,0 +1,33 @@
+package modeltwofa
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+// TOTPConfirm 确认绑定 TOTP 设备
+type TOTPConfirm struct {
+	model.Empty
+}
+type TOTPConfirmReq struct {
+	Secret     string `json:"secret" validate:"required"`     // The secret from bind step
+	Code       string `json:"code" validate:"required,len=6"` // 6-digit TOTP code to confirm
+	DeviceName string `json:"device_name" validate:"required,max=100"`
+}
+
+type TOTPConfirmRsp struct {
+	DeviceID    string   `json:"device_id"`
+	Message     string   `json:"message"`
+	BackupCodes []string `json:"backup_codes"` // 8-digit backup codes
+}
+
+func (TOTPConfirm) Design() {
+	Route("2fa/totp/confirm", func() {
+		Create(func() {
+			Enabled(true)
+			Service(true)
+			Payload[*TOTPConfirmReq]()
+			Result[*TOTPConfirmRsp]()
+		})
+	})
+}
