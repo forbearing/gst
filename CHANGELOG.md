@@ -1,10 +1,17 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Refactor
+- **logmgmt:** move log models and services into internal packages
+
+
+<a name="v0.10.0-beta.6"></a>
+## [v0.10.0-beta.6] - 2025-11-24
 ### Chg
 - **model:** remove internal/model/user.go
 
 ### Chore
+- **release:** generate CHANGEME.md
 - **types:** reorder `Pub` method below `Route` in `Module` interface
 
 ### Docs
@@ -19,6 +26,12 @@
 - **golangci-lint:** resolve errorcheck in "LogoutService"
 - **golangci-lint:** sha256 replace md5
 - **shadow:** resolve shadows declaration
+
+### Pull Requests
+- Merge pull request [#58](https://github.com/forbearing/gst/issues/58) from forbearing/dev
+- Merge pull request [#57](https://github.com/forbearing/gst/issues/57) from forbearing/dev
+- Merge pull request [#56](https://github.com/forbearing/gst/issues/56) from forbearing/dev
+- Merge pull request [#55](https://github.com/forbearing/gst/issues/55) from forbearing/dev
 
 
 <a name="v0.10.0-beta.5"></a>
@@ -201,11 +214,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="v0.10.0-beta.3"></a>
-## [v0.10.0-beta.3] - 2025-11-08
-
 <a name="list"></a>
 ## [list] - 2025-11-08
+
+<a name="v0.10.0-beta.3"></a>
+## [v0.10.0-beta.3] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -2599,11 +2612,12 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...HEAD
+[v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
 [v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
