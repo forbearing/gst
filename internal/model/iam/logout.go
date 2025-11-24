@@ -3,7 +3,6 @@ package modeliam
 import (
 	"github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 type Logout struct {
@@ -21,8 +20,4 @@ func (Logout) Design() {
 		dsl.Public(false)
 		dsl.Result[*LogoutRsp]()
 	})
-}
-
-type LogoutService struct {
-	service.Base[*Logout, *Logout, *LogoutRsp]
 }
