@@ -65,7 +65,14 @@ type Config struct {
 //   - PATCH  /api/iam/users/:id
 //   - GET    /api/iam/users
 //   - GET    /api/iam/users/:id
-func Register(...Config) {
+//
+// Default disable Tenant module, use `EnableTenant` to enable it.
+func Register(config ...Config) {
+	cfg := Config{}
+	if len(config) > 0 {
+		cfg = config[0]
+	}
+
 	// Use module "ChangePasswordModule"
 	module.Use[
 		*ChangePassword,
@@ -161,20 +168,22 @@ func Register(...Config) {
 		consts.PHASE_CREATE,
 	)
 
-	// Use module "TenantModule"
-	module.Use[
-		*Tenant,
-		*Tenant,
-		*Tenant,
-		*TenantService](
-		&TenantModule{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-	)
+	if cfg.EnableTenant {
+		// Use module "TenantModule"
+		module.Use[
+			*Tenant,
+			*Tenant,
+			*Tenant,
+			*TenantService](
+			&TenantModule{},
+			consts.PHASE_CREATE,
+			consts.PHASE_DELETE,
+			consts.PHASE_UPDATE,
+			consts.PHASE_PATCH,
+			consts.PHASE_LIST,
+			consts.PHASE_GET,
+		)
+	}
 
 	// Use module "UserModule"
 	module.Use[
