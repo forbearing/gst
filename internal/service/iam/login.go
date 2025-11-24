@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/database"
-	iam "github.com/forbearing/gst/internal/model/iam"
+	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/module/logmgmt"
 	"github.com/forbearing/gst/module/twofa"
 	"github.com/forbearing/gst/provider/redis"
@@ -20,16 +20,16 @@ import (
 )
 
 type LoginService struct {
-	service.Base[*iam.Login, *iam.LoginReq, *iam.LoginRsp]
+	service.Base[*modeliam.Login, *modeliam.LoginReq, *modeliam.LoginRsp]
 }
 
-func (s *LoginService) Create(ctx *types.ServiceContext, req *iam.LoginReq) (rsp *iam.LoginRsp, err error) {
+func (s *LoginService) Create(ctx *types.ServiceContext, req *modeliam.LoginReq) (rsp *modeliam.LoginRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	// return keycloakLogin(ctx, log, req)
 	return localLogin(ctx, log, req)
 }
 
-func localLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) (rsp *iam.LoginRsp, err error) {
+func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.LoginReq) (rsp *modeliam.LoginRsp, err error) {
 	// Validate input
 	if req.Username == "" {
 		return nil, fmt.Errorf("username is required")
@@ -61,9 +61,9 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) 
 	}()
 
 	// Find user by username
-	db := database.Database[*iam.User](ctx.DatabaseContext())
-	users := make([]*iam.User, 0)
-	if err = db.WithLimit(1).WithQuery(&iam.User{Username: req.Username}).List(&users); err != nil {
+	db := database.Database[*modeliam.User](ctx.DatabaseContext())
+	users := make([]*modeliam.User, 0)
+	if err = db.WithLimit(1).WithQuery(&modeliam.User{Username: req.Username}).List(&users); err != nil {
 		log.Errorz("failed to query user", zap.Error(err))
 		return nil, fmt.Errorf("invalid username or password")
 	}
@@ -74,10 +74,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) 
 	user := users[0]
 
 	// Check if user is enabled
-	if user.Status == iam.UserStatusInactive {
+	if user.Status == modeliam.UserStatusInactive {
 		return nil, fmt.Errorf("user account is disabled")
 	}
-	if user.Status == iam.UserStatusLocked {
+	if user.Status == modeliam.UserStatusLocked {
 		return nil, fmt.Errorf("user account is locked")
 	}
 
@@ -128,18 +128,18 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) 
 	}
 
 	// Query the group of the user
-	group := new(iam.Group)
-	_ = database.Database[*iam.Group](ctx.DatabaseContext()).Get(group, user.GroupID)
+	group := new(modeliam.Group)
+	_ = database.Database[*modeliam.Group](ctx.DatabaseContext()).Get(group, user.GroupID)
 
 	// Parse user agent for session info
 
 	// Create session
 	sessionID := util.UUID()
-	prefixedSessionID := SessionRedisKey(iam.SessionNamespace, sessionID)
-	prefixedUserID := SessionRedisKey(iam.SessionNamespace, user.ID)
+	prefixedSessionID := SessionRedisKey(modeliam.SessionNamespace, sessionID)
+	prefixedUserID := SessionRedisKey(modeliam.SessionNamespace, user.ID)
 
 	// Create session data for local user
-	sessionData := iam.Session{
+	sessionData := modeliam.Session{
 		UserID:      user.ID,
 		Username:    user.Username,
 		Email:       util.Deref(user.Email),
@@ -159,7 +159,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) 
 
 	expire := 8 * time.Hour
 	// Store session in Redis
-	if err = redis.Cache[iam.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
+	if err = redis.Cache[modeliam.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
 		log.Errorz("failed to set session in redis", zap.Error(err))
 		return nil, fmt.Errorf("failed to set session in redis")
 	}
@@ -198,7 +198,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) 
 		log.Warnz("failed to write login log", zap.Error(err))
 	}
 
-	return &iam.LoginRsp{
+	return &modeliam.LoginRsp{
 		SessionID: sessionID,
 	}, nil
 }

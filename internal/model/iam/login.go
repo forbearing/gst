@@ -5,7 +5,7 @@ import (
 	"github.com/forbearing/gst/model"
 )
 
-const SessionNamespace = "identity:session"
+const SessionNamespace = "iam:session"
 
 type Login struct {
 	model.Empty
