@@ -1,33 +1,30 @@
 package logmgmt
 
 import (
-	modellog "github.com/forbearing/gst/internal/model/log"
-	"github.com/forbearing/gst/service"
+	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
+	servicelogmgmt "github.com/forbearing/gst/internal/service/logmgmt"
 	"github.com/forbearing/gst/types"
 )
 
-var _ types.Module[*LoginLog, *LoginLog, *LoginLog] = (*loginLogModule)(nil)
+var _ types.Module[*LoginLog, *LoginLog, *LoginLog] = (*LoginLogModule)(nil)
 
 type (
-	LoginLog    = modellog.LoginLog
-	LoginStatus = modellog.LoginStatus
+	LoginStatus = modellogmgmt.LoginStatus
+
+	LoginLog        = modellogmgmt.LoginLog
+	LoginLogService = servicelogmgmt.LoginLogService
+	LoginLogModule  struct{}
 )
 
 const (
-	LoginStatusSuccess = modellog.LoginStatusSuccess
-	LoginStatusFailure = modellog.LoginStatusFailure
-	LoginStatusLogout  = modellog.LoginStatusLogout
+	LoginStatusSuccess = modellogmgmt.LoginStatusSuccess
+	LoginStatusFailure = modellogmgmt.LoginStatusFailure
+	LoginStatusLogout  = modellogmgmt.LoginStatusLogout
 )
 
-type loginLogService struct {
-	service.Base[*LoginLog, *LoginLog, *LoginLog]
+func (*LoginLogModule) Service() types.Service[*LoginLog, *LoginLog, *LoginLog] {
+	return &LoginLogService{}
 }
-
-type loginLogModule struct{}
-
-func (*loginLogModule) Service() types.Service[*LoginLog, *LoginLog, *LoginLog] {
-	return &loginLogService{}
-}
-func (*loginLogModule) Pub() bool     { return false }
-func (*loginLogModule) Route() string { return "/log/loginlog" }
-func (*loginLogModule) Param() string { return "id" }
+func (*LoginLogModule) Route() string { return "/log/loginlog" }
+func (*LoginLogModule) Pub() bool     { return false }
+func (*LoginLogModule) Param() string { return "id" }

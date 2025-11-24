@@ -1,4 +1,4 @@
-package modellog
+package modellogmgmt
 
 import (
 	. "github.com/forbearing/gst/dsl"

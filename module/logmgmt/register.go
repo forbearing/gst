@@ -2,6 +2,7 @@ package logmgmt
 
 import (
 	"github.com/forbearing/gst/cronjob"
+	cronjoblogmgmt "github.com/forbearing/gst/internal/cronjob/logmgmt"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
 )
@@ -24,8 +25,8 @@ func Register() {
 	module.Use[*LoginLog,
 		*LoginLog,
 		*LoginLog,
-		*loginLogService](
-		&loginLogModule{},
+		*LoginLogService](
+		&LoginLogModule{},
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
@@ -34,11 +35,11 @@ func Register() {
 		*OperationLog,
 		*OperationLog,
 		*OperationLog,
-		*operationLogService](
-		&operationLogModule{},
+		*OperationLogService](
+		&OperationLogModule{},
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
 
-	cronjob.Register(cleanupLogs, "0 0 * * * *", "cleanup operationlog and loginlog hourly")
+	cronjob.Register(cronjoblogmgmt.Cleanup, "0 0 * * * *", "cleanup operationlog and loginlog hourly")
 }

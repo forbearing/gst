@@ -9,7 +9,7 @@ import (
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
-	modellog "github.com/forbearing/gst/internal/model/log"
+	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types"
@@ -165,11 +165,11 @@ func writeFeishuSessionAndCookie(c *gin.Context, aToken, rToken string, userInfo
 	// ua := useragent.New(c.Request.UserAgent())
 	// engineName, engineVersion := ua.Engine()
 	// browserName, browserVersion := ua.Browser()
-	err = database.Database[*modellog.LoginLog](types.NewDatabaseContext(c)).Create(&modellog.LoginLog{
+	err = database.Database[*modellogmgmt.LoginLog](types.NewDatabaseContext(c)).Create(&modellogmgmt.LoginLog{
 		UserID:   userInfo.UserID,
 		Username: userInfo.Name,
 		// Token:    aToken,
-		Status:   modellog.LoginStatusSuccess,
+		Status:   modellogmgmt.LoginStatusSuccess,
 		ClientIP: c.ClientIP(),
 		Source:   c.Request.UserAgent(),
 		// UserAgent: model.UserAgent{

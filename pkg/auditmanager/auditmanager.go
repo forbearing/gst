@@ -10,7 +10,7 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/ds/queue/circularbuffer"
-	modellog "github.com/forbearing/gst/internal/model/log"
+	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/types"
 	"github.com/gertd/go-pluralize"
 	"go.uber.org/zap"
@@ -24,12 +24,12 @@ var pluralizeCli = pluralize.NewClient()
 // The manager supports configurable filtering, field exclusion, and data truncation.
 type AuditManager struct {
 	config *config.Audit
-	cb     *circularbuffer.CircularBuffer[*modellog.OperationLog]
+	cb     *circularbuffer.CircularBuffer[*modellogmgmt.OperationLog]
 }
 
 // New creates a new audit manager instance.
 // This replaces the previous direct usage of circular buffer for operation logging.
-func New(auditConfig *config.Audit, cb *circularbuffer.CircularBuffer[*modellog.OperationLog]) *AuditManager {
+func New(auditConfig *config.Audit, cb *circularbuffer.CircularBuffer[*modellogmgmt.OperationLog]) *AuditManager {
 	return &AuditManager{
 		config: auditConfig,
 		cb:     cb,
@@ -39,7 +39,7 @@ func New(auditConfig *config.Audit, cb *circularbuffer.CircularBuffer[*modellog.
 // RecordOperation records a single operation audit log.
 // This method is now used by all Factory functions instead of directly enqueuing OperationLog records.
 // It provides centralized audit logging with configurable filtering and supports both sync and async writing.
-func (am *AuditManager) RecordOperation(ctx *types.DatabaseContext, m types.Model, operationLog *modellog.OperationLog) error {
+func (am *AuditManager) RecordOperation(ctx *types.DatabaseContext, m types.Model, operationLog *modellogmgmt.OperationLog) error {
 	// Skip if audit is disabled
 	if !am.config.Enable {
 		return nil
@@ -68,14 +68,14 @@ func (am *AuditManager) RecordOperation(ctx *types.DatabaseContext, m types.Mode
 	}
 
 	// Synchronous writing
-	if err := database.Database[*modellog.OperationLog](ctx).Create(operationLog); err != nil {
+	if err := database.Database[*modellogmgmt.OperationLog](ctx).Create(operationLog); err != nil {
 		return errors.Wrap(err, "failed to write audit log")
 	}
 	return nil
 }
 
 // RecordBatchOperations records multiple operations audit logs
-func (am *AuditManager) RecordBatchOperations(ctx *types.DatabaseContext, m types.Model, operationLogs []*modellog.OperationLog) error {
+func (am *AuditManager) RecordBatchOperations(ctx *types.DatabaseContext, m types.Model, operationLogs []*modellogmgmt.OperationLog) error {
 	if !am.config.Enable {
 		return nil
 	}
@@ -106,7 +106,7 @@ func (am *AuditManager) RecordBatchOperations(ctx *types.DatabaseContext, m type
 	}
 
 	// Synchronous batch writing
-	if err := database.Database[*modellog.OperationLog](ctx).Create(operationLogs...); err != nil {
+	if err := database.Database[*modellogmgmt.OperationLog](ctx).Create(operationLogs...); err != nil {
 		return errors.Wrap(err, "failed to write batch audit logs")
 	}
 	return nil
@@ -114,7 +114,7 @@ func (am *AuditManager) RecordBatchOperations(ctx *types.DatabaseContext, m type
 
 // Consume operation log.
 func (am *AuditManager) Consume() {
-	operationLogs := make([]*modellog.OperationLog, 0, config.App.Server.CircularBuffer.SizeOperationLog)
+	operationLogs := make([]*modellogmgmt.OperationLog, 0, config.App.Server.CircularBuffer.SizeOperationLog)
 	ticker := time.NewTicker(5 * time.Second)
 
 	for range ticker.C {
@@ -124,7 +124,7 @@ func (am *AuditManager) Consume() {
 			operationLogs = append(operationLogs, ol)
 		}
 		if len(operationLogs) > 0 {
-			if err := database.Database[*modellog.OperationLog](nil).WithBatchSize(1000).Create(operationLogs...); err != nil {
+			if err := database.Database[*modellogmgmt.OperationLog](nil).WithBatchSize(1000).Create(operationLogs...); err != nil {
 				zap.S().Error(err)
 			}
 		}
