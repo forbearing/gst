@@ -19,6 +19,6 @@ type (
 func (*LoginModule) Service() types.Service[*Login, *LoginReq, *LoginRsp] {
 	return &LoginService{}
 }
-func (*LoginModule) Route() string { return "/iam/login" }
+func (*LoginModule) Route() string { return "/login" }
 func (*LoginModule) Pub() bool     { return true }
 func (*LoginModule) Param() string { return "id" }

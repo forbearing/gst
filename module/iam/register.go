@@ -119,7 +119,7 @@ func Register(...Config) {
 		MeRsp,
 		*MeService](
 		&MeModule{},
-		consts.PHASE_GET,
+		consts.PHASE_LIST,
 	)
 
 	// Use module "OfflineModule"
