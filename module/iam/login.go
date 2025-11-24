@@ -6,8 +6,6 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-const SessionNamespace = modeliam.SessionNamespace
-
 var _ types.Module[*Login, *LoginReq, *LoginRsp] = (*LoginModule)(nil)
 
 type (
