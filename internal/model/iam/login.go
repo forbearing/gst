@@ -3,7 +3,6 @@ package modeliam
 import (
 	"github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 const SessionNamespace = "identity:session"
@@ -31,8 +30,4 @@ func (Login) Design() {
 		dsl.Payload[*LoginReq]()
 		dsl.Result[*LoginRsp]()
 	})
-}
-
-type LoginService struct {
-	service.Base[*Login, *LoginReq, *LoginRsp]
 }
