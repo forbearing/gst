@@ -1,6 +1,28 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Chg
+- **model:** remove internal/model/user.go
+
+### Chore
+- **types:** reorder `Pub` method below `Route` in `Module` interface
+
+### Docs
+- **model:** update docs for `AreTypeEqual`
+- **module:** correct routes about "PUT" method for modules "authz", "towfa"
+
+### Feat
+- **codegen:** add model import/package synchronization for service generation
+- **model:** add models in "internal/model/iam"
+
+### Fix
+- **golangci-lint:** resolve errorcheck in "LogoutService"
+- **golangci-lint:** sha256 replace md5
+- **shadow:** resolve shadows declaration
+
+
+<a name="v0.10.0-beta.5"></a>
+## [v0.10.0-beta.5] - 2025-11-22
 ### Build
 - add analysis tools and update Makefile
 
@@ -22,6 +44,7 @@
 - **database:** change `WithTable` and `WithTx` position
 - **deps:** go mod tidy
 - **model:** remove "Menu", that replace by internal/model/authz/menu.go
+- **release:** generate CHANGEME.md
 
 ### Ci
 - sync analysis tools with Makefile
@@ -135,6 +158,16 @@
 - **module:** role binding permissions
 - **test:** add test cases for `WithCache`
 
+### Pull Requests
+- Merge pull request [#54](https://github.com/forbearing/gst/issues/54) from forbearing/dev
+- Merge pull request [#52](https://github.com/forbearing/gst/issues/52) from forbearing/dev
+
+### BREAKING CHANGE
+
+- WithAnd() is removed
+- WithOr() is removed, use QueryConfig{UseOr: true} instead
+- WithTryRun() is renamed to WithDryRun()
+
 
 <a name="v0.10.0-beta.4"></a>
 ## [v0.10.0-beta.4] - 2025-11-10
@@ -168,11 +201,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="list"></a>
-## [list] - 2025-11-08
-
 <a name="v0.10.0-beta.3"></a>
 ## [v0.10.0-beta.3] - 2025-11-08
+
+<a name="list"></a>
+## [list] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -284,11 +317,11 @@
 Plugin interface renamed to Module interface
 
 
-<a name="v0.9.7"></a>
-## [v0.9.7] - 2025-10-31
-
 <a name="v0.9.7-beta.4"></a>
 ## [v0.9.7-beta.4] - 2025-10-31
+
+<a name="v0.9.7"></a>
+## [v0.9.7] - 2025-10-31
 ### Chore
 - **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
@@ -2566,15 +2599,16 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...HEAD
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...HEAD
+[v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
-[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
-[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
-[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
+[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
