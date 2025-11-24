@@ -102,7 +102,7 @@ func Register(...Config) {
 	module.Use[
 		*Me,
 		*Me,
-		*MeRsp,
+		MeRsp,
 		*MeService](
 		&MeModule{},
 		consts.PHASE_GET,
