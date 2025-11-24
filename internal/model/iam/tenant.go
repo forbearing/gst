@@ -3,6 +3,7 @@ package modeliam
 import (
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
+	"github.com/forbearing/gst/service"
 )
 
 type TenantStatus string
@@ -135,3 +136,7 @@ func (Tenant) Purge() bool { return true }
 //
 // 	return nil
 // }
+
+type TenantService struct {
+	service.Base[*Tenant, *Tenant, *Tenant]
+}

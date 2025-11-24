@@ -17,9 +17,8 @@ type Config struct {
 //
 // Routes:
 //   - POST   /api/iam/change-password
-//   - CREATE /api/iam/groups
-//   - DELETE /api/iam/groups/:id
 //   - POST   /api/iam/groups
+//   - DELETE /api/iam/groups/:id
 //   - PUT    /api/iam/groups/:id
 //   - PATCH  /api/iam/groups/:id
 //   - GET    /api/iam/groups
@@ -31,6 +30,12 @@ type Config struct {
 //   - GET    /api/me
 //   - GET    /api/online-users
 //   - POST   /api/iam/signup
+//   - POST   /api/iam/tenants
+//   - DELETE /api/iam/tenants/:id
+//   - PUT    /api/iam/tenants/:id
+//   - PATCH  /api/iam/tenants/:id
+//   - GET    /api/iam/tenants
+//   - GET    /api/iam/tenants/:id
 func Register(...Config) {
 	// Use module "ChangePasswordModule"
 	module.Use[
@@ -125,5 +130,20 @@ func Register(...Config) {
 		*SignupService](
 		&SignupModule{},
 		consts.PHASE_CREATE,
+	)
+
+	// Use module "TenantModule"
+	module.Use[
+		*Tenant,
+		*Tenant,
+		*Tenant,
+		*TenantService](
+		&TenantModule{},
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
 	)
 }
