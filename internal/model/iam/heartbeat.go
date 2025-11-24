@@ -3,7 +3,6 @@ package modeliam
 import (
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 type Heartbeat struct {
@@ -18,8 +17,4 @@ func (Heartbeat) Design() {
 			Service(true)
 		})
 	})
-}
-
-type HeartbeatService struct {
-	service.Base[*Heartbeat, *Heartbeat, *Heartbeat]
 }
