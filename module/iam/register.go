@@ -28,6 +28,15 @@ type Config struct {
 // Models:
 //   - ChangePassword
 //   - Group
+//   - Heartbeat
+//   - Login
+//   - Logout
+//   - Offline
+//   - Me
+//   - OnlineUser
+//   - Signup
+//   - Tenant
+//   - User
 //
 // Routes:
 //   - POST   /api/iam/change-password
@@ -43,7 +52,7 @@ type Config struct {
 //   - POST   /api/offline
 //   - GET    /api/me
 //   - GET    /api/online-users
-//   - POST   /api/iam/signup
+//   - POST   /api/signup
 //   - POST   /api/iam/tenants
 //   - DELETE /api/iam/tenants/:id
 //   - PUT    /api/iam/tenants/:id
