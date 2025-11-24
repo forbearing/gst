@@ -3,7 +3,6 @@ package modeliam
 import (
 	. "github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/service"
 )
 
 type Offline struct {
@@ -22,8 +21,4 @@ func (Offline) Design() {
 			Payload[*OfflineReq]()
 		})
 	})
-}
-
-type OfflineService struct {
-	service.Base[*Offline, *OfflineReq, *Offline]
 }
