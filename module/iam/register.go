@@ -2,16 +2,8 @@ package iam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
-)
-
-const SessionNamespace = modeliam.SessionNamespace
-
-var (
-	SessionRedisKey = serviceiam.SessionRedisKey
-	SessionID       = serviceiam.SessionID
 )
 
 type (
