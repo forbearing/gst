@@ -2,12 +2,18 @@ package authz
 
 import (
 	"os"
+	"regexp"
 
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/database"
+	"github.com/forbearing/gst/database/helper"
+	modelauthz "github.com/forbearing/gst/internal/model/authz"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 func init() {
@@ -55,6 +61,8 @@ func init() {
 //   - PATCH  /api/buttons/:id
 //   - GET    /api/buttons
 //   - GET    /api/buttons/:id
+//
+// Panic if creates table records failed.
 func Register() {
 	// creates table "casbin_rule".
 	model.Register[*CasbinRule]()
@@ -140,4 +148,49 @@ func Register() {
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
+
+	// Block here until all modules are migrated.
+	helper.Wait()
+
+	// re-create all permissions
+	if err := database.Database[*modelauthz.Permission](nil).Transaction(func(tx types.Database[*modelauthz.Permission]) error {
+		// list all permissions.
+		permissions := make([]*modelauthz.Permission, 0)
+		if err := tx.List(&permissions); err != nil {
+			log.Error(err)
+			return err
+		}
+
+		// delete all permissions
+		if err := tx.WithBatchSize(100).WithPurge().Delete(permissions...); err != nil {
+			log.Error(err)
+			return err
+		}
+
+		// create permissions.
+		permissions = make([]*modelauthz.Permission, 0)
+		for endpoint, methods := range model.Routes {
+			for _, method := range methods {
+				permissions = append(permissions, &modelauthz.Permission{
+					Resource: convertGinPathToCasbinKeyMatch3(endpoint),
+					Action:   method,
+				})
+			}
+		}
+		if err := tx.WithBatchSize(100).Create(permissions...); err != nil {
+			log.Error(err)
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		log.Error(err)
+		panic(err)
+	}
+}
+
+func convertGinPathToCasbinKeyMatch3(ginPath string) string {
+	// Match :param style and replace with {param}
+	re := regexp.MustCompile(`:([a-zA-Z0-9_]+)`)
+	return re.ReplaceAllString(ginPath, `{$1}`)
 }

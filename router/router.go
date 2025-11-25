@@ -5,15 +5,12 @@ import (
 	"net"
 	"net/http"
 	gopath "path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/controller"
-	"github.com/forbearing/gst/database"
-	modelauthz "github.com/forbearing/gst/internal/model/authz"
 	"github.com/forbearing/gst/internal/openapigen"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
@@ -80,42 +77,6 @@ func Init() error {
 func Run() error {
 	log := zap.S()
 	if err := multierr.Combine(globalErrors...); err != nil {
-		log.Error(err)
-		return err
-	}
-
-	// re-create all permissions
-	if err := database.Database[*modelauthz.Permission](nil).Transaction(func(tx types.Database[*modelauthz.Permission]) error {
-		// list all permissions.
-		permissions := make([]*modelauthz.Permission, 0)
-		if err := tx.List(&permissions); err != nil {
-			log.Error(err)
-			return err
-		}
-
-		// delete all permissions
-		if err := tx.WithBatchSize(100).WithPurge().Delete(permissions...); err != nil {
-			log.Error(err)
-			return err
-		}
-
-		// create permissions.
-		permissions = make([]*modelauthz.Permission, 0)
-		for endpoint, methods := range model.Routes {
-			for _, method := range methods {
-				permissions = append(permissions, &modelauthz.Permission{
-					Resource: convertGinPathToCasbinKeyMatch3(endpoint),
-					Action:   method,
-				})
-			}
-		}
-		if err := tx.WithBatchSize(100).Create(permissions...); err != nil {
-			log.Error(err)
-			return err
-		}
-
-		return nil
-	}); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -337,10 +298,4 @@ func buildVerbMap(verbs ...consts.HTTPVerb) map[consts.HTTPVerb]bool {
 		verbMap[verb] = true
 	}
 	return verbMap
-}
-
-func convertGinPathToCasbinKeyMatch3(ginPath string) string {
-	// Match :param style and replace with {param}
-	re := regexp.MustCompile(`:([a-zA-Z0-9_]+)`)
-	return re.ReplaceAllString(ginPath, `{$1}`)
 }
