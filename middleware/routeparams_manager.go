@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ func RouteParams() gin.HandlerFunc {
 
 type routeParamsManager struct {
 	paramsMap map[string][]string
+	mu        sync.RWMutex
 }
 
 func NewRouteParamsManager() *routeParamsManager {
@@ -30,10 +32,14 @@ func (rpm *routeParamsManager) Add(path string) {
 	if len(path) == 0 {
 		return
 	}
+	rpm.mu.Lock()
 	rpm.paramsMap[path] = rpm.parsePath(path)
+	rpm.mu.Unlock()
 }
 
 func (rpm *routeParamsManager) Get(path string) []string {
+	rpm.mu.RLock()
+	defer rpm.mu.RUnlock()
 	val := rpm.paramsMap[path]
 	if len(val) == 0 {
 		// NOTE: {}string <nil> not deep equal to []string{}
