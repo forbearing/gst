@@ -2,6 +2,7 @@ package iam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
 )
@@ -58,7 +59,13 @@ type Config struct {
 //   - GET    /api/iam/users
 //   - GET    /api/iam/users/:id
 //
+// Middleware:
+//   - IAMSession
+//
 // Default disable Tenant module, use `EnableTenant` to enable it.
+//
+// NOTE: iam modules register must before "authz" modules register.
+// because "authz" registered middleware "Authz" depend on iam modules registered middleware "IAMSession".
 func Register(config ...Config) {
 	cfg := Config{}
 	if len(config) > 0 {
@@ -191,4 +198,6 @@ func Register(config ...Config) {
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
+
+	middleware.RegisterAuth(middleware.IAMSession())
 }

@@ -3,11 +3,12 @@ package authz
 import (
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
-	"github.com/forbearing/gst/database/helper"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
+	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/service"
@@ -61,6 +62,9 @@ func init() {
 //   - PATCH  /api/buttons/:id
 //   - GET    /api/buttons
 //   - GET    /api/buttons/:id
+//
+// Middleware:
+//   - Authz
 //
 // Panic if creates table records failed.
 func Register() {
@@ -149,44 +153,49 @@ func Register() {
 		consts.PHASE_GET,
 	)
 
-	// Block here until all modules are migrated.
-	helper.Wait()
+	middleware.RegisterAuth(middleware.Authz())
 
-	// re-create all permissions
-	if err := database.Database[*modelauthz.Permission](nil).Transaction(func(tx types.Database[*modelauthz.Permission]) error {
-		// list all permissions.
-		permissions := make([]*modelauthz.Permission, 0)
-		if err := tx.List(&permissions); err != nil {
-			log.Error(err)
-			return err
+	go func() {
+		for !database.Inited() {
+			time.Sleep(100 * time.Millisecond)
 		}
 
-		// delete all permissions
-		if err := tx.WithBatchSize(100).WithPurge().Delete(permissions...); err != nil {
-			log.Error(err)
-			return err
-		}
-
-		// create permissions.
-		permissions = make([]*modelauthz.Permission, 0)
-		for endpoint, methods := range model.Routes {
-			for _, method := range methods {
-				permissions = append(permissions, &modelauthz.Permission{
-					Resource: convertGinPathToCasbinKeyMatch3(endpoint),
-					Action:   method,
-				})
+		// re-create all permissions
+		if err := database.Database[*modelauthz.Permission](nil).Transaction(func(tx types.Database[*modelauthz.Permission]) error {
+			// list all permissions.
+			permissions := make([]*modelauthz.Permission, 0)
+			if err := tx.List(&permissions); err != nil {
+				log.Error(err)
+				return err
 			}
-		}
-		if err := tx.WithBatchSize(100).Create(permissions...); err != nil {
-			log.Error(err)
-			return err
-		}
 
-		return nil
-	}); err != nil {
-		log.Error(err)
-		panic(err)
-	}
+			// delete all permissions
+			if err := tx.WithBatchSize(100).WithPurge().Delete(permissions...); err != nil {
+				log.Error(err)
+				return err
+			}
+
+			// create permissions.
+			permissions = make([]*modelauthz.Permission, 0)
+			for endpoint, methods := range model.Routes {
+				for _, method := range methods {
+					permissions = append(permissions, &modelauthz.Permission{
+						Resource: convertGinPathToCasbinKeyMatch3(endpoint),
+						Action:   method,
+					})
+				}
+			}
+			if err := tx.WithBatchSize(100).Create(permissions...); err != nil {
+				log.Error(err)
+				return err
+			}
+
+			return nil
+		}); err != nil {
+			log.Error(err)
+			panic(err)
+		}
+	}()
 }
 
 func convertGinPathToCasbinKeyMatch3(ginPath string) string {

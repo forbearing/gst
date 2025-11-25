@@ -7,6 +7,8 @@ import (
 	gopath "path"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/forbearing/gst/config"
@@ -30,6 +32,10 @@ var (
 	pub  *gin.RouterGroup
 
 	server *http.Server
+
+	started uint32
+	mu      sync.Mutex
+	done    = make(chan struct{}, 1)
 )
 
 var globalErrors = make([]error, 0)
@@ -60,16 +66,23 @@ func Init() error {
 	auth = base.Group("")
 	pub = base.Group("")
 
-	auth.Use(middleware.CommonMiddlewares...)
-	auth.Use(middleware.AuthMiddlewares...)
-	if config.App.Middleware.EnableJwtAuth {
-		auth.Use(middleware.JwtAuth())
-	}
-	if config.App.Middleware.EnableAuthz {
-		auth.Use(middleware.Authz())
-	}
-	auth.Use(middleware.AuthMarker())
-	pub.Use(middleware.CommonMiddlewares...)
+	go func() {
+		for {
+			select {
+			case mid := <-middleware.CommonMiddlewaresChan:
+				if atomic.LoadUint32(&started) == 0 {
+					auth.Use(mid)
+					pub.Use(mid)
+				}
+			case mid := <-middleware.AuthMiddlewaresChan:
+				if atomic.LoadUint32(&started) == 0 {
+					auth.Use(mid)
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
 
 	return nil
 }
@@ -96,6 +109,8 @@ func Run() error {
 		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
+	atomic.StoreUint32(&started, 1)
+	done <- struct{}{}
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Errorw("failed to start server", "err", err)
 		return err
@@ -170,6 +185,9 @@ func validPath(rawPath string) bool {
 }
 
 func register[M types.Model, REQ types.Request, RSP types.Response](router gin.IRouter, path string, verbMap map[consts.HTTPVerb]bool, cfg ...*types.ControllerConfig[M]) {
+	mu.Lock()
+	defer mu.Unlock()
+
 	// v := reflect.ValueOf(router).Elem()
 	// base := v.FieldByName("basePath").String()
 	var base string
