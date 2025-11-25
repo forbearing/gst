@@ -110,7 +110,7 @@ var moduleContent = `// Package module provides business logic modules for the a
 // Place your business module implementations here.
 package module
 
-func Init() error {
+func init() {
     // TODO: Add your custom module registrations here
     //
     // Preferred approach:
@@ -136,7 +136,6 @@ func Init() error {
     //     consts.PHASE_UPDATE_MANY,
     //     consts.PHASE_PATCH_MANY,
     // )
-    return nil
 }
 `
 
@@ -148,7 +147,7 @@ import (
 	_ "%s/cronjob"
 	_ "%s/middleware"
 	_ "%s/model"
-	"%s/module"
+	_ "%s/module"
 	"%s/router"
 	_ "%s/service"
 
@@ -158,7 +157,6 @@ import (
 
 func main() {
 	RunOrDie(bootstrap.Bootstrap)
-	RunOrDie(module.Init)
 	RunOrDie(router.Init)
 	RunOrDie(bootstrap.Run)
 }

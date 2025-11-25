@@ -237,7 +237,7 @@ import (
 	_ "helloworld/cronjob"
 	_ "helloworld/middleware"
 	_ "helloworld/model"
-	"helloworld/module"
+	_ "helloworld/module"
 	"helloworld/router"
 	_ "helloworld/service"
 
@@ -248,7 +248,6 @@ import (
 func main() {
 	RunOrDie(bootstrap.Bootstrap)
 	RunOrDie(router.Init)
-	RunOrDie(module.Init)
 	RunOrDie(bootstrap.Run)
 }
 `,
