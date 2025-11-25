@@ -58,6 +58,7 @@ type Claims struct {
 }
 
 func Init() error {
+	return nil
 	sessionCache = expirable.NewLRU(0, func(_ string, s *model.Session) {
 		_ = database.Database[*model.Session](nil).WithPurge().Delete(s)
 	}, config.App.Auth.RefreshTokenExpireDuration)
