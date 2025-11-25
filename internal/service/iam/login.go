@@ -7,8 +7,8 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
-	"github.com/forbearing/gst/module/logmgmt"
-	"github.com/forbearing/gst/module/twofa"
+	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
+	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -46,10 +46,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 	defer func() {
 		// write login log.
 		if !success {
-			if err = database.Database[*logmgmt.LoginLog](ctx.DatabaseContext()).Create(&logmgmt.LoginLog{
+			if err = database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
 				Username: req.Username,
 				ClientIP: ctx.ClientIP,
-				Status:   logmgmt.LoginStatusFailure,
+				Status:   modellogmgmt.LoginStatusFailure,
 				Source:   ctx.Request.UserAgent(),
 				Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
 				Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
@@ -135,8 +135,8 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 	// Create session
 	sessionID := util.UUID()
-	prefixedSessionID := SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	prefixedUserID := SessionRedisKey(modeliam.SessionNamespace, user.ID)
+	prefixedSessionID := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
+	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, user.ID)
 
 	// Create session data for local user
 	sessionData := modeliam.Session{
@@ -184,11 +184,11 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 	// write login log
 	success = true
-	if err = database.Database[*logmgmt.LoginLog](ctx.DatabaseContext()).Create(&logmgmt.LoginLog{
+	if err = database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
 		UserID:   user.ID,
 		Username: user.Username,
 		ClientIP: ctx.ClientIP,
-		Status:   logmgmt.LoginStatusSuccess,
+		Status:   modellogmgmt.LoginStatusSuccess,
 
 		Source:   ctx.Request.UserAgent(),
 		Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
@@ -205,10 +205,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 // checkUserHas2FA checks if the user has active TOTP devices
 func checkUserHas2FA(ctx *types.ServiceContext, userID string) (bool, error) {
-	db := database.Database[*twofa.TOTPDevice](ctx.DatabaseContext())
-	devices := make([]*twofa.TOTPDevice, 0)
+	db := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext())
+	devices := make([]*modeltwofa.TOTPDevice, 0)
 
-	if err := db.WithQuery(&twofa.TOTPDevice{
+	if err := db.WithQuery(&modeltwofa.TOTPDevice{
 		UserID:   userID,
 		IsActive: true,
 	}).List(&devices); err != nil {
@@ -224,10 +224,10 @@ func validateTOTPCode(ctx *types.ServiceContext, userID, code string) error {
 		return fmt.Errorf("TOTP code is required")
 	}
 
-	db := database.Database[*twofa.TOTPDevice](ctx.DatabaseContext())
-	devices := make([]*twofa.TOTPDevice, 0)
+	db := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext())
+	devices := make([]*modeltwofa.TOTPDevice, 0)
 
-	if err := db.WithQuery(&twofa.TOTPDevice{
+	if err := db.WithQuery(&modeltwofa.TOTPDevice{
 		UserID:   userID,
 		IsActive: true,
 	}).List(&devices); err != nil {
@@ -254,10 +254,10 @@ func validateBackupCode(ctx *types.ServiceContext, userID, code string) error {
 		return fmt.Errorf("backup code is required")
 	}
 
-	db := database.Database[*twofa.TOTPDevice](ctx.DatabaseContext())
-	devices := make([]*twofa.TOTPDevice, 0)
+	db := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext())
+	devices := make([]*modeltwofa.TOTPDevice, 0)
 
-	if err := db.WithQuery(&twofa.TOTPDevice{
+	if err := db.WithQuery(&modeltwofa.TOTPDevice{
 		UserID:   userID,
 		IsActive: true,
 	}).List(&devices); err != nil {
