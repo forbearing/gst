@@ -13,10 +13,6 @@ const (
 	FIXED_LEFT  Fixed = "left"  //nolint:staticcheck
 )
 
-func init() {
-	Register[*TableColumn]()
-}
-
 // TableColumn 表格的列
 type TableColumn struct {
 	UserID    string `json:"user_id,omitempty" schema:"user_id"`       // 属于哪一个用户的

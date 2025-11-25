@@ -10,10 +10,6 @@ var DefaultGroup = Group{
 	Base: model.Base{ID: "default"},
 }
 
-func init() {
-	model.Register(&DefaultGroup)
-}
-
 // GroupType 用户组类型枚举
 type GroupType string
 

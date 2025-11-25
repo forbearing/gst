@@ -7,7 +7,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/golang-jwt/jwt/v5"
@@ -58,19 +57,23 @@ type Claims struct {
 }
 
 func Init() error {
-	sessionCache = expirable.NewLRU(0, func(_ string, s *model.Session) {
-		_ = database.Database[*model.Session](nil).WithPurge().Delete(s)
-	}, config.App.Auth.RefreshTokenExpireDuration)
-	sessions := make([]*model.Session, 0)
-	if err := database.Database[*model.Session](nil).WithLimit(-1).List(&sessions); err != nil {
-		return errors.Wrap(err, "failed to list sessions")
-	}
-	for _, session := range sessions {
-		setSession(session.UserID, session)
-	}
-
 	return nil
 }
+
+// func Init() error {
+// 	sessionCache = expirable.NewLRU(0, func(_ string, s *model.Session) {
+// 		_ = database.Database[*model.Session](nil).WithPurge().Delete(s)
+// 	}, config.App.Auth.RefreshTokenExpireDuration)
+// 	sessions := make([]*model.Session, 0)
+// 	if err := database.Database[*model.Session](nil).WithLimit(-1).List(&sessions); err != nil {
+// 		return errors.Wrap(err, "failed to list sessions")
+// 	}
+// 	for _, session := range sessions {
+// 		setSession(session.UserID, session)
+// 	}
+//
+// 	return nil
+// }
 
 // GenTokens 生成 access token 和 refresh token
 func GenTokens(userID string, username string, session *model.Session) (aToken, rToken string, err error) {

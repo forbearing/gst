@@ -8,10 +8,7 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-func init() {
-	Register[*Session]()
-}
-
+// Session is deprecated
 type Session struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
