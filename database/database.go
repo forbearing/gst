@@ -3786,3 +3786,7 @@ func Database[M types.Model](ctx *types.DatabaseContext) types.Database[M] {
 
 	return db
 }
+
+func Inited() bool {
+	return DB != nil
+}

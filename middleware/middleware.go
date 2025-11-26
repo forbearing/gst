@@ -15,10 +15,11 @@ import (
 )
 
 var (
-	cb                *gobreaker.CircuitBreaker
-	RouteManager      *routeParamsManager
-	CommonMiddlewares = []gin.HandlerFunc{}
-	AuthMiddlewares   = []gin.HandlerFunc{}
+	cb           *gobreaker.CircuitBreaker
+	RouteManager *routeParamsManager
+
+	CommonMiddlewaresChan = make(chan gin.HandlerFunc, 1024)
+	AuthMiddlewaresChan   = make(chan gin.HandlerFunc, 1024)
 )
 
 // Register adds global middlewares that apply to all routes.
@@ -33,7 +34,8 @@ func Register(middlewares ...gin.HandlerFunc) {
 		name := getFunctionName(middleware)
 		// Automatically wrap middleware with tracing for performance monitoring
 		wrapped := middlewareWrapper(name, middleware)
-		CommonMiddlewares = append(CommonMiddlewares, wrapped)
+		zap.S().Infow("register common middleware", "name", name)
+		CommonMiddlewaresChan <- wrapped
 	}
 }
 
@@ -49,7 +51,8 @@ func RegisterAuth(middlewares ...gin.HandlerFunc) {
 		name := getFunctionName(middleware)
 		// Automatically wrap middleware with tracing for performance monitoring
 		wrapped := middlewareWrapper(name, middleware)
-		AuthMiddlewares = append(AuthMiddlewares, wrapped)
+		zap.S().Infow("register auth middleware", "name", name)
+		AuthMiddlewaresChan <- wrapped
 	}
 }
 

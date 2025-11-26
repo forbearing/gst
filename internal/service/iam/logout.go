@@ -5,7 +5,7 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
-	"github.com/forbearing/gst/module/logmgmt"
+	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -33,7 +33,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *modeliam.Logo
 	}
 
 	// Get session from Redis to extract user info for logging
-	prefixedSessionID := SessionRedisKey(modeliam.SessionNamespace, sessionID)
+	prefixedSessionID := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
 	session, err := redis.Cache[modeliam.Session]().Get(prefixedSessionID)
 
 	// Parse user agent for logging
@@ -48,11 +48,11 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *modeliam.Logo
 		username = session.Username
 	}
 
-	if logErr := database.Database[*logmgmt.LoginLog](ctx.DatabaseContext()).Create(&logmgmt.LoginLog{
+	if logErr := database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
 		UserID:   userID,
 		Username: username,
 		ClientIP: ctx.ClientIP,
-		Status:   logmgmt.LoginStatusLogout,
+		Status:   modellogmgmt.LoginStatusLogout,
 		Source:   ctx.Request.UserAgent(),
 		Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
 		Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
@@ -66,7 +66,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *modeliam.Logo
 		log.Warnz("failed to delete session from redis", zap.Error(delErr))
 	}
 	// Delete session id from redis
-	prefixedUserID := SessionRedisKey(modeliam.SessionNamespace, userID)
+	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, userID)
 	if delErr := redis.Cache[string]().Delete(prefixedUserID); delErr != nil {
 		log.Warnz("failed to delete session id from redis", zap.Error(delErr))
 	}

@@ -300,11 +300,13 @@ func BuildRouterFile(pkgName string, modelImports []string, stmts ...ast.Stmt) (
 package main
 
 import (
-	"helloworld/configx"
-	"helloworld/cronjob"
+	- "helloworld/configx"
+	_ "helloworld/cronjob"
+	_ "helloworld/middleware"
 	_ "helloworld/model"
+	_ "helloworld/module"
 	"helloworld/router"
-	"helloworld/service"
+	_ "helloworld/service"
 
 	"github.com/forbearing/gst/bootstrap"
 	. "github.com/forbearing/gst/util"
@@ -331,7 +333,7 @@ func BuildMainFile(projectName string) (string, error) {
 					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", projectName+"/"+constants.SubDirMiddleware)}, Name: ast.NewIdent("_")},
 					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", projectName+"/"+constants.SubDirModel)}, Name: ast.NewIdent("_")},
 					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", projectName+"/"+constants.SubDirService)}, Name: ast.NewIdent("_")},
-					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", projectName+"/"+constants.SubDirModule)}},
+					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", projectName+"/"+constants.SubDirModule)}, Name: ast.NewIdent("_")},
 					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", projectName+"/"+constants.SubDirRouter)}},
 					&ast.ImportSpec{Path: &ast.BasicLit{Value: fmt.Sprintf("%q", constants.ImportPathBootstrap)}},
 					&ast.ImportSpec{
@@ -363,17 +365,6 @@ func BuildMainFile(projectName string) (string, error) {
 									&ast.SelectorExpr{
 										X:   ast.NewIdent(constants.PkgRouter),
 										Sel: ast.NewIdent(constants.RouterInit),
-									},
-								},
-							},
-						},
-						&ast.ExprStmt{
-							X: &ast.CallExpr{
-								Fun: ast.NewIdent(constants.FuncRunOrDie),
-								Args: []ast.Expr{
-									&ast.SelectorExpr{
-										X:   ast.NewIdent(constants.PkgModule),
-										Sel: ast.NewIdent(constants.ModuleInit),
 									},
 								},
 							},

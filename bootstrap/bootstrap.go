@@ -27,6 +27,7 @@ import (
 	pkgzap "github.com/forbearing/gst/logger/zap"
 	"github.com/forbearing/gst/metrics"
 	"github.com/forbearing/gst/middleware"
+	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/provider/cassandra"
 	"github.com/forbearing/gst/provider/elastic"
 	"github.com/forbearing/gst/provider/etcd"
@@ -122,6 +123,9 @@ func Bootstrap() error {
 		// job
 		task.Init, // nolint:staticcheck
 		cronjob.Init,
+
+		// module system must be the last to be initialized.
+		module.Init,
 	)
 
 	RegisterCleanup(redis.Close)

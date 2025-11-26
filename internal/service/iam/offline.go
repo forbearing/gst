@@ -14,7 +14,7 @@ type OfflineService struct {
 func (s *OfflineService) Create(ctx *types.ServiceContext, req *modeliam.OfflineReq) (rsp *modeliam.Offline, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
-	prefixedUserID := SessionRedisKey(modeliam.SessionNamespace, req.UserID)
+	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, req.UserID)
 
 	prefixedSessionID, err := redis.Cache[string]().Get(prefixedUserID)
 	if err != nil {
