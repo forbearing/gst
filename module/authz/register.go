@@ -20,9 +20,6 @@ import (
 func init() {
 	// Enable RBAC
 	os.Setenv(config.AUTH_RBAC_ENABLE, "true")
-
-	// Enable authz middleware
-	os.Setenv(config.MIDDLEWARE_ENABLE_AUTHZ, "true")
 }
 
 // Register register modules: Permission, Role, UserRole.
