@@ -381,7 +381,7 @@ func TestServiceMethod6(t *testing.T) {
 			modelName:    "Asset",
 			modelPkgName: "model",
 			phase:        consts.PHASE_EXPORT,
-			want:         "func (a *Exporter) Export(ctx *types.ServiceContext, data ...*model.Asset) (data []byte, err error) {\n}",
+			want:         "func (a *Exporter) Export(ctx *types.ServiceContext, assets ...*model.Asset) (data []byte, err error) {\n}",
 		},
 	}
 	for _, tt := range tests {

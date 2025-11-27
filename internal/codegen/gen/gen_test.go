@@ -626,7 +626,7 @@ func TestGenServiceMethod6(t *testing.T) {
 				ModelFileDir: "/tmp/model",
 			},
 			phase: consts.PHASE_EXPORT,
-			want: `func (u *Exporter) Export(ctx *types.ServiceContext, data ...*model.User) (data []byte, err error) {
+			want: `func (u *Exporter) Export(ctx *types.ServiceContext, users ...*model.User) (data []byte, err error) {
 	log := u.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("user export")
 	return data, err
