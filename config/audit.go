@@ -41,7 +41,7 @@ type Audit struct {
 }
 
 func (*Audit) setDefault() {
-	cv.SetDefault("audit.enable", true)
+	cv.SetDefault("audit.enable", false)
 	cv.SetDefault("audit.async_write", true)
 	cv.SetDefault("audit.batch_size", 10000)
 	cv.SetDefault("audit.flush_interval", "5s")
