@@ -1,6 +1,9 @@
 package logmgmt
 
 import (
+	"os"
+
+	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/cronjob"
 	cronjoblogmgmt "github.com/forbearing/gst/internal/cronjob/logmgmt"
 	"github.com/forbearing/gst/module"
@@ -21,7 +24,12 @@ import (
 //
 // Cronjob:
 //   - cleanup operationlog and loginlog hourly.
+//
+// Enable Audit to records all operation logs.
 func Register() {
+	// enable audit function to records the operation logs.
+	os.Setenv(config.AUDIT_ENABLE, "true")
+
 	module.Use[*LoginLog,
 		*LoginLog,
 		*LoginLog,
