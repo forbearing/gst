@@ -3,7 +3,24 @@ package dsl
 import (
 	"slices"
 	"strings"
+
+	"github.com/forbearing/gst/types/consts"
 )
+
+var routePhaseOrder = []consts.Phase{
+	consts.PHASE_CREATE,
+	consts.PHASE_DELETE,
+	consts.PHASE_UPDATE,
+	consts.PHASE_PATCH,
+	consts.PHASE_LIST,
+	consts.PHASE_IMPORT,
+	consts.PHASE_EXPORT,
+	consts.PHASE_GET,
+	consts.PHASE_CREATE_MANY,
+	consts.PHASE_DELETE_MANY,
+	consts.PHASE_UPDATE_MANY,
+	consts.PHASE_PATCH_MANY,
+}
 
 // rangeAction iterates through all actions in a Design and calls the provided function
 // for each enabled action. This is a helper function used by Design.Range().
@@ -16,9 +33,10 @@ import (
 //   - fn: Callback function that receives (endpoint, action) for each enabled action
 //
 // Iteration order:
-//  1. Single record operations: Create, Delete, Update, Patch, List, Get
-//  2. Batch operations: CreateMany, DeleteMany, UpdateMany, PatchMany
-//  3. Data transfer operations: Import, Export
+//  1. Single record operations: Create, Delete, Update, Patch, List
+//  2. Data transfer operations: Import, Export
+//  3. Single record retrieval: Get
+//  4. Batch operations: CreateMany, DeleteMany, UpdateMany, PatchMany
 //
 // For each enabled action, the callback receives:
 //   - endpoint: The API endpoint path from the Design
@@ -49,6 +67,12 @@ func rangeAction(d *Design, fn func(string, *Action)) {
 	if d.List.Enabled {
 		fn(d.Endpoint, d.List)
 	}
+	if d.Import.Enabled {
+		fn(d.Endpoint, d.Import)
+	}
+	if d.Export.Enabled {
+		fn(d.Endpoint, d.Export)
+	}
 	if d.Get.Enabled {
 		fn(d.Endpoint, d.Get)
 	}
@@ -64,18 +88,22 @@ func rangeAction(d *Design, fn func(string, *Action)) {
 	if d.PatchMany.Enabled {
 		fn(d.Endpoint, d.PatchMany)
 	}
-	if d.Import.Enabled {
-		fn(d.Endpoint, d.Import)
-	}
-	if d.Export.Enabled {
-		fn(d.Endpoint, d.Export)
-	}
 
-	for route, action := range d.routes {
-		for _, a := range action {
-			if a.Enabled {
-				fn(route, a)
+	for route, actions := range d.routes {
+		emitRouteActions(route, actions, fn)
+	}
+}
+
+func emitRouteActions(route string, actions []*Action, fn func(string, *Action)) {
+	if len(actions) == 0 || fn == nil {
+		return
+	}
+	for _, phase := range routePhaseOrder {
+		for _, action := range actions {
+			if action == nil || !action.Enabled || action.Phase != phase {
+				continue
 			}
+			fn(route, action)
 		}
 	}
 }

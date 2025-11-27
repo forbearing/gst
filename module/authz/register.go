@@ -17,14 +17,6 @@ import (
 	"github.com/opentracing/opentracing-go/log"
 )
 
-func init() {
-	// Enable RBAC
-	os.Setenv(config.AUTH_RBAC_ENABLE, "true")
-
-	// Enable authz middleware
-	os.Setenv(config.MIDDLEWARE_ENABLE_AUTHZ, "true")
-}
-
 // Register register modules: Permission, Role, UserRole.
 //
 // Modules:
@@ -68,6 +60,9 @@ func init() {
 //
 // Panic if creates table records failed.
 func Register() {
+	// Enable RBAC
+	os.Setenv(config.AUTH_RBAC_ENABLE, "true")
+
 	// creates table "casbin_rule".
 	model.Register[*CasbinRule]()
 

@@ -2208,7 +2208,10 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		}
 		// 2.Batch delete resources in database.
 		if !errors.Is(reqErr, io.EOF) {
-			if err = handler(types.NewDatabaseContext(c)).WithPurge(req.Options.Purge).Delete(req.Items...); err != nil {
+			// purge mode is current not allowed in request.
+			//
+			// if err = handler(types.NewDatabaseContext(c)).WithPurge(req.Options.Purge).Delete(req.Items...); err != nil {
+			if err = handler(types.NewDatabaseContext(c)).Delete(req.Items...); err != nil {
 				log.Error(err)
 				ResponseJSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)

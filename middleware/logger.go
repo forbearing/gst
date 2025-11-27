@@ -3,6 +3,7 @@ package middleware
 import (
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/metrics"
@@ -18,12 +19,13 @@ func Logger(filename ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
+		labelPath := sanitizeLabelValue(path)
 		query := c.Request.URL.RawQuery
 		c.Set(consts.CTX_ROUTE, path)
 		c.Next()
 
-		metrics.HTTPRequestsTotal.WithLabelValues(c.Request.Method, path, strconv.Itoa(c.Writer.Status())).Inc()
-		metrics.HTTPRequestDuration.WithLabelValues(c.Request.Method, path, strconv.Itoa(c.Writer.Status())).Observe(time.Since(start).Seconds())
+		metrics.HTTPRequestsTotal.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Inc()
+		metrics.HTTPRequestDuration.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Observe(time.Since(start).Seconds())
 
 		// Add tracing information to logs
 		span := GetSpanFromContext(c)
@@ -63,4 +65,17 @@ func Logger(filename ...string) gin.HandlerFunc {
 			logger.Gin.Info(path, fields...)
 		}
 	}
+}
+
+// sanitizeLabelValue ensures we never export non UTF-8 label values to Prometheus.
+func sanitizeLabelValue(value string) string {
+	if value == "" {
+		return "<empty>"
+	}
+
+	if utf8.ValidString(value) {
+		return value
+	}
+
+	return "<invalid>"
 }

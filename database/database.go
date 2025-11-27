@@ -134,14 +134,18 @@ func (db *database[M]) prepare() error {
 	if db.ins == nil || db.ins == new(gorm.DB) {
 		return ErrInvalidDB
 	}
+	db.typ = reflect.TypeOf(*new(M)).Elem()
+	db.m = reflect.New(db.typ).Interface().(M) //nolint:errcheck
 	if db.shouldAutoMigrate != nil && *db.shouldAutoMigrate {
-		if err := db.ins.AutoMigrate(new(M)); err != nil {
+		session := db.ins
+		if tableName := db.m.GetTableName(); len(tableName) > 0 {
+			session = session.Table(tableName)
+		}
+		if err := session.AutoMigrate(db.m); err != nil {
 			return err
 		}
 	}
 
-	db.typ = reflect.TypeOf(*new(M)).Elem()
-	db.m = reflect.New(db.typ).Interface().(M) //nolint:errcheck
 	// Set enablePurge based on model's Purge() method if not explicitly set by WithPurge().
 	// Priority: WithPurge() > model.Purge() > default (soft delete)
 	// - If WithPurge() was called, use the explicitly set value (highest priority)
