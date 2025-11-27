@@ -385,6 +385,122 @@ func TestFindAllModelEmpty(t *testing.T) {
 	}
 }
 
+func TestDesignRangeOrderDefaultRoute(t *testing.T) {
+	design := parseDesignFromSource(t, defaultRouteOrderSource, "OrderHost")
+
+	var got []consts.Phase
+	design.Range(func(route string, act *Action) {
+		got = append(got, act.Phase)
+	})
+
+	want := []consts.Phase{
+		consts.PHASE_LIST,
+		consts.PHASE_IMPORT,
+		consts.PHASE_EXPORT,
+		consts.PHASE_GET,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected action order: got %v want %v", got, want)
+	}
+}
+
+func TestDesignRangeOrderCustomRoute(t *testing.T) {
+	design := parseDesignFromSource(t, routeOrderSource, "RouteHost")
+
+	var got []consts.Phase
+	design.Range(func(route string, act *Action) {
+		if route == "cmdb/hosts" {
+			got = append(got, act.Phase)
+		}
+	})
+
+	want := []consts.Phase{
+		consts.PHASE_LIST,
+		consts.PHASE_IMPORT,
+		consts.PHASE_EXPORT,
+		consts.PHASE_GET,
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected route action order: got %v want %v", got, want)
+	}
+}
+
+const defaultRouteOrderSource = `
+package model
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+type OrderHost struct {
+	model.Base
+}
+
+func (OrderHost) Design() {
+	Endpoint("cmdb/hosts")
+	Get(func() {
+		Enabled(true)
+	})
+	Export(func() {
+		Enabled(true)
+	})
+	Import(func() {
+		Enabled(true)
+	})
+	List(func() {
+		Enabled(true)
+	})
+}
+`
+
+const routeOrderSource = `
+package model
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+type RouteHost struct {
+	model.Base
+}
+
+func (RouteHost) Design() {
+	Route("/cmdb/hosts", func() {
+		Get(func() {
+			Enabled(true)
+		})
+		Export(func() {
+			Enabled(true)
+		})
+		Import(func() {
+			Enabled(true)
+		})
+		List(func() {
+			Enabled(true)
+		})
+	})
+}
+`
+
+func parseDesignFromSource(t *testing.T, src, modelName string) *Design {
+	t.Helper()
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse source failed: %v", err)
+	}
+
+	designs := Parse(file, "")
+	design, ok := designs[modelName]
+	if !ok {
+		t.Fatalf("model %s not found", modelName)
+	}
+	return design
+}
+
 func TestParse(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case

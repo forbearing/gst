@@ -349,8 +349,8 @@ type Design struct {
 // Parameters:
 //   - fn: Callback function that receives (endpoint, action) for each enabled action
 //
-// The iteration order is fixed: Create, Delete, Update, Patch, List, Get,
-// CreateMany, DeleteMany, UpdateMany, PatchMany, Import, Export.
+// The iteration order is fixed: Create, Delete, Update, Patch, List, Import,
+// Export, Get, CreateMany, DeleteMany, UpdateMany, PatchMany.
 //
 // Example:
 //
