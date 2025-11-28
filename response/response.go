@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	internalsse "github.com/forbearing/gst/internal/sse"
+	"github.com/forbearing/gst/internal/sse"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
@@ -335,7 +335,7 @@ func stringAny(v any) string {
 //	    Data:  "Hello, World!",
 //	})
 func ResponseSSE(c *gin.Context, event types.Event) error {
-	return internalsse.SendSSE(c.Writer, event)
+	return sse.SendSSE(c.Writer, event)
 }
 
 // StreamSSE starts a Server-Sent Events stream.
@@ -347,7 +347,7 @@ func ResponseSSE(c *gin.Context, event types.Event) error {
 //
 // Note: This function does NOT automatically send a [DONE] marker when the stream ends.
 // If your protocol requires a [DONE] marker (e.g., AI chat completions), you must
-// manually call internalsse.EncodeDone(c.Writer) after StreamSSE() returns.
+// manually call sse.EncodeDone(c.Writer) after StreamSSE() returns.
 //
 // Parameters:
 //   - c: Gin context
@@ -357,16 +357,16 @@ func ResponseSSE(c *gin.Context, event types.Event) error {
 // Example:
 //
 //	StreamSSE(c, func(w io.Writer) bool {
-//	    internalsse.Encode(w, types.Event{
+//	    sse.Encode(w, types.Event{
 //	        Event: "message",
 //	        Data:  "Hello",
 //	    })
 //	    return true // Continue streaming
 //	})
 //	// Send [DONE] marker if required by your protocol
-//	internalsse.EncodeDone(c.Writer)
+//	sse.EncodeDone(c.Writer)
 func StreamSSE(c *gin.Context, fn func(io.Writer) bool) {
-	internalsse.StreamSSE(c.Writer, c.Request.Context(), c.Stream, fn)
+	sse.StreamSSE(c.Writer, c.Request.Context(), c.Stream, fn)
 }
 
 // StreamSSEWithInterval starts a Server-Sent Events stream with a fixed interval between events.
@@ -378,7 +378,7 @@ func StreamSSE(c *gin.Context, fn func(io.Writer) bool) {
 //
 // Note: This function does NOT automatically send a [DONE] marker when the stream ends.
 // If your protocol requires a [DONE] marker (e.g., AI chat completions), you must
-// manually call internalsse.EncodeDone(c.Writer) after StreamSSEWithInterval() returns.
+// manually call sse.EncodeDone(c.Writer) after StreamSSEWithInterval() returns.
 //
 // Parameters:
 //   - c: Gin context
@@ -398,5 +398,5 @@ func StreamSSE(c *gin.Context, fn func(io.Writer) bool) {
 //	// Send [DONE] marker if required by your protocol
 //	sse.EncodeDone(c.Writer)
 func StreamSSEWithInterval(c *gin.Context, interval time.Duration, fn func(io.Writer) bool) {
-	internalsse.StreamSSEWithInterval(c.Writer, c.Request.Context(), c.Stream, interval, fn)
+	sse.StreamSSEWithInterval(c.Writer, c.Request.Context(), c.Stream, interval, fn)
 }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	internalsse "github.com/forbearing/gst/internal/sse"
+	"github.com/forbearing/gst/internal/sse"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
 )
@@ -265,7 +265,7 @@ func (sc *ServiceContext) WithPhase(phase consts.Phase) *ServiceContext {
 func (sc *ServiceContext) RequiresAuth() bool { return sc.requiresAuth }
 
 // Encode writes an SSE event to the given writer.
-// This is a convenience method that wraps internalsse.Encode for use within
+// This is a convenience method that wraps sse.Encode for use within
 // SSE stream callbacks.
 //
 // The event is formatted according to the SSE specification:
@@ -299,7 +299,7 @@ func (sc *ServiceContext) Encode(w io.Writer, event Event) error {
 		return nil
 	}
 
-	return internalsse.Encode(w, event)
+	return sse.Encode(w, event)
 }
 
 type ModelContext struct {

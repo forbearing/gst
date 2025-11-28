@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	internalsse "github.com/forbearing/gst/internal/sse"
+	"github.com/forbearing/gst/internal/sse"
 )
 
 // sseBuilder provides a fluent interface for building and sending SSE events.
@@ -121,7 +121,7 @@ func streamSSE(sc *ServiceContext, fn func(io.Writer) bool) {
 	if sc == nil || sc.ginCtx == nil {
 		return
 	}
-	internalsse.StreamSSE(sc.ginCtx.Writer, sc.Context(), sc.ginCtx.Stream, fn)
+	sse.StreamSSE(sc.ginCtx.Writer, sc.Context(), sc.ginCtx.Stream, fn)
 }
 
 // streamSSEWithInterval starts a Server-Sent Events stream with a fixed interval between events.
@@ -130,7 +130,7 @@ func streamSSEWithInterval(sc *ServiceContext, interval time.Duration, fn func(i
 	if sc == nil || sc.ginCtx == nil {
 		return
 	}
-	internalsse.StreamSSEWithInterval(sc.ginCtx.Writer, sc.Context(), sc.ginCtx.Stream, interval, fn)
+	sse.StreamSSEWithInterval(sc.ginCtx.Writer, sc.Context(), sc.ginCtx.Stream, interval, fn)
 }
 
 // sendSSEDone sends a [DONE] marker to indicate the end of an SSE stream.
@@ -139,5 +139,5 @@ func sendSSEDone(sc *ServiceContext) error {
 	if sc == nil || sc.ginCtx == nil {
 		return nil
 	}
-	return internalsse.SendSSEDone(sc.ginCtx.Writer)
+	return sse.SendSSEDone(sc.ginCtx.Writer)
 }
