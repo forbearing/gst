@@ -16,7 +16,7 @@ type ControllerContext struct {
 	UserID   string // currrent login user id
 	Route    string
 	Params   map[string]string
-	Query    map[string][]string
+	Query    url.Values
 
 	RequestID string
 	TraceID   string
@@ -52,7 +52,7 @@ type DatabaseContext struct {
 	UserID   string // currrent login user id
 	Route    string
 	Params   map[string]string
-	Query    map[string][]string
+	Query    url.Values
 
 	context   context.Context
 	RequestID string
@@ -138,7 +138,7 @@ type ServiceContext struct {
 	// eg: DELETE /api/user/:userid/shelf/:shelfid/book
 	// Params: map[string]string{"userid": "xxxxx-myuserid-xxxxx", "shelfid": "xxxxx-myshelfid-xxxxx"}
 	Params map[string]string
-	Query  map[string][]string
+	Query  url.Values
 
 	SessionID string // session id
 	Username  string // currrent login user.
