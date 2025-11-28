@@ -17,12 +17,9 @@ import (
 	"time"
 )
 
-// ContentType is the MIME type for Server-Sent Events.
-const ContentType = "text/event-stream"
-
-// DoneMarker is a special marker sent at the end of an SSE stream to indicate completion.
+// doneMarker is a special marker sent at the end of an SSE stream to indicate completion.
 // This is commonly used in AI chat completions and similar streaming APIs.
-const DoneMarker = "[DONE]"
+const doneMarker = "[DONE]"
 
 // Event represents a Server-Sent Event.
 // Each event can have an optional ID, event type, retry interval, and data.
@@ -153,7 +150,7 @@ func formatData(data any) (string, error) {
 //
 //	EncodeDone(w)  // Sends: data: [DONE]\n\n
 func EncodeDone(w io.Writer) error {
-	_, err := fmt.Fprintf(w, "data: %s\n\n", DoneMarker)
+	_, err := fmt.Fprintf(w, "data: %s\n\n", doneMarker)
 	return err
 }
 
@@ -311,7 +308,7 @@ func StreamSSEWithInterval(w http.ResponseWriter, ctx context.Context, stream St
 
 // setHeaders sets the standard SSE headers on the response writer.
 func setHeaders(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", ContentType)
+	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
