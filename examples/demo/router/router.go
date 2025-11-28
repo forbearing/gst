@@ -10,8 +10,9 @@ import (
 	"demo/model/setting"
 
 	"github.com/forbearing/gst/router"
-	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
+
+	"github.com/forbearing/gst/types"
 )
 
 func Init() error {
