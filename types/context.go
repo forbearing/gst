@@ -2,9 +2,11 @@ package types
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/url"
 
+	"github.com/forbearing/gst/internal/sse"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
 )
@@ -14,7 +16,7 @@ type ControllerContext struct {
 	UserID   string // currrent login user id
 	Route    string
 	Params   map[string]string
-	Query    map[string][]string
+	Query    url.Values
 
 	RequestID string
 	TraceID   string
@@ -50,7 +52,7 @@ type DatabaseContext struct {
 	UserID   string // currrent login user id
 	Route    string
 	Params   map[string]string
-	Query    map[string][]string
+	Query    url.Values
 
 	context   context.Context
 	RequestID string
@@ -136,7 +138,7 @@ type ServiceContext struct {
 	// eg: DELETE /api/user/:userid/shelf/:shelfid/book
 	// Params: map[string]string{"userid": "xxxxx-myuserid-xxxxx", "shelfid": "xxxxx-myshelfid-xxxxx"}
 	Params map[string]string
-	Query  map[string][]string
+	Query  url.Values
 
 	SessionID string // session id
 	Username  string // currrent login user.
@@ -261,6 +263,44 @@ func (sc *ServiceContext) WithPhase(phase consts.Phase) *ServiceContext {
 
 // RequiresAuth returns whether the current API requires authentication
 func (sc *ServiceContext) RequiresAuth() bool { return sc.requiresAuth }
+
+// Encode writes an SSE event to the given writer.
+// This is a convenience method that wraps sse.Encode for use within
+// SSE stream callbacks.
+//
+// The event is formatted according to the SSE specification:
+//   - Fields are written in recommended order: id, event, retry, data
+//   - Each field is written as "field: value\n"
+//   - Multiple data fields are concatenated (for multi-line data)
+//   - Events are separated by a blank line (\n\n)
+//
+// If Data is a complex type (map, struct, slice), it will be JSON-encoded.
+// If Data is a primitive type, it will be converted to string.
+// If Data is nil, no data field will be written.
+//
+// Example:
+//
+//	ctx.SSE().WithInterval(1*time.Second).Stream(func(w io.Writer) bool {
+//	    _ = ctx.Encode(w, types.Event{
+//	        Event: "message",
+//	        Data:  "Hello",
+//	    })
+//	    return true
+//	})
+//
+// Parameters:
+//   - w: Writer to write the event to (typically from SSE stream callback)
+//   - event: SSE event to encode
+//
+// Returns:
+//   - error: Any error that occurred during encoding
+func (sc *ServiceContext) Encode(w io.Writer, event Event) error {
+	if sc == nil {
+		return nil
+	}
+
+	return sse.Encode(w, event)
+}
 
 type ModelContext struct {
 	dbctx *DatabaseContext

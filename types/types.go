@@ -1,5 +1,13 @@
 package types
 
+import (
+	"github.com/forbearing/gst/internal/sse"
+)
+
+// Event is an alias for sse.Event.
+// This allows users to use types.Event instead of importing internal/sse directly.
+type Event = sse.Event
+
 type ControllerConfig[M Model] struct {
 	DB        any // only support *gorm.DB
 	TableName string

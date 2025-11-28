@@ -208,7 +208,10 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 				return
 			}
 			logResponse(log, consts.PHASE_CREATE, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -413,7 +416,10 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 				return
 			}
 			logResponse(log, consts.PHASE_DELETE, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -660,7 +666,10 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 				return
 			}
 			logResponse(log, consts.PHASE_UPDATE, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -919,7 +928,10 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 				return
 			}
 			logResponse(log, consts.PHASE_PATCH, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -1210,7 +1222,10 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 				return
 			}
 			logResponse(log, consts.PHASE_LIST, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -1573,7 +1588,10 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 				return
 			}
 			logResponse(log, consts.PHASE_GET, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -1950,7 +1968,10 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 				return
 			}
 			logResponse(log, consts.PHASE_CREATE_MANY, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -2170,7 +2191,10 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 				return
 			}
 			logResponse(log, consts.PHASE_DELETE_MANY, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -2367,7 +2391,10 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 				return
 			}
 			logResponse(log, consts.PHASE_UPDATE_MANY, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
@@ -2559,7 +2586,10 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 				return
 			}
 			logResponse(log, consts.PHASE_PATCH_MANY, rsp)
-			ResponseJSON(c, CodeSuccess, rsp)
+			// Check if response is already written (e.g., SSE streaming)
+			if !c.Writer.Written() {
+				ResponseJSON(c, CodeSuccess, rsp)
+			}
 			return
 		}
 
