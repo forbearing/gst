@@ -27,13 +27,22 @@ var (
 	ErrNotFoundServiceID = errors.New("not found service id in assetIdMap")
 )
 
-func serviceKey[M types.Model](phase consts.Phase) string {
-	typ := reflect.TypeOf(*new(M))
-	for typ.Kind() == reflect.Pointer {
-		typ = typ.Elem()
+func serviceKey[M types.Model, REQ types.Request, RSP types.Response](phase consts.Phase) string {
+	mTyp := reflect.TypeFor[M]()
+	reqTyp := reflect.TypeFor[REQ]()
+	rspTyp := reflect.TypeFor[RSP]()
+
+	for mTyp.Kind() == reflect.Pointer {
+		mTyp = mTyp.Elem()
 	}
-	key := fmt.Sprintf("%s|%s|%s", typ.PkgPath(), typ.String(), phase)
-	fmt.Println("----- service key", key)
+	for reqTyp.Kind() == reflect.Pointer {
+		reqTyp = reqTyp.Elem()
+	}
+	for rspTyp.Kind() == reflect.Pointer {
+		rspTyp = rspTyp.Elem()
+	}
+
+	key := fmt.Sprintf("%s|%s|%s|%s|%s", mTyp.PkgPath(), mTyp.String(), reqTyp.String(), rspTyp.String(), phase)
 	return key
 }
 
@@ -77,7 +86,7 @@ func Register[S types.Service[M, REQ, RSP], M types.Model, REQ types.Request, RS
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	key := serviceKey[M](phase)
+	key := serviceKey[M, REQ, RSP](phase)
 
 	// Always create a pointer instance
 	val := reflect.New(typ).Interface()
@@ -135,9 +144,9 @@ func Factory[M types.Model, REQ types.Request, RSP types.Response]() *factory[M,
 type factory[M types.Model, REQ types.Request, RSP types.Response] struct{}
 
 func (f factory[M, REQ, RSP]) Service(phase consts.Phase) types.Service[M, REQ, RSP] {
-	svc, ok := serviceMap[serviceKey[M](phase)]
+	svc, ok := serviceMap[serviceKey[M, REQ, RSP](phase)]
 	if !ok {
-		logger.Service.Debugz(ErrNotFoundService.Error(), zap.String("model", serviceKey[M](phase)))
+		logger.Service.Debugz(ErrNotFoundService.Error(), zap.String("model", serviceKey[M, REQ, RSP](phase)))
 		return new(Base[M, REQ, RSP])
 	}
 	return svc.(types.Service[M, REQ, RSP]) //nolint:errcheck
