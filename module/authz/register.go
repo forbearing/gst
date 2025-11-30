@@ -14,7 +14,7 @@ import (
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/opentracing/opentracing-go/log"
+	"go.uber.org/zap"
 )
 
 // Register register modules: Permission, Role, UserRole.
@@ -150,6 +150,7 @@ func Register() {
 
 	middleware.RegisterAuth(middleware.Authz())
 
+	log := zap.S()
 	go func() {
 		for !database.Inited() {
 			time.Sleep(100 * time.Millisecond)
