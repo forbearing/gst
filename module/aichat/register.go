@@ -18,6 +18,8 @@ type (
 	KnowledgeBase   = modelaichat.KnowledgeBase
 	Document        = modelaichat.Document
 	Chunk           = modelaichat.Chunk
+	Prompt          = modelaichat.Prompt
+	PromptFavorite  = modelaichat.PromptFavorite
 )
 
 // Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
@@ -31,6 +33,8 @@ type (
 //   - KnowledgeBase: Knowledge bases for RAG (Retrieval-Augmented Generation)
 //   - Document: Documents in knowledge bases
 //   - Chunk: Text chunks from documents for vector search
+//   - Prompt: Prompt templates for AI interactions
+//   - PromptFavorite: User's favorite prompts
 //
 // Routes:
 //
@@ -123,6 +127,30 @@ type (
 //   - PATCH    /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks/:chunk_id
 //   - GET      /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks
 //   - GET      /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks/:chunk_id
+//
+// Prompt module (full CRUD):
+//   - POST     /api/ai/prompts
+//   - DELETE   /api/ai/prompts/:pmt_id
+//   - PUT      /api/ai/prompts/:pmt_id
+//   - PATCH    /api/ai/prompts/:pmt_id
+//   - GET      /api/ai/prompts
+//   - GET      /api/ai/prompts/:pmt_id
+//   - POST     /api/ai/prompts/batch
+//   - DELETE   /api/ai/prompts/batch
+//   - PUT      /api/ai/prompts/batch
+//   - PATCH    /api/ai/prompts/batch
+//
+// PromptFavorite module (full CRUD):
+//   - POST     /api/ai/prompts/:pmt_id/favorites
+//   - DELETE   /api/ai/prompts/:pmt_id/favorites/:id
+//   - PUT      /api/ai/prompts/:pmt_id/favorites/:id
+//   - PATCH    /api/ai/prompts/:pmt_id/favorites/:id
+//   - GET      /api/ai/prompts/:pmt_id/favorites
+//   - GET      /api/ai/prompts/:pmt_id/favorites/:id
+//   - POST     /api/ai/prompts/:pmt_id/favorites/batch
+//   - DELETE   /api/ai/prompts/:pmt_id/favorites/batch
+//   - PUT      /api/ai/prompts/:pmt_id/favorites/batch
+//   - PATCH    /api/ai/prompts/:pmt_id/favorites/batch
 //
 // Supported provider types:
 //   - openai: OpenAI API
@@ -306,5 +334,43 @@ func Register() {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
+	)
+
+	// Register "Prompt" module
+	module.Use[
+		*Prompt,
+		*Prompt,
+		*Prompt,
+		*service.Base[*Prompt, *Prompt, *Prompt]](
+		module.NewWrapper[*Prompt, *Prompt, *Prompt]("/ai/prompts", "pmt_id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
+	)
+
+	// Register "PromptFavorite" module
+	module.Use[
+		*PromptFavorite,
+		*PromptFavorite,
+		*PromptFavorite,
+		*service.Base[*PromptFavorite, *PromptFavorite, *PromptFavorite]](
+		module.NewWrapper[*PromptFavorite, *PromptFavorite, *PromptFavorite]("/ai/prompts/:pmt_id/favorites", "id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
 	)
 }
