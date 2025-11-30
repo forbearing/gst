@@ -8,9 +8,10 @@
 // See module/helloworld for a complete example.
 package module
 
+import (
+	"github.com/forbearing/gst/module/aichat"
+)
+
 func init() {
-	// TODO: Call your module Register() functions here
-	// Example:
-	//   user.Register()
-	//   order.Register()
+	aichat.Register()
 }
