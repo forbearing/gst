@@ -269,7 +269,7 @@ func Register() {
 		*KnowledgeBase,
 		*KnowledgeBase,
 		*service.Base[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]](
-		module.NewWrapper[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]("/ai/knowledge-bases", "kb_id", false),
+		module.NewWrapper[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]("/ai/rag/knowledge-bases", "kb_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -284,7 +284,7 @@ func Register() {
 		*Document,
 		*Document,
 		*service.Base[*Document, *Document, *Document]](
-		module.NewWrapper[*Document, *Document, *Document]("/ai/knowledge-bases/:kb_id/documents", "doc_id", false),
+		module.NewWrapper[*Document, *Document, *Document]("/ai/rag/knowledge-bases/:kb_id/documents", "doc_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -299,7 +299,7 @@ func Register() {
 		*Chunk,
 		*Chunk,
 		*service.Base[*Chunk, *Chunk, *Chunk]](
-		module.NewWrapper[*Chunk, *Chunk, *Chunk]("/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks", "chunk_id", false),
+		module.NewWrapper[*Chunk, *Chunk, *Chunk]("/ai/rag/knowledge-bases/:kb_id/documents/:doc_id/chunks", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
