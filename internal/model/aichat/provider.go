@@ -51,3 +51,22 @@ type Provider struct {
 
 func (Provider) GetTableName() string { return "ai_providers" }
 func (Provider) Purge() bool          { return true }
+
+// TestConnectionRsp is the response type for testing provider connection
+type TestConnectionRsp struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+}
+
+// ListModelsRsp is the response type for listing provider models
+type ListModelsRsp struct {
+	Models []ModelInfo `json:"models"`
+}
+
+// ModelInfo represents a model provided by the provider
+type ModelInfo struct {
+	ID      string `json:"id"`      // Model identifier (e.g., gpt-4o)
+	Name    string `json:"name"`    // Model display name
+	Type    string `json:"type"`    // Model type (chat, embedding, etc.)
+	Context int    `json:"context"` // Context length
+}
