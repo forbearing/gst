@@ -7,11 +7,11 @@ import (
 
 // Chat represents a conversation session between a user and an AI model
 type Chat struct {
-	UserID     string                       `gorm:"size:100;not null;index" json:"user_id,omitempty" schema:"user_id"` // User ID
-	Title      string                       `gorm:"size:200;not null" json:"title,omitempty" schema:"title"`         // Chat title
-	Summary    string                       `gorm:"size:500" json:"summary,omitempty" schema:"summary"`              // Chat summary
-	ModelID    string                       `gorm:"size:100;not null;index" json:"model_id,omitempty" schema:"model_id"` // Model ID
-	MessageIDs datatypes.JSONSlice[string] `json:"message_ids,omitempty"` // Message IDs
+	UserID     string                      `gorm:"size:100;not null;index" json:"user_id,omitempty" schema:"user_id"`   // User ID
+	Title      string                      `gorm:"size:200;not null" json:"title,omitempty" schema:"title"`             // Chat title
+	Summary    string                      `gorm:"size:500" json:"summary,omitempty" schema:"summary"`                  // Chat summary
+	ModelID    string                      `gorm:"size:100;not null;index" json:"model_id,omitempty" schema:"model_id"` // Model ID
+	MessageIDs datatypes.JSONSlice[string] `json:"message_ids,omitempty"`                                               // Message IDs
 
 	// Statistics
 	MessageCount int `gorm:"default:0" json:"message_count,omitempty"` // Message count
