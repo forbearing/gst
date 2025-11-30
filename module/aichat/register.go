@@ -15,9 +15,12 @@ type (
 	Chat            = modelaichat.Chat
 	Message         = modelaichat.Message
 	MessageFeedBack = modelaichat.MessageFeedback
+	KnowledgeBase   = modelaichat.KnowledgeBase
+	Document        = modelaichat.Document
+	Chunk           = modelaichat.Chunk
 )
 
-// Register registers AI chat modules for managing AI providers, models, chats, and messages.
+// Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
 //
 // Models:
 //   - Model: AI model configuration and metadata
@@ -25,6 +28,9 @@ type (
 //   - Chat: Chat conversation sessions
 //   - Message: Messages within a chat conversation
 //   - MessageFeedback: User feedback for messages
+//   - KnowledgeBase: Knowledge bases for RAG (Retrieval-Augmented Generation)
+//   - Document: Documents in knowledge bases
+//   - Chunk: Text chunks from documents for vector search
 //
 // Routes:
 //
@@ -93,6 +99,30 @@ type (
 //   - POST     /api/ai/providers/models
 //     Request body: Provider (with config information)
 //     Response: ListModelsRsp with array of available models
+//
+// KnowledgeBase module (full CRUD):
+//   - POST     /api/ai/knowledge-bases
+//   - DELETE   /api/ai/knowledge-bases/:kb_id
+//   - PUT      /api/ai/knowledge-bases/:kb_id
+//   - PATCH    /api/ai/knowledge-bases/:kb_id
+//   - GET      /api/ai/knowledge-bases
+//   - GET      /api/ai/knowledge-bases/:kb_id
+//
+// Document module (full CRUD):
+//   - POST     /api/ai/knowledge-bases/:kb_id/documents
+//   - DELETE   /api/ai/knowledge-bases/:kb_id/documents/:doc_id
+//   - PUT      /api/ai/knowledge-bases/:kb_id/documents/:doc_id
+//   - PATCH    /api/ai/knowledge-bases/:kb_id/documents/:doc_id
+//   - GET      /api/ai/knowledge-bases/:kb_id/documents
+//   - GET      /api/ai/knowledge-bases/:kb_id/documents/:doc_id
+//
+// Chunk module (full CRUD):
+//   - POST     /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks
+//   - DELETE   /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks/:chunk_id
+//   - PUT      /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks/:chunk_id
+//   - PATCH    /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks/:chunk_id
+//   - GET      /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks
+//   - GET      /api/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks/:chunk_id
 //
 // Supported provider types:
 //   - openai: OpenAI API
@@ -225,6 +255,51 @@ func Register() {
 		*MessageFeedBack,
 		*service.Base[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]](
 		module.NewWrapper[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]("/ai/chats/:chat_id/messages/:msg_id/feedback", "id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+	)
+
+	// Register "KnowledgeBase" module.
+	module.Use[
+		*KnowledgeBase,
+		*KnowledgeBase,
+		*KnowledgeBase,
+		*service.Base[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]](
+		module.NewWrapper[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]("/ai/knowledge-bases", "kb_id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+	)
+
+	// Register "Document" module.
+	module.Use[
+		*Document,
+		*Document,
+		*Document,
+		*service.Base[*Document, *Document, *Document]](
+		module.NewWrapper[*Document, *Document, *Document]("/ai/knowledge-bases/:kb_id/documents", "doc_id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+	)
+
+	// Register "Chunk" module
+	module.Use[
+		*Chunk,
+		*Chunk,
+		*Chunk,
+		*service.Base[*Chunk, *Chunk, *Chunk]](
+		module.NewWrapper[*Chunk, *Chunk, *Chunk]("/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks", "chunk_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
