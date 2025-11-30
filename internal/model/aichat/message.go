@@ -35,11 +35,11 @@ const (
 
 // Message represents a single message in a chat conversation
 type Message struct {
-	Role       MessageRole   `gorm:"size:20;not null;index" json:"role" schema:"role"`                           // Message role
-	Status     MessageStatus `gorm:"size:20;default:completed" json:"status,omitempty" schema:"status"`         // Message status
-	Content    string        `gorm:"type:text" json:"content"`                                                    // Message content
-	ErrMessage string        `gorm:"type:text" json:"err_message,omitempty"`                                     // Error message if failed
-	StopReason *StopReason   `gorm:"size:20" json:"stop_reason,omitempty" schema:"stop_reason"`                  // Stop reason
+	Role       MessageRole   `gorm:"size:20;not null;index" json:"role" schema:"role"`                  // Message role
+	Status     MessageStatus `gorm:"size:20;default:completed" json:"status,omitempty" schema:"status"` // Message status
+	Content    string        `gorm:"type:text" json:"content"`                                          // Message content
+	ErrMessage string        `gorm:"type:text" json:"err_message,omitempty"`                            // Error message if failed
+	StopReason *StopReason   `gorm:"size:20" json:"stop_reason,omitempty" schema:"stop_reason"`         // Stop reason
 
 	// Model information
 	ParentID   *string          `gorm:"index" json:"parent_id,omitempty" schema:"parent_id"` // Parent message ID (for regeneration versioning)
