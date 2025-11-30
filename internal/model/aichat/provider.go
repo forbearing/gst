@@ -33,9 +33,10 @@ type ProviderConfig struct {
 
 // Provider represents an AI provider
 type Provider struct {
-	Name string       `gorm:"size:100;not null;uniqueIndex" json:"name" schema:"name"` // Display name
-	Code string       `gorm:"size:50;not null;uniqueIndex" json:"code" schema:"code"`  // Unique identifier
-	Type ProviderType `gorm:"size:20;not null;index" json:"type" schema:"type"`        // Provider type
+	Name     string                      `gorm:"size:100;not null;uniqueIndex" json:"name" schema:"name"` // Display name
+	Code     string                      `gorm:"size:50;not null;uniqueIndex" json:"code" schema:"code"`  // Unique identifier
+	Type     ProviderType                `gorm:"size:20;not null;index" json:"type" schema:"type"`        // Provider type
+	ModelIDs datatypes.JSONSlice[string] `json:"model_ids,omitempty"`                                     // Associated models's ID list
 
 	Config datatypes.JSONType[ProviderConfig] `json:"config"` // AI provider configuration
 
@@ -43,14 +44,14 @@ type Provider struct {
 	Icon        string `gorm:"size:255" json:"icon"`    // Icon URL
 	Status      *int   `gorm:"default:1" json:"status"` // Status: 1 enabled, 0 disabled
 
-	// // Associated AI models
-	// Models []Model `gorm:"foreignKey:ProviderID" json:"models,omitempty"`
+	// Associated AI models
+	Models []Model `gorm:"-" json:"models,omitempty"`
 
 	model.Base
 }
 
-func (Provider) GetTableName() string { return "ai_providers" }
 func (Provider) Purge() bool          { return true }
+func (Provider) GetTableName() string { return "ai_providers" }
 
 // TestConnectionRsp is the response type for testing provider connection
 type TestConnectionRsp struct {

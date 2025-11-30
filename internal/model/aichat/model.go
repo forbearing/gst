@@ -41,8 +41,8 @@ type Model struct {
 	IsDefault   *bool  `gorm:"default:false" json:"is_default,omitempty" schema:"is_default"` // Whether is default model
 	Status      *int   `gorm:"default:1;index" json:"status" schema:"status"`                 // Status: 1 enabled, 0 disabled
 
-	// // Association
-	// Provider *Provider `gorm:"foreignKey:ProviderID" json:"provider,omitempty" schema:"provider"`
+	// Association
+	Provider *Provider `gorm:"-" json:"provider,omitempty" schema:"provider"`
 
 	model.Base
 }
