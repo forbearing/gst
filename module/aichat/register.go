@@ -20,6 +20,9 @@ type (
 	Chunk           = modelaichat.Chunk
 	Prompt          = modelaichat.Prompt
 	PromptFavorite  = modelaichat.PromptFavorite
+	Agent           = modelaichat.Agent
+	AgentTool       = modelaichat.AgentTool
+	AgentFavorite   = modelaichat.AgentFavorite
 )
 
 // Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
@@ -35,6 +38,9 @@ type (
 //   - Chunk: Text chunks from documents for vector search
 //   - Prompt: Prompt templates for AI interactions
 //   - PromptFavorite: User's favorite prompts
+//   - Agent: AI agents with tools and RAG capabilities
+//   - AgentFavorite: User's favorite agents
+//   - AgentTool: Tools/functions that agents can use
 //
 // Routes:
 //
@@ -151,6 +157,42 @@ type (
 //   - DELETE   /api/ai/prompts/:pmt_id/favorites/batch
 //   - PUT      /api/ai/prompts/:pmt_id/favorites/batch
 //   - PATCH    /api/ai/prompts/:pmt_id/favorites/batch
+//
+// Agent module (full CRUD):
+//   - POST     /api/ai/agents
+//   - DELETE   /api/ai/agents/:agent_id
+//   - PUT      /api/ai/agents/:agent_id
+//   - PATCH    /api/ai/agents/:agent_id
+//   - GET      /api/ai/agents
+//   - GET      /api/ai/agents/:agent_id
+//   - POST     /api/ai/agents/batch
+//   - DELETE   /api/ai/agents/batch
+//   - PUT      /api/ai/agents/batch
+//   - PATCH    /api/ai/agents/batch
+//
+// AgentFavorite module (full CRUD):
+//   - POST     /api/ai/agents/:agent_id/favorites
+//   - DELETE   /api/ai/agents/:agent_id/favorites/:id
+//   - PUT      /api/ai/agents/:agent_id/favorites/:id
+//   - PATCH    /api/ai/agents/:agent_id/favorites/:id
+//   - GET      /api/ai/agents/:agent_id/favorites
+//   - GET      /api/ai/agents/:agent_id/favorites/:id
+//   - POST     /api/ai/agents/:agent_id/favorites/batch
+//   - DELETE   /api/ai/agents/:agent_id/favorites/batch
+//   - PUT      /api/ai/agents/:agent_id/favorites/batch
+//   - PATCH    /api/ai/agents/:agent_id/favorites/batch
+//
+// AgentTool module (full CRUD):
+//   - POST     /api/ai/agents/tools
+//   - DELETE   /api/ai/agents/tools/:id
+//   - PUT      /api/ai/agents/tools/:id
+//   - PATCH    /api/ai/agents/tools/:id
+//   - GET      /api/ai/agents/tools
+//   - GET      /api/ai/agents/tools/:id
+//   - POST     /api/ai/agents/tools/batch
+//   - DELETE   /api/ai/agents/tools/batch
+//   - PUT      /api/ai/agents/tools/batch
+//   - PATCH    /api/ai/agents/tools/batch
 //
 // Supported provider types:
 //   - openai: OpenAI API
@@ -362,6 +404,63 @@ func Register() {
 		*PromptFavorite,
 		*service.Base[*PromptFavorite, *PromptFavorite, *PromptFavorite]](
 		module.NewWrapper[*PromptFavorite, *PromptFavorite, *PromptFavorite]("/ai/prompts/:pmt_id/favorites", "id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
+	)
+
+	// Register "Agent" module
+	module.Use[
+		*Agent,
+		*Agent,
+		*Agent,
+		*service.Base[*Agent, *Agent, *Agent]](
+		module.NewWrapper[*Agent, *Agent, *Agent]("/ai/agents", "agent_id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
+	)
+
+	// Register "AgentFavorite" module
+	module.Use[
+		*AgentFavorite,
+		*AgentFavorite,
+		*AgentFavorite,
+		*service.Base[*AgentFavorite, *AgentFavorite, *AgentFavorite]](
+		module.NewWrapper[*AgentFavorite, *AgentFavorite, *AgentFavorite]("/ai/agents/:agent_id/favorites", "id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
+	)
+
+	// Register "AgentTool" module
+	module.Use[
+		*AgentTool,
+		*AgentTool,
+		*AgentTool,
+		*service.Base[*AgentTool, *AgentTool, *AgentTool]](
+		module.NewWrapper[*AgentTool, *AgentTool, *AgentTool]("/ai/agents/tools", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
