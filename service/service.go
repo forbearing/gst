@@ -28,23 +28,59 @@ var (
 )
 
 func serviceKey[M types.Model](phase consts.Phase) string {
-	typ := reflect.TypeOf(*new(M)).Elem()
+	typ := reflect.TypeOf(*new(M))
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
 	key := fmt.Sprintf("%s|%s|%s", typ.PkgPath(), typ.String(), phase)
+	fmt.Println("----- service key", key)
 	return key
 }
 
-// Register service instance.
+// Register registers a service instance for the specified phase.
 //
-// If Register called in "init" function, logger.Service is nil
-// the service.Logger will be set in "Init".
+// The service type parameter S can be either a pointer to a struct type (e.g., *MyService)
+// or a non-pointer struct type (e.g., MyService). The function will automatically handle
+// both cases and always store a pointer instance in the service map.
 //
-// If Register called is not "init" function, such as "Init", logger.Service is not nil,
-// set the service.Logger directly.
+// Example usage with pointer type:
+//
+//	type myService struct {
+//	    service.Base[*model.User, *request.CreateUserReq, *response.CreateUserRsp]
+//	}
+//
+//	func init() {
+//	    service.Register[*myService](consts.PHASE_CREATE)
+//	}
+//
+// Example usage with non-pointer type:
+//
+//	type myService struct {
+//	    service.Base[*model.User, *request.CreateUserReq, *response.CreateUserRsp]
+//	}
+//
+//	func init() {
+//	    service.Register[myService](consts.PHASE_CREATE)
+//	}
+//
+// Logger initialization:
+//   - If Register is called in an "init" function, logger.Service may be nil,
+//     and the service.Logger will be set later in service.Init().
+//   - If Register is called after initialization (e.g., in Init function),
+//     logger.Service is already available, and the service.Logger will be set directly.
 func Register[S types.Service[M, REQ, RSP], M types.Model, REQ types.Request, RSP types.Response](phase consts.Phase) {
 	mu.Lock()
 	defer mu.Unlock()
+
+	// Get the type of S
+	typ := reflect.TypeFor[S]()
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
 	key := serviceKey[M](phase)
-	val := reflect.New(reflect.TypeOf(*new(S)).Elem()).Interface()
+
+	// Always create a pointer instance
+	val := reflect.New(typ).Interface()
 	setLogger(val)
 	serviceMap[key] = val
 }
@@ -55,8 +91,14 @@ func setLogger(s any) {
 	if logger.Service == nil {
 		return
 	}
-	typ := reflect.TypeOf(s).Elem()
-	val := reflect.ValueOf(s).Elem()
+	typ := reflect.TypeOf(s)
+	val := reflect.ValueOf(s)
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	for val.Kind() == reflect.Pointer {
+		val = val.Elem()
+	}
 	for i := range typ.NumField() {
 		switch strings.ToLower(typ.Field(i).Name) {
 		case "logger": // service object has itself types.Logger
