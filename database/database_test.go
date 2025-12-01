@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/config"
@@ -260,6 +262,24 @@ func TestDatabaseCreate(t *testing.T) {
 	require.Equal(t, u2.IsActive, u22.IsActive, "u2 is_active should match")
 	require.Equal(t, u3.IsActive, u33.IsActive, "u3 is_active should match")
 
+	// all created resources will generates ID automatically
+	now := time.Now().Unix()
+	list := []*TestUser{
+		{
+			Name: strconv.Itoa(int(now)),
+		},
+		{
+			Name: strconv.Itoa(int(now + 1)),
+		},
+		{
+			Name: strconv.Itoa(int(now + 2)),
+		},
+	}
+	require.NoError(t, database.Database[*TestUser](nil).Create(list...))
+	for _, u := range list {
+		require.NotEmpty(t, u.ID, "id should not be empty")
+	}
+
 	// Test Create with empty resources - should not return error
 	require.NoError(t, database.Database[*TestUser](nil).Create(nil))
 	require.NoError(t, database.Database[*TestUser](nil).Create([]*TestUser{nil, nil, nil}...))
@@ -406,6 +426,24 @@ func TestDatabaseUpdate(t *testing.T) {
 	require.Equal(t, u1.IsActive, u11.IsActive, "u1 is_active should match")
 	require.Equal(t, u2.IsActive, u22.IsActive, "u2 is_active should match")
 	require.Equal(t, u3.IsActive, u33.IsActive, "u3 is_active should match")
+
+	// all created resources will generates ID automatically
+	now := time.Now().Unix()
+	list := []*TestUser{
+		{
+			Name: strconv.Itoa(int(now)),
+		},
+		{
+			Name: strconv.Itoa(int(now + 1)),
+		},
+		{
+			Name: strconv.Itoa(int(now + 2)),
+		},
+	}
+	require.NoError(t, database.Database[*TestUser](nil).Update(list...))
+	for _, u := range list {
+		require.NotEmpty(t, u.ID, "id should not be empty")
+	}
 
 	// Test Update with empty resources - should not return error
 	require.NoError(t, database.Database[*TestUser](nil).Update(nil))
