@@ -248,12 +248,12 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.Provider,
-		*modelaichat.TestConnectionRsp,
+		*modelaichat.ProviderTestRsp,
 		*serviceaichat.TestConnection](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.Provider,
-			*modelaichat.TestConnectionRsp](
+			*modelaichat.ProviderTestRsp](
 			"/ai/providers/test-connection",
 			"id",
 			false,
@@ -267,12 +267,12 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.Provider,
-		*modelaichat.ListModelsRsp,
+		*modelaichat.ProviderListModelsRsp,
 		*serviceaichat.ListModels](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.Provider,
-			*modelaichat.ListModelsRsp](
+			*modelaichat.ProviderListModelsRsp](
 			"/ai/providers/models",
 			"id",
 			false,

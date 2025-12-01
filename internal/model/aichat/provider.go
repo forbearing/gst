@@ -44,30 +44,34 @@ type Provider struct {
 	Icon        string `gorm:"size:255" json:"icon"`    // Icon URL
 	Status      *int   `gorm:"default:1" json:"status"` // Status: 1 enabled, 0 disabled
 
-	// Associated AI models
 	Models []Model `gorm:"-" json:"models,omitempty"`
 
 	model.Base
 }
 
 func (Provider) Purge() bool          { return true }
-func (Provider) GetTableName() string { return "ai_providers" }
+func (Provider) GetTableName() string { return "llm_providers" }
 
-// TestConnectionRsp is the response type for testing provider connection
-type TestConnectionRsp struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
+// ProviderTestRsp is the response type for testing provider connection
+type ProviderTestRsp struct {
+	Success   bool     `json:"success"`
+	Message   string   `json:"message,omitempty"`
+	Latency   int64    `json:"latency,omitempty"` // milliseconds
+	ModelList []string `json:"model_list,omitempty"`
 }
 
-// ListModelsRsp is the response type for listing provider models
-type ListModelsRsp struct {
-	Models []ModelInfo `json:"models"`
+// ProviderListModelsRsp is the response type for listing provider models
+type ProviderListModelsRsp struct {
+	Models []ProviderModelInfo `json:"models"`
 }
 
-// ModelInfo represents a model provided by the provider
-type ModelInfo struct {
-	ID      string `json:"id"`      // Model identifier (e.g., gpt-4o)
-	Name    string `json:"name"`    // Model display name
-	Type    string `json:"type"`    // Model type (chat, embedding, etc.)
-	Context int    `json:"context"` // Context length
+// ProviderModelInfo represents a model provided by the provider
+type ProviderModelInfo struct {
+	ID          string `json:"id"`      // Model identifier (e.g., gpt-4o)
+	Name        string `json:"name"`    // Model display name
+	Type        string `json:"type"`    // Model type (chat, embedding, etc.)
+	Context     int    `json:"context"` // Context length
+	Description string `json:"description,omitempty"`
+	MaxOutput   int    `json:"max_output,omitempty"`
+	Owned       string `json:"owned,omitempty"`
 }

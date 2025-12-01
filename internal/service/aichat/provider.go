@@ -15,15 +15,15 @@ import (
 )
 
 type TestConnection struct {
-	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.TestConnectionRsp]
+	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.ProviderTestRsp]
 }
 
 type ListModels struct {
-	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.ListModelsRsp]
+	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.ProviderListModelsRsp]
 }
 
 // Create tests the connection to the AI provider
-func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat.Provider) (*modelaichat.TestConnectionRsp, error) {
+func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat.Provider) (*modelaichat.ProviderTestRsp, error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Infow("testing provider connection", "provider_id", provider.ID, "provider_type", provider.Type)
 
@@ -184,14 +184,14 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 
 	log.Infow("provider connection test completed", "success", success, "message", message)
 
-	return &modelaichat.TestConnectionRsp{
+	return &modelaichat.ProviderTestRsp{
 		Success: success,
 		Message: message,
 	}, nil
 }
 
 // Create lists all models provided by the AI provider
-func (s *ListModels) Create(ctx *types.ServiceContext, provider *modelaichat.Provider) (*modelaichat.ListModelsRsp, error) {
+func (s *ListModels) Create(ctx *types.ServiceContext, provider *modelaichat.Provider) (*modelaichat.ProviderListModelsRsp, error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Infow("listing provider models", "provider_id", provider.ID, "provider_type", provider.Type)
 
@@ -203,7 +203,7 @@ func (s *ListModels) Create(ctx *types.ServiceContext, provider *modelaichat.Pro
 	// Get provider configuration
 	config := provider.Config.Data()
 
-	var models []modelaichat.ModelInfo
+	var models []modelaichat.ProviderModelInfo
 
 	switch provider.Type {
 	case modelaichat.ProviderOpenAI, modelaichat.ProviderCustom:
@@ -254,7 +254,7 @@ func (s *ListModels) Create(ctx *types.ServiceContext, provider *modelaichat.Pro
 		}
 
 		for _, m := range openaiResp.Data {
-			models = append(models, modelaichat.ModelInfo{
+			models = append(models, modelaichat.ProviderModelInfo{
 				ID:      m.ID,
 				Name:    m.ID,
 				Type:    "chat", // Default to chat for OpenAI models
@@ -311,7 +311,7 @@ func (s *ListModels) Create(ctx *types.ServiceContext, provider *modelaichat.Pro
 		}
 
 		for _, m := range ollamaResp.Models {
-			models = append(models, modelaichat.ModelInfo{
+			models = append(models, modelaichat.ProviderModelInfo{
 				ID:      m.Name,
 				Name:    m.Name,
 				Type:    "chat", // Default to chat for Ollama models
@@ -322,12 +322,12 @@ func (s *ListModels) Create(ctx *types.ServiceContext, provider *modelaichat.Pro
 	default:
 		// For other provider types, return empty list
 		// They can be manually added or implemented later
-		models = []modelaichat.ModelInfo{}
+		models = []modelaichat.ProviderModelInfo{}
 	}
 
 	log.Infow("provider models listed", "count", len(models))
 
-	return &modelaichat.ListModelsRsp{
+	return &modelaichat.ProviderListModelsRsp{
 		Models: models,
 	}, nil
 }
