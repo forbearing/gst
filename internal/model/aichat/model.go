@@ -20,11 +20,13 @@ type ModelConfig struct {
 	ContextLength    int     `json:"context_length,omitempty"`    // Context length
 	Temperature      float64 `json:"temperature,omitempty"`       // Default temperature
 	TopP             float64 `json:"top_p,omitempty"`             // Default top_p
+	TopK             int     `json:"top_k,omitempty"`             // Default top_k
 	FrequencyPenalty float64 `json:"frequency_penalty,omitempty"` // Frequency penalty
 	PresencePenalty  float64 `json:"presence_penalty,omitempty"`  // Presence penalty
 	SupportTools     bool    `json:"support_tools,omitempty"`     // Whether supports tool calling
 	SupportVision    bool    `json:"support_vision,omitempty"`    // Whether supports vision
 	SupportStreaming bool    `json:"support_streaming,omitempty"` // Whether supports streaming
+	MaxOutputTokens  int     `json:"max_output_tokens,omitempty"` // Maximum output tokens
 }
 
 type Model struct {
@@ -41,11 +43,10 @@ type Model struct {
 	IsDefault   *bool  `gorm:"default:false" json:"is_default,omitempty" schema:"is_default"` // Whether is default model
 	Status      *int   `gorm:"default:1;index" json:"status" schema:"status"`                 // Status: 1 enabled, 0 disabled
 
-	// Association
 	Provider *Provider `gorm:"-" json:"provider,omitempty" schema:"provider"`
 
 	model.Base
 }
 
 func (Model) Purge() bool          { return true }
-func (Model) GetTableName() string { return "ai_models" }
+func (Model) GetTableName() string { return "llm_models" }
