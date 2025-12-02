@@ -126,11 +126,11 @@ func (User) Design() {
 }
 func (User) Purge() bool { return true }
 
-func (u *User) CreateBefore(ctx *types.ModelContext) error { return u.generateHashPasswd(ctx) }
-func (u *User) UpdateBefore(ctx *types.ModelContext) error { return u.generateHashPasswd(ctx) }
+func (u *User) CreateBefore(ctx *types.ModelContext) error { return GenerateHashedPassword(u) }
+func (u *User) UpdateBefore(ctx *types.ModelContext) error { return GenerateHashedPassword(u) }
 
-// generateHashPasswd used in the scene: create user with default password.
-func (u *User) generateHashPasswd(_ *types.ModelContext) error {
+// GenerateHashedPassword used in the scene: create user with default password.
+func GenerateHashedPassword(u *User) error {
 	if len(u.Password) > 0 && len(u.PasswordHash) == 0 {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 		if err != nil {

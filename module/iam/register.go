@@ -3,6 +3,7 @@ package iam
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/middleware"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
 )
@@ -14,6 +15,7 @@ type (
 
 type Config struct {
 	EnableTenant bool // default disable tenant.
+	DefaultUsers []*User
 }
 
 // Register registers iam modules,
@@ -198,6 +200,15 @@ func Register(config ...Config) {
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
+	// create default users
+	if len(cfg.DefaultUsers) > 0 {
+		for _, u := range cfg.DefaultUsers {
+			if err := modeliam.GenerateHashedPassword(u); err != nil {
+				panic(err)
+			}
+		}
+		model.Register(cfg.DefaultUsers...)
+	}
 
 	middleware.RegisterAuth(middleware.IAMSession())
 }
