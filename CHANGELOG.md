@@ -1,8 +1,28 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Feat
+- add examples/aichat to show how to use sse
+- **database:** support query "remark"
+- **sse:** prepare support SSE
+
+### Refactor
+- rename imports: "internalsse" to  "sse"
+- **sse:** unexport consts and inline context-type
+- **types:** replace map[string][]string with url.Values for "Query" fields in ControllerContext, DatabaseContext, ServiceContext
+
+### Style
+- **types:** gofumpt format
+
+### Test
+- **database:** test resources ID generated automatically in "Create" and "Update"
+
+
+<a name="v0.10.1"></a>
+## [v0.10.1] - 2025-11-27
 ### Chore
 - **controller:** remove unused controller about column
+- **release:** generate CHANGELOG.md
 
 ### Feat
 - **middleware:** add "Timeout" middleware
@@ -26,6 +46,11 @@
 - **codegen:** change module.Init() to init() for automatic initialization
 - **config:** default disabled Audit for record operation
 - **controller:** not support set purge mode in controller
+
+### Pull Requests
+- Merge pull request [#64](https://github.com/forbearing/gst/issues/64) from forbearing/dev
+- Merge pull request [#63](https://github.com/forbearing/gst/issues/63) from forbearing/dev
+- Merge pull request [#62](https://github.com/forbearing/gst/issues/62) from forbearing/dev
 
 
 <a name="v0.10.0"></a>
@@ -145,18 +170,18 @@
 ### Fix
 - **controller:** remove `List` second parameter "cache"
 - **database:** ignore model fields when RawQuery is provided
-- **database:** improve WithQuery nil handling and documentation
-- **database:** apply WithSelect lazily and respect select columns
-- **database:** fix cache delection bug in `Delete` and `Update` options and improve docs and test coverage for `WithBatchSize`
 - **database:** always rollback if transaction failed in `TransactionFunc` and add test cases for `TransactionFunc`
+- **database:** fix UseOr to use Where() for first condition
+- **database:** check query condition is nil in `WithQuery`
+- **database:** improve WithQuery nil handling and documentation
 - **database:** ensure state cleanup on early returns
 - **database:** check count is nil in `Count`
 - **database:** properly uses database context for PingContext in `Health`
 - **database:** skip empty items in FuzzyMatch REGEXP pattern
 - **database:** always add defaultColumns in `WithSelect` and enhance `WithSelect` test cases
+- **database:** apply WithSelect lazily and respect select columns
 - **database:** check nil dest in `Get`, `First`, `Last`, `Take`
-- **database:** check query condition is nil in `WithQuery`
-- **database:** fix UseOr to use Where() for first condition
+- **database:** fix cache delection bug in `Delete` and `Update` options and improve docs and test coverage for `WithBatchSize`
 - **database:** restrict WithIndex to MySQL SELECT queries only
 - **database:** support auto migration for multiple database instances
 - **database:** check "db.shouldAutoMigrate" in `prepare`
@@ -251,6 +276,9 @@
 ### Pull Requests
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
+
+<a name="list"></a>
+## [list] - 2025-11-08
 
 <a name="v0.10.0-beta.3"></a>
 ## [v0.10.0-beta.3] - 2025-11-08
@@ -776,16 +804,41 @@ Configuration field names changed from Jaeger to OTEL
 ## [v0.8.0] - 2025-09-21
 ### Chore
 - update CHANGELOG.md
-- update examples/demo
-- **deps:** upgrade dependencies to latest version
+- update CHANGELOG.md
+- update CHANGELOG.md
 - **deps:** upgrade dependencies to latest version
 
 ### Docs
 - **types:** correct interface Cache method `WithContext` comment
 
 ### Enh
-- **controller:** controller span add "file" and "line"
 - **database:** make AuthMigrate error message more descriptive
+
+### Fix
+- **controller:** correct propagate controller span context into service layer
+- **database:** custom table name has more priority than default table name in database.Get
+- **database:** remove the redundant id query in database.Get
+- **database:** fix span context propagation to model hooks
+- **dsl:** parse custom Import and Export operation in Route keyword domain
+
+### Refactor
+- **database:** change WithSelect default behavior: no columns provides will use defaultColumns
+- **task:** upgrade github.com/shirou/gopsutil from v3 to v4
+
+### Pull Requests
+- Merge pull request [#16](https://github.com/forbearing/gst/issues/16) from forbearing/dev
+- Merge pull request [#15](https://github.com/forbearing/gst/issues/15) from forbearing/dev
+- Merge pull request [#14](https://github.com/forbearing/gst/issues/14) from forbearing/dev
+
+
+<a name="v0.8.0-beta.1"></a>
+## [v0.8.0-beta.1] - 2025-09-13
+### Chore
+- update examples/demo
+- **deps:** upgrade dependencies to latest version
+
+### Enh
+- **controller:** controller span add "file" and "line"
 
 ### Feat
 - **cache:** refactor tracing architecture and fix span context propagation
@@ -795,23 +848,13 @@ Configuration field names changed from Jaeger to OTEL
 - **tracing:** integrate Jaeger distributed tracing across framework
 
 ### Fix
-- **controller:** correct propagate controller span context into service layer
 - **controller:** correct span relation of "Service XXXBefore hook", "Database", "Service XXXAfter hook" to sibling
-- **database:** custom table name has more priority than default table name in database.Get
-- **database:** remove the redundant id query in database.Get
-- **database:** fix span context propagation to model hooks
 - **database:** propagate trace context from database into cache operations
-- **dsl:** parse custom Import and Export operation in Route keyword domain
 
 ### Refactor
 - **cache:** unify cache error handling + add tracing context support
-- **database:** change WithSelect default behavior: no columns provides will use defaultColumns
-- **task:** upgrade github.com/shirou/gopsutil from v3 to v4
 - **types:** extrace context types into dedicated file "types/context.go"
 - **types:** encapsulate context in ServiceContext and add method Context() to returns the internal context
-
-### Pull Requests
-- Merge pull request [#16](https://github.com/forbearing/gst/issues/16) from forbearing/dev
 
 
 <a name="v0.7.5"></a>
@@ -2089,17 +2132,17 @@ Migration: Update service implementations to specify REQ and RSP types:
 ## [v0.1.0] - 2024-12-26
 ### Chore
 - update examples/demo
-- update examples/demo
+- update README.md
 - update READMD.md
 - update READMD.md
 - update examples/demo
 - add READMD.md for controller
 - update READMD.md
 - update READMD.md
-- update example/demo
-- update READMD.md
 - update examples/demo
 - update READMD.md
+- update READMD.md
+- update examples/demo
 - update READMD.md
 - update example/demo
 - update examples/demo
@@ -2108,7 +2151,7 @@ Migration: Update service implementations to specify REQ and RSP types:
 - update README.md
 - update examples/simple
 - update README.md
-- update README.md
+- update example/demo
 - bump go pkg version to latest
 - **model:** add doc for `Register` and `Register`, deprecated `RegisterRoutes`
 
@@ -2632,11 +2675,13 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.1...HEAD
+[v0.10.1]: https://github.com/forbearing/gst/compare/v0.10.0...v0.10.1
 [v0.10.0]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...v0.10.0
 [v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
 [v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
@@ -2661,7 +2706,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.9.1-beta.1]: https://github.com/forbearing/gst/compare/v0.9.1...v0.9.1-beta.1
 [v0.9.1]: https://github.com/forbearing/gst/compare/v0.9.0...v0.9.1
 [v0.9.0]: https://github.com/forbearing/gst/compare/v0.8.0...v0.9.0
-[v0.8.0]: https://github.com/forbearing/gst/compare/v0.7.5...v0.8.0
+[v0.8.0]: https://github.com/forbearing/gst/compare/v0.8.0-beta.1...v0.8.0
+[v0.8.0-beta.1]: https://github.com/forbearing/gst/compare/v0.7.5...v0.8.0-beta.1
 [v0.7.5]: https://github.com/forbearing/gst/compare/v0.7.4...v0.7.5
 [v0.7.4]: https://github.com/forbearing/gst/compare/v0.7.3...v0.7.4
 [v0.7.3]: https://github.com/forbearing/gst/compare/v0.7.2...v0.7.3
