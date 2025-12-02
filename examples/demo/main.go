@@ -6,6 +6,7 @@ import (
 	_ "demo/cronjob"
 	_ "demo/middleware"
 	_ "demo/model"
+	_ "demo/module"
 	"demo/router"
 	_ "demo/service"
 

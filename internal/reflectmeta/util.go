@@ -55,6 +55,20 @@ func StructFieldToMap2(_typ reflect.Type, val reflect.Value, q map[string]string
 						q["id"] = fieldVal.FieldByName("ID").Interface().(string) //nolint:errcheck
 					}
 				}
+				remarkField := fieldVal.FieldByName("Remark")
+				if remarkField.IsValid() && !remarkField.IsZero() {
+					// Not overwrite the "Remark" value set in types.Model.
+					// The "Remark" value set in types.Model has higher priority than base model.
+					if _, loaded := q["remark"]; !loaded {
+						if remarkField.Kind() == reflect.Pointer {
+							if !remarkField.IsNil() {
+								q["remark"] = remarkField.Elem().Interface().(string) //nolint:errcheck
+							}
+						} else {
+							q["remark"] = remarkField.Interface().(string) //nolint:errcheck
+						}
+					}
+				}
 			} else {
 				StructFieldToMap2(field.Type, fieldVal, q)
 			}
@@ -197,6 +211,20 @@ func StructFieldToMap(typ reflect.Type, val reflect.Value, q map[string]string) 
 					// The "ID" value set in types.Model has higher priority than base model.
 					if _, loaded := q["id"]; !loaded {
 						q["id"] = fieldVal.FieldByName("ID").Interface().(string) //nolint:errcheck
+					}
+				}
+				remarkField := fieldVal.FieldByName("Remark")
+				if remarkField.IsValid() && !remarkField.IsZero() {
+					// Not overwrite the "Remark" value set in types.Model.
+					// The "Remark" value set in types.Model has higher priority than base model.
+					if _, loaded := q["remark"]; !loaded {
+						if remarkField.Kind() == reflect.Pointer {
+							if !remarkField.IsNil() {
+								q["remark"] = remarkField.Elem().Interface().(string) //nolint:errcheck
+							}
+						} else {
+							q["remark"] = remarkField.Interface().(string) //nolint:errcheck
+						}
 					}
 				}
 			} else {
