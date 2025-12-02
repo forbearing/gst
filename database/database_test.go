@@ -139,6 +139,18 @@ func (t *TestUser) UpdateBefore(ctx *types.ModelContext) error {
 	return nil
 }
 
+type TestUser2 struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Age      int    `json:"age"`
+	IsActive *bool  `json:"is_active"`
+
+	model.Base
+}
+
+func (t *TestUser2) Purge() bool          { return true }
+func (t *TestUser2) GetTableName() string { return "test_users" }
+
 type TestProduct struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
@@ -571,6 +583,50 @@ func TestDatabaseList(t *testing.T) {
 	require.Equal(t, 1, len(users), "should have 1 record matching name")
 	require.Equal(t, u1.Name, users[0].Name)
 
+	// Test List with Remark field query condition using TestUser2 (no hooks)
+	testRemark := "test remark for query"
+	u2_1 := &TestUser2{
+		Name:  "user2_1",
+		Email: "user2_1@example.com",
+		Age:   25,
+		Base:  model.Base{ID: "u2_1"},
+	}
+	u2_1.Remark = &testRemark
+	require.NoError(t, database.Database[*TestUser2](nil).Create(u2_1))
+
+	u2_2 := &TestUser2{
+		Name:  "user2_2",
+		Email: "user2_2@example.com",
+		Age:   26,
+		Base:  model.Base{ID: "u2_2"},
+	}
+	// u2_2 has no remark (nil)
+	require.NoError(t, database.Database[*TestUser2](nil).Create(u2_2))
+
+	// Verify u2_1 was created with remark
+	u2_1Check := new(TestUser2)
+	require.NoError(t, database.Database[*TestUser2](nil).Get(u2_1Check, u2_1.ID))
+	require.NotNil(t, u2_1Check.Remark, "u2_1 should have remark")
+	require.Equal(t, testRemark, *u2_1Check.Remark, "u2_1 remark should match")
+
+	// Query by Remark field - should find u2_1
+	queryUser2 := &TestUser2{}
+	queryUser2.Remark = &testRemark
+	users2 := make([]*TestUser2, 0)
+	require.NoError(t, database.Database[*TestUser2](nil).WithQuery(queryUser2).List(&users2))
+	require.GreaterOrEqual(t, len(users2), 1, "should have at least 1 record matching remark")
+	found := false
+	for _, u := range users2 {
+		if u.ID == u2_1.ID && u.Remark != nil && *u.Remark == testRemark {
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "should find u2_1 with matching remark")
+
+	// Clean up TestUser2 data
+	require.NoError(t, database.Database[*TestUser2](nil).Delete(u2_1, u2_2))
+
 	// Test List after soft delete - should not return soft-deleted records
 	require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
 	users = make([]*TestUser, 0)
@@ -590,9 +646,9 @@ func TestDatabaseList(t *testing.T) {
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
 	require.Equal(t, 3, len(users))
-	users2 := make([]*TestUser, 0)
-	require.NoError(t, database.Database[*TestUser](nil).List(&users2))
-	require.Equal(t, 3, len(users2))
+	users3 := make([]*TestUser, 0)
+	require.NoError(t, database.Database[*TestUser](nil).List(&users3))
+	require.Equal(t, 3, len(users3))
 
 	// Test List with different model types
 	products := make([]*TestProduct, 0)

@@ -168,7 +168,7 @@ type Base struct {
 	CreatedAt *time.Time     `json:"created_at,omitempty" gorm:"index" schema:"-" url:"-"`          // Timestamp when the record was created
 	UpdatedAt *time.Time     `json:"updated_at,omitempty" gorm:"index" schema:"-" url:"-"`          // Timestamp when the record was last updated
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index" schema:"-" url:"-"`                             // Timestamp when the record was deleted
-	Remark    *string        `json:"remark,omitempty" gorm:"size:10240" schema:"-" url:"-"`         // Optional remark or note for the record (pointer type for PATCH support)
+	Remark    *string        `json:"remark,omitempty" gorm:"size:10240" schema:"remark" url:"-"`    // Optional remark or note for the record (pointer type for PATCH support)
 	Order     *uint          `json:"order,omitempty" schema:"-" url:"-"`                            // Optional ordering value for sorting records
 
 	// Query parameter
