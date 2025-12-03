@@ -2,7 +2,9 @@ package serviceauthz
 
 import (
 	"github.com/forbearing/gst/database"
+	"github.com/forbearing/gst/internal/dao"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
+	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
@@ -13,14 +15,14 @@ type UserRoleService struct {
 	service.Base[*modelauthz.UserRole, *modelauthz.UserRole, *modelauthz.UserRole]
 }
 
-// DeleteAfter support filter and delete multiple user_roles by query parameter `user` and `role`.
+// DeleteAfter support filter and delete multiple user_roles by query parameter `username` and `rolecode`.
 func (s *UserRoleService) DeleteAfter(ctx *types.ServiceContext, userRole *modelauthz.UserRole) error {
 	log := s.WithServiceContext(ctx, consts.PHASE_DELETE_AFTER)
-	user := ctx.URL.Query().Get("user")
-	role := ctx.URL.Query().Get("role")
+	username := ctx.URL.Query().Get("username")
+	roleCode := ctx.URL.Query().Get("rolecode")
 
 	userRoles := make([]*modelauthz.UserRole, 0)
-	if err := database.Database[*modelauthz.UserRole](ctx.DatabaseContext()).WithQuery(&modelauthz.UserRole{User: user, Role: role}).List(&userRoles); err != nil {
+	if err := database.Database[*modelauthz.UserRole](ctx.DatabaseContext()).WithQuery(&modelauthz.UserRole{Username: username, RoleCode: roleCode}).List(&userRoles); err != nil {
 		log.Error(err)
 		return err
 	}
@@ -29,6 +31,28 @@ func (s *UserRoleService) DeleteAfter(ctx *types.ServiceContext, userRole *model
 	}
 	if err := database.Database[*modelauthz.UserRole](ctx.DatabaseContext()).WithPurge().Delete(userRoles...); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *UserRoleService) ListAfter(ctx *types.ServiceContext, data *[]*modelauthz.UserRole) error {
+	log := s.WithServiceContext(ctx, consts.PHASE_LIST_AFTER)
+
+	userMap, err := dao.QueryModelMap(ctx.DatabaseContext(), func(u *modeliam.User) string { return u.ID }, nil)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	roleMap, err := dao.QueryModelMap(ctx.DatabaseContext(), func(r *modelauthz.Role) string { return r.ID }, nil)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	for _, ur := range *data {
+		ur.User = userMap[ur.UserID]
+		ur.Role = roleMap[ur.RoleID]
 	}
 
 	return nil
