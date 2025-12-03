@@ -40,6 +40,8 @@ var (
 
 var globalErrors = make([]error, 0)
 
+func Started() bool { return atomic.LoadUint32(&started) > 0 }
+
 func Init() error {
 	gin.SetMode(gin.ReleaseMode)
 	root = gin.New()
@@ -70,15 +72,18 @@ func Init() error {
 		for {
 			select {
 			case mid := <-middleware.CommonMiddlewaresChan:
+				// Only use middlewares before the server start.
 				if atomic.LoadUint32(&started) == 0 {
 					auth.Use(mid)
 					pub.Use(mid)
 				}
 			case mid := <-middleware.AuthMiddlewaresChan:
 				if atomic.LoadUint32(&started) == 0 {
+					// Only use middleware before the server start.
 					auth.Use(mid)
 				}
 			case <-done:
+				// Server has been started. No need to use middlewares anymore.
 				return
 			}
 		}
@@ -109,8 +114,10 @@ func Run() error {
 		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
+	// mark the server as started.
 	atomic.StoreUint32(&started, 1)
 	done <- struct{}{}
+
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Errorw("failed to start server", "err", err)
 		return err
