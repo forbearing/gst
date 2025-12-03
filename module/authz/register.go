@@ -11,10 +11,12 @@ import (
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
+	"github.com/forbearing/gst/router"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/opentracing/opentracing-go/log"
+	"go.uber.org/zap"
 )
 
 // Register register modules: Permission, Role, UserRole.
@@ -152,7 +154,13 @@ func Register() {
 
 	go func() {
 		for !database.Inited() {
-			time.Sleep(100 * time.Millisecond)
+			zap.S().Infow("waiting database inited", "module", "authz")
+			time.Sleep(500 * time.Millisecond)
+		}
+
+		for !router.Started() {
+			zap.S().Infow("waiting router started", "module", "authz")
+			time.Sleep(500 * time.Millisecond)
 		}
 
 		// re-create all permissions
