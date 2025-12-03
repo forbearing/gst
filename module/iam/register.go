@@ -1,6 +1,8 @@
 package iam
 
 import (
+	"github.com/forbearing/gst/cronjob"
+	cronjobiam "github.com/forbearing/gst/internal/cronjob/iam"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
@@ -211,4 +213,7 @@ func Register(config ...Config) {
 	}
 
 	middleware.RegisterAuth(middleware.IAMSession())
+
+	// cleanup the oneline user that not active every 30 seconds, will run immediately after application bootstrap.
+	cronjob.Register(cronjobiam.CleanupOnlineUser, "*/30 * * * * *", "cleanup online user", cronjob.Config{RunImmediately: true})
 }

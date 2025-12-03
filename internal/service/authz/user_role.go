@@ -39,12 +39,12 @@ func (s *UserRoleService) DeleteAfter(ctx *types.ServiceContext, userRole *model
 func (s *UserRoleService) ListAfter(ctx *types.ServiceContext, data *[]*modelauthz.UserRole) error {
 	log := s.WithServiceContext(ctx, consts.PHASE_LIST_AFTER)
 
-	userMap, err := dao.QueryModelMap(ctx.DatabaseContext(), func(u *modeliam.User) string { return u.ID }, nil)
+	userMap, err := dao.QueryModelsToMap(ctx.DatabaseContext(), func(u *modeliam.User) string { return u.ID }, nil)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	roleMap, err := dao.QueryModelMap(ctx.DatabaseContext(), func(r *modelauthz.Role) string { return r.ID }, nil)
+	roleMap, err := dao.QueryModelsToMap(ctx.DatabaseContext(), func(r *modelauthz.Role) string { return r.ID }, nil)
 	if err != nil {
 		log.Error(err)
 		return err
