@@ -17,8 +17,11 @@ type UserRole struct {
 	UserID string `json:"user_id,omitempty" schema:"user_id"`
 	RoleID string `json:"role_id,omitempty" schema:"role_id"`
 
-	User string `json:"user,omitempty" schema:"user"` // 用户名,只是为了方便查询
-	Role string `json:"role,omitempty" schema:"role"` // 角色名,只是为了方便查询
+	RoleCode string `json:"rolecode,omitempty" schema:"rolecode"` // 角色Code, 用于 RBAC 角色控制和前端查询
+	Username string `json:"username,omitempty" schema:"username"` // 用户名, 用于 RBAC 用户控制和前端查询
+
+	User *modeliam.User `json:"user,omitempty" gorm:"-"`
+	Role *Role          `json:"role,omitempty" gorm:"-"`
 
 	model.Base
 }
@@ -39,7 +42,7 @@ func (r *UserRole) CreateBefore(ctx *types.ModelContext) error {
 	if err := database.Database[*Role](ctx.DatabaseContext()).Get(role, r.RoleID); err != nil {
 		return err
 	}
-	r.User, r.Role = user.Username, role.Name
+	r.Username, r.RoleCode = user.Username, role.Code
 
 	// If the user already has the role, set same id to just update it.
 	r.SetID(util.HashID(r.UserID, r.RoleID))
@@ -52,7 +55,7 @@ func (r *UserRole) CreateAfter(ctx *types.ModelContext) error {
 		return err
 	}
 	// NOTE: must be role name not role id.
-	if err := rbac.RBAC().AssignRole(r.UserID, r.Role); err != nil {
+	if err := rbac.RBAC().AssignRole(r.UserID, r.RoleCode); err != nil {
 		return err
 	}
 
@@ -62,13 +65,13 @@ func (r *UserRole) CreateAfter(ctx *types.ModelContext) error {
 		return err
 	}
 	casbinRules := make([]*CasbinRule, 0)
-	if err := database.Database[*CasbinRule](ctx.DatabaseContext()).WithLimit(1).WithQuery(&CasbinRule{V0: r.UserID, V1: r.Role}).List(&casbinRules); err != nil {
+	if err := database.Database[*CasbinRule](ctx.DatabaseContext()).WithLimit(1).WithQuery(&CasbinRule{V0: r.UserID, V1: r.RoleCode}).List(&casbinRules); err != nil {
 		return err
 	}
 	if len(casbinRules) > 0 {
 		casbinRules[0].User = user.Username
-		casbinRules[0].Role = r.Role
-		casbinRules[0].Remark = util.ValueOf(fmt.Sprintf("%s -> %s", r.User, r.Role))
+		casbinRules[0].Role = r.RoleCode
+		casbinRules[0].Remark = util.ValueOf(fmt.Sprintf("%s -> %s", r.Username, r.RoleCode))
 		return database.Database[*CasbinRule](ctx.DatabaseContext()).Update(casbinRules[0])
 	}
 	return nil
@@ -80,7 +83,7 @@ func (r *UserRole) DeleteBefore(ctx *types.ModelContext) error {
 		return err
 	}
 	// NOTE: must be role name not role id.
-	return rbac.RBAC().UnassignRole(r.UserID, r.Role)
+	return rbac.RBAC().UnassignRole(r.UserID, r.RoleCode)
 }
 
 func (r *UserRole) MarshalLogObject(enc zapcore.ObjectEncoder) error {
@@ -89,8 +92,8 @@ func (r *UserRole) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	}
 	enc.AddString("user_id", r.UserID)
 	enc.AddString("role_id", r.RoleID)
-	enc.AddString("user", r.User)
-	enc.AddString("role", r.Role)
+	enc.AddString("user", r.Username)
+	enc.AddString("role", r.RoleCode)
 	_ = enc.AddObject("base", &r.Base)
 	return nil
 }
