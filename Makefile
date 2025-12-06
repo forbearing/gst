@@ -27,8 +27,6 @@ help:
 # Run all code quality checks
 # Order matches make install tool installation order
 check: build lint format modernize nilness shadow lostcancel stringintconv vet
-	@echo "Running go mod tidy..."
-	go mod tidy
 	@echo "All checks passed successfully!"
 
 # Build the project
@@ -80,6 +78,7 @@ stringintconv:
 test:
 	@echo "Running unit tests..."
 	go test ./model/...
+	go test ./service
 	go test ./util/...
 	go test ./dsl
 	go test ./client
@@ -91,6 +90,7 @@ test:
 testv:
 	@echo "Running unit tests with verbose output..."
 	go test -v ./model/...
+	go test -v ./service
 	go test -v ./util/...
 	go test -v ./dsl
 	go test -v ./client
