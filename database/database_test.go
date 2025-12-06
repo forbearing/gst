@@ -20,6 +20,7 @@ import (
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -120,10 +121,11 @@ func findUsersByID(users []*TestUser) (u11, u22, u33 *TestUser) {
 }
 
 type TestUser struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Age      int    `json:"age"`
-	IsActive *bool  `json:"is_active"`
+	Name     string                      `json:"name"`
+	Email    string                      `json:"email"`
+	Age      int                         `json:"age"`
+	Addr     datatypes.JSONSlice[string] `json:"addr"`
+	IsActive *bool                       `json:"is_active"`
 
 	model.Base
 }
@@ -659,6 +661,47 @@ func TestDatabaseList(t *testing.T) {
 	err := database.Database[*TestUser](nil).List(nil)
 	require.Error(t, err, "should return error when dest is nil")
 	require.ErrorIs(t, err, database.ErrNilDest, "error should be ErrNilDest")
+}
+
+func TestDatabaseListWithJSONString(t *testing.T) {
+	defer cleanupTestData()
+
+	data := []*TestUser{
+		{Name: "shanghai", Addr: []string{"shanghai1", "shanghai2"}},
+		{Name: "beijing", Addr: []string{"beijing1", "beijing2"}},
+	}
+	require.NoError(t, database.Database[*TestUser](nil).Create(data...))
+
+	res := make([]*TestUser, 0)
+	// Test query JSON field without fuzzy match.
+	require.NoError(t, database.Database[*TestUser](nil).
+		WithQuery(&TestUser{Addr: []string{"shanghai"}}, types.QueryConfig{FuzzyMatch: false}).
+		List(&res))
+	require.Len(t, res, 0)
+
+	// Test query JSON field with fuzzy match
+	require.NoError(t, database.Database[*TestUser](nil).
+		WithQuery(&TestUser{Addr: []string{"shanghai"}}, types.QueryConfig{FuzzyMatch: true}).
+		List(&res))
+	require.Len(t, res, 1)
+	require.Equal(t, "shanghai", res[0].Name)
+
+	// Test query JSON field with fuzzy match again
+	require.NoError(t, database.Database[*TestUser](nil).
+		WithQuery(&TestUser{Addr: []string{"1"}}, types.QueryConfig{FuzzyMatch: true}).
+		List(&res))
+	require.Len(t, res, 2)
+	var found1, found2 bool
+	for _, r := range res {
+		if r.Name == "shanghai" {
+			found1 = true
+		}
+		if r.Name == "beijing" {
+			found2 = true
+		}
+	}
+	require.True(t, found1)
+	require.True(t, found2)
 }
 
 func TestDatabaseGet(t *testing.T) {
