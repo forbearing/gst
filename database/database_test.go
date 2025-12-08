@@ -3239,9 +3239,9 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Age, users[0].Age)
 
-		// Test RawQuery with non-nil query: RawQuery should ignore model fields
+		// Test RawQuery combined with model fields: both conditions are applied with AND logic
 		// RawQuery: age > 18, Query: Name="user1"
-		// Should return u2 and u3 (age > 18), ignoring Name condition
+		// Should return 0 records (no user with name="user1" AND age > 18, since u1 has age=18)
 		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name}, types.QueryConfig{
@@ -3249,24 +3249,38 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{18},
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users), "RawQuery should ignore model fields when both are provided")
-		foundU2, foundU3 = false, false
-		for _, u := range users {
-			if u.ID == u2.ID {
-				foundU2 = true
-				require.Equal(t, u2.Name, u.Name)
-				require.Equal(t, u2.Age, u.Age)
-				require.Equal(t, u2.Email, u.Email)
-			}
-			if u.ID == u3.ID {
-				foundU3 = true
-				require.Equal(t, u3.Name, u.Name)
-				require.Equal(t, u3.Age, u.Age)
-				require.Equal(t, u3.Email, u.Email)
-			}
-		}
-		require.True(t, foundU2, "should find u2")
-		require.True(t, foundU3, "should find u3")
+		require.Equal(t, 0, len(users), "RawQuery and model fields should be combined with AND logic")
+
+		// Test RawQuery combined with model fields: both conditions match
+		// RawQuery: age >= 18, Query: Name="user1"
+		// Should return u1 (name="user1" AND age >= 18)
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: u1.Name}, types.QueryConfig{
+				RawQuery:     "age >= ?",
+				RawQueryArgs: []any{18},
+			}).
+			List(&users))
+		require.Equal(t, 1, len(users), "RawQuery and model fields should be combined with AND logic")
+		require.Equal(t, u1.ID, users[0].ID)
+		require.Equal(t, u1.Name, users[0].Name)
+		require.Equal(t, u1.Age, users[0].Age)
+
+		// Test RawQuery combined with model fields: multiple model fields
+		// RawQuery: age > 18, Query: Name="user2", Email="user2@example.com"
+		// Should return u2 (name="user2" AND email="user2@example.com" AND age > 18)
+		users = make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: u2.Name, Email: u2.Email}, types.QueryConfig{
+				RawQuery:     "age > ?",
+				RawQueryArgs: []any{18},
+			}).
+			List(&users))
+		require.Equal(t, 1, len(users), "RawQuery and multiple model fields should be combined with AND logic")
+		require.Equal(t, u2.ID, users[0].ID)
+		require.Equal(t, u2.Name, users[0].Name)
+		require.Equal(t, u2.Age, users[0].Age)
+		require.Equal(t, u2.Email, users[0].Email)
 
 		// Test RawQuery with complex condition: (name = ? OR email = ?) AND age >= ?
 		// Should return u2 (email="user2@example.com" AND age=19)

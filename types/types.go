@@ -103,12 +103,14 @@ type ControllerConfig[M Model] struct {
 //	WithQuery(&User{Name: "John", Email: "example"}, QueryConfig{UseOr: true, FuzzyMatch: true})
 //	// WHERE name LIKE '%John%' OR email LIKE '%example%'
 //
-//	// Raw SQL query (model fields are ignored)
+//		// Raw SQL query (can be combined with model fields using AND logic)
 //	WithQuery(&User{}, QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
 //	WithQuery(nil, QueryConfig{RawQuery: "created_at BETWEEN ? AND ?", RawQueryArgs: []any{startDate, endDate}})
 //
 //	// Raw SQL with complex conditions
 //	WithQuery(&User{}, QueryConfig{RawQuery: "created_at BETWEEN ? AND ? OR priority IN (?)", RawQueryArgs: []any{startDate, endDate, priorities}})
+//	// Raw SQL combined with model fields
+//	WithQuery(&User{Name: "John"}, QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // WHERE age > ? AND name IN ('John')
 //
 //	// Combined options
 //	WithQuery(&User{Name: "John"}, QueryConfig{

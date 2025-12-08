@@ -528,10 +528,12 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 //	- Works with both exact match and fuzzy match
 //
 //	RawQuery:
-//	- When provided, model fields are completely ignored and only RawQuery is used
+//	- When provided, it will be combined with model fields using AND logic
 //	- Works even when query is nil
 //	- Supports parameterized queries with RawQueryArgs
 //	- Example: WHERE age > ? AND status = ?
+//	- When both RawQuery and model fields are provided, they are combined with AND logic
+//	- Example: RawQuery "age > ?" + model field Name="John" → WHERE age > ? AND name IN ('John')
 //
 //	AllowEmpty:
 //	- By default (false): Empty queries are blocked for safety (adds WHERE 1 = 0)
@@ -569,10 +571,10 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 //	WithQuery(&model.User{Name: "John", Email: "example"}, types.QueryConfig{UseOr: true, FuzzyMatch: true})
 //	// WHERE name LIKE '%John%' OR email LIKE '%example%'
 //
-//	// Raw SQL query (model fields are ignored)
+//		// Raw SQL query (can be combined with model fields)
 //	WithQuery(&model.User{}, types.QueryConfig{RawQuery: "age > ? AND status = ?", RawQueryArgs: []any{18, "active"}})
 //	WithQuery(nil, types.QueryConfig{RawQuery: "created_at BETWEEN ? AND ?", RawQueryArgs: []any{startDate, endDate}})
-//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // Name is ignored
+//	WithQuery(&model.User{Name: "John"}, types.QueryConfig{RawQuery: "age > ?", RawQueryArgs: []any{18}})  // WHERE age > ? AND name IN ('John')
 //
 //	// Empty query (blocked by default for safety)
 //	WithQuery(nil)  // WHERE 1 = 0 (returns no records)
@@ -598,7 +600,7 @@ func (db *database[M]) WithIndex(indexName string, hint ...consts.IndexHintMode)
 //
 //	catastrophic data loss (e.g., deleting all records). Use QueryConfig{AllowEmpty: true} to override.
 //
-// NOTE: When RawQuery is provided, all model fields are ignored regardless of their values.
+// NOTE: When both RawQuery and model fields are provided, they are combined with AND logic.
 // NOTE: REGEXP function may not be available in all databases (e.g., SQLite requires extension).
 //
 //	For SQLite compatibility, consider using FuzzyMatch with single values (LIKE) or RawQuery.
@@ -616,19 +618,27 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 
 	queryVal := reflect.ValueOf(query)
 	// Handle RawQuery first (works even if query is nil)
-	// When RawQuery is provided, model fields are ignored as per documentation
-	if len(cfg.RawQuery) > 0 {
-		db.ins = db.ins.Where(cfg.RawQuery, cfg.RawQueryArgs...)
-		// If RawQuery is provided, ignore model fields and return early
-		// RawQuery alone is sufficient for query conditions
-		return db
+	// RawQuery will be combined with model fields using AND logic if both are provided
+	hasRawQuery := len(cfg.RawQuery) > 0
+	if hasRawQuery {
+		if cfg.UseOr {
+			db.ins = db.ins.Or(cfg.RawQuery, cfg.RawQueryArgs...)
+		} else {
+			db.ins = db.ins.Where(cfg.RawQuery, cfg.RawQueryArgs...)
+		}
 	}
 
 	// Check if query is nil or empty
 	var empty M
 	if queryVal.IsNil() || reflect.DeepEqual(query, empty) {
 		// Treat nil/empty as empty query
-		// Note: RawQuery is already handled above if provided
+		// If RawQuery is provided, it's already applied above, so we can return
+		// (RawQuery alone is sufficient, no need to check empty query safety)
+		if hasRawQuery {
+			// RawQuery is already applied, no need to check empty query
+			return db
+		}
+		// No RawQuery and empty query: apply safety check
 		if !cfg.AllowEmpty {
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Warn("query is nil or empty, adding safety condition to prevent matching all records")
 			db.ins = db.ins.Where("1 = 0")
@@ -663,6 +673,13 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 	// To allow empty queries, use: WithQuery(nil, QueryConfig{AllowEmpty: true}) or
 	//                              WithQuery(&User{}, QueryConfig{AllowEmpty: true})
 	if len(q) == 0 {
+		// If RawQuery is provided, it's already applied above, so we can return
+		// (RawQuery alone is sufficient, no need to check empty query safety)
+		if hasRawQuery {
+			// RawQuery is already applied, no need to check empty query
+			return db
+		}
+		// No RawQuery and empty query: apply safety check
 		if !cfg.AllowEmpty {
 			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithQuery")).Warn("all query fields are empty, adding safety condition to prevent matching all records")
 			db.ins = db.ins.Where("1 = 0")
@@ -686,6 +703,10 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 		//     SELECT count(*) FROM `assets` WHERE `category_level2_id` REGEXP '.*XS.*|.*NU.*'
 		hasValidCondition := false
 		isFirstCondition := true
+		if len(cfg.RawQuery) > 0 {
+			// RawQuery is already applied, no need to check empty query
+			isFirstCondition = false
+		}
 		for k, v := range q {
 			items := strings.Split(v, ",")
 			// skip the string slice which all element is empty.
