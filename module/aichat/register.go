@@ -12,7 +12,7 @@ import (
 type (
 	Model           = modelaichat.Model
 	Provider        = modelaichat.Provider
-	Chat            = modelaichat.Chat
+	Conversation    = modelaichat.Conversation
 	Message         = modelaichat.Message
 	MessageFeedBack = modelaichat.MessageFeedback
 	KnowledgeBase   = modelaichat.KnowledgeBase
@@ -30,7 +30,7 @@ type (
 // Models:
 //   - Model: AI model configuration and metadata
 //   - Provider: AI provider configuration (OpenAI, Anthropic, Ollama, etc.)
-//   - Chat: Chat conversation sessions
+//   - Conversation: Conversation sessions
 //   - Message: Messages within a chat conversation
 //   - MessageFeedback: User feedback for messages
 //   - KnowledgeBase: Knowledge bases for RAG (Retrieval-Augmented Generation)
@@ -68,37 +68,37 @@ type (
 //   - PUT      /api/providers/batch
 //   - PATCH    /api/providers/batch
 //
-// Chat module (full CRUD):
-//   - POST     /api/ai/chats
-//   - DELETE   /api/ai/chats/:chat_id
-//   - PUT      /api/ai/chats/:chat_id
-//   - PATCH    /api/ai/chats/:chat_id
-//   - GET      /api/ai/chats
-//   - GET      /api/ai/chats/:chat_id
-//   - POST     /api/ai/chats/batch
-//   - DELETE   /api/ai/chats/batch
-//   - PUT      /api/ai/chats/batch
-//   - PATCH    /api/ai/chats/batch
+// Conversation module (full CRUD):
+//   - POST     /api/ai/conversations
+//   - DELETE   /api/ai/conversations/:conv_id
+//   - PUT      /api/ai/conversations/:conv_id
+//   - PATCH    /api/ai/conversations/:conv_id
+//   - GET      /api/ai/conversations
+//   - GET      /api/ai/conversations/:conv_id
+//   - POST     /api/ai/conversations/batch
+//   - DELETE   /api/ai/conversations/batch
+//   - PUT      /api/ai/conversations/batch
+//   - PATCH    /api/ai/conversations/batch
 //
 // Message module (full CRUD):
-//   - POST     /api/ai/chats/:chat_id/messages
-//   - DELETE   /api/ai/chats/:chat_id/messages/:msg_id
-//   - PUT      /api/ai/chats/:chat_id/messages/:msg_id
-//   - PATCH    /api/ai/chats/:chat_id/messages/:msg_id
-//   - GET      /api/ai/chats/:chat_id/messages
-//   - GET      /api/ai/chats/:chat_id/messages/:msg_id
-//   - POST     /api/ai/chats/:chat_id/messages/batch
-//   - DELETE   /api/ai/chats/:chat_id/messages/batch
-//   - PUT      /api/ai/chats/:chat_id/messages/batch
-//   - PATCH    /api/ai/chats/:chat_id/messages/batch
+//   - POST     /api/ai/conversations/:conv_id/messages
+//   - DELETE   /api/ai/conversations/:conv_id/messages/:msg_id
+//   - PUT      /api/ai/conversations/:conv_id/messages/:msg_id
+//   - PATCH    /api/ai/conversations/:conv_id/messages/:msg_id
+//   - GET      /api/ai/conversations/:conv_id/messages
+//   - GET      /api/ai/conversations/:conv_id/messages/:msg_id
+//   - POST     /api/ai/conversations/:conv_id/messages/batch
+//   - DELETE   /api/ai/conversations/:conv_id/messages/batch
+//   - PUT      /api/ai/conversations/:conv_id/messages/batch
+//   - PATCH    /api/ai/conversations/:conv_id/messages/batch
 //
 // MessageFeedback module (full CRUD):
-//   - POST     /api/ai/chats/:chat_id/messages/:msg_id/feedback
-//   - DELETE   /api/ai/chats/:chat_id/messages/:msg_id/feedback/:id
-//   - PUT      /api/ai/chats/:chat_id/messages/:msg_id/feedback/:id
-//   - PATCH    /api/ai/chats/:chat_id/messages/:msg_id/feedback/:id
-//   - GET      /api/ai/chats/:chat_id/messages/:msg_id/feedback
-//   - GET      /api/ai/chats/:chat_id/messages/:msg_id/feedback/:id
+//   - POST     /api/ai/conversations/:conv_id/messages/:msg_id/feedback
+//   - DELETE   /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
+//   - PUT      /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
+//   - PATCH    /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
+//   - GET      /api/ai/conversations/:conv_id/messages/:msg_id/feedback
+//   - GET      /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
 //
 // TestConnection module:
 //   - POST     /api/ai/providers/test-connection
@@ -280,13 +280,13 @@ func Register() {
 		consts.PHASE_CREATE,
 	)
 
-	// Register "Chat" module.
+	// Register "Conversation" module.
 	module.Use[
-		*Chat,
-		*Chat,
-		*Chat,
-		*service.Base[*Chat, *Chat, *Chat]](
-		module.NewWrapper[*Chat, *Chat, *Chat]("/ai/chats", "chat_id", false),
+		*Conversation,
+		*Conversation,
+		*Conversation,
+		*service.Base[*Conversation, *Conversation, *Conversation]](
+		module.NewWrapper[*Conversation, *Conversation, *Conversation]("/ai/conversations", "conv_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -305,7 +305,7 @@ func Register() {
 		*Message,
 		*Message,
 		*service.Base[*Message, *Message, *Message]](
-		module.NewWrapper[*Message, *Message, *Message]("/ai/chats/:chat_id/messages", "msg_id", false),
+		module.NewWrapper[*Message, *Message, *Message]("/ai/conversations/:conv_id/messages", "msg_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -324,7 +324,7 @@ func Register() {
 		*MessageFeedBack,
 		*MessageFeedBack,
 		*service.Base[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]](
-		module.NewWrapper[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]("/ai/chats/:chat_id/messages/:msg_id/feedback", "id", false),
+		module.NewWrapper[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]("/ai/conversations/:conv_id/messages/:msg_id/feedback", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,

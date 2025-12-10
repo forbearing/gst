@@ -42,13 +42,13 @@ type Message struct {
 	StopReason *StopReason   `gorm:"size:20" json:"stop_reason,omitempty" schema:"stop_reason"`         // Stop reason
 
 	// Model information
-	ParentID   *string          `gorm:"index" json:"parent_id,omitempty" schema:"parent_id"` // Parent message ID (for regeneration versioning)
-	ChatID     string           `gorm:"index;not null" json:"chat_id" schema:"chat_id"`      // Chat ID
-	ModelID    string           `gorm:"index;not null" json:"model_id" schema:"model_id"`    // Model ID
-	Chat       *Chat            `gorm:"-" json:"chat,omitempty"`
-	Model      *Model           `gorm:"-" json:"model,omitempty"`
-	Variations []Message        `gorm:"-" json:"variations,omitempty"`
-	Feedback   *MessageFeedback `gorm:"-" json:"feedback,omitempty"`
+	ParentID       *string          `gorm:"index" json:"parent_id,omitempty" schema:"parent_id"`            // Parent message ID (for regeneration versioning)
+	ConversationID string           `gorm:"index;not null" json:"conversation_id" schema:"conversation_id"` // Conversation ID
+	ModelID        string           `gorm:"index;not null" json:"model_id" schema:"model_id"`               // Model ID
+	Conversation   *Conversation    `gorm:"-" json:"conversation,omitempty"`
+	Model          *Model           `gorm:"-" json:"model,omitempty"`
+	Variations     []Message        `gorm:"-" json:"variations,omitempty"`
+	Feedback       *MessageFeedback `gorm:"-" json:"feedback,omitempty"`
 
 	// Token statistics
 	PromptTokens     int `gorm:"default:0" json:"prompt_tokens,omitempty"`     // Input tokens

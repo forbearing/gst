@@ -66,7 +66,7 @@ type Agent struct {
 	Prompt         *Prompt          `gorm:"-" json:"prompt,omitempty"`          // Associated prompt
 	Provider       *Provider        `gorm:"-" json:"provider,omitempty"`        // Associated provider
 	Model          *Model           `gorm:"-" json:"model,omitempty"`           // Associated model
-	Chat           *Chat            `gorm:"-" json:"chat,omitempty"`            // Associated chat
+	Conversation   *Conversation    `gorm:"-" json:"conversation,omitempty"`    // Associated conversation
 	KnowledgeBases []*KnowledgeBase `gorm:"-" json:"knowledge_bases,omitempty"` // Associated knowledge bases
 	Tools          []*AgentTool     `gorm:"-" json:"tools,omitempty"`           // Associated tools
 
