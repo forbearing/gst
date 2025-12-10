@@ -3,6 +3,7 @@ package serviceiam
 import (
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/forbearing/gst/database"
@@ -18,6 +19,30 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var (
+	sessionExpiration   time.Duration
+	sessionExpirationMu sync.RWMutex
+)
+
+// SetSessionExpiration sets the session expiration time for iam module.
+// This function should be called during module registration.
+func SetSessionExpiration(expiration time.Duration) {
+	sessionExpirationMu.Lock()
+	defer sessionExpirationMu.Unlock()
+	sessionExpiration = expiration
+}
+
+// getSessionExpiration returns the configured session expiration time.
+// If not configured, it returns the default value of 8 hours.
+func getSessionExpiration() time.Duration {
+	sessionExpirationMu.RLock()
+	defer sessionExpirationMu.RUnlock()
+	if sessionExpiration == 0 {
+		return 8 * time.Hour
+	}
+	return sessionExpiration
+}
 
 type LoginService struct {
 	service.Base[*modeliam.Login, *modeliam.LoginReq, *modeliam.LoginRsp]
@@ -157,7 +182,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 		},
 	}
 
-	expire := 8 * time.Hour
+	expire := getSessionExpiration()
 	// Store session in Redis
 	if err = redis.Cache[modeliam.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
 		log.Errorz("failed to set session in redis", zap.Error(err))
@@ -174,10 +199,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 		Name:     "session_id",
 		Value:    sessionID,
 		Path:     "/",
-		MaxAge:   8 * 60 * 60,          // 8 hours
-		HttpOnly: true,                 // More secure
-		Secure:   false,                // Set to false for local development
-		SameSite: http.SameSiteLaxMode, // Lax mode
+		MaxAge:   int(expire.Seconds()), // Use configured expiration time
+		HttpOnly: true,                  // More secure
+		Secure:   false,                 // Set to false for local development
+		SameSite: http.SameSiteLaxMode,  // Lax mode
 	})
 
 	log.Infoz("user logged in successfully", zap.String("username", req.Username), zap.String("user_id", user.ID))

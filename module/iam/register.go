@@ -1,9 +1,12 @@
 package iam
 
 import (
+	"time"
+
 	"github.com/forbearing/gst/cronjob"
 	cronjobiam "github.com/forbearing/gst/internal/cronjob/iam"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
@@ -15,9 +18,14 @@ type (
 	Token   = modeliam.Token
 )
 
+// iamConfig stores the configuration for iam module
+var iamConfig Config
+
+// Config is the configuration for iam module.
 type Config struct {
-	EnableTenant bool // default disable tenant.
-	DefaultUsers []*User
+	EnableTenant      bool          // EnableTenant enables tenant module, default is false
+	DefaultUsers      []*User       // DefaultUsers are default users to create on registration
+	SessionExpiration time.Duration // SessionExpiration is the session expiration time, default is 8 hours
 }
 
 // Register registers iam modules,
@@ -67,14 +75,27 @@ type Config struct {
 //   - IAMSession
 //
 // Default disable Tenant module, use `EnableTenant` to enable it.
+// Default session expiration time is 8 hours, use `SessionExpiration` to customize it.
 //
 // NOTE: iam modules register must before "authz" modules register.
 // because "authz" registered middleware "Authz" depend on iam modules registered middleware "IAMSession".
 func Register(config ...Config) {
-	cfg := Config{}
+	cfg := Config{
+		SessionExpiration: 8 * time.Hour, // default session expiration time
+	}
 	if len(config) > 0 {
 		cfg = config[0]
+		// Set default session expiration if not provided
+		if cfg.SessionExpiration == 0 {
+			cfg.SessionExpiration = 8 * time.Hour
+		}
 	}
+
+	// Store config globally
+	iamConfig = cfg
+
+	// Set session expiration in service layer
+	serviceiam.SetSessionExpiration(cfg.SessionExpiration)
 
 	// Use module "ChangePasswordModule"
 	module.Use[
@@ -216,4 +237,13 @@ func Register(config ...Config) {
 
 	// cleanup the oneline user that not active every 30 seconds, will run immediately after application bootstrap.
 	cronjob.Register(cronjobiam.CleanupOnlineUser, "*/30 * * * * *", "cleanup online user", cronjob.Config{RunImmediately: true})
+}
+
+// GetSessionExpiration returns the configured session expiration time.
+// If not configured, it returns the default value of 8 hours.
+func GetSessionExpiration() time.Duration {
+	if iamConfig.SessionExpiration == 0 {
+		return 8 * time.Hour
+	}
+	return iamConfig.SessionExpiration
 }
