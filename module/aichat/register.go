@@ -10,19 +10,21 @@ import (
 )
 
 type (
-	Model           = modelaichat.Model
-	Provider        = modelaichat.Provider
-	Conversation    = modelaichat.Conversation
-	Message         = modelaichat.Message
-	MessageFeedBack = modelaichat.MessageFeedback
-	KnowledgeBase   = modelaichat.KnowledgeBase
-	Document        = modelaichat.Document
-	Chunk           = modelaichat.Chunk
-	Prompt          = modelaichat.Prompt
-	PromptFavorite  = modelaichat.PromptFavorite
-	Agent           = modelaichat.Agent
-	AgentTool       = modelaichat.AgentTool
-	AgentFavorite   = modelaichat.AgentFavorite
+	Model             = modelaichat.Model
+	Provider          = modelaichat.Provider
+	Conversation      = modelaichat.Conversation
+	Message           = modelaichat.Message
+	MessageFeedBack   = modelaichat.MessageFeedback
+	KnowledgeBase     = modelaichat.KnowledgeBase
+	Document          = modelaichat.Document
+	Chunk             = modelaichat.Chunk
+	Prompt            = modelaichat.Prompt
+	PromptFavorite    = modelaichat.PromptFavorite
+	Agent             = modelaichat.Agent
+	AgentTool         = modelaichat.AgentTool
+	AgentFavorite     = modelaichat.AgentFavorite
+	ChatCompletionReq = modelaichat.ChatCompletionReq
+	ChatCompletionRsp = modelaichat.ChatCompletionRsp
 )
 
 // Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
@@ -471,5 +473,40 @@ func Register() {
 		consts.PHASE_DELETE_MANY,
 		consts.PHASE_UPDATE_MANY,
 		consts.PHASE_PATCH_MANY,
+	)
+
+	// Register "ChatCompletion" module
+	//
+	/*
+		curl -X POST http://localhost:8080/api/ai/conversations/chat \
+		  -H "Content-Type: application/json" \
+		  -d '{
+		    "model_id": "model-id",
+		    "messages": ["你好"],
+		    "stream": true
+		  }'
+
+		curl -X POST http://localhost:8080/api/ai/conversations/chat \
+		  -H "Content-Type: application/json" \
+		  -d '{
+			"model_id": "model-id",
+			"messages": ["你好"],
+			"stream": false
+		  }'
+	*/
+	module.Use[
+		*model.Empty,
+		*modelaichat.ChatCompletionReq,
+		*modelaichat.ChatCompletionRsp,
+		*serviceaichat.ChatCompletion](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.ChatCompletionReq,
+			*modelaichat.ChatCompletionRsp](
+			"/ai/conversations/chat",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
 	)
 }
