@@ -65,7 +65,6 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/mssola/useragent v1.0.0
 	github.com/nats-io/nats.go v1.46.1
-	github.com/opentracing/opentracing-go v1.1.0
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/panjf2000/ants/v2 v2.11.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -375,6 +374,7 @@ require (
 	github.com/oapi-codegen/runtime v1.0.0 // indirect
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037 // indirect
 	github.com/oasdiff/yaml3 v0.0.0-20250309153720-d2182401db90 // indirect
+	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pdfcpu/pdfcpu v0.9.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect

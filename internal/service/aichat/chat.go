@@ -25,22 +25,39 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Infow("chat completion", "conversation_id", req.ConversationID, "model_id", req.ModelID, "stream", req.Stream)
 
-	//  1. Get model and provider information
-	aiModel := new(modelaichat.Model)
-	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).First(aiModel); err != nil {
-		return nil, errors.Wrap(err, "failed to get ai model")
-	}
-	provider := new(modelaichat.Provider)
-	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).First(provider); err != nil {
-		return nil, errors.Wrap(err, "failed to get provider")
+	// Validate request
+	if len(req.ModelID) == 0 {
+		return nil, errors.New("model_id is required")
 	}
 
-	// 2. Get or create conversation
+	// 1. Get model information by model_id
+	aiModel := new(modelaichat.Model)
+	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).
+		WithQuery(&modelaichat.Model{Base: model.Base{ID: req.ModelID}}).
+		First(aiModel); err != nil {
+		return nil, errors.Wrapf(err, "failed to get ai model: %s", req.ModelID)
+	}
+
+	// 2. Get provider information by provider_id from model
+	provider := new(modelaichat.Provider)
+	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).
+		WithQuery(&modelaichat.Provider{Base: model.Base{ID: aiModel.ProviderID}}).
+		First(provider); err != nil {
+		return nil, errors.Wrapf(err, "failed to get provider: %s", aiModel.ProviderID)
+	}
+
+	// 3. Get or create conversation
 	var conversation *modelaichat.Conversation
 	if len(req.ConversationID) > 0 {
 		conversation = new(modelaichat.Conversation)
-		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).First(conversation); err != nil {
-			return nil, errors.Wrap(err, "failed to get conversation")
+		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).
+			WithQuery(&modelaichat.Conversation{Base: model.Base{ID: req.ConversationID}}).
+			First(conversation); err != nil {
+			return nil, errors.Wrapf(err, "failed to get conversation: %s", req.ConversationID)
+		}
+		// Verify conversation belongs to current user
+		if conversation.UserID != ctx.UserID {
+			return nil, errors.New("conversation does not belong to current user")
 		}
 	} else {
 		// Create new conversation
@@ -54,16 +71,18 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		}
 	}
 
-	// 3. Get conversation history messages
+	// 4. Get conversation history messages
 	messages := make([]*modelaichat.Message, 0)
-	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).WithQuery(&modelaichat.Message{ConversationID: conversation.ID}).List(&messages); err != nil {
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
+		WithQuery(&modelaichat.Message{ConversationID: conversation.ID}).
+		List(&messages); err != nil {
 		return nil, errors.Wrap(err, "failed to get message history")
 	}
 
-	// 4. Build eino messages
+	// 5. Build eino messages and save new user messages to database
 	einoMessages := make([]*schema.Message, 0)
 
-	// Add history messages
+	// Add history messages to eino messages
 	for _, msg := range messages {
 		switch msg.Role {
 		case modelaichat.MessageRoleSystem:
@@ -74,8 +93,13 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 			einoMessages = append(einoMessages, schema.AssistantMessage(msg.Content, nil))
 		}
 	}
-	// Add new user messages
+
+	// Add new user messages to eino messages and save to database
 	for _, content := range req.Messages {
+		// Add to eino messages first
+		einoMessages = append(einoMessages, schema.UserMessage(content))
+
+		// Save to database
 		if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Create(&modelaichat.Message{
 			ConversationID: conversation.ID,
 			ModelID:        req.ModelID,
@@ -113,7 +137,6 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		}
 	default:
 		return nil, errors.Newf("unsupported provider type: %s", provider.Type)
-
 	}
 
 	// 7. Create assistant message in database
@@ -121,7 +144,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		ConversationID: conversation.ID,
 		ModelID:        req.ModelID,
 		Role:           modelaichat.MessageRoleAssistant,
-		Status:         modelaichat.MessageStatusStreaming,
+		Status:         modelaichat.MessageStatusPending,
 	}
 
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Create(assistantMsg); err != nil {
@@ -146,6 +169,12 @@ func (s *ChatCompletion) handleStreaming(
 	// Start streaming
 	stream, err := chatModel.Stream(ctx.Context(), einoMessages)
 	if err != nil {
+		assistantMsg.Status = modelaichat.MessageStatusFailed
+		assistantMsg.ErrMessage = err.Error()
+		assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
+		if e := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); e != nil {
+			s.Errorw("failed to update message", "error", e)
+		}
 		return nil, errors.Wrap(err, "failed to start streaming")
 	}
 	defer stream.Close()
@@ -168,11 +197,18 @@ func (s *ChatCompletion) handleStreaming(
 	ctx.SSE().Stream(func(w io.Writer) bool {
 		chunk, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			// Stream ended
+			// Stream ended, try to extract usage information if available
 			assistantMsg.Status = modelaichat.MessageStatusCompleted
 			assistantMsg.Content = fullContent
 			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
 			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
+
+			if chunk.ResponseMeta != nil || chunk.ResponseMeta.Usage != nil {
+				assistantMsg.PromptTokens = chunk.ResponseMeta.Usage.PromptTokens
+				assistantMsg.CompletionTokens = chunk.ResponseMeta.Usage.CompletionTokens
+				assistantMsg.TotalTokens = chunk.ResponseMeta.Usage.TotalTokens
+			}
+
 			if err = msgDB.Update(assistantMsg); err != nil {
 				s.Errorw("failed to update message", "error", err)
 			}
@@ -224,6 +260,7 @@ func (s *ChatCompletion) handleNonStreaming(
 	assistantMsg *modelaichat.Message,
 	conversation *modelaichat.Conversation,
 ) (*modelaichat.ChatCompletionRsp, error) {
+	_ = conversation
 	startTime := time.Now()
 
 	// Generate response
@@ -243,10 +280,12 @@ func (s *ChatCompletion) handleNonStreaming(
 	assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
 	assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
-	// TODO: Extract token usage from response if available
-	// assistantMsg.PromptTokens = response.Usage.PromptTokens
-	// assistantMsg.CompletionTokens = response.Usage.CompletionTokens
-	// assistantMsg.TotalTokens = response.Usage.TotalTokens
+	// Extract token usage from response
+	if response.ResponseMeta != nil || response.ResponseMeta.Usage != nil {
+		assistantMsg.PromptTokens = response.ResponseMeta.Usage.PromptTokens
+		assistantMsg.CompletionTokens = response.ResponseMeta.Usage.CompletionTokens
+		assistantMsg.TotalTokens = response.ResponseMeta.Usage.TotalTokens
+	}
 
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 		return nil, errors.Wrap(err, "failed to update message")
