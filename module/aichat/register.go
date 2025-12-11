@@ -100,12 +100,12 @@ type (
 //   - GET      /api/ai/conversations/:conv_id/messages/:msg_id/feedback
 //   - GET      /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
 //
-// TestConnection module:
-//   - POST     /api/ai/providers/test-connection
+// ProviderTestConn module:
+//   - POST     /api/ai/providers/test-conn
 //     Request body: Provider (with config information)
-//     Response: TestConnectionRsp with success status and message
+//     Response: ProviderTestConnRsp with success status and message
 //
-// SyncModels module:
+// ProviderSyncModels module:
 //   - POST     /api/ai/providers/sync-models
 //     Request body: Provider (with id)
 //     Response: ProviderSyncModelsRsp with sync statistics
@@ -230,38 +230,38 @@ func Register() {
 		consts.PHASE_PATCH_MANY,
 	)
 
-	// Register "TestConnection" module.
-	// Route: POST /api/ai/providers/test-connection
-	// Request body: Provider (with config information)
-	module.Use[
-		*model.Empty,
-		*modelaichat.Provider,
-		*modelaichat.ProviderTestRsp,
-		*serviceaichat.TestConnection](
-		module.NewWrapper[
-			*model.Empty,
-			*modelaichat.Provider,
-			*modelaichat.ProviderTestRsp](
-			"/ai/providers/test-connection",
-			"id",
-			false,
-		),
-		consts.PHASE_CREATE,
-	)
-
-	// Register "SyncModels" module.
+	// Register "ProviderSyncModels" module.
 	// Route: POST /api/ai/providers/sync-models
 	// Request body: Provider (with id)
 	module.Use[
 		*model.Empty,
 		*modelaichat.Provider,
 		*modelaichat.ProviderSyncModelsRsp,
-		*serviceaichat.SyncModels](
+		*serviceaichat.ProviderSyncModels](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.Provider,
 			*modelaichat.ProviderSyncModelsRsp](
 			"/ai/providers/sync-models",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
+	)
+
+	// Register "ProviderTestConn" module.
+	// Route: POST /api/ai/providers/test-conn
+	// Request body: Provider (with config information)
+	module.Use[
+		*model.Empty,
+		*modelaichat.Provider,
+		*modelaichat.ProviderTestConnRsp,
+		*serviceaichat.ProviderTestConn](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.Provider,
+			*modelaichat.ProviderTestConnRsp](
+			"/ai/providers/test-conn",
 			"id",
 			false,
 		),

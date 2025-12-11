@@ -51,18 +51,18 @@ type Provider struct {
 func (Provider) Purge() bool          { return true }
 func (Provider) GetTableName() string { return "ai_providers" }
 
-// ProviderTestRsp is the response type for testing provider connection
-type ProviderTestRsp struct {
-	Success   bool     `json:"success"`
-	Message   string   `json:"message,omitempty"`
-	Latency   int64    `json:"latency,omitempty"` // milliseconds
-	ModelList []string `json:"model_list,omitempty"`
-}
-
 // ProviderSyncModelsRsp is the response type for syncing provider models into database
 type ProviderSyncModelsRsp struct {
 	Total   int `json:"total"`   // Total models fetched from provider
 	Created int `json:"created"` // Number of newly created models
 	Updated int `json:"updated"` // Number of updated models
 	Failed  int `json:"failed"`  // Number of failed models
+}
+
+// ProviderTestConnRsp is the response type for testing provider connection
+type ProviderTestConnRsp struct {
+	Success   bool     `json:"success"`
+	Message   string   `json:"message,omitempty"`
+	Latency   int64    `json:"latency,omitempty"` // milliseconds
+	ModelList []string `json:"model_list,omitempty"`
 }

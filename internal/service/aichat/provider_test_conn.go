@@ -7,38 +7,54 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/forbearing/gst/database"
 	modelaichat "github.com/forbearing/gst/internal/model/aichat"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
 
-// TestConnection tests provider connectivity without persisting anything.
-type TestConnection struct {
-	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.ProviderTestRsp]
+type ProviderTestConn struct {
+	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.ProviderTestConnRsp]
 }
 
-// Create tests the connection to the AI provider.
-func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat.Provider) (*modelaichat.ProviderTestRsp, error) {
+// Create tests the connection to the AI provider
+func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Provider) (*modelaichat.ProviderTestConnRsp, error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
-	log.Infow("testing provider connection", "provider_id", provider.ID, "provider_type", provider.Type)
 
+	if len(req.ID) == 0 {
+		return nil, errors.New("provider id is required")
+	}
+
+	aiProvider := new(modelaichat.Provider)
+	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).
+		WithQuery(&modelaichat.Provider{Base: model.Base{ID: req.ID}}).
+		First(aiProvider); err != nil {
+		return nil, errors.Wrapf(err, "failed to get provider: %s", req.ID)
+	}
+
+	log.Infow("testing provider connection", "provider_id", aiProvider.ID, "provider_type", aiProvider.Type)
+
+	// Create HTTP client with timeout
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	config := provider.Config.Data()
+	// Get provider configuration
+	config := aiProvider.Config.Data()
+
+	// Test connection based on provider type
 	var success bool
 	var message string
 
-	switch provider.Type {
-	case modelaichat.ProviderOpenAI, modelaichat.ProviderCustom:
+	switch aiProvider.Type {
+	case modelaichat.ProviderOpenAI:
+		// Test OpenAI-compatible API
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			baseURL = "https://api.openai.com/v1"
 		}
 		testURL := fmt.Sprintf("%s/models", baseURL)
-
 		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, testURL, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
@@ -49,6 +65,7 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 		if config.OrgID != "" {
 			req.Header.Set("OpenAI-Organization", config.OrgID)
 		}
+		// Add extra headers
 		for k, v := range config.ExtraHeaders {
 			req.Header.Set(k, v)
 		}
@@ -69,12 +86,12 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 		}
 
 	case modelaichat.ProviderAnthropic:
+		// Test Anthropic API
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			baseURL = "https://api.anthropic.com/v1"
 		}
 		testURL := fmt.Sprintf("%s/messages", baseURL)
-
 		req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, testURL, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
@@ -104,12 +121,12 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 		}
 
 	case modelaichat.ProviderLocal:
+		// Test local provider (Ollama, etc.)
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			baseURL = "http://localhost:11434"
 		}
 		testURL := fmt.Sprintf("%s/api/tags", baseURL)
-
 		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, testURL, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
@@ -117,7 +134,6 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 		for k, v := range config.ExtraHeaders {
 			req.Header.Set(k, v)
 		}
-
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			success = false
@@ -134,6 +150,7 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 		}
 
 	default:
+		// For other provider types, just check if base URL is accessible
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			success = false
@@ -166,7 +183,7 @@ func (s *TestConnection) Create(ctx *types.ServiceContext, provider *modelaichat
 
 	log.Infow("provider connection test completed", "success", success, "message", message)
 
-	return &modelaichat.ProviderTestRsp{
+	return &modelaichat.ProviderTestConnRsp{
 		Success: success,
 		Message: message,
 	}, nil

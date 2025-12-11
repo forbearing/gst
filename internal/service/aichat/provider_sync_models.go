@@ -15,13 +15,13 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-// SyncModels fetches provider models and persists them into database.
-type SyncModels struct {
+// ProviderSyncModels fetches provider models and persists them into database.
+type ProviderSyncModels struct {
 	service.Base[*model.Empty, *modelaichat.Provider, *modelaichat.ProviderSyncModelsRsp]
 }
 
 // Create syncs provider models into the database.
-func (s *SyncModels) Create(ctx *types.ServiceContext, req *modelaichat.Provider) (*modelaichat.ProviderSyncModelsRsp, error) {
+func (s *ProviderSyncModels) Create(ctx *types.ServiceContext, req *modelaichat.Provider) (*modelaichat.ProviderSyncModelsRsp, error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	if len(req.ID) == 0 {

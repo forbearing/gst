@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	authropicID = "019b0d1a-1563-7c19-81f4-2a29087d073c"
+	openaiID    = "019b0d99-3876-7c8e-b59c-918a07df2efc"
+	ollamaID    = "019b0db0-2295-7c38-8ec0-e2f958b58331"
+)
+
 func TestProviderSyncModels(t *testing.T) {
 	cli, err := client.New(addr+"/ai/providers/sync-models", client.WithToken(token))
 	require.NoError(t, err)
@@ -17,7 +23,7 @@ func TestProviderSyncModels(t *testing.T) {
 	t.Run("authropic", func(t *testing.T) {
 		rsp, err := cli.Create(modelaichat.Provider{
 			Base: model.Base{
-				ID: "019b0d1a-1563-7c19-81f4-2a29087d073c",
+				ID: authropicID,
 			},
 		})
 		require.NoError(t, err)
@@ -27,7 +33,7 @@ func TestProviderSyncModels(t *testing.T) {
 	t.Run("openai", func(t *testing.T) {
 		rsp, err := cli.Create(modelaichat.Provider{
 			Base: model.Base{
-				ID: "019b0d99-3876-7c8e-b59c-918a07df2efc",
+				ID: openaiID,
 			},
 		})
 		require.NoError(t, err)
@@ -37,10 +43,23 @@ func TestProviderSyncModels(t *testing.T) {
 	t.Run("ollama", func(t *testing.T) {
 		rsp, err := cli.Create(modelaichat.Provider{
 			Base: model.Base{
-				ID: "019b0db0-2295-7c38-8ec0-e2f958b58331",
+				ID: ollamaID,
 			},
 		})
 		require.NoError(t, err)
 		pretty.Println(string(rsp.Data))
 	})
+}
+
+func TestProviderTestConn(t *testing.T) {
+	cli, err := client.New(addr+"/ai/providers/test-conn", client.WithToken(token))
+	require.NoError(t, err)
+
+	rsp, err := cli.Create(modelaichat.Provider{
+		Base: model.Base{
+			ID: authropicID,
+		},
+	})
+	require.NoError(t, err)
+	pretty.Println(string(rsp.Data))
 }
