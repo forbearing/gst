@@ -119,15 +119,24 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 
 	switch provider.Type {
 	case modelaichat.ProviderAnthropic:
+		baseURL := config.BaseURL
+		if baseURL == "" {
+			baseURL = "https://api.anthropic.com"
+		}
+		maxTokens := aiModel.Config.Data().MaxTokens
+		if maxTokens <= 0 {
+			maxTokens = 4096 // Default max tokens for Anthropic
+		}
 		if chatModel, err = claude.NewChatModel(ctx.Context(), &claude.Config{
 			APIKey:    config.APIKey,
 			Model:     aiModel.ModelID,
-			MaxTokens: aiModel.Config.Data().MaxTokens,
-			BaseURL:   &config.BaseURL,
+			MaxTokens: maxTokens,
+			BaseURL:   &baseURL,
 		}); err != nil {
 			return nil, errors.Wrap(err, "failed to create claude client")
 		}
 	case modelaichat.ProviderOpenAI:
+		// eino will auto set openai BaseURL.
 		if chatModel, err = openai.NewChatModel(ctx.Context(), &openai.ChatModelConfig{
 			APIKey:    config.APIKey,
 			Model:     aiModel.ModelID,

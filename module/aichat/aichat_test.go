@@ -30,6 +30,10 @@ func init() {
 	os.Setenv(config.MYSQL_HOST, "127.0.0.1")
 	os.Setenv(config.MYSQL_PORT, "3307")
 
+	// Improve the server timeout for non-stream chat.
+	os.Setenv(config.SERVER_READ_TIMEOUT, "3m")
+	os.Setenv(config.SERVER_WRITE_TIMEOUT, "3m")
+
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
 	}

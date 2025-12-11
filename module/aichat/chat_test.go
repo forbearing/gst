@@ -2,6 +2,7 @@ package aichat_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/forbearing/gst/client"
 	modelaichat "github.com/forbearing/gst/internal/model/aichat"
@@ -10,39 +11,71 @@ import (
 )
 
 const (
-	authropicModelID = "claude-sonnet-4-5-20250929"
+	anthropicModelID = "claude-sonnet-4-5-20250929"
 	openaiModelID    = "gpt-4o"
-	ollamaModelID    = "gpt-oss:20b"
+	ollamaModelID    = "llama3:latest"
 )
 
-func TestChatCompletion(t *testing.T) {
-	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token))
-	require.NoError(t, err)
+var messages = []string{
+	"你现在是一个精通 go 语言的专家",
+	"简单介绍下 golang 这门语言,包括它的特性、用法和适用场景。",
+}
 
+func TestChatCompletion(t *testing.T) {
+	// cli, err := client.New(addr+"/ai/providers/sync-models", client.WithToken(token))
+	// require.NoError(t, err)
+	// // sync model first
+	// _, err = cli.Create(modelaichat.Provider{
+	// 	Base: model.Base{ID: anthropicID},
+	// })
+	// require.NoError(t, err)
+	// _, err = cli.Create(modelaichat.Provider{
+	// 	Base: model.Base{ID: openaiID},
+	// })
+	// require.NoError(t, err)
+	// _, err = cli.Create(modelaichat.Provider{
+	// 	Base: model.Base{ID: ollamaID},
+	// })
+	// require.NoError(t, err)
+
+	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token), client.WithTimeout(3*time.Minute))
+	require.NoError(t, err)
 	t.Run("non-stream", func(t *testing.T) {
-		t.Run("authropic", func(t *testing.T) {})
-		t.Run("openai", func(t *testing.T) {})
+		t.Run("anthropic", func(t *testing.T) {
+			req := modelaichat.ChatCompletionReq{
+				ModelID:  anthropicModelID,
+				Messages: messages,
+				Stream:   false,
+			}
+			rsp, err := cli.Create(req)
+			require.NoError(t, err)
+			pretty.Println(string(rsp.Data))
+		})
+		t.Run("openai", func(t *testing.T) {
+			req := modelaichat.ChatCompletionReq{
+				ModelID:  openaiModelID,
+				Messages: messages,
+				Stream:   false,
+			}
+			rsp, err := cli.Create(req)
+			require.NoError(t, err)
+			pretty.Println(string(rsp.Data))
+		})
 
 		t.Run("local", func(t *testing.T) {
 			req := modelaichat.ChatCompletionReq{
-				ModelID: ollamaModelID,
-				Messages: []string{
-					"你现在是一个精通 go 语言的专家",
-					"简单介绍下 Golang 这门语言,包括它的特性、用法和适用场景。",
-				},
-				Stream: false,
+				ModelID:  ollamaModelID,
+				Messages: messages,
+				Stream:   false,
 			}
-
-			require.NoError(t, err)
-
 			rsp, err := cli.Create(req)
 			require.NoError(t, err)
-			pretty.Println(rsp.Data)
+			pretty.Println(string(rsp.Data))
 		})
 	})
 
 	t.Run("stream", func(t *testing.T) {
-		t.Run("authropic", func(t *testing.T) {})
+		t.Run("anthropic", func(t *testing.T) {})
 		t.Run("openai", func(t *testing.T) {})
 		t.Run("local", func(t *testing.T) {})
 	})
