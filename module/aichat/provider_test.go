@@ -22,9 +22,7 @@ func TestProviderSyncModels(t *testing.T) {
 
 	t.Run("authropic", func(t *testing.T) {
 		rsp, err := cli.Create(modelaichat.Provider{
-			Base: model.Base{
-				ID: authropicID,
-			},
+			Base: model.Base{ID: authropicID},
 		})
 		require.NoError(t, err)
 		pretty.Println(string(rsp.Data))
@@ -32,9 +30,7 @@ func TestProviderSyncModels(t *testing.T) {
 
 	t.Run("openai", func(t *testing.T) {
 		rsp, err := cli.Create(modelaichat.Provider{
-			Base: model.Base{
-				ID: openaiID,
-			},
+			Base: model.Base{ID: openaiID},
 		})
 		require.NoError(t, err)
 		pretty.Println(string(rsp.Data))
@@ -42,9 +38,7 @@ func TestProviderSyncModels(t *testing.T) {
 
 	t.Run("ollama", func(t *testing.T) {
 		rsp, err := cli.Create(modelaichat.Provider{
-			Base: model.Base{
-				ID: ollamaID,
-			},
+			Base: model.Base{ID: ollamaID},
 		})
 		require.NoError(t, err)
 		pretty.Println(string(rsp.Data))
@@ -55,11 +49,27 @@ func TestProviderTestConn(t *testing.T) {
 	cli, err := client.New(addr+"/ai/providers/test-conn", client.WithToken(token))
 	require.NoError(t, err)
 
-	rsp, err := cli.Create(modelaichat.Provider{
-		Base: model.Base{
-			ID: authropicID,
-		},
+	t.Run("authropic", func(t *testing.T) {
+		rsp, err := cli.Create(modelaichat.Provider{
+			Base: model.Base{ID: authropicID},
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
 	})
-	require.NoError(t, err)
-	pretty.Println(string(rsp.Data))
+
+	t.Run("openai", func(t *testing.T) {
+		rsp, err := cli.Create(modelaichat.Provider{
+			Base: model.Base{ID: openaiID},
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+	})
+
+	t.Run("ollama", func(t *testing.T) {
+		rsp, err := cli.Create(modelaichat.Provider{
+			Base: model.Base{ID: ollamaID},
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+	})
 }
