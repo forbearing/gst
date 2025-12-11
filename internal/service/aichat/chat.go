@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/claude"
-	_ "github.com/cloudwego/eino-ext/components/model/claude"
 	"github.com/cloudwego/eino-ext/components/model/openai"
-	_ "github.com/cloudwego/eino-ext/components/model/openai"
 	einomodel "github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 	"github.com/cockroachdb/errors"
@@ -28,11 +26,11 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 	log.Infow("chat completion", "conversation_id", req.ConversationID, "model_id", req.ModelID, "stream", req.Stream)
 
 	//  1. Get model and provider information
-	var aiModel *modelaichat.Model
+	aiModel := new(modelaichat.Model)
 	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).First(aiModel); err != nil {
 		return nil, errors.Wrap(err, "failed to get ai model")
 	}
-	var provider *modelaichat.Provider
+	provider := new(modelaichat.Provider)
 	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).First(provider); err != nil {
 		return nil, errors.Wrap(err, "failed to get provider")
 	}
@@ -40,6 +38,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 	// 2. Get or create conversation
 	var conversation *modelaichat.Conversation
 	if len(req.ConversationID) > 0 {
+		conversation = new(modelaichat.Conversation)
 		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).First(conversation); err != nil {
 			return nil, errors.Wrap(err, "failed to get conversation")
 		}
@@ -90,7 +89,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 
 	// 6. Create AI model client based on provider type
 	config := provider.Config.Data()
-	var chatModel einomodel.ChatModel
+	var chatModel einomodel.ToolCallingChatModel
 	var err error
 
 	switch provider.Type {
@@ -139,7 +138,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 // handleStreaming handles streaming response
 func (s *ChatCompletion) handleStreaming(
 	ctx *types.ServiceContext,
-	chatModel einomodel.ChatModel,
+	chatModel einomodel.ToolCallingChatModel,
 	einoMessages []*schema.Message,
 	assistantMsg *modelaichat.Message,
 	conversation *modelaichat.Conversation,
@@ -168,13 +167,13 @@ func (s *ChatCompletion) handleStreaming(
 
 	ctx.SSE().Stream(func(w io.Writer) bool {
 		chunk, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// Stream ended
 			assistantMsg.Status = modelaichat.MessageStatusCompleted
 			assistantMsg.Content = fullContent
 			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
 			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
-			if err := msgDB.Update(assistantMsg); err != nil {
+			if err = msgDB.Update(assistantMsg); err != nil {
 				s.Errorw("failed to update message", "error", err)
 			}
 			return false
@@ -220,41 +219,36 @@ func (s *ChatCompletion) handleStreaming(
 // handleNonStreaming handles non-streaming response
 func (s *ChatCompletion) handleNonStreaming(
 	ctx *types.ServiceContext,
-	chatModel einomodel.ChatModel,
+	chatModel einomodel.ToolCallingChatModel,
 	einoMessages []*schema.Message,
 	assistantMsg *modelaichat.Message,
 	conversation *modelaichat.Conversation,
 ) (*modelaichat.ChatCompletionRsp, error) {
 	startTime := time.Now()
 
-	msgDB := database.Database[*modelaichat.Message](ctx.DatabaseContext())
-
 	// Generate response
 	response, err := chatModel.Generate(ctx.Context(), einoMessages)
 	if err != nil {
 		assistantMsg.Status = modelaichat.MessageStatusFailed
 		assistantMsg.ErrMessage = err.Error()
-		stopReason := modelaichat.StopReasonError
-		assistantMsg.StopReason = &stopReason
-
-		_ = msgDB.Update(assistantMsg)
-
+		assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
+		if e := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); e != nil {
+			err = errors.Join(err, errors.Wrap(e, "failed to update message"))
+		}
 		return nil, errors.Wrap(err, "failed to generate response")
-
-		// Update message
-		assistantMsg.Status = modelaichat.MessageStatusCompleted
-		assistantMsg.Content = response.Content
-		assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
-		assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
-
-		// TODO: Extract token usage from response if available
-		// assistantMsg.PromptTokens = response.Usage.PromptTokens
-		// assistantMsg.CompletionTokens = response.Usage.CompletionTokens
-		// assistantMsg.TotalTokens = response.Usage.TotalTokens
-
 	}
 
-	if err := msgDB.Update(assistantMsg); err != nil {
+	assistantMsg.Status = modelaichat.MessageStatusCompleted
+	assistantMsg.Content = response.Content
+	assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
+	assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
+
+	// TODO: Extract token usage from response if available
+	// assistantMsg.PromptTokens = response.Usage.PromptTokens
+	// assistantMsg.CompletionTokens = response.Usage.CompletionTokens
+	// assistantMsg.TotalTokens = response.Usage.TotalTokens
+
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 		return nil, errors.Wrap(err, "failed to update message")
 	}
 
