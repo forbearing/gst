@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/claude"
+	"github.com/cloudwego/eino-ext/components/model/ollama"
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	einomodel "github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
@@ -126,7 +127,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		}); err != nil {
 			return nil, errors.Wrap(err, "failed to create claude client")
 		}
-	case modelaichat.ProviderOpenAI, modelaichat.ProviderCustom:
+	case modelaichat.ProviderOpenAI:
 		if chatModel, err = openai.NewChatModel(ctx.Context(), &openai.ChatModelConfig{
 			APIKey:    config.APIKey,
 			Model:     aiModel.ModelID,
@@ -134,6 +135,17 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 			BaseURL:   config.BaseURL,
 		}); err != nil {
 			return nil, errors.Wrap(err, "failed to create openai client")
+		}
+	case modelaichat.ProviderLocal:
+		baseURL := config.BaseURL
+		if baseURL == "" {
+			baseURL = "http://localhost:11434"
+		}
+		if chatModel, err = ollama.NewChatModel(ctx.Context(), &ollama.ChatModelConfig{
+			BaseURL: baseURL,
+			Model:   aiModel.ModelID,
+		}); err != nil {
+			return nil, errors.Wrap(err, "failed to create ollama client")
 		}
 	default:
 		return nil, errors.Newf("unsupported provider type: %s", provider.Type)
@@ -166,6 +178,7 @@ func (s *ChatCompletion) handleStreaming(
 	assistantMsg *modelaichat.Message,
 	conversation *modelaichat.Conversation,
 ) (*modelaichat.ChatCompletionRsp, error) {
+	_ = conversation
 	// Start streaming
 	stream, err := chatModel.Stream(ctx.Context(), einoMessages)
 	if err != nil {

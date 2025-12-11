@@ -29,6 +29,7 @@ require (
 	github.com/casbin/gorm-adapter/v3 v3.37.0
 	github.com/cloudwego/eino v0.7.8
 	github.com/cloudwego/eino-ext/components/model/claude v0.1.10
+	github.com/cloudwego/eino-ext/components/model/ollama v0.1.6
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.5
 	github.com/cloverstd/tcping v0.1.1
 	github.com/cockroachdb/errors v1.12.0
@@ -228,6 +229,7 @@ require (
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/ebitengine/purego v0.9.0 // indirect
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
+	github.com/eino-contrib/ollama v0.1.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.7.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
