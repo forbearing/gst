@@ -49,6 +49,7 @@ require (
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/cloudwego/eino v0.7.8 // indirect
 	github.com/cloudwego/eino-ext/components/model/claude v0.1.10 // indirect
+	github.com/cloudwego/eino-ext/components/model/ollama v0.1.6 // indirect
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.5 // indirect
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.2 // indirect
 	github.com/cloverstd/tcping v0.1.1 // indirect
@@ -69,6 +70,7 @@ require (
 	github.com/ebitengine/purego v0.9.0 // indirect
 	github.com/eclipse/paho.mqtt.golang v1.5.1 // indirect
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
+	github.com/eino-contrib/ollama v0.1.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.7.0 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.19.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
