@@ -82,25 +82,30 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 	var models []*modelaichat.Model
 
 	switch provider.Type {
-	case modelaichat.ProviderOpenAI, modelaichat.ProviderCustom:
+	case modelaichat.ProviderOpenAI:
+		/*
+			export OPENAI_API_KEY="sk-..."
+			export OPENAI_ORG_ID="org-..."  # optional
+
+			curl https://api.openai.com/v1/models \
+			  -H "Authorization: Bearer $OPENAI_API_KEY" \
+			  -H "OpenAI-Organization: $OPENAI_ORG_ID"
+		*/
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			baseURL = "https://api.openai.com/v1"
 		}
 		modelsURL := fmt.Sprintf("%s/models", baseURL)
-
 		req, err := http.NewRequestWithContext(ctx.Context(), http.MethodGet, modelsURL, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
 		}
-
 		if config.APIKey != "" {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.APIKey))
 		}
 		if config.OrgID != "" {
 			req.Header.Set("OpenAI-Organization", config.OrgID)
 		}
-
 		for k, v := range config.ExtraHeaders {
 			req.Header.Set(k, v)
 		}
@@ -110,7 +115,6 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}
 		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
 			return nil, errors.Newf("failed to fetch models: status %d", resp.StatusCode)
 		}
@@ -123,11 +127,9 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 				OwnedBy string `json:"owned_by"`
 			} `json:"data"`
 		}
-
 		if err := json.NewDecoder(resp.Body).Decode(&openaiResp); err != nil {
 			return nil, errors.Wrap(err, "failed to decode response")
 		}
-
 		for _, m := range openaiResp.Data {
 			models = append(models, &modelaichat.Model{
 				Base:        model.Base{ID: m.ID},
@@ -139,17 +141,21 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 		}
 
 	case modelaichat.ProviderAnthropic:
+		/*
+			export ANTHROPIC_API_KEY="sk-..."
+			curl https://api.anthropic.com/v1/models \
+				-H "x-api-key: $ANTHROPIC_API_KEY" \
+				-H "anthropic-version: 2023-06-01"
+		*/
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			baseURL = "https://api.anthropic.com/v1"
 		}
 		modelsURL := fmt.Sprintf("%s/models", baseURL)
-
 		req, err := http.NewRequestWithContext(ctx.Context(), http.MethodGet, modelsURL, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
 		}
-
 		if config.APIKey != "" {
 			req.Header.Set("x-api-key", config.APIKey)
 		}
@@ -163,7 +169,6 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}
 		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
 			return nil, errors.Newf("failed to fetch models: status %d", resp.StatusCode)
 		}
@@ -176,11 +181,9 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 				Type        string `json:"type"`
 			} `json:"data"`
 		}
-
 		if err := json.NewDecoder(resp.Body).Decode(&anthropicResp); err != nil {
 			return nil, errors.Wrap(err, "failed to decode response")
 		}
-
 		for _, m := range anthropicResp.Data {
 			models = append(models, &modelaichat.Model{
 				Base:        model.Base{ID: m.ID},
@@ -192,17 +195,19 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 		}
 
 	case modelaichat.ProviderLocal:
+		/*
+			export OLLAMA_BASE_URL="http://localhost:11434"
+			curl $OLLAMA_BASE_URL/api/tags
+		*/
 		baseURL := config.BaseURL
 		if baseURL == "" {
 			baseURL = "http://localhost:11434"
 		}
 		modelsURL := fmt.Sprintf("%s/api/tags", baseURL)
-
 		req, err := http.NewRequestWithContext(ctx.Context(), http.MethodGet, modelsURL, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create request")
 		}
-
 		for k, v := range config.ExtraHeaders {
 			req.Header.Set(k, v)
 		}
@@ -212,7 +217,6 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}
 		defer resp.Body.Close()
-
 		if resp.StatusCode != http.StatusOK {
 			return nil, errors.Newf("failed to fetch models: status %d", resp.StatusCode)
 		}
@@ -220,6 +224,7 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 		var ollamaResp struct {
 			Models []struct {
 				Name       string `json:"name"`
+				Model      string `json:"model"`
 				ModifiedAt string `json:"modified_at"`
 				Size       int64  `json:"size"`
 				Digest     string `json:"digest"`
@@ -233,15 +238,13 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 				} `json:"details"`
 			} `json:"models"`
 		}
-
 		if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
 			return nil, errors.Wrap(err, "failed to decode response")
 		}
-
 		for _, m := range ollamaResp.Models {
 			models = append(models, &modelaichat.Model{
-				Base:        model.Base{ID: m.Name},
-				ModelID:     m.Name,
+				Base:        model.Base{ID: m.Model},
+				ModelID:     m.Model,
 				Name:        m.Name,
 				Type:        modelaichat.ModelTypeChat,
 				Description: m.Name,
