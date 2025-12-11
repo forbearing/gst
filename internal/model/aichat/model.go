@@ -30,10 +30,10 @@ type ModelConfig struct {
 }
 
 type Model struct {
-	ProviderID string    `gorm:"not null;index" json:"provider_id" schema:"provider_id"` // Provider ID
-	Name       string    `gorm:"size:100;not null" json:"name" schema:"name"`            // Display name
-	ModelID    string    `gorm:"size:100;not null" json:"model_id" schema:"model_id"`    // Model identifier (e.g., gpt-4o)
-	Type       ModelType `gorm:"size:20;not null;index" json:"type" schema:"type"`       // Model type
+	ProviderID string    `gorm:"not null;index" json:"provider_id" schema:"provider_id"`           // Provider ID
+	Name       string    `gorm:"size:100;not null" json:"name" schema:"name"`                      // Display name
+	ModelID    string    `gorm:"size:100;not null;index;unique" json:"model_id" schema:"model_id"` // Model identifier (e.g., gpt-4o)
+	Type       ModelType `gorm:"size:20;not null;index" json:"type" schema:"type"`                 // Model type
 
 	Config      datatypes.JSONType[ModelConfig] `json:"config"`                                           // AI model configuration
 	InputPrice  float64                         `gorm:"type:decimal(10,6);default:0" json:"input_price"`  // Input price (per 1K tokens)
@@ -49,4 +49,4 @@ type Model struct {
 }
 
 func (Model) Purge() bool          { return true }
-func (Model) GetTableName() string { return "llm_models" }
+func (Model) GetTableName() string { return "ai_models" }

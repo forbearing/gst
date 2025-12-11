@@ -49,7 +49,7 @@ type Provider struct {
 }
 
 func (Provider) Purge() bool          { return true }
-func (Provider) GetTableName() string { return "llm_providers" }
+func (Provider) GetTableName() string { return "ai_providers" }
 
 // ProviderTestRsp is the response type for testing provider connection
 type ProviderTestRsp struct {
@@ -59,18 +59,10 @@ type ProviderTestRsp struct {
 	ModelList []string `json:"model_list,omitempty"`
 }
 
-// ProviderListModelsRsp is the response type for listing provider models
-type ProviderListModelsRsp struct {
-	Models []ProviderModelInfo `json:"models"`
-}
-
-// ProviderModelInfo represents a model provided by the provider
-type ProviderModelInfo struct {
-	ID          string `json:"id"`      // Model identifier (e.g., gpt-4o)
-	Name        string `json:"name"`    // Model display name
-	Type        string `json:"type"`    // Model type (chat, embedding, etc.)
-	Context     int    `json:"context"` // Context length
-	Description string `json:"description,omitempty"`
-	MaxOutput   int    `json:"max_output,omitempty"`
-	Owned       string `json:"owned,omitempty"`
+// ProviderSyncModelsRsp is the response type for syncing provider models into database
+type ProviderSyncModelsRsp struct {
+	Total   int `json:"total"`   // Total models fetched from provider
+	Created int `json:"created"` // Number of newly created models
+	Updated int `json:"updated"` // Number of updated models
+	Failed  int `json:"failed"`  // Number of failed models
 }

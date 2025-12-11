@@ -105,10 +105,10 @@ type (
 //     Request body: Provider (with config information)
 //     Response: TestConnectionRsp with success status and message
 //
-// ListModels module:
-//   - POST     /api/ai/providers/models
-//     Request body: Provider (with config information)
-//     Response: ListModelsRsp with array of available models
+// SyncModels module:
+//   - POST     /api/ai/providers/sync-models
+//     Request body: Provider (with id)
+//     Response: ProviderSyncModelsRsp with sync statistics
 //
 // KnowledgeBase module (full CRUD):
 //   - POST     /api/ai/knowledge-bases
@@ -249,19 +249,19 @@ func Register() {
 		consts.PHASE_CREATE,
 	)
 
-	// Register "ListModels" module.
-	// Route: POST /api/ai/providers/models
-	// Request body: Provider (with config information)
+	// Register "SyncModels" module.
+	// Route: POST /api/ai/providers/sync-models
+	// Request body: Provider (with id)
 	module.Use[
 		*model.Empty,
 		*modelaichat.Provider,
-		*modelaichat.ProviderListModelsRsp,
-		*serviceaichat.ListModels](
+		*modelaichat.ProviderSyncModelsRsp,
+		*serviceaichat.SyncModels](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.Provider,
-			*modelaichat.ProviderListModelsRsp](
-			"/ai/providers/models",
+			*modelaichat.ProviderSyncModelsRsp](
+			"/ai/providers/sync-models",
 			"id",
 			false,
 		),
