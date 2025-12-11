@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -411,4 +412,267 @@ func (c *Client) request(action action, payload any) (*Resp, error) {
 
 	// Delete or BatchDelete response is empty with http status 204.
 	return &Resp{}, nil
+}
+
+// StreamCallback is a function type for handling stream events.
+// It receives an SSE event and returns an error if processing should stop.
+type StreamCallback func(event types.Event) error
+
+// Stream sends a POST request and processes the response as a Server-Sent Events (SSE) stream.
+// The callback function will be called for each event received, allowing immediate processing.
+//
+// Parameters:
+//   - payload: The request payload (can be []byte or struct/pointer that can be marshaled to JSON)
+//   - callback: Function to handle each SSE event. Return an error to stop streaming.
+//
+// Example:
+//
+//	err := client.Stream(payload, func(event types.Event) error {
+//	    fmt.Printf("Event: %s, Data: %v\n", event.Event, event.Data)
+//	    return nil // Continue streaming
+//	})
+func (c *Client) Stream(payload any, callback StreamCallback) error {
+	return c.StreamURL(http.MethodPost, "", payload, callback)
+}
+
+// parseSSEStream parses a Server-Sent Events stream and calls the callback for each event.
+func (c *Client) parseSSEStream(body io.Reader, callback StreamCallback) error {
+	scanner := bufio.NewScanner(body)
+	event := types.Event{}
+	var dataLines []string
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Empty line indicates end of event
+		if line == "" {
+			if len(dataLines) > 0 {
+				// Join all data lines with newline (SSE spec allows multiple data fields)
+				event.Data = strings.Join(dataLines, "\n")
+				if err := callback(event); err != nil {
+					return err
+				}
+				// Reset for next event
+				event = types.Event{}
+				dataLines = nil
+			}
+			continue
+		}
+
+		// Parse SSE field
+		if strings.HasPrefix(line, "id:") {
+			event.ID = strings.TrimSpace(line[3:])
+		} else if strings.HasPrefix(line, "event:") {
+			event.Event = strings.TrimSpace(line[6:])
+		} else if strings.HasPrefix(line, "retry:") {
+			retryStr := strings.TrimSpace(line[6:])
+			if retry, err := parseInt(retryStr); err == nil {
+				event.Retry = retry
+			}
+		} else if strings.HasPrefix(line, "data:") {
+			data := strings.TrimSpace(line[5:])
+			// Check for [DONE] marker
+			if data == "[DONE]" {
+				return nil
+			}
+			dataLines = append(dataLines, data)
+		}
+		// Ignore comments (lines starting with :)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return errors.Wrap(err, "failed to read stream")
+	}
+
+	// Handle last event if stream ends without empty line
+	if len(dataLines) > 0 {
+		event.Data = strings.Join(dataLines, "\n")
+		if err := callback(event); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// StreamPrint sends a POST request and prints each SSE event as it arrives.
+// This is a convenience method that automatically prints events to stdout.
+// JSON data will be pretty-printed if possible.
+//
+// Parameters:
+//   - payload: The request payload (can be []byte or struct/pointer that can be marshaled to JSON)
+//
+// Example:
+//
+//	err := client.StreamPrint(payload)
+func (c *Client) StreamPrint(payload any) error {
+	return c.Stream(payload, c.defaultPrintCallback)
+}
+
+// StreamURL sends a request to a custom URL and processes the response as a Server-Sent Events (SSE) stream.
+// This allows streaming from any endpoint, not just the base address.
+// If url is empty, it uses the base address.
+//
+// Parameters:
+//   - method: HTTP method (e.g., "GET", "POST")
+//   - url: Full URL or path relative to base address (empty string uses base address)
+//   - payload: The request payload (can be []byte or struct/pointer that can be marshaled to JSON, or nil)
+//   - callback: Function to handle each SSE event. Return an error to stop streaming.
+//
+// Example:
+//
+//	err := client.StreamURL("POST", "/api/chat/stream", payload, func(event types.Event) error {
+//	    fmt.Printf("Event: %s, Data: %v\n", event.Event, event.Data)
+//	    return nil
+//	})
+func (c *Client) StreamURL(method, url string, payload any, callback StreamCallback) error {
+	if callback == nil {
+		return errors.New("callback cannot be nil")
+	}
+
+	if c.rateLimiter != nil {
+		if err := c.rateLimiter.Wait(c.ctx); err != nil {
+			return errors.Wrap(err, "rate limit exceeded")
+		}
+	}
+
+	// Build full URL
+	var fullURL string
+	if url == "" {
+		fullURL = c.addr
+	} else if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+		fullURL = url
+	} else {
+		fullURL = c.addr + "/" + strings.TrimLeft(url, "/")
+	}
+
+	var reader io.Reader
+	if payload != nil {
+		switch v := payload.(type) {
+		case []byte:
+			reader = bytes.NewReader(v)
+		default:
+			data, err := json.Marshal(v)
+			if err != nil {
+				return errors.Wrap(err, "failed to marshal payload")
+			}
+			reader = bytes.NewReader(data)
+		}
+	}
+
+	req, err := http.NewRequest(method, fullURL, reader)
+	if err != nil {
+		return errors.Wrap(err, "failed to create request")
+	}
+	if c.ctx != nil {
+		req = req.WithContext(c.ctx)
+	}
+	if len(c.username) > 0 {
+		req.SetBasicAuth(c.username, c.password)
+	}
+	if len(c.token) > 0 {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	maps.Copy(req.Header, c.header)
+	// Set Accept header for SSE
+	req.Header.Set("Accept", "text/event-stream")
+
+	if c.debug {
+		dump, _ := httputil.DumpRequest(req, true)
+		fmt.Println(string(dump))
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "failed to request")
+	}
+	defer resp.Body.Close()
+
+	if c.debug {
+		dump, _ := httputil.DumpResponse(resp, false)
+		fmt.Println(string(dump))
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		buf := new(bytes.Buffer)
+		_, _ = io.Copy(buf, resp.Body)
+		return fmt.Errorf("response status code: %d, body: %s", resp.StatusCode, buf.String())
+	}
+
+	// Check if response is SSE format
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "text/event-stream") {
+		// If not SSE, read as regular response
+		buf := new(bytes.Buffer)
+		if _, err := io.Copy(buf, resp.Body); err != nil {
+			return errors.Wrap(err, "failed to copy response body")
+		}
+		if len(buf.Bytes()) != 0 {
+			res := new(Resp)
+			if err := json.Unmarshal(buf.Bytes(), res); err != nil {
+				return errors.Wrap(err, "failed to unmarshal response: "+buf.String())
+			}
+			if res.Code != 0 {
+				return fmt.Errorf("response status code: %d, code: %d, msg: %s, body: %s", resp.StatusCode, res.Code, res.Msg, buf.String())
+			}
+		}
+		return nil
+	}
+
+	// Parse SSE stream
+	return c.parseSSEStream(resp.Body, callback)
+}
+
+// StreamPrintURL sends a request to a custom URL and prints each SSE event as it arrives.
+// This is a convenience method that automatically prints events to stdout.
+//
+// Parameters:
+//   - method: HTTP method (e.g., "GET", "POST")
+//   - url: Full URL or path relative to base address (empty string uses base address)
+//   - payload: The request payload (can be []byte or struct/pointer that can be marshaled to JSON, or nil)
+//
+// Example:
+//
+//	err := client.StreamPrintURL("POST", "/api/chat/stream", payload)
+func (c *Client) StreamPrintURL(method, url string, payload any) error {
+	return c.StreamURL(method, url, payload, c.defaultPrintCallback)
+}
+
+// defaultPrintCallback is the default callback used by StreamPrint and StreamPrintURL.
+func (c *Client) defaultPrintCallback(event types.Event) error {
+	// Print event immediately
+	if event.Event != "" {
+		fmt.Printf("[%s] ", event.Event)
+	}
+	if event.ID != "" {
+		fmt.Printf("(id: %s) ", event.ID)
+	}
+
+	// Try to pretty-print JSON data
+	dataStr := fmt.Sprintf("%v", event.Data)
+	if strings.TrimSpace(dataStr) != "" {
+		var jsonData any
+		if err := json.Unmarshal([]byte(dataStr), &jsonData); err == nil {
+			// It's valid JSON, pretty print it
+			prettyJSON, err := json.MarshalIndent(jsonData, "", "  ")
+			if err == nil {
+				fmt.Println(string(prettyJSON))
+			} else {
+				fmt.Println(dataStr)
+			}
+		} else {
+			// Not JSON, print as-is
+			fmt.Println(dataStr)
+		}
+	} else {
+		fmt.Println()
+	}
+	return nil
+}
+
+// parseInt parses an integer string and returns the value.
+func parseInt(s string) (int, error) {
+	var result int
+	_, err := fmt.Sscanf(s, "%d", &result)
+	return result, err
 }
