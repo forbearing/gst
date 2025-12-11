@@ -50,7 +50,8 @@ func TestChatCompletion(t *testing.T) {
 				Messages: messages,
 				Stream:   false,
 			}
-			rsp, err := cli.Create(req)
+			var rsp *client.Resp
+			rsp, err = cli.Create(req)
 			require.NoError(t, err)
 			pretty.Println(string(rsp.Data))
 		})
@@ -60,7 +61,8 @@ func TestChatCompletion(t *testing.T) {
 				Messages: messages,
 				Stream:   false,
 			}
-			rsp, err := cli.Create(req)
+			var rsp *client.Resp
+			rsp, err = cli.Create(req)
 			require.NoError(t, err)
 			pretty.Println(string(rsp.Data))
 		})
@@ -71,7 +73,8 @@ func TestChatCompletion(t *testing.T) {
 				Messages: messages,
 				Stream:   false,
 			}
-			rsp, err := cli.Create(req)
+			var rsp *client.Resp
+			rsp, err = cli.Create(req)
 			require.NoError(t, err)
 			pretty.Println(string(rsp.Data))
 		})
