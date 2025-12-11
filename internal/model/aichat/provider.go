@@ -33,10 +33,9 @@ type ProviderConfig struct {
 
 // Provider represents an AI provider
 type Provider struct {
-	Name     string                      `gorm:"size:100;not null;uniqueIndex" json:"name" schema:"name"` // Display name
-	Code     string                      `gorm:"size:50;not null;uniqueIndex" json:"code" schema:"code"`  // Unique identifier
-	Type     ProviderType                `gorm:"size:20;not null;index" json:"type" schema:"type"`        // Provider type
-	ModelIDs datatypes.JSONSlice[string] `json:"model_ids,omitempty"`                                     // Associated models's ID list
+	Name string       `gorm:"size:100;not null;uniqueIndex" json:"name" schema:"name"` // Display name
+	Code string       `gorm:"size:50;not null;uniqueIndex" json:"code" schema:"code"`  // Unique identifier
+	Type ProviderType `gorm:"size:20;not null;index" json:"type" schema:"type"`        // Provider type
 
 	Config datatypes.JSONType[ProviderConfig] `json:"config"` // AI provider configuration
 

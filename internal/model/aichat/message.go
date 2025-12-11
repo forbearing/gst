@@ -26,11 +26,14 @@ const (
 type StopReason string
 
 const (
-	StopReasonUser      StopReason = "user"       // User stopped
-	StopReasonMaxTokens StopReason = "max_tokens" // Reached max tokens
-	StopReasonTimeout   StopReason = "timeout"    // Timeout
-	StopReasonError     StopReason = "error"      // Error occurred
-	StopReasonEndTurn   StopReason = "end_turn"   // Model ended normally
+	StopReasonUser          StopReason = "user"           // User stopped
+	StopReasonMaxTokens     StopReason = "max_tokens"     // Reached max tokens
+	StopReasonTimeout       StopReason = "timeout"        // Timeout
+	StopReasonError         StopReason = "error"          // Error occurred
+	StopReasonEndTurn       StopReason = "end_turn"       // Model ended normally
+	StopReasonToolCalls     StopReason = "tool_calls"     // Tool calls required
+	StopReasonStopSequence  StopReason = "stop_sequence"  // Stop sequence reached
+	StopReasonContentFilter StopReason = "content_filter" // Content filtered
 )
 
 // Message represents a single message in a chat conversation
@@ -56,8 +59,8 @@ type Message struct {
 	TotalTokens      int `gorm:"default:0" json:"total_tokens,omitempty"`      // Total tokens
 
 	// Regeneration related
-	RegenerateCount int  `gorm:"default:0" json:"regenerate_count,omitempty"` // Regeneration count
-	IsActive        bool `gorm:"default:true" json:"is_active,omitempty"`     // Whether is active version
+	RegenerateCount int   `gorm:"default:0" json:"regenerate_count,omitempty"`                // Regeneration count
+	IsActive        *bool `gorm:"default:true" json:"is_active,omitempty" schema:"is_active"` // Whether is active version
 
 	// Performance
 	LatencyMs int64 `json:"latency_ms,omitempty"` // Response latency in milliseconds

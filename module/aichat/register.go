@@ -19,10 +19,9 @@ type (
 	Document          = modelaichat.Document
 	Chunk             = modelaichat.Chunk
 	Prompt            = modelaichat.Prompt
-	PromptFavorite    = modelaichat.PromptFavorite
 	Agent             = modelaichat.Agent
 	AgentTool         = modelaichat.AgentTool
-	AgentFavorite     = modelaichat.AgentFavorite
+	Favorite          = modelaichat.Favorite
 	ChatCompletionReq = modelaichat.ChatCompletionReq
 	ChatCompletionRsp = modelaichat.ChatCompletionRsp
 )
@@ -39,36 +38,35 @@ type (
 //   - Document: Documents in knowledge bases
 //   - Chunk: Text chunks from documents for vector search
 //   - Prompt: Prompt templates for AI interactions
-//   - PromptFavorite: User's favorite prompts
 //   - Agent: AI agents with tools and RAG capabilities
-//   - AgentFavorite: User's favorite agents
 //   - AgentTool: Tools/functions that agents can use
+//   - Favorite: User's favorites (prompts, agents, etc.)
 //
 // Routes:
 //
 // Model module (full CRUD):
-//   - POST     /api/models
-//   - DELETE   /api/models/:id
-//   - PUT      /api/models/:id
-//   - PATCH    /api/models/:id
-//   - GET      /api/models
-//   - GET      /api/models/:id
-//   - POST     /api/models/batch
-//   - DELETE   /api/models/batch
-//   - PUT      /api/models/batch
-//   - PATCH    /api/models/batch
+//   - POST     /api/ai/models
+//   - DELETE   /api/ai/models/:id
+//   - PUT      /api/ai/models/:id
+//   - PATCH    /api/ai/models/:id
+//   - GET      /api/ai/models
+//   - GET      /api/ai/models/:id
+//   - POST     /api/ai/models/batch
+//   - DELETE   /api/ai/models/batch
+//   - PUT      /api/ai/models/batch
+//   - PATCH    /api/ai/models/batch
 //
 // Provider module (full CRUD):
-//   - POST     /api/providers
-//   - DELETE   /api/providers/:id
-//   - PUT      /api/providers/:id
-//   - PATCH    /api/providers/:id
-//   - GET      /api/providers
-//   - GET      /api/providers/:id
-//   - POST     /api/providers/batch
-//   - DELETE   /api/providers/batch
-//   - PUT      /api/providers/batch
-//   - PATCH    /api/providers/batch
+//   - POST     /api/ai/providers
+//   - DELETE   /api/ai/providers/:id
+//   - PUT      /api/ai/providers/:id
+//   - PATCH    /api/ai/providers/:id
+//   - GET      /api/ai/providers
+//   - GET      /api/ai/providers/:id
+//   - POST     /api/ai/providers/batch
+//   - DELETE   /api/ai/providers/batch
+//   - PUT      /api/ai/providers/batch
+//   - PATCH    /api/ai/providers/batch
 //
 // Conversation module (full CRUD):
 //   - POST     /api/ai/conversations
@@ -138,63 +136,51 @@ type (
 //
 // Prompt module (full CRUD):
 //   - POST     /api/ai/prompts
-//   - DELETE   /api/ai/prompts/:pmt_id
-//   - PUT      /api/ai/prompts/:pmt_id
-//   - PATCH    /api/ai/prompts/:pmt_id
+//   - DELETE   /api/ai/prompts/:id
+//   - PUT      /api/ai/prompts/:id
+//   - PATCH    /api/ai/prompts/:id
 //   - GET      /api/ai/prompts
-//   - GET      /api/ai/prompts/:pmt_id
+//   - GET      /api/ai/prompts/:id
 //   - POST     /api/ai/prompts/batch
 //   - DELETE   /api/ai/prompts/batch
 //   - PUT      /api/ai/prompts/batch
 //   - PATCH    /api/ai/prompts/batch
 //
-// PromptFavorite module (full CRUD):
-//   - POST     /api/ai/prompts/:pmt_id/favorites
-//   - DELETE   /api/ai/prompts/:pmt_id/favorites/:id
-//   - PUT      /api/ai/prompts/:pmt_id/favorites/:id
-//   - PATCH    /api/ai/prompts/:pmt_id/favorites/:id
-//   - GET      /api/ai/prompts/:pmt_id/favorites
-//   - GET      /api/ai/prompts/:pmt_id/favorites/:id
-//   - POST     /api/ai/prompts/:pmt_id/favorites/batch
-//   - DELETE   /api/ai/prompts/:pmt_id/favorites/batch
-//   - PUT      /api/ai/prompts/:pmt_id/favorites/batch
-//   - PATCH    /api/ai/prompts/:pmt_id/favorites/batch
-//
 // Agent module (full CRUD):
 //   - POST     /api/ai/agents
-//   - DELETE   /api/ai/agents/:agent_id
-//   - PUT      /api/ai/agents/:agent_id
-//   - PATCH    /api/ai/agents/:agent_id
+//   - DELETE   /api/ai/agents/:id
+//   - PUT      /api/ai/agents/:id
+//   - PATCH    /api/ai/agents/:id
 //   - GET      /api/ai/agents
-//   - GET      /api/ai/agents/:agent_id
+//   - GET      /api/ai/agents/:id
 //   - POST     /api/ai/agents/batch
 //   - DELETE   /api/ai/agents/batch
 //   - PUT      /api/ai/agents/batch
 //   - PATCH    /api/ai/agents/batch
 //
-// AgentFavorite module (full CRUD):
-//   - POST     /api/ai/agents/:agent_id/favorites
-//   - DELETE   /api/ai/agents/:agent_id/favorites/:id
-//   - PUT      /api/ai/agents/:agent_id/favorites/:id
-//   - PATCH    /api/ai/agents/:agent_id/favorites/:id
-//   - GET      /api/ai/agents/:agent_id/favorites
-//   - GET      /api/ai/agents/:agent_id/favorites/:id
-//   - POST     /api/ai/agents/:agent_id/favorites/batch
-//   - DELETE   /api/ai/agents/:agent_id/favorites/batch
-//   - PUT      /api/ai/agents/:agent_id/favorites/batch
-//   - PATCH    /api/ai/agents/:agent_id/favorites/batch
-//
 // AgentTool module (full CRUD):
-//   - POST     /api/ai/agents/tools
-//   - DELETE   /api/ai/agents/tools/:id
-//   - PUT      /api/ai/agents/tools/:id
-//   - PATCH    /api/ai/agents/tools/:id
-//   - GET      /api/ai/agents/tools
-//   - GET      /api/ai/agents/tools/:id
-//   - POST     /api/ai/agents/tools/batch
-//   - DELETE   /api/ai/agents/tools/batch
-//   - PUT      /api/ai/agents/tools/batch
-//   - PATCH    /api/ai/agents/tools/batch
+//   - POST     /api/ai/tools
+//   - DELETE   /api/ai/tools/:id
+//   - PUT      /api/ai/tools/:id
+//   - PATCH    /api/ai/tools/:id
+//   - GET      /api/ai/tools
+//   - GET      /api/ai/tools/:id
+//   - POST     /api/ai/tools/batch
+//   - DELETE   /api/ai/tools/batch
+//   - PUT      /api/ai/tools/batch
+//   - PATCH    /api/ai/tools/batch
+//
+// Favorite module (full CRUD):
+//   - POST     /api/ai/favorites
+//   - DELETE   /api/ai/favorites/:id
+//   - PUT      /api/ai/favorites/:id
+//   - PATCH    /api/ai/favorites/:id
+//   - GET      /api/ai/favorites
+//   - GET      /api/ai/favorites/:id
+//   - POST     /api/ai/favorites/batch
+//   - DELETE   /api/ai/favorites/batch
+//   - PUT      /api/ai/favorites/batch
+//   - PATCH    /api/ai/favorites/batch
 //
 // Supported provider types:
 //   - openai: OpenAI API
@@ -212,7 +198,7 @@ func Register() {
 		*Model,
 		*Model,
 		*service.Base[*Model, *Model, *Model]](
-		module.NewWrapper[*Model, *Model, *Model]("/api/models", "id", false),
+		module.NewWrapper[*Model, *Model, *Model]("/ai/models", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -231,7 +217,7 @@ func Register() {
 		*Provider,
 		*Provider,
 		*service.Base[*Provider, *Provider, *Provider]](
-		module.NewWrapper[*Provider, *Provider, *Provider]("/api/providers", "id", false),
+		module.NewWrapper[*Provider, *Provider, *Provider]("/ai/providers", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -341,7 +327,7 @@ func Register() {
 		*KnowledgeBase,
 		*KnowledgeBase,
 		*service.Base[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]](
-		module.NewWrapper[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]("/ai/rag/knowledge-bases", "kb_id", false),
+		module.NewWrapper[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]("/ai/knowledge-bases", "kb_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -356,7 +342,7 @@ func Register() {
 		*Document,
 		*Document,
 		*service.Base[*Document, *Document, *Document]](
-		module.NewWrapper[*Document, *Document, *Document]("/ai/rag/knowledge-bases/:kb_id/documents", "doc_id", false),
+		module.NewWrapper[*Document, *Document, *Document]("/ai/knowledge-bases/:kb_id/documents", "doc_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -371,7 +357,7 @@ func Register() {
 		*Chunk,
 		*Chunk,
 		*service.Base[*Chunk, *Chunk, *Chunk]](
-		module.NewWrapper[*Chunk, *Chunk, *Chunk]("/ai/rag/knowledge-bases/:kb_id/documents/:doc_id/chunks", "id", false),
+		module.NewWrapper[*Chunk, *Chunk, *Chunk]("/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks", "chunk_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -386,26 +372,7 @@ func Register() {
 		*Prompt,
 		*Prompt,
 		*service.Base[*Prompt, *Prompt, *Prompt]](
-		module.NewWrapper[*Prompt, *Prompt, *Prompt]("/ai/prompts", "pmt_id", false),
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-		consts.PHASE_CREATE_MANY,
-		consts.PHASE_DELETE_MANY,
-		consts.PHASE_UPDATE_MANY,
-		consts.PHASE_PATCH_MANY,
-	)
-
-	// Register "PromptFavorite" module
-	module.Use[
-		*PromptFavorite,
-		*PromptFavorite,
-		*PromptFavorite,
-		*service.Base[*PromptFavorite, *PromptFavorite, *PromptFavorite]](
-		module.NewWrapper[*PromptFavorite, *PromptFavorite, *PromptFavorite]("/ai/prompts/:pmt_id/favorites", "id", false),
+		module.NewWrapper[*Prompt, *Prompt, *Prompt]("/ai/prompts", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -424,7 +391,7 @@ func Register() {
 		*Agent,
 		*Agent,
 		*service.Base[*Agent, *Agent, *Agent]](
-		module.NewWrapper[*Agent, *Agent, *Agent]("/ai/agents", "agent_id", false),
+		module.NewWrapper[*Agent, *Agent, *Agent]("/ai/agents", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -437,13 +404,13 @@ func Register() {
 		consts.PHASE_PATCH_MANY,
 	)
 
-	// Register "AgentFavorite" module
+	// Register "Favorite" module (for prompts, agents, etc.)
 	module.Use[
-		*AgentFavorite,
-		*AgentFavorite,
-		*AgentFavorite,
-		*service.Base[*AgentFavorite, *AgentFavorite, *AgentFavorite]](
-		module.NewWrapper[*AgentFavorite, *AgentFavorite, *AgentFavorite]("/ai/agents/:agent_id/favorites", "id", false),
+		*Favorite,
+		*Favorite,
+		*Favorite,
+		*service.Base[*Favorite, *Favorite, *Favorite]](
+		module.NewWrapper[*Favorite, *Favorite, *Favorite]("/ai/favorites", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -462,7 +429,7 @@ func Register() {
 		*AgentTool,
 		*AgentTool,
 		*service.Base[*AgentTool, *AgentTool, *AgentTool]](
-		module.NewWrapper[*AgentTool, *AgentTool, *AgentTool]("/ai/agents/tools", "id", false),
+		module.NewWrapper[*AgentTool, *AgentTool, *AgentTool]("/ai/tools", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,

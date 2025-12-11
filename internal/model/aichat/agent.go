@@ -47,11 +47,9 @@ type Agent struct {
 	Visibility  AgentVisibility `gorm:"size:20;default:private" json:"visibility,omitempty" schema:"visibility"` // Visibility
 	Category    AgentCategory   `gorm:"size:30;default:assistant" json:"category,omitempty" schema:"category"`   // Category
 
-	UserID     string `gorm:"size:100;not null;index" json:"user_id,omitempty" schema:"user_id"` // Owner user ID
-	ProviderID string `gorm:"size:100;index" json:"provider_id,omitempty" schema:"provider_id"`  // Associated provider ID
-	ModelID    string `gorm:"size:100;index" json:"model_id,omitempty" schema:"model_id"`        // Associated model ID
-	ChatID     string `gorm:"size:100;index" json:"chat_id,omitempty" schema:"chat_id"`          // Associated chat ID
-	PromptID   string `gorm:"size:100;index" json:"prompt_id,omitempty" schema:"prompt_id"`      // Associated prompt ID
+	UserID   string `gorm:"size:100;not null;index" json:"user_id,omitempty" schema:"user_id"` // Owner user ID
+	ModelID  string `gorm:"size:100;index" json:"model_id,omitempty" schema:"model_id"`        // Associated model ID
+	PromptID string `gorm:"size:100;index" json:"prompt_id,omitempty" schema:"prompt_id"`      // Associated prompt ID
 
 	// Knowledge base configuration
 	EnableRAG        *bool                       `gorm:"default:false" json:"enable_rag,omitempty" schema:"enable_rag"`         // Enable RAG
@@ -64,9 +62,7 @@ type Agent struct {
 	ToolIDs     datatypes.JSONSlice[string] `gorm:"size:1000" json:"tool_ids,omitempty" schema:"tool_ids"`             // JSON array of tool IDs
 
 	Prompt         *Prompt          `gorm:"-" json:"prompt,omitempty"`          // Associated prompt
-	Provider       *Provider        `gorm:"-" json:"provider,omitempty"`        // Associated provider
 	Model          *Model           `gorm:"-" json:"model,omitempty"`           // Associated model
-	Conversation   *Conversation    `gorm:"-" json:"conversation,omitempty"`    // Associated conversation
 	KnowledgeBases []*KnowledgeBase `gorm:"-" json:"knowledge_bases,omitempty"` // Associated knowledge bases
 	Tools          []*AgentTool     `gorm:"-" json:"tools,omitempty"`           // Associated tools
 
