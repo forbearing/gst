@@ -1,6 +1,36 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Refactor
+- **database:** combine model query and raw query in database option "WithQuery"
+
+
+<a name="v0.10.5-beta.2"></a>
+## [v0.10.5-beta.2] - 2025-12-06
+### Chore
+- go mod tidy
+- **build:** add "go mod tidy" in `make check`
+- **ci:** use go 1.25
+- **release:** generate CHANGEME.md
+
+### Refactor
+- **service:** includes REQ and RSP types int service key generation
+
+### Test
+- **database:** add test case for JSON field fuzzy query
+
+### Pull Requests
+- Merge pull request [#71](https://github.com/forbearing/gst/issues/71) from forbearing/dev
+
+
+<a name="v0.10.5-beta.1"></a>
+## [v0.10.5-beta.1] - 2025-12-03
+### Chore
+- **release:** generate CHANGEME.md
+
+### Pull Requests
+- Merge pull request [#70](https://github.com/forbearing/gst/issues/70) from forbearing/dev
+
 
 <a name="v0.10.5-beta.0"></a>
 ## [v0.10.5-beta.0] - 2025-12-03
@@ -314,11 +344,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="list"></a>
-## [list] - 2025-11-08
-
 <a name="v0.10.0-beta.3"></a>
 ## [v0.10.0-beta.3] - 2025-11-08
+
+<a name="list"></a>
+## [list] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -2712,7 +2742,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.5-beta.0...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.5-beta.2...HEAD
+[v0.10.5-beta.2]: https://github.com/forbearing/gst/compare/v0.10.5-beta.1...v0.10.5-beta.2
+[v0.10.5-beta.1]: https://github.com/forbearing/gst/compare/v0.10.5-beta.0...v0.10.5-beta.1
 [v0.10.5-beta.0]: https://github.com/forbearing/gst/compare/v0.10.4...v0.10.5-beta.0
 [v0.10.4]: https://github.com/forbearing/gst/compare/v0.10.3...v0.10.4
 [v0.10.3]: https://github.com/forbearing/gst/compare/v0.10.2...v0.10.3
@@ -2721,9 +2753,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.10.0]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...v0.10.0
 [v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
 [v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0

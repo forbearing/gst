@@ -292,6 +292,10 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 				slice = reflect.MakeSlice(reflect.TypeFor[[]string](), _len, _len)
 				reflect.Copy(slice, fieldVal)
 				_v = strings.Join(slice.Interface().([]string), ",") //nolint:errcheck
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			// TODO: handle integer slice.
+			case reflect.Float32, reflect.Float64:
+			// TODO: handle float slice.
 			default:
 				_v = fmt.Sprintf("%v", v)
 			}
