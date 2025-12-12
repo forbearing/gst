@@ -40,7 +40,9 @@ func (sm *StreamManager) CancelStream(messageID string) error {
 		return errors.Newf("stream not found for message: %s", messageID)
 	}
 
-	cancel()
+	if cancel != nil {
+		cancel()
+	}
 	delete(sm.streams, messageID)
 	return nil
 }
