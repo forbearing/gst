@@ -54,6 +54,7 @@ type Client struct {
 	query       *model.Base
 	queryRaw    string
 	param       string
+	apiPath     string
 	debug       bool
 	maxRetries  int
 	retryWait   time.Duration
@@ -131,14 +132,18 @@ func (c *Client) RequestURL() (string, error) {
 	if !strings.HasPrefix(c.addr, "http://") && !strings.HasPrefix(c.addr, "https://") {
 		return "", errors.New("addr must start with http:// or https://")
 	}
+	url := c.addr
+	if len(c.apiPath) > 0 {
+		url = fmt.Sprintf("%s/%s", c.addr, c.apiPath)
+	}
 	query, err := c.QueryString()
 	if err != nil {
 		return "", err
 	}
 	if len(query) > 0 {
-		return fmt.Sprintf("%s?%s", c.addr, query), nil
+		return fmt.Sprintf("%s?%s", url, query), nil
 	}
-	return c.addr, nil
+	return url, nil
 }
 
 // Create send a POST request to create a new resource.
@@ -312,37 +317,41 @@ func (c *Client) request(action action, payload any) (*Resp, error) {
 	var url string
 	var err error
 	var method string
+	baseURL := c.addr
+	if len(c.apiPath) > 0 {
+		baseURL = fmt.Sprintf("%s/%s", c.addr, c.apiPath)
+	}
 	switch action {
 	case create:
 		method = http.MethodPost
-		url = c.addr
+		url = baseURL
 	case delete_:
 		method = http.MethodDelete
-		url = fmt.Sprintf("%s/%s", c.addr, c.param)
+		url = fmt.Sprintf("%s/%s", baseURL, c.param)
 	case update:
 		method = http.MethodPut
-		url = fmt.Sprintf("%s/%s", c.addr, c.param)
+		url = fmt.Sprintf("%s/%s", baseURL, c.param)
 	case patch:
 		method = http.MethodPatch
-		url = fmt.Sprintf("%s/%s", c.addr, c.param)
+		url = fmt.Sprintf("%s/%s", baseURL, c.param)
 	case create_many:
 		method = http.MethodPost
-		url = fmt.Sprintf("%s/batch", c.addr)
+		url = fmt.Sprintf("%s/batch", baseURL)
 	case delete_many:
 		method = http.MethodDelete
-		url = fmt.Sprintf("%s/batch", c.addr)
+		url = fmt.Sprintf("%s/batch", baseURL)
 	case update_many:
 		method = http.MethodPut
-		url = fmt.Sprintf("%s/batch", c.addr)
+		url = fmt.Sprintf("%s/batch", baseURL)
 	case patch_many:
 		method = http.MethodPatch
-		url = fmt.Sprintf("%s/batch", c.addr)
+		url = fmt.Sprintf("%s/batch", baseURL)
 	case list:
 		method = http.MethodGet
 		url, err = c.RequestURL()
 	case get:
 		method = http.MethodGet
-		url = fmt.Sprintf("%s/%s", c.addr, c.param)
+		url = fmt.Sprintf("%s/%s", baseURL, c.param)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid request url")

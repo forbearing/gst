@@ -1,9 +1,11 @@
 package client_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -58,9 +60,17 @@ var (
 	user3 = User{Name: name3, Email: email3, Avatar: avatar3, Base: model.Base{ID: id3}}
 	user4 = User{Name: name4, Email: email4, Avatar: avatar4, Base: model.Base{ID: id4}}
 	user5 = User{Name: name5, Email: email5, Avatar: avatar5, Base: model.Base{ID: id5}}
+
+	serverOnce sync.Once
 )
 
 func startServer() {
+	serverOnce.Do(func() {
+		startServerOnce()
+	})
+}
+
+func startServerOnce() {
 	model.Register[*User]()
 
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
@@ -413,6 +423,201 @@ func Test_Client(t *testing.T) {
 		require.Equal(t, u.Name, user4.Name)
 		require.Equal(t, u.Email, user4.Email)
 		require.Equal(t, u.Avatar, user4.Avatar)
+	})
+}
+
+func Test_Client_WithAPI(t *testing.T) {
+	startServer()
+
+	baseAddr := fmt.Sprintf("http://localhost:%d/api", port)
+
+	// Create test users first
+	cliSetup, err := client.New(baseAddr+"/test-user", client.WithToken(token))
+	require.NoError(t, err)
+	_, err = cliSetup.Create(user1)
+	require.NoError(t, err)
+	_, err = cliSetup.Create(user2)
+	require.NoError(t, err)
+
+	// Test WithAPI option with List method
+	t.Run("with_api_option_list", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"))
+		require.NoError(t, err)
+
+		// Test List using apiPath from WithAPI
+		users := make([]User, 0)
+		total := new(int64)
+		resp, err := cli.List(&users, total)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotEmpty(t, resp.RequestID)
+		require.GreaterOrEqual(t, len(users), 0)
+		require.GreaterOrEqual(t, *total, int64(0))
+	})
+
+	// Test WithAPI option with Get method
+	t.Run("with_api_option_get", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"))
+		require.NoError(t, err)
+
+		// Test Get using apiPath from WithAPI
+		user := new(User)
+		resp, err := cli.Get(id1, user)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotEmpty(t, resp.RequestID)
+		require.Equal(t, id1, user.ID)
+		require.Equal(t, name1, user.Name)
+		require.Equal(t, email1, user.Email)
+		require.Equal(t, avatar1, user.Avatar)
+	})
+
+	// Test WithAPI option with Create method
+	t.Run("with_api_option_create", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"))
+		require.NoError(t, err)
+
+		newUser := User{
+			Name:   "test_user",
+			Email:  "test@example.com",
+			Avatar: "test_avatar",
+		}
+
+		resp, err := cli.Create(newUser)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotEmpty(t, resp.RequestID)
+
+		createdUser := new(User)
+		err = json.Unmarshal(resp.Data, createdUser)
+		require.NoError(t, err)
+		require.NotEmpty(t, createdUser.ID)
+		require.Equal(t, newUser.Name, createdUser.Name)
+		require.Equal(t, newUser.Email, createdUser.Email)
+		require.Equal(t, newUser.Avatar, createdUser.Avatar)
+
+		// Clean up: delete the created user
+		_, err = cli.Delete(createdUser.ID)
+		require.NoError(t, err)
+	})
+
+	// Test WithAPI option with Update method
+	t.Run("with_api_option_update", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"))
+		require.NoError(t, err)
+
+		// First create a user
+		newUser := User{
+			Name:   "update_test",
+			Email:  "update@example.com",
+			Avatar: "update_avatar",
+		}
+		resp, err := cli.Create(newUser)
+		require.NoError(t, err)
+		createdUser := new(User)
+		err = json.Unmarshal(resp.Data, createdUser)
+		require.NoError(t, err)
+
+		// Update the user
+		updatedUser := User{
+			Name:   "updated_name",
+			Email:  "updated@example.com",
+			Avatar: "updated_avatar",
+		}
+		resp, err = cli.Update(createdUser.ID, updatedUser)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		// Verify update
+		user := new(User)
+		_, err = cli.Get(createdUser.ID, user)
+		require.NoError(t, err)
+		require.Equal(t, updatedUser.Name, user.Name)
+		require.Equal(t, updatedUser.Email, user.Email)
+		require.Equal(t, updatedUser.Avatar, user.Avatar)
+
+		// Clean up
+		_, err = cli.Delete(createdUser.ID)
+		require.NoError(t, err)
+	})
+
+	// Test WithAPI option with Patch method
+	t.Run("with_api_option_patch", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"))
+		require.NoError(t, err)
+
+		// First create a user
+		newUser := User{
+			Name:   "patch_test",
+			Email:  "patch@example.com",
+			Avatar: "patch_avatar",
+		}
+		resp, err := cli.Create(newUser)
+		require.NoError(t, err)
+		createdUser := new(User)
+		err = json.Unmarshal(resp.Data, createdUser)
+		require.NoError(t, err)
+
+		// Partially update the user
+		patchedUser := User{
+			Avatar: "patched_avatar",
+		}
+		resp, err = cli.Patch(createdUser.ID, patchedUser)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		// Verify patch
+		user := new(User)
+		_, err = cli.Get(createdUser.ID, user)
+		require.NoError(t, err)
+		require.Equal(t, newUser.Name, user.Name) // Name should remain unchanged
+		require.Equal(t, newUser.Email, user.Email) // Email should remain unchanged
+		require.Equal(t, patchedUser.Avatar, user.Avatar) // Avatar should be updated
+
+		// Clean up
+		_, err = cli.Delete(createdUser.ID)
+		require.NoError(t, err)
+	})
+
+	// Test WithAPI option with Delete method
+	t.Run("with_api_option_delete", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"))
+		require.NoError(t, err)
+
+		// First create a user
+		newUser := User{
+			Name:   "delete_test",
+			Email:  "delete@example.com",
+			Avatar: "delete_avatar",
+		}
+		resp, err := cli.Create(newUser)
+		require.NoError(t, err)
+		createdUser := new(User)
+		err = json.Unmarshal(resp.Data, createdUser)
+		require.NoError(t, err)
+
+		// Delete the user
+		resp, err = cli.Delete(createdUser.ID)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		// Verify deletion
+		user := new(User)
+		_, err = cli.Get(createdUser.ID, user)
+		require.Error(t, err)
+	})
+
+	// Test WithAPI option with query parameters
+	t.Run("with_api_option_query", func(t *testing.T) {
+		cli, err := client.New(baseAddr, client.WithToken(token), client.WithAPI("test-user"), client.WithQueryPagination(1, 2))
+		require.NoError(t, err)
+
+		users := make([]User, 0)
+		total := new(int64)
+		resp, err := cli.List(&users, total)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.GreaterOrEqual(t, *total, int64(0))
 	})
 }
 

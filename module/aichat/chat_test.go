@@ -136,3 +136,8 @@ func TestChatCompletion(t *testing.T) {
 		})
 	})
 }
+
+func TestStopMessage(t *testing.T) {
+	stopCli, err := client.New(addr+"/ai/messages/stop", client.WithToken(token), client.WithTimeout(3*time.Minute))
+	require.NoError(t, err)
+}
