@@ -25,3 +25,16 @@ type StopMessageRsp struct {
 	MessageID string `json:"message_id"`
 	Content   string `json:"content"`
 }
+
+// RegenerateMessageReq represents a request to regenerate an assistant message
+type RegenerateMessageReq struct {
+	MessageID string `json:"message_id"`       // Assistant message ID to regenerate
+	Stream    bool   `json:"stream,omitempty"` // Whether to stream response
+}
+
+// RegenerateMessageRsp represents a response for regenerated message
+type RegenerateMessageRsp struct {
+	MessageID      string `json:"message_id"`        // New regenerated message ID
+	ConversationID string `json:"conversation_id"`   // Conversation ID
+	Content        string `json:"content,omitempty"` // Response content (non-streaming only)
+}

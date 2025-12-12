@@ -516,4 +516,30 @@ func Register() {
 		),
 		consts.PHASE_CREATE,
 	)
+
+	// Register "RegenerateMessage" module
+	//
+	/*
+		curl --location --request POST 'http://localhost:8090/api/ai/messages/regenerate' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"message_id": "xxxxx-message-id-xxxxx",
+			"stream": true
+		}'
+	*/
+	module.Use[
+		*model.Empty,
+		*modelaichat.RegenerateMessageReq,
+		*modelaichat.RegenerateMessageRsp,
+		*serviceaichat.RegenerateMessage](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.RegenerateMessageReq,
+			*modelaichat.RegenerateMessageRsp](
+			"/ai/messages/regenerate",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
+	)
 }
