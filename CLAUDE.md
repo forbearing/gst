@@ -12,7 +12,7 @@
 
 ### Sandbox
 
-切换目录时请使用 `builtin cd mydir` 而不是直接 `cd mydir` 因为在 sandbox autorun 中, `cd` 命令有问题
+在 sandbox 运行命令时，使用 `bultin cd` 来替代 `cd`
 
 
 

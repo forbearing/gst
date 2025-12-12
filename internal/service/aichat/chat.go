@@ -89,27 +89,8 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		return nil, errors.Wrap(err, "failed to get message history")
 	}
 
-	// 5. Build eino messages and save new user messages to database
-	einoMessages := make([]*schema.Message, 0)
-
-	// Add history messages to eino messages
-	for _, msg := range messages {
-		switch msg.Role {
-		case modelaichat.MessageRoleSystem:
-			einoMessages = append(einoMessages, schema.SystemMessage(msg.Content))
-		case modelaichat.MessageRoleUser:
-			einoMessages = append(einoMessages, schema.UserMessage(msg.Content))
-		case modelaichat.MessageRoleAssistant:
-			einoMessages = append(einoMessages, schema.AssistantMessage(msg.Content, nil))
-		}
-	}
-
-	// Add new user messages to eino messages and save to database
+	// 5. Save new user messages to database
 	for _, content := range req.Messages {
-		// Add to eino messages first
-		einoMessages = append(einoMessages, schema.UserMessage(content))
-
-		// Save to database
 		if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Create(&modelaichat.Message{
 			ConversationID: conversation.ID,
 			ModelID:        req.ModelID,
@@ -121,10 +102,32 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		}
 	}
 
-	// 6. Create AI model client based on provider type
+	// 6. Manage context window using ContextManager
+	// messages contains all historical messages (user + assistant) from database
+	// req.Messages contains new user messages from current request
+	// ContextManager will merge them and trim using sliding window strategy to fit within context length
+	modelConfig := aiModel.Config.Data()
+	contextLength := modelConfig.ContextLength
+	if contextLength <= 0 {
+		// Default context length if not specified
+		contextLength = 4096
+	}
+
+	contextManager, err := NewContextManager(aiModel.ModelID, contextLength)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create context manager")
+	}
+
+	// ManageContext merges history messages and new messages, then trims to fit context window
+	// It preserves system messages and uses sliding window for conversation history
+	einoMessages, err := contextManager.ManageContext(messages, req.Messages)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to manage context")
+	}
+
+	// 7. Create AI model client based on provider type
 	config := provider.Config.Data()
 	var chatModel einomodel.ToolCallingChatModel
-	var err error
 
 	switch provider.Type {
 	case modelaichat.ProviderAnthropic:
@@ -169,7 +172,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		return nil, errors.Newf("unsupported provider type: %s", provider.Type)
 	}
 
-	// 7. Create assistant message in database
+	// 8. Create assistant message in database
 	assistantMsg := &modelaichat.Message{
 		ConversationID: conversation.ID,
 		ModelID:        req.ModelID,
@@ -181,7 +184,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		return nil, errors.Wrap(err, "failed to create assistant message")
 	}
 
-	// 8. Handle streaming or non-streaming response
+	// 9. Handle streaming or non-streaming response
 	if req.Stream {
 		return s.handleStreaming(ctx, chatModel, einoMessages, assistantMsg, conversation)
 	}

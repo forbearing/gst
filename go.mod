@@ -70,6 +70,7 @@ require (
 	github.com/panjf2000/ants/v2 v2.11.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/sftp v1.13.9
+	github.com/pkoukk/tiktoken-go v0.1.7
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus-community/pro-bing v0.7.0
 	github.com/prometheus/client_golang v1.23.2
