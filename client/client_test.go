@@ -570,8 +570,8 @@ func Test_Client_WithAPI(t *testing.T) {
 		user := new(User)
 		_, err = cli.Get(createdUser.ID, user)
 		require.NoError(t, err)
-		require.Equal(t, newUser.Name, user.Name) // Name should remain unchanged
-		require.Equal(t, newUser.Email, user.Email) // Email should remain unchanged
+		require.Equal(t, newUser.Name, user.Name)         // Name should remain unchanged
+		require.Equal(t, newUser.Email, user.Email)       // Email should remain unchanged
 		require.Equal(t, patchedUser.Avatar, user.Avatar) // Avatar should be updated
 
 		// Clean up
