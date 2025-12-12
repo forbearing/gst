@@ -73,9 +73,18 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 	}
 
 	// 4. Get conversation history messages
+	// Filter out failed and inactive messages to ensure only valid messages are included
 	messages := make([]*modelaichat.Message, 0)
+	query := &modelaichat.Message{
+		ConversationID: conversation.ID,
+		Status:         modelaichat.MessageStatusCompleted,
+		IsActive:       util.ValueOf(true), // Only include active messages
+	}
+	// Filter out failed and inactive messages
+	// Only include completed messages that are active
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Message{ConversationID: conversation.ID}).
+		WithQuery(query).
+		WithOrder("created_at ASC").
 		List(&messages); err != nil {
 		return nil, errors.Wrap(err, "failed to get message history")
 	}
@@ -188,14 +197,17 @@ func (s *ChatCompletion) handleStreaming(
 	conversation *modelaichat.Conversation,
 ) (*modelaichat.ChatCompletionRsp, error) {
 	_ = conversation
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
+	db := database.Database[*modelaichat.Message](ctx.DatabaseContext())
+
 	// Start streaming
 	stream, err := chatModel.Stream(ctx.Context(), einoMessages)
 	if err != nil {
 		assistantMsg.Status = modelaichat.MessageStatusFailed
 		assistantMsg.ErrMessage = err.Error()
 		assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
-		if e := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); e != nil {
-			s.Errorw("failed to update message", "error", e)
+		if e := db.Update(assistantMsg); e != nil {
+			log.Errorw("failed to update message", "error", e)
 		}
 		return nil, errors.Wrap(err, "failed to start streaming")
 	}
@@ -203,9 +215,8 @@ func (s *ChatCompletion) handleStreaming(
 
 	// Update message status
 	assistantMsg.Status = modelaichat.MessageStatusStreaming
-	msgDB := database.Database[*modelaichat.Message](ctx.DatabaseContext())
-	if err := msgDB.Update(assistantMsg); err != nil {
-		s.Errorw("failed to update message", "error", err)
+	if err := db.Update(assistantMsg); err != nil {
+		log.Errorw("failed to update message", "error", err)
 	}
 
 	var fullContent string
@@ -225,15 +236,16 @@ func (s *ChatCompletion) handleStreaming(
 			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
 			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
-			if chunk.ResponseMeta != nil || chunk.ResponseMeta.Usage != nil {
+			if chunk != nil && chunk.ResponseMeta != nil && chunk.ResponseMeta.Usage != nil {
 				assistantMsg.PromptTokens = chunk.ResponseMeta.Usage.PromptTokens
 				assistantMsg.CompletionTokens = chunk.ResponseMeta.Usage.CompletionTokens
 				assistantMsg.TotalTokens = chunk.ResponseMeta.Usage.TotalTokens
 			}
 
-			if err = msgDB.Update(assistantMsg); err != nil {
-				s.Errorw("failed to update message", "error", err)
+			if err = db.Update(assistantMsg); err != nil {
+				log.Errorw("failed to update message", "error", err)
 			}
+			log.Info("stream ended")
 			return false
 		}
 
@@ -243,8 +255,8 @@ func (s *ChatCompletion) handleStreaming(
 			assistantMsg.ErrMessage = err.Error()
 			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
 			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
-			if err = msgDB.Update(assistantMsg); err != nil {
-				s.Errorw("failed to update message", "error", err)
+			if err = db.Update(assistantMsg); err != nil {
+				log.Errorw("failed to update message", "error", err)
 			}
 
 			_ = ctx.Encode(w, types.Event{
@@ -282,7 +294,6 @@ func (s *ChatCompletion) handleNonStreaming(
 	assistantMsg *modelaichat.Message,
 	conversation *modelaichat.Conversation,
 ) (*modelaichat.ChatCompletionRsp, error) {
-	_ = conversation
 	startTime := time.Now()
 
 	// Generate response
@@ -303,7 +314,7 @@ func (s *ChatCompletion) handleNonStreaming(
 	assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
 	// Extract token usage from response
-	if response.ResponseMeta != nil || response.ResponseMeta.Usage != nil {
+	if response != nil && response.ResponseMeta != nil && response.ResponseMeta.Usage != nil {
 		assistantMsg.PromptTokens = response.ResponseMeta.Usage.PromptTokens
 		assistantMsg.CompletionTokens = response.ResponseMeta.Usage.CompletionTokens
 		assistantMsg.TotalTokens = response.ResponseMeta.Usage.TotalTokens

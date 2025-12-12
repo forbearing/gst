@@ -1,6 +1,10 @@
 package modelaichat
 
-import "github.com/forbearing/gst/model"
+import (
+	"time"
+
+	"github.com/forbearing/gst/model"
+)
 
 // MessageRole represents the role of a message in a conversation
 type MessageRole string
@@ -45,9 +49,9 @@ type Message struct {
 	StopReason *StopReason   `gorm:"size:20" json:"stop_reason,omitempty" schema:"stop_reason"`         // Stop reason
 
 	// Model information
-	ParentID       *string          `gorm:"index" json:"parent_id,omitempty" schema:"parent_id"`            // Parent message ID (for regeneration versioning)
-	ConversationID string           `gorm:"index;not null" json:"conversation_id" schema:"conversation_id"` // Conversation ID
-	ModelID        string           `gorm:"index;not null" json:"model_id" schema:"model_id"`               // Model ID
+	ParentID       *string          `gorm:"index" json:"parent_id,omitempty" schema:"parent_id"`                                                // Parent message ID (for regeneration versioning)
+	ConversationID string           `gorm:"index:idx_conversation_created,priority:1;not null" json:"conversation_id" schema:"conversation_id"` // Conversation ID
+	ModelID        string           `gorm:"index;not null" json:"model_id" schema:"model_id"`                                                   // Model ID
 	Conversation   *Conversation    `gorm:"-" json:"conversation,omitempty"`
 	Model          *Model           `gorm:"-" json:"model,omitempty"`
 	Variations     []Message        `gorm:"-" json:"variations,omitempty"`
@@ -64,6 +68,9 @@ type Message struct {
 
 	// Performance
 	LatencyMs int64 `json:"latency_ms,omitempty"` // Response latency in milliseconds
+
+	// Override Base.CreatedAt to add composite index with ConversationID
+	CreatedAt *time.Time `gorm:"index:idx_conversation_created,priority:2" json:"created_at,omitempty" schema:"-" url:"-"` // Timestamp when the record was created
 
 	model.Base
 }

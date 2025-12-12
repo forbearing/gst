@@ -445,21 +445,28 @@ func Register() {
 	// Register "ChatCompletion" module
 	//
 	/*
-		curl -X POST http://localhost:8080/api/ai/conversations/chat \
-		  -H "Content-Type: application/json" \
-		  -d '{
-		    "model_id": "model-id",
-		    "messages": ["你好"],
-		    "stream": true
-		  }'
+		curl --location 'http://localhost:8090/api/ai/conversations/chat' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"model_id": "claude-3-7-sonnet-20250219",
+			"stream": true,
+			"messages": [
+				"你现在是一个精通 go 语言的专家",
+				"简单介绍下 golang 这门语言,包括它的特性、用法和适用场景。"
+			]
 
-		curl -X POST http://localhost:8080/api/ai/conversations/chat \
-		  -H "Content-Type: application/json" \
-		  -d '{
-			"model_id": "model-id",
-			"messages": ["你好"],
-			"stream": false
-		  }'
+		}'
+		curl --location 'http://localhost:8090/api/ai/conversations/chat' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"model_id": "claude-3-7-sonnet-20250219",
+			"stream": false,
+			"messages": [
+				"你现在是一个精通 go 语言的专家",
+				"简单介绍下 golang 这门语言,包括它的特性、用法和适用场景。"
+			]
+
+		}'
 	*/
 	module.Use[
 		*model.Empty,

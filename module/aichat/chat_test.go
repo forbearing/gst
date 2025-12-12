@@ -1,6 +1,7 @@
 package aichat_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -80,6 +81,10 @@ func TestChatCompletion(t *testing.T) {
 		})
 	})
 
+	type Data struct {
+		Content string `json:"content"`
+		Delta   string `json:"delta"`
+	}
 	t.Run("stream", func(t *testing.T) {
 		t.Run("anthropic", func(t *testing.T) {
 			req := modelaichat.ChatCompletionReq{
@@ -88,7 +93,11 @@ func TestChatCompletion(t *testing.T) {
 				Stream:   true,
 			}
 			err = cli.Stream(req, func(event types.Event) error {
-				fmt.Printf("%s", event.Data)
+				var data Data
+				v1 := fmt.Sprintf("%s", event.Data)
+				v2 := []byte(v1)
+				_ = json.Unmarshal(v2, &data)
+				fmt.Printf("%s", data.Delta)
 				return nil
 			})
 			require.NoError(t, err)
@@ -100,7 +109,11 @@ func TestChatCompletion(t *testing.T) {
 				Stream:   true,
 			}
 			err = cli.Stream(req, func(event types.Event) error {
-				fmt.Printf("%s", event.Data)
+				var data Data
+				v1 := fmt.Sprintf("%s", event.Data)
+				v2 := []byte(v1)
+				_ = json.Unmarshal(v2, &data)
+				fmt.Printf("%s", data.Delta)
 				return nil
 			})
 			require.NoError(t, err)
@@ -112,7 +125,11 @@ func TestChatCompletion(t *testing.T) {
 				Stream:   true,
 			}
 			err = cli.Stream(req, func(event types.Event) error {
-				fmt.Printf("%s", event.Data)
+				var data Data
+				v1 := fmt.Sprintf("%s", event.Data)
+				v2 := []byte(v1)
+				_ = json.Unmarshal(v2, &data)
+				fmt.Printf("%s", data.Delta)
 				return nil
 			})
 			require.NoError(t, err)
