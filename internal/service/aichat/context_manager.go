@@ -131,19 +131,29 @@ func (cm *ContextManager) ManageContext(
 		}
 	}
 
-	// Add new user messages to conversation
-	for _, content := range newUserMessages {
-		conversationMessages = append(conversationMessages, schema.UserMessage(content))
-	}
-
 	// Count tokens for system messages
 	systemTokens := cm.CountTokensForMessages(systemMessages)
 
-	// Calculate available tokens for conversation (excluding system messages)
-	conversationAvailableTokens := max(0, availableTokens-systemTokens)
+	// Count tokens for new user messages
+	newUserEinoMessages := make([]*schema.Message, 0, len(newUserMessages))
+	for _, content := range newUserMessages {
+		newUserEinoMessages = append(newUserEinoMessages, schema.UserMessage(content))
+	}
+	newUserTokens := cm.CountTokensForMessages(newUserEinoMessages)
+
+	// Calculate available tokens for conversation (excluding system messages and new user messages)
+	// New user messages must be included, so we reserve tokens for them
+	conversationAvailableTokens := max(0, availableTokens-systemTokens-newUserTokens)
+
+	// Add new user messages to conversation
+	conversationMessages = append(conversationMessages, newUserEinoMessages...)
 
 	// Trim conversation messages if necessary using sliding window
-	trimmedConversationMessages := cm.trimMessages(conversationMessages, conversationAvailableTokens)
+	// Only trim history messages, keep new user messages
+	historyLen := max(0, len(conversationMessages)-len(newUserEinoMessages))
+	historyEinoMessages := conversationMessages[:historyLen]
+	trimmedHistoryMessages := cm.trimMessages(historyEinoMessages, conversationAvailableTokens)
+	trimmedConversationMessages := append(trimmedHistoryMessages, newUserEinoMessages...)
 
 	// Combine system messages and trimmed conversation messages
 	einoMessages = append(einoMessages, systemMessages...)
@@ -167,25 +177,36 @@ func (cm *ContextManager) trimMessages(messages []*schema.Message, maxTokens int
 
 	// Use sliding window: keep the most recent messages
 	// Start from the end and work backwards
+	// Collect messages in reverse order first, then reverse at the end for better performance
 	trimmed := make([]*schema.Message, 0)
 	currentTokens := 0
 
 	// Iterate backwards through messages
+	// i is guaranteed to be valid: starts at len(messages)-1 and decrements to 0
 	for i := len(messages) - 1; i >= 0; i-- {
-		msgTokens := cm.CountTokens(messages[i])
+		msgTokens := cm.CountTokens(messages[i]) //nolint:gosec // i is always valid in this loop
 		if currentTokens+msgTokens > maxTokens {
 			// Can't fit this message, stop
 			break
 		}
-		trimmed = append([]*schema.Message{messages[i]}, trimmed...)
+		trimmed = append(trimmed, messages[i])
 		currentTokens += msgTokens
 	}
 
-	// If we have user messages, try to keep at least one user-assistant pair
+	// Reverse the slice to get correct order (most recent messages first in original order)
+	for i, j := 0, len(trimmed)-1; i < j; i, j = i+1, j-1 {
+		trimmed[i], trimmed[j] = trimmed[j], trimmed[i]
+	}
+
+	// If we have messages but all were trimmed, check if we can fit at least the last message
 	// This ensures we don't lose the conversation context completely
 	if len(trimmed) == 0 && len(messages) > 0 {
-		// At least keep the last message
-		trimmed = []*schema.Message{messages[len(messages)-1]}
+		lastMsg := messages[len(messages)-1]
+		lastMsgTokens := cm.CountTokens(lastMsg)
+		// Only keep the last message if it fits within the limit
+		if lastMsgTokens <= maxTokens {
+			trimmed = []*schema.Message{lastMsg}
+		}
 	}
 
 	return trimmed

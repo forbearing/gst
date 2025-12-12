@@ -8,13 +8,9 @@
 - module 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq
 - module 中使用自定义 Response 时, 命名偏向于 XXXRsp, 例如 SignupRsp
 
-
-
 ### Sandbox
 
-在 sandbox 运行命令时，使用 `bultin cd` 来替代 `cd`
-
-
+sandbox 中切换目录时，会使用 `builtin cd` 而不是 `cd`
 
 ### 开发中
 
@@ -26,9 +22,9 @@ go install ./cmd/gg
 
 - 优先使用的包: 错误处理使用 `github.com/cockroachdb/errors `而不是 golang 内置的 errors 包.
 
-- 禁止在 golib 项目根目录执行 `cmd/gg` 的任何命令** - 很容易破坏当前项目代码。测试 `cmd/gg` 命令请到 `examples/demo`  项目目录下执行。
+- 禁止在 golib 项目根目录执行 `cmd/gg` 的任何命令\*\* - 很容易破坏当前项目代码。测试 `cmd/gg` 命令请到 `examples/demo` 项目目录下执行。
 
-
+- 修改了代码，当前代码如果有测试用例，必须确保测试用例通过
 
 ### 开发完后
 
