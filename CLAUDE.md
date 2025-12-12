@@ -10,7 +10,7 @@
 
 ### Sandbox
 
-sandbox 中切换目录时，会使用 `builtin cd` 而不是 `cd`
+sandbox 中切换目录时，必须使用 `builtin cd` 而不是 `cd`
 
 ### 开发中
 
