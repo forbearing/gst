@@ -24,6 +24,7 @@ type (
 	Favorite          = modelaichat.Favorite
 	ChatCompletionReq = modelaichat.ChatCompletionReq
 	ChatCompletionRsp = modelaichat.ChatCompletionRsp
+	StopMessageReq    = modelaichat.StopMessageReq
 )
 
 // Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
@@ -181,6 +182,16 @@ type (
 //   - DELETE   /api/ai/favorites/batch
 //   - PUT      /api/ai/favorites/batch
 //   - PATCH    /api/ai/favorites/batch
+//
+// ChatCompletion module:
+//   - POST     /api/ai/conversations/chat
+//     Request body: ChatCompletionReq with model_id, messages, stream flag
+//     Response: ChatCompletionRsp (for non-stream) or SSE stream (for stream)
+//
+// StopMessage module:
+//   - POST     /api/ai/messages/stop
+//     Request body: StopMessageReq with message_id
+//     Response: Empty response
 //
 // Supported provider types:
 //   - openai: OpenAI API
@@ -478,6 +489,31 @@ func Register() {
 			*modelaichat.ChatCompletionReq,
 			*modelaichat.ChatCompletionRsp](
 			"/ai/conversations/chat",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
+	)
+
+	// Register "StopMessage" module
+	//
+	/*
+		curl --location --request POST 'http://localhost:8090/api/ai/messages/stop' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"message_id": "xxxxx-message-id-xxxxx"
+		}'
+	*/
+	module.Use[
+		*model.Empty,
+		*modelaichat.StopMessageReq,
+		*model.Empty,
+		*serviceaichat.StopMessage](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.StopMessageReq,
+			*model.Empty](
+			"/ai/messages/stop",
 			"id",
 			false,
 		),

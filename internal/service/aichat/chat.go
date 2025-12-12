@@ -1,6 +1,7 @@
 package serviceaichat
 
 import (
+	"context"
 	"io"
 	"time"
 
@@ -203,8 +204,19 @@ func (s *ChatCompletion) handleStreaming(
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	db := database.Database[*modelaichat.Message](ctx.DatabaseContext())
 
+	// Create a cancellable context for this stream
+	streamCtx, cancel := context.WithCancel(ctx.Context())
+	defer cancel()
+
+	// Register the stream with the manager
+	streamManager := GetStreamManager()
+	if err := streamManager.RegisterStream(assistantMsg.ID, cancel); err != nil {
+		log.Warnw("failed to register stream", "error", err)
+	}
+	defer streamManager.UnregisterStream(assistantMsg.ID)
+
 	// Start streaming
-	stream, err := chatModel.Stream(ctx.Context(), einoMessages)
+	stream, err := chatModel.Stream(streamCtx, einoMessages)
 	if err != nil {
 		assistantMsg.Status = modelaichat.MessageStatusFailed
 		assistantMsg.ErrMessage = err.Error()
@@ -231,6 +243,30 @@ func (s *ChatCompletion) handleStreaming(
 	}()
 
 	ctx.SSE().Stream(func(w io.Writer) bool {
+		// Check if context is canceled (user stopped the stream)
+		select {
+		case <-streamCtx.Done():
+			// Stream was canceled
+			assistantMsg.Status = modelaichat.MessageStatusStopped
+			assistantMsg.Content = fullContent
+			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonUser)
+			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
+
+			if err := db.Update(assistantMsg); err != nil {
+				log.Errorw("failed to update message", "error", err)
+			}
+
+			_ = ctx.Encode(w, types.Event{
+				Event: "stopped",
+				Data: map[string]any{
+					"message_id": assistantMsg.ID,
+				},
+			})
+			log.Info("stream stopped by user")
+			return false
+		default:
+		}
+
 		chunk, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
 			// Stream ended, try to extract usage information if available
