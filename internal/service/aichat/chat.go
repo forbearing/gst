@@ -309,7 +309,7 @@ func (s *ChatCompletion) handleNonStreaming(
 	}
 
 	assistantMsg.Status = modelaichat.MessageStatusCompleted
-	assistantMsg.Content = response.Content
+	assistantMsg.Content = util.Deref(response).Content
 	assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
 	assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
