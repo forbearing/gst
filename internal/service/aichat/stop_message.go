@@ -53,12 +53,13 @@ func (s *StopMessage) Create(ctx *types.ServiceContext, req *modelaichat.StopMes
 	if err := streamManager.CancelStream(req.MessageID); err != nil {
 		log.Warnw("failed to cancel stream", "error", err, "message_id", req.MessageID)
 		// Even if cancel fails, try to update message status
-		msg.Status = modelaichat.MessageStatusStopped
-		msg.StopReason = util.ValueOf(modelaichat.StopReasonUser)
-		if e := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(msg); e != nil {
-			return nil, errors.Wrap(e, "failed to update message status")
-		}
-		return &modelaichat.StopMessageRsp{MessageID: req.MessageID, Content: msg.Content}, nil
+	}
+
+	// Update message status regardless of cancel result
+	msg.Status = modelaichat.MessageStatusStopped
+	msg.StopReason = util.ValueOf(modelaichat.StopReasonUser)
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(msg); err != nil {
+		return nil, errors.Wrap(err, "failed to update message status")
 	}
 
 	log.Infow("message stopped", "message_id", req.MessageID)

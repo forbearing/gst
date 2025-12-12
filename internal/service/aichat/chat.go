@@ -253,7 +253,13 @@ func (s *ChatCompletion) handleStreaming(
 		// Start receiving chunk in a goroutine to avoid blocking
 		go func() {
 			chunk, err := stream.Recv()
-			chunkChan <- streamResult{chunk: chunk, err: err}
+			// Check if context was canceled before sending to channel to avoid blocking
+			select {
+			case <-streamCtx.Done():
+				// Context canceled, don't send to channel
+				return
+			case chunkChan <- streamResult{chunk: chunk, err: err}:
+			}
 		}()
 
 		// Wait for either context cancellation or stream data
