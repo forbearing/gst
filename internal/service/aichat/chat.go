@@ -242,10 +242,24 @@ func (s *ChatCompletion) handleStreaming(
 		_ = ctx.SSE().Done()
 	}()
 
+	// Channel to receive stream chunks
+	type streamResult struct {
+		chunk *schema.Message
+		err   error
+	}
+	chunkChan := make(chan streamResult, 1)
+
 	ctx.SSE().Stream(func(w io.Writer) bool {
-		// Check if context is canceled (user stopped the stream)
+		// Start receiving chunk in a goroutine to avoid blocking
+		go func() {
+			chunk, err := stream.Recv()
+			chunkChan <- streamResult{chunk: chunk, err: err}
+		}()
+
+		// Wait for either context cancellation or stream data
 		select {
 		case <-streamCtx.Done():
+			log.Infow("stream canceled", "error", streamCtx.Err())
 			// Stream was canceled
 			assistantMsg.Status = modelaichat.MessageStatusStopped
 			assistantMsg.Content = fullContent
@@ -264,62 +278,68 @@ func (s *ChatCompletion) handleStreaming(
 			})
 			log.Info("stream stopped by user")
 			return false
-		default:
-		}
 
-		chunk, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
-			// Stream ended, try to extract usage information if available
-			assistantMsg.Status = modelaichat.MessageStatusCompleted
-			assistantMsg.Content = fullContent
-			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
-			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
+		case result := <-chunkChan:
+			chunk, err := result.chunk, result.err
 
-			if chunk != nil && chunk.ResponseMeta != nil && chunk.ResponseMeta.Usage != nil {
-				assistantMsg.PromptTokens = chunk.ResponseMeta.Usage.PromptTokens
-				assistantMsg.CompletionTokens = chunk.ResponseMeta.Usage.CompletionTokens
-				assistantMsg.TotalTokens = chunk.ResponseMeta.Usage.TotalTokens
+			if errors.Is(err, io.EOF) {
+				// Stream ended, try to extract usage information if available
+				assistantMsg.Status = modelaichat.MessageStatusCompleted
+				assistantMsg.Content = fullContent
+				assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
+				assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
+
+				if chunk != nil && chunk.ResponseMeta != nil && chunk.ResponseMeta.Usage != nil {
+					assistantMsg.PromptTokens = chunk.ResponseMeta.Usage.PromptTokens
+					assistantMsg.CompletionTokens = chunk.ResponseMeta.Usage.CompletionTokens
+					assistantMsg.TotalTokens = chunk.ResponseMeta.Usage.TotalTokens
+				}
+
+				if err = db.Update(assistantMsg); err != nil {
+					log.Errorw("failed to update message", "error", err)
+				}
+				log.Info("stream ended")
+				return false
 			}
 
-			if err = db.Update(assistantMsg); err != nil {
-				log.Errorw("failed to update message", "error", err)
-			}
-			log.Info("stream ended")
-			return false
-		}
+			if err != nil {
+				// Error occurred
+				assistantMsg.Status = modelaichat.MessageStatusFailed
+				assistantMsg.ErrMessage = err.Error()
+				assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
+				assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
+				if err = db.Update(assistantMsg); err != nil {
+					log.Errorw("failed to update message", "error", err)
+				}
 
-		if err != nil {
-			// Error occurred
-			assistantMsg.Status = modelaichat.MessageStatusFailed
-			assistantMsg.ErrMessage = err.Error()
-			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
-			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
-			if err = db.Update(assistantMsg); err != nil {
-				log.Errorw("failed to update message", "error", err)
+				_ = ctx.Encode(w, types.Event{
+					Event: "error",
+					Data: map[string]any{
+						"error": err.Error(),
+					},
+				})
+				return false
 			}
 
+			if chunk == nil {
+				log.Errorw("received nil chunk")
+				return true // Continue to next iteration
+			}
+
+			// Append chunk content
+			fullContent += chunk.Content
+
+			// Send chunk via SSE
 			_ = ctx.Encode(w, types.Event{
-				Event: "error",
+				Event: "message",
 				Data: map[string]any{
-					"error": err.Error(),
+					"content": chunk.Content,
+					"delta":   chunk.Content, // For compatibility
 				},
 			})
-			return false
+
+			return true
 		}
-
-		// Append chunk content
-		fullContent += chunk.Content
-
-		// Send chunk via SSE
-		_ = ctx.Encode(w, types.Event{
-			Event: "message",
-			Data: map[string]any{
-				"content": chunk.Content,
-				"delta":   chunk.Content, // For compatibility
-			},
-		})
-
-		return true
 	})
 
 	return nil, nil

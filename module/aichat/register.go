@@ -10,21 +10,18 @@ import (
 )
 
 type (
-	Model             = modelaichat.Model
-	Provider          = modelaichat.Provider
-	Conversation      = modelaichat.Conversation
-	Message           = modelaichat.Message
-	MessageFeedBack   = modelaichat.MessageFeedback
-	KnowledgeBase     = modelaichat.KnowledgeBase
-	Document          = modelaichat.Document
-	Chunk             = modelaichat.Chunk
-	Prompt            = modelaichat.Prompt
-	Agent             = modelaichat.Agent
-	AgentTool         = modelaichat.AgentTool
-	Favorite          = modelaichat.Favorite
-	ChatCompletionReq = modelaichat.ChatCompletionReq
-	ChatCompletionRsp = modelaichat.ChatCompletionRsp
-	StopMessageReq    = modelaichat.StopMessageReq
+	Model           = modelaichat.Model
+	Provider        = modelaichat.Provider
+	Conversation    = modelaichat.Conversation
+	Message         = modelaichat.Message
+	MessageFeedBack = modelaichat.MessageFeedback
+	KnowledgeBase   = modelaichat.KnowledgeBase
+	Document        = modelaichat.Document
+	Chunk           = modelaichat.Chunk
+	Prompt          = modelaichat.Prompt
+	Agent           = modelaichat.Agent
+	AgentTool       = modelaichat.AgentTool
+	Favorite        = modelaichat.Favorite
 )
 
 // Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
@@ -507,12 +504,12 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.StopMessageReq,
-		*model.Empty,
+		*modelaichat.StopMessageRsp,
 		*serviceaichat.StopMessage](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.StopMessageReq,
-			*model.Empty](
+			*modelaichat.StopMessageRsp](
 			"/ai/messages/stop",
 			"id",
 			false,

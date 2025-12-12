@@ -19,3 +19,9 @@ type ChatCompletionRsp struct {
 type StopMessageReq struct {
 	MessageID string `json:"message_id" schema:"message_id"` // Message ID to stop
 }
+
+// StopMessageRsp represents the response to stop a message
+type StopMessageRsp struct {
+	MessageID string `json:"message_id"`
+	Content   string `json:"content"`
+}

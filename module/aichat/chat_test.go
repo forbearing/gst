@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/client"
+	"github.com/forbearing/gst/database"
 	modelaichat "github.com/forbearing/gst/internal/model/aichat"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
@@ -23,6 +24,11 @@ const (
 var messages = []string{
 	"你现在是一个精通 go 语言的专家",
 	"简单介绍下 golang 这门语言,包括它的特性、用法和适用场景。",
+}
+
+type ChatData struct {
+	Content string `json:"content"`
+	Delta   string `json:"delta"`
 }
 
 func TestChatCompletion(t *testing.T) {
@@ -81,10 +87,6 @@ func TestChatCompletion(t *testing.T) {
 		})
 	})
 
-	type Data struct {
-		Content string `json:"content"`
-		Delta   string `json:"delta"`
-	}
 	t.Run("stream", func(t *testing.T) {
 		t.Run("anthropic", func(t *testing.T) {
 			req := modelaichat.ChatCompletionReq{
@@ -93,7 +95,7 @@ func TestChatCompletion(t *testing.T) {
 				Stream:   true,
 			}
 			err = cli.Stream(req, func(event types.Event) error {
-				var data Data
+				var data ChatData
 				v1 := fmt.Sprintf("%s", event.Data)
 				v2 := []byte(v1)
 				_ = json.Unmarshal(v2, &data)
@@ -109,7 +111,7 @@ func TestChatCompletion(t *testing.T) {
 				Stream:   true,
 			}
 			err = cli.Stream(req, func(event types.Event) error {
-				var data Data
+				var data ChatData
 				v1 := fmt.Sprintf("%s", event.Data)
 				v2 := []byte(v1)
 				_ = json.Unmarshal(v2, &data)
@@ -125,7 +127,7 @@ func TestChatCompletion(t *testing.T) {
 				Stream:   true,
 			}
 			err = cli.Stream(req, func(event types.Event) error {
-				var data Data
+				var data ChatData
 				v1 := fmt.Sprintf("%s", event.Data)
 				v2 := []byte(v1)
 				_ = json.Unmarshal(v2, &data)
@@ -138,6 +140,46 @@ func TestChatCompletion(t *testing.T) {
 }
 
 func TestStopMessage(t *testing.T) {
-	stopCli, err := client.New(addr+"/ai/messages/stop", client.WithToken(token), client.WithTimeout(3*time.Minute))
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		// waiting for ai chat is starting and streaming.
+		time.Sleep(5 * time.Second)
+
+		// query the latest message that is "streaming"
+		msg := new(modelaichat.Message)
+		err := database.Database[*modelaichat.Message](nil).WithQuery(&modelaichat.Message{Status: modelaichat.MessageStatusStreaming}).Last(msg)
+		require.NoError(t, err)
+		require.NotNil(t, msg)
+
+		// send stop message request.
+		cli, err := client.New(addr+"/ai/messages/stop", client.WithToken(token))
+		require.NoError(t, err)
+		var rsp *client.Resp
+		rsp, err = cli.Create(modelaichat.StopMessageReq{
+			MessageID: msg.ID,
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+	}()
+
+	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token), client.WithTimeout(3*time.Minute))
 	require.NoError(t, err)
+
+	err = cli.Stream(modelaichat.ChatCompletionReq{
+		ModelID:  ollamaModelID,
+		Messages: messages,
+		Stream:   true,
+	}, func(event types.Event) error {
+		var data ChatData
+		v1 := fmt.Sprintf("%s", event.Data)
+		v2 := []byte(v1)
+		_ = json.Unmarshal(v2, &data)
+		// fmt.Printf("%s", data.Delta)
+		return nil
+	})
+	require.NoError(t, err)
+
+	<-done
 }

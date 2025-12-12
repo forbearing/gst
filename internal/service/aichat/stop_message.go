@@ -12,10 +12,10 @@ import (
 
 // StopMessage handles stopping a streaming message
 type StopMessage struct {
-	service.Base[*model.Empty, *modelaichat.StopMessageReq, *model.Empty]
+	service.Base[*model.Empty, *modelaichat.StopMessageReq, *modelaichat.StopMessageRsp]
 }
 
-func (s *StopMessage) Create(ctx *types.ServiceContext, req *modelaichat.StopMessageReq) (*model.Empty, error) {
+func (s *StopMessage) Create(ctx *types.ServiceContext, req *modelaichat.StopMessageReq) (*modelaichat.StopMessageRsp, error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	// Validate request
@@ -58,9 +58,9 @@ func (s *StopMessage) Create(ctx *types.ServiceContext, req *modelaichat.StopMes
 		if e := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(msg); e != nil {
 			return nil, errors.Wrap(e, "failed to update message status")
 		}
-		return &model.Empty{}, nil
+		return &modelaichat.StopMessageRsp{MessageID: req.MessageID, Content: msg.Content}, nil
 	}
 
 	log.Infow("message stopped", "message_id", req.MessageID)
-	return &model.Empty{}, nil
+	return &modelaichat.StopMessageRsp{MessageID: req.MessageID, Content: msg.Content}, nil
 }
