@@ -19,7 +19,7 @@ type LoginReq struct {
 }
 
 type LoginRsp struct {
-	SessionID string `json:"session_id"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 func (Login) Design() {

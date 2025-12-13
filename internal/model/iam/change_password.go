@@ -15,7 +15,7 @@ type ChangePasswordReq struct {
 }
 
 type ChangePasswordRsp struct {
-	Msg string `json:"msg"`
+	Msg string `json:"msg,omitempty"`
 }
 
 func (ChangePassword) Design() {

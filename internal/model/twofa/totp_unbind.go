@@ -16,9 +16,9 @@ type TOTPUnbindReq struct {
 }
 
 type TOTPUnbindRsp struct {
-	Success     bool   `json:"success"`      // 操作是否成功
-	Message     string `json:"message"`      // 操作结果消息
-	DeviceCount int    `json:"device_count"` // 剩余活跃设备数量
+	Success     bool   `json:"success,omitempty"`      // 操作是否成功
+	Message     string `json:"message,omitempty"`      // 操作结果消息
+	DeviceCount int    `json:"device_count,omitempty"` // 剩余活跃设备数量
 }
 
 func (TOTPUnbind) Design() {

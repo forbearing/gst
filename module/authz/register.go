@@ -15,7 +15,6 @@ import (
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/opentracing/opentracing-go/log"
 	"go.uber.org/zap"
 )
 
@@ -152,6 +151,7 @@ func Register() {
 
 	middleware.RegisterAuth(middleware.Authz())
 
+	log := zap.S()
 	go func() {
 		for !database.Inited() {
 			zap.S().Infow("waiting database inited", "module", "authz")
