@@ -93,6 +93,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 			Role:           modelaichat.MessageRoleUser,
 			Content:        content,
 			Status:         modelaichat.MessageStatusCompleted,
+			IsActive:       util.ValueOf(true), // Explicitly set IsActive to true
 		}); err != nil {
 			return nil, errors.Wrap(err, "failed to create message")
 		}
@@ -174,6 +175,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		ModelID:        req.ModelID,
 		Role:           modelaichat.MessageRoleAssistant,
 		Status:         modelaichat.MessageStatusPending,
+		IsActive:       util.ValueOf(true), // Explicitly set IsActive to true
 	}
 
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Create(assistantMsg); err != nil {

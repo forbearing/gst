@@ -63,11 +63,14 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 		return nil, errors.New("assistant message created_at is nil")
 	}
 	// Query for the most recent user message before the assistant message
+	// Only query active and completed user messages
 	userMsg := new(modelaichat.Message)
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
 		WithQuery(&modelaichat.Message{
 			ConversationID: conversation.ID,
 			Role:           modelaichat.MessageRoleUser,
+			Status:         modelaichat.MessageStatusCompleted,
+			IsActive:       util.ValueOf(true),
 		}).
 		WithTimeRange("created_at", time.Time{}, *assistantMsg.CreatedAt).
 		WithOrder("created_at DESC").

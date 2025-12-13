@@ -116,6 +116,7 @@ func handleStreaming(
 				assistantMsg.Status = modelaichat.MessageStatusCompleted
 				assistantMsg.Content = fullContent
 				assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
+				assistantMsg.IsActive = util.ValueOf(true) // Mark as active when completed
 				assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
 				if chunk != nil && chunk.ResponseMeta != nil && chunk.ResponseMeta.Usage != nil {
@@ -200,6 +201,7 @@ func handleNonStreaming(
 	assistantMsg.Status = modelaichat.MessageStatusCompleted
 	assistantMsg.Content = util.Deref(response).Content
 	assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonEndTurn)
+	assistantMsg.IsActive = util.ValueOf(true) // Mark as active when completed
 	assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
 	// Extract token usage from response
