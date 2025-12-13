@@ -1,6 +1,8 @@
 package serviceaichat
 
 import (
+	"time"
+
 	"github.com/cloudwego/eino-ext/components/model/claude"
 	"github.com/cloudwego/eino-ext/components/model/ollama"
 	"github.com/cloudwego/eino-ext/components/model/openai"
@@ -30,12 +32,9 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 
 	// 1. Get the assistant message to regenerate
 	assistantMsg := new(modelaichat.Message)
-	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Message{Base: model.Base{ID: req.MessageID}}).
-		First(assistantMsg); err != nil {
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Get(assistantMsg, req.MessageID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get message: %s", req.MessageID)
 	}
-
 	// Verify it's an assistant message
 	if assistantMsg.Role != modelaichat.MessageRoleAssistant {
 		return nil, errors.New("can only regenerate assistant messages")
@@ -44,44 +43,32 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 	// 2. Get conversation and verify ownership
 	conversation := new(modelaichat.Conversation)
 	if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Conversation{Base: model.Base{ID: assistantMsg.ConversationID}}).
-		First(conversation); err != nil {
+		Get(conversation, assistantMsg.ConversationID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get conversation: %s", assistantMsg.ConversationID)
 	}
-
 	if conversation.UserID != ctx.UserID {
 		return nil, errors.New("message does not belong to current user")
 	}
 
 	// 3. Find the user message that triggered this assistant message
-	// Get all messages in the conversation before this assistant message
-	allMessages := make([]*modelaichat.Message, 0)
+	// Get the most recent user message before this assistant message
+	if assistantMsg.CreatedAt == nil {
+		return nil, errors.New("assistant message created_at is nil")
+	}
+	// Query for the most recent user message before the assistant message
+	userMsg := new(modelaichat.Message)
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Message{ConversationID: conversation.ID}).
-		WithOrder("created_at ASC").
-		List(&allMessages); err != nil {
-		return nil, errors.Wrap(err, "failed to get conversation messages")
+		WithQuery(&modelaichat.Message{
+			ConversationID: conversation.ID,
+			Role:           modelaichat.MessageRoleUser,
+		}).
+		WithTimeRange("created_at", time.Time{}, *assistantMsg.CreatedAt).
+		WithOrder("created_at DESC").
+		First(userMsg); err != nil {
+		return nil, errors.Wrap(err, "failed to get user message before assistant message")
 	}
-
-	// Find the user message that precedes this assistant message
-	var userMsg *modelaichat.Message
-	userMsgIndex := -1
-	for i := len(allMessages) - 1; i >= 0; i-- {
-		if allMessages[i].ID == assistantMsg.ID {
-			// Found the assistant message, look backwards for the user message
-			for j := i - 1; j >= 0; j-- {
-				if allMessages[j].Role == modelaichat.MessageRoleUser {
-					userMsg = allMessages[j]
-					userMsgIndex = j
-					break
-				}
-			}
-			break
-		}
-	}
-
-	if userMsg == nil {
-		return nil, errors.New("user message not found for this assistant message")
+	if userMsg.CreatedAt == nil {
+		return nil, errors.New("user message created_at is nil")
 	}
 
 	// 4. Mark the original assistant message as inactive
@@ -90,31 +77,30 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 		return nil, errors.Wrap(err, "failed to deactivate original message")
 	}
 
-	// 5. Get model and provider information
+	// 5. Get model and provider information using Get method
 	aiModel := new(modelaichat.Model)
-	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Model{Base: model.Base{ID: assistantMsg.ModelID}}).
-		First(aiModel); err != nil {
+	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).Get(aiModel, assistantMsg.ModelID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get ai model: %s", assistantMsg.ModelID)
 	}
 
 	provider := new(modelaichat.Provider)
-	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Provider{Base: model.Base{ID: aiModel.ProviderID}}).
-		First(provider); err != nil {
+	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).Get(provider, aiModel.ProviderID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get provider: %s", aiModel.ProviderID)
 	}
 
-	// 6. Get conversation history up to (and including) the user message
+	// 6. Get conversation history up to (and including) the user message using WithTimeRange
 	// Exclude the original assistant message and any messages after it
 	historyMessages := make([]*modelaichat.Message, 0)
-	for i := 0; i <= userMsgIndex; i++ {
-		msg := allMessages[i]
-		// Only include active, completed messages
-		isActive := msg.IsActive == nil || *msg.IsActive
-		if isActive && msg.Status == modelaichat.MessageStatusCompleted {
-			historyMessages = append(historyMessages, msg)
-		}
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
+		WithQuery(&modelaichat.Message{
+			ConversationID: conversation.ID,
+			Status:         modelaichat.MessageStatusCompleted,
+			IsActive:       util.ValueOf(true),
+		}).
+		WithTimeRange("created_at", time.Time{}, *userMsg.CreatedAt).
+		WithOrder("created_at ASC").
+		List(&historyMessages); err != nil {
+		return nil, errors.Wrap(err, "failed to get conversation history")
 	}
 
 	// 7. Create new assistant message with ParentID pointing to original message
@@ -127,7 +113,6 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 		RegenerateCount: assistantMsg.RegenerateCount + 1,
 		IsActive:        util.ValueOf(true),
 	}
-
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Create(newAssistantMsg); err != nil {
 		return nil, errors.Wrap(err, "failed to create new assistant message")
 	}
@@ -138,7 +123,6 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 	if contextLength <= 0 {
 		contextLength = 4096
 	}
-
 	contextManager, err := NewContextManager(aiModel.ModelID, contextLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create context manager")
@@ -154,7 +138,6 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 	// 9. Create AI model client
 	config := provider.Config.Data()
 	var chatModel einomodel.ToolCallingChatModel
-
 	switch provider.Type {
 	case modelaichat.ProviderAnthropic:
 		baseURL := config.BaseURL
@@ -198,17 +181,22 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 	}
 
 	// 10. Handle streaming or non-streaming response using shared functions
-	var chatRsp *modelaichat.ChatCompletionRsp
 	if req.Stream {
-		chatRsp, err = handleStreaming(ctx, log, chatModel, einoMessages, newAssistantMsg, conversation)
-		if err != nil {
+		// For streaming mode, handleStreaming returns nil, nil as response is sent via SSE
+		if _, err = handleStreaming(ctx, log, chatModel, einoMessages, newAssistantMsg, conversation); err != nil {
 			return nil, err
 		}
-	} else {
-		chatRsp, err = handleNonStreaming(ctx, log, chatModel, einoMessages, newAssistantMsg, conversation)
-		if err != nil {
-			return nil, err
-		}
+		// Return response with message ID and conversation ID for streaming mode
+		return &modelaichat.RegenerateMessageRsp{
+			MessageID:      newAssistantMsg.ID,
+			ConversationID: conversation.ID,
+		}, nil
+	}
+
+	// For non-streaming mode, handleNonStreaming returns the full response
+	chatRsp, err := handleNonStreaming(ctx, log, chatModel, einoMessages, newAssistantMsg, conversation)
+	if err != nil {
+		return nil, err
 	}
 
 	// Convert ChatCompletionRsp to RegenerateMessageRsp
