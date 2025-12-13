@@ -19,9 +19,9 @@ type SignupReq struct {
 }
 
 type SignupRsp struct {
-	UserID   string `json:"user_id"`
-	Username string `json:"username"`
-	Message  string `json:"message"`
+	UserID   string `json:"user_id,omitempty"`
+	Username string `json:"username,omitempty"`
+	Message  string `json:"message,omitempty"`
 }
 
 func (Signup) Design() {

@@ -53,15 +53,15 @@ func (Provider) GetTableName() string { return "ai_providers" }
 
 // ProviderSyncModelsRsp is the response type for syncing provider models into database
 type ProviderSyncModelsRsp struct {
-	Total   int `json:"total"`   // Total models fetched from provider
-	Created int `json:"created"` // Number of newly created models
-	Updated int `json:"updated"` // Number of updated models
-	Failed  int `json:"failed"`  // Number of failed models
+	Total   int `json:"total,omitempty"`   // Total models fetched from provider
+	Created int `json:"created,omitempty"` // Number of newly created models
+	Updated int `json:"updated,omitempty"` // Number of updated models
+	Failed  int `json:"failed,omitempty"`  // Number of failed models
 }
 
 // ProviderTestConnRsp is the response type for testing provider connection
 type ProviderTestConnRsp struct {
-	Success   bool     `json:"success"`
+	Success   bool     `json:"success,omitempty"`
 	Message   string   `json:"message,omitempty"`
 	Latency   int64    `json:"latency,omitempty"` // milliseconds
 	ModelList []string `json:"model_list,omitempty"`

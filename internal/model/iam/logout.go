@@ -10,7 +10,7 @@ type Logout struct {
 }
 
 type LogoutRsp struct {
-	Msg string `json:"msg"`
+	Msg string `json:"msg,omitempty"`
 }
 
 func (Logout) Design() {

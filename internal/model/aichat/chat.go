@@ -10,9 +10,9 @@ type ChatCompletionReq struct {
 
 // ChatCompletionRsp represents a response for chat completion
 type ChatCompletionRsp struct {
-	ConversationID string `json:"conversation_id"`   // Conversation ID
-	MessageID      string `json:"message_id"`        // Created message ID
-	Content        string `json:"content,omitempty"` // Response content (non-streaming only)
+	ConversationID string `json:"conversation_id,omitempty"` // Conversation ID
+	MessageID      string `json:"message_id,omitempty"`      // Created message ID
+	Content        string `json:"content,omitempty"`         // Response content (non-streaming only)
 }
 
 // StopMessageReq represents the request to stop a message
@@ -22,8 +22,8 @@ type StopMessageReq struct {
 
 // StopMessageRsp represents the response to stop a message
 type StopMessageRsp struct {
-	MessageID string `json:"message_id"`
-	Content   string `json:"content"`
+	MessageID string `json:"message_id,omitempty"`
+	Content   string `json:"content,omitempty"`
 }
 
 // RegenerateMessageReq represents a request to regenerate an assistant message
@@ -34,7 +34,7 @@ type RegenerateMessageReq struct {
 
 // RegenerateMessageRsp represents a response for regenerated message
 type RegenerateMessageRsp struct {
-	MessageID      string `json:"message_id"`        // New regenerated message ID
-	ConversationID string `json:"conversation_id"`   // Conversation ID
-	Content        string `json:"content,omitempty"` // Response content (non-streaming only)
+	MessageID      string `json:"message_id,omitempty"`      // New regenerated message ID
+	ConversationID string `json:"conversation_id,omitempty"` // Conversation ID
+	Content        string `json:"content,omitempty"`         // Response content (non-streaming only)
 }

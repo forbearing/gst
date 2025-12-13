@@ -10,9 +10,9 @@ type TOTPStatus struct {
 	model.Empty
 }
 type TOTPStatusRsp struct {
-	Enabled     bool             `json:"enabled"`      // Whether 2FA is enabled
-	DeviceCount int              `json:"device_count"` // Number of active devices
-	Devices     []TOTPDeviceInfo `json:"devices"`      // List of devices (without secrets)
+	Enabled     bool             `json:"enabled,omitempty"`      // Whether 2FA is enabled
+	DeviceCount int              `json:"device_count,omitempty"` // Number of active devices
+	Devices     []TOTPDeviceInfo `json:"devices,omitempty"`      // List of devices (without secrets)
 }
 
 type TOTPDeviceInfo struct {
