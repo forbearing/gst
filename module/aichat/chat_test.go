@@ -183,3 +183,73 @@ func TestStopMessage(t *testing.T) {
 
 	<-done
 }
+
+func TestRegenerateMessage(t *testing.T) {
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		// waiting for ai chat is starting and streaming.
+		time.Sleep(5 * time.Second)
+
+		// query the latest message that is "streaming"
+		msg := new(modelaichat.Message)
+		err := database.Database[*modelaichat.Message](nil).WithQuery(&modelaichat.Message{Status: modelaichat.MessageStatusStreaming}).Last(msg)
+		require.NoError(t, err)
+		require.NotNil(t, msg)
+
+		// send stop message request.
+		cli, err := client.New(addr+"/ai/messages/stop", client.WithToken(token))
+		require.NoError(t, err)
+		var rsp *client.Resp
+		rsp, err = cli.Create(modelaichat.StopMessageReq{
+			MessageID: msg.ID,
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+
+		time.Sleep(3 * time.Second)
+
+		//
+		// regenerate messsage.
+		//
+
+		// query the latest message that is "stopped"
+		require.NoError(t, database.Database[*modelaichat.Message](nil).WithQuery(&modelaichat.Message{Status: modelaichat.MessageStatusStopped}).Last(msg))
+		require.NotNil(t, msg)
+		// send regenerate message request
+		cli, err = client.New(addr+"/ai/messages/regenerate", client.WithToken(token))
+		require.NoError(t, err)
+		err = cli.Stream(modelaichat.RegenerateMessageReq{
+			MessageID: msg.ID,
+			Stream:    true,
+		}, func(event types.Event) error {
+			var data ChatData
+			v1 := fmt.Sprintf("%s", event.Data)
+			v2 := []byte(v1)
+			_ = json.Unmarshal(v2, &data)
+			fmt.Printf("%s", data.Delta)
+			return nil
+		})
+		require.NoError(t, err)
+	}()
+
+	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token), client.WithTimeout(3*time.Minute))
+	require.NoError(t, err)
+
+	err = cli.Stream(modelaichat.ChatCompletionReq{
+		ModelID:  ollamaModelID,
+		Messages: messages,
+		Stream:   true,
+	}, func(event types.Event) error {
+		var data ChatData
+		v1 := fmt.Sprintf("%s", event.Data)
+		v2 := []byte(v1)
+		_ = json.Unmarshal(v2, &data)
+		// fmt.Printf("%s", data.Delta)
+		return nil
+	})
+	require.NoError(t, err)
+
+	<-done
+}

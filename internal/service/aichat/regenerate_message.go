@@ -40,6 +40,13 @@ func (s *RegenerateMessage) Create(ctx *types.ServiceContext, req *modelaichat.R
 		return nil, errors.New("can only regenerate assistant messages")
 	}
 
+	// Verify message status allows regeneration (stopped, failed, or completed messages can be regenerated)
+	if assistantMsg.Status != modelaichat.MessageStatusStopped &&
+		assistantMsg.Status != modelaichat.MessageStatusFailed &&
+		assistantMsg.Status != modelaichat.MessageStatusCompleted {
+		return nil, errors.Newf("cannot regenerate message with status: %s", assistantMsg.Status)
+	}
+
 	// 2. Get conversation and verify ownership
 	conversation := new(modelaichat.Conversation)
 	if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).

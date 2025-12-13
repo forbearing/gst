@@ -92,6 +92,7 @@ func handleStreaming(
 			assistantMsg.Status = modelaichat.MessageStatusStopped
 			assistantMsg.Content = fullContent
 			assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonUser)
+			assistantMsg.IsActive = util.ValueOf(false) // Mark as inactive when stopped
 			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
 			if err := db.Update(assistantMsg); err != nil {

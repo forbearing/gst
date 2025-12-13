@@ -58,6 +58,7 @@ func (s *StopMessage) Create(ctx *types.ServiceContext, req *modelaichat.StopMes
 	// Update message status regardless of cancel result
 	msg.Status = modelaichat.MessageStatusStopped
 	msg.StopReason = util.ValueOf(modelaichat.StopReasonUser)
+	msg.IsActive = util.ValueOf(false) // Mark as inactive since it was stopped
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(msg); err != nil {
 		return nil, errors.Wrap(err, "failed to update message status")
 	}
