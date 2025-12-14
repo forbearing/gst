@@ -34,6 +34,23 @@ func (s *SubmitMessageFeedback) Create(ctx *types.ServiceContext, req *modelaich
 		return nil, errors.Wrapf(err, "failed to get message: %s", req.MessageID)
 	}
 
+	// Verify it's an assistant message
+	if msg.Role != modelaichat.MessageRoleAssistant {
+		return nil, errors.New("can only submit feedback for assistant messages")
+	}
+
+	// Verify message status allows feedback (only completed, stopped, or failed messages can receive feedback)
+	if msg.Status != modelaichat.MessageStatusCompleted &&
+		msg.Status != modelaichat.MessageStatusStopped &&
+		msg.Status != modelaichat.MessageStatusFailed {
+		return nil, errors.Newf("cannot submit feedback for message with status: %s", msg.Status)
+	}
+
+	// Verify message is active
+	if msg.IsActive == nil || !*msg.IsActive {
+		return nil, errors.New("can only submit feedback for active messages")
+	}
+
 	// Verify message belongs to current user
 	if msg.ConversationID == "" {
 		return nil, errors.New("message conversation_id is empty")

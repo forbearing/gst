@@ -293,3 +293,54 @@ func TestConversationTitle(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestSubmitMessageFeedback(t *testing.T) {
+	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token), client.WithTimeout(3*time.Minute))
+	require.NoError(t, err)
+
+	req := modelaichat.ChatCompletionReq{
+		ModelID:  ollamaModelID,
+		Messages: messages,
+		Stream:   true,
+	}
+	err = cli.Stream(req, func(event types.Event) error {
+		var data ChatData
+		v1 := fmt.Sprintf("%s", event.Data)
+		v2 := []byte(v1)
+		_ = json.Unmarshal(v2, &data)
+		fmt.Printf("%s", data.Delta)
+		return nil
+	})
+	require.NoError(t, err)
+
+	msg := new(modelaichat.Message)
+	require.NoError(t, database.Database[*modelaichat.Message](nil).Last(msg))
+
+	cli, err = client.New(addr+"/ai/messages/feedback", client.WithToken(token))
+	require.NoError(t, err)
+	t.Run("first feedback", func(t *testing.T) {
+		var rsp *client.Resp
+		rsp, err = cli.Create(modelaichat.SubmitMessageFeedbackReq{
+			MessageID: msg.ID,
+			Type:      modelaichat.FeedbackLike,
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+	})
+
+	t.Log("wait for 3 seconds to feedback again")
+	time.Sleep(3 * time.Second)
+	t.Run("second feedback", func(t *testing.T) {
+		var rsp *client.Resp
+		rsp, err = cli.Create(modelaichat.SubmitMessageFeedbackReq{
+			MessageID: msg.ID,
+			Type:      modelaichat.FeedbackDislike,
+			Categories: []modelaichat.FeedbackCategory{
+				modelaichat.FeedbackCategoryNotHelpful,
+				modelaichat.FeedbackCategoryIncomplete,
+			},
+		})
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+	})
+}
