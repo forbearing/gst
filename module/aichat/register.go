@@ -187,6 +187,11 @@ type (
 //     Request body: SubmitMessageFeedbackReq with message_id, type, and optional feedback details
 //     Response: SubmitMessageFeedbackRsp with feedback_id and message_id
 //
+// ClearConversationMessages module:
+//   - POST     /api/ai/conversations/clear-messages
+//     Request body: ClearConversationMessagesReq with conversation_id
+//     Response: ClearConversationMessagesRsp with conversation_id and deleted_count
+//
 // Supported provider types:
 //   - openai: OpenAI API
 //   - anthropic: Anthropic Claude API
@@ -548,6 +553,31 @@ func Register() {
 			*modelaichat.SubmitMessageFeedbackReq,
 			*modelaichat.SubmitMessageFeedbackRsp](
 			"/ai/messages/feedback",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
+	)
+
+	// Register "ClearConversationMessages" module
+	//
+	/*
+		curl --location --request POST 'http://localhost:8090/api/ai/conversations/clear-messages' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"conversation_id": "xxxxx-conversation-id-xxxxx"
+		}'
+	*/
+	module.Use[
+		*model.Empty,
+		*modelaichat.ClearConversationMessagesReq,
+		*modelaichat.ClearConversationMessagesRsp,
+		*serviceaichat.ClearConversationMessages](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.ClearConversationMessagesReq,
+			*modelaichat.ClearConversationMessagesRsp](
+			"/ai/conversations/clear-messages",
 			"id",
 			false,
 		),

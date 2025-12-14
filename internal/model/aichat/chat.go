@@ -53,3 +53,14 @@ type SubmitMessageFeedbackRsp struct {
 	FeedbackID string `json:"feedback_id,omitempty"` // Created or updated feedback ID
 	MessageID  string `json:"message_id,omitempty"`  // Message ID
 }
+
+// ClearConversationMessagesReq represents a request to clear all messages in a conversation
+type ClearConversationMessagesReq struct {
+	ConversationID string `json:"conversation_id"` // Conversation ID to clear messages from
+}
+
+// ClearConversationMessagesRsp represents a response for clearing conversation messages
+type ClearConversationMessagesRsp struct {
+	ConversationID string `json:"conversation_id,omitempty"` // Conversation ID
+	DeletedCount   int    `json:"deleted_count,omitempty"`   // Number of messages deleted
+}
