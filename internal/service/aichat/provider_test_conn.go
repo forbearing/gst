@@ -120,6 +120,40 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 			}
 		}
 
+	case modelaichat.ProviderGoogle:
+		// Test Google Gemini API
+		baseURL := config.BaseURL
+		if baseURL == "" {
+			baseURL = "https://generativelanguage.googleapis.com/v1beta"
+		}
+		testURL := fmt.Sprintf("%s/models", baseURL)
+		req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, testURL, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create request")
+		}
+		if config.APIKey != "" {
+			q := req.URL.Query()
+			q.Set("key", config.APIKey)
+			req.URL.RawQuery = q.Encode()
+		}
+		for k, v := range config.ExtraHeaders {
+			req.Header.Set(k, v)
+		}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			success = false
+			message = fmt.Sprintf("connection failed: %v", err)
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				success = true
+				message = "connection successful"
+			} else {
+				success = false
+				message = fmt.Sprintf("connection failed with status: %d", resp.StatusCode)
+			}
+		}
+
 	case modelaichat.ProviderLocal:
 		// Test local provider (Ollama, etc.)
 		baseURL := config.BaseURL

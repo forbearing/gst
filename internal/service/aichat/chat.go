@@ -2,6 +2,7 @@ package serviceaichat
 
 import (
 	"github.com/cloudwego/eino-ext/components/model/claude"
+	"github.com/cloudwego/eino-ext/components/model/gemini"
 	"github.com/cloudwego/eino-ext/components/model/ollama"
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	einomodel "github.com/cloudwego/eino/components/model"
@@ -12,6 +13,7 @@ import (
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
+	"google.golang.org/genai"
 )
 
 type ChatCompletion struct {
@@ -153,6 +155,20 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 			BaseURL:   config.BaseURL,
 		}); err != nil {
 			return nil, errors.Wrap(err, "failed to create openai client")
+		}
+	case modelaichat.ProviderGoogle:
+		// Create genai client for Gemini
+		genaiClient, errGenai := genai.NewClient(ctx.Context(), &genai.ClientConfig{
+			APIKey: config.APIKey,
+		})
+		if errGenai != nil {
+			return nil, errors.Wrap(errGenai, "failed to create genai client")
+		}
+		if chatModel, err = gemini.NewChatModel(ctx.Context(), &gemini.Config{
+			Client: genaiClient,
+			Model:  aiModel.ModelID,
+		}); err != nil {
+			return nil, errors.Wrap(err, "failed to create gemini client")
 		}
 	case modelaichat.ProviderLocal:
 		baseURL := config.BaseURL

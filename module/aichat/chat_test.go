@@ -18,6 +18,7 @@ import (
 const (
 	anthropicModelID = "claude-3-7-sonnet-20250219"
 	openaiModelID    = "gpt-4o"
+	googleModelID    = "gemini-2.5-flash"
 	ollamaModelID    = "llama3:latest"
 )
 
@@ -36,15 +37,15 @@ func TestChatCompletion(t *testing.T) {
 	require.NoError(t, err)
 	// sync model first
 	_, err = cliSync.Create(modelaichat.Provider{
-		Base: model.Base{ID: anthropicID},
+		Base: model.Base{ID: anthropicProviderID},
 	})
 	require.NoError(t, err)
 	_, err = cliSync.Create(modelaichat.Provider{
-		Base: model.Base{ID: openaiID},
+		Base: model.Base{ID: openaiProviderID},
 	})
 	require.NoError(t, err)
 	_, err = cliSync.Create(modelaichat.Provider{
-		Base: model.Base{ID: ollamaID},
+		Base: model.Base{ID: ollamaProviderID},
 	})
 	require.NoError(t, err)
 
@@ -62,9 +63,22 @@ func TestChatCompletion(t *testing.T) {
 			require.NoError(t, err)
 			pretty.Println(string(rsp.Data))
 		})
+
 		t.Run("openai", func(t *testing.T) {
 			req := modelaichat.ChatCompletionReq{
 				ModelID:  openaiModelID,
+				Messages: messages,
+				Stream:   false,
+			}
+			var rsp *client.Resp
+			rsp, err = cli.Create(req)
+			require.NoError(t, err)
+			pretty.Println(string(rsp.Data))
+		})
+
+		t.Run("google", func(t *testing.T) {
+			req := modelaichat.ChatCompletionReq{
+				ModelID:  googleModelID,
 				Messages: messages,
 				Stream:   false,
 			}
@@ -104,6 +118,7 @@ func TestChatCompletion(t *testing.T) {
 			})
 			require.NoError(t, err)
 		})
+
 		t.Run("openai", func(t *testing.T) {
 			req := modelaichat.ChatCompletionReq{
 				ModelID:  openaiModelID,
@@ -120,6 +135,24 @@ func TestChatCompletion(t *testing.T) {
 			})
 			require.NoError(t, err)
 		})
+
+		t.Run("google", func(t *testing.T) {
+			req := modelaichat.ChatCompletionReq{
+				ModelID:  googleModelID,
+				Messages: messages,
+				Stream:   true,
+			}
+			err = cli.Stream(req, func(event types.Event) error {
+				var data ChatData
+				v1 := fmt.Sprintf("%s", event.Data)
+				v2 := []byte(v1)
+				_ = json.Unmarshal(v2, &data)
+				fmt.Printf("%s", data.Delta)
+				return nil
+			})
+			require.NoError(t, err)
+		})
+
 		t.Run("local", func(t *testing.T) {
 			req := modelaichat.ChatCompletionReq{
 				ModelID:  ollamaModelID,
@@ -258,7 +291,7 @@ func TestConversationTitle(t *testing.T) {
 	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token), client.WithTimeout(3*time.Minute))
 	require.NoError(t, err)
 
-	messages := []string{
+	testMessages := []string{
 		"", // empty message.
 		"", // empty message.
 		"你现在是一个精通 go 语言的专家, 简单介绍下 golang 这门语言,包括它的特性、用法和适用场景。",
@@ -267,7 +300,7 @@ func TestConversationTitle(t *testing.T) {
 	t.Run("non-stream", func(t *testing.T) {
 		req := modelaichat.ChatCompletionReq{
 			ModelID:  ollamaModelID,
-			Messages: messages,
+			Messages: testMessages,
 			Stream:   false,
 		}
 		var rsp *client.Resp
@@ -279,7 +312,7 @@ func TestConversationTitle(t *testing.T) {
 	t.Run("stream", func(t *testing.T) {
 		req := modelaichat.ChatCompletionReq{
 			ModelID:  ollamaModelID,
-			Messages: messages,
+			Messages: testMessages,
 			Stream:   true,
 		}
 		err = cli.Stream(req, func(event types.Event) error {

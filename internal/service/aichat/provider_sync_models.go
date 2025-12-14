@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cockroachdb/errors"
@@ -191,6 +192,74 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 				Name:        m.DisplayName,
 				Type:        modelaichat.ModelTypeChat,
 				Description: m.DisplayName,
+			})
+		}
+
+	case modelaichat.ProviderGoogle:
+		/*
+			export GEMINI_API_KEY="AIza..."
+			curl "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY"
+		*/
+		baseURL := config.BaseURL
+		if baseURL == "" {
+			baseURL = "https://generativelanguage.googleapis.com/v1beta"
+		}
+		modelsURL := fmt.Sprintf("%s/models", baseURL)
+		req, err := http.NewRequestWithContext(ctx.Context(), http.MethodGet, modelsURL, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create request")
+		}
+		if config.APIKey != "" {
+			q := req.URL.Query()
+			q.Set("key", config.APIKey)
+			req.URL.RawQuery = q.Encode()
+		}
+		for k, v := range config.ExtraHeaders {
+			req.Header.Set(k, v)
+		}
+
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch models")
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, errors.Newf("failed to fetch models: status %d", resp.StatusCode)
+		}
+
+		var geminiResp struct {
+			Models []struct {
+				Name                       string   `json:"name"`
+				DisplayName                string   `json:"displayName"`
+				Description                string   `json:"description"`
+				Version                    string   `json:"version"`
+				SupportedGenerationMethods []string `json:"supportedGenerationMethods"`
+			} `json:"models"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&geminiResp); err != nil {
+			return nil, errors.Wrap(err, "failed to decode response")
+		}
+
+		for _, m := range geminiResp.Models {
+			// // Only include models that support generateContent
+			// if !slices.Contains(m.SupportedGenerationMethods, "generateContent") {
+			// 	continue
+			// }
+
+			// sync all models
+
+			// remove the prefix "models/"
+			// the model name like: "models/gemini-2.5-flash-image"
+			modelName := strings.TrimPrefix(m.Name, "models/")
+			if modelName == "" {
+				modelName = m.DisplayName
+			}
+			models = append(models, &modelaichat.Model{
+				Base:        model.Base{ID: modelName},
+				ModelID:     modelName,
+				Name:        m.DisplayName,
+				Type:        modelaichat.ModelTypeChat,
+				Description: m.Description,
 			})
 		}
 
