@@ -48,7 +48,7 @@ func Init() (err error) {
 	// Try to establish a connection to MinIO and verify the connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	// Multiple buckets seperated by comma.
+	// Multiple buckets separated by comma.
 	buckets := strings.Split(cfg.Bucket, ",")
 	if err := EnsureBucket(ctx, buckets...); err != nil {
 		return err
@@ -168,7 +168,6 @@ func EnsureBucket(ctx context.Context, buckets ...string) error {
 		if len(bucket) == 0 {
 			continue
 		}
-		fmt.Println("----- ensure bucket", bucket)
 		if err := ensureBucket(ctx, bucket); err != nil {
 			return err
 		}
