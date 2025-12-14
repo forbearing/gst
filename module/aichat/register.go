@@ -283,7 +283,7 @@ func Register() {
 		*Conversation,
 		*Conversation,
 		*Conversation,
-		*service.Base[*Conversation, *Conversation, *Conversation]](
+		*serviceaichat.Conversation](
 		module.NewWrapper[*Conversation, *Conversation, *Conversation]("/ai/conversations", "conv_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,

@@ -42,12 +42,9 @@ func (s *ClearConversationMessages) Create(ctx *types.ServiceContext, req *model
 	err := database.Database[*model.Any](ctx.DatabaseContext()).TransactionFunc(func(tx any) error {
 		// Get all messages in this conversation within the transaction
 		messages := make([]*modelaichat.Message, 0)
-		query := &modelaichat.Message{
-			ConversationID: req.ConversationID,
-		}
 		if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
 			WithTx(tx).
-			WithQuery(query).
+			WithQuery(&modelaichat.Message{ConversationID: req.ConversationID}).
 			List(&messages); err != nil {
 			return errors.Wrap(err, "failed to get messages")
 		}
