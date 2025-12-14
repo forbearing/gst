@@ -253,3 +253,43 @@ func TestRegenerateMessage(t *testing.T) {
 
 	<-done
 }
+
+func TestConversationTitle(t *testing.T) {
+	cli, err := client.New(addr+"/ai/conversations/chat", client.WithToken(token), client.WithTimeout(3*time.Minute))
+	require.NoError(t, err)
+
+	messages := []string{
+		"", // empty message.
+		"", // empty message.
+		"你现在是一个精通 go 语言的专家, 简单介绍下 golang 这门语言,包括它的特性、用法和适用场景。",
+	}
+
+	t.Run("non-stream", func(t *testing.T) {
+		req := modelaichat.ChatCompletionReq{
+			ModelID:  ollamaModelID,
+			Messages: messages,
+			Stream:   false,
+		}
+		var rsp *client.Resp
+		rsp, err = cli.Create(req)
+		require.NoError(t, err)
+		pretty.Println(string(rsp.Data))
+	})
+
+	t.Run("stream", func(t *testing.T) {
+		req := modelaichat.ChatCompletionReq{
+			ModelID:  ollamaModelID,
+			Messages: messages,
+			Stream:   true,
+		}
+		err = cli.Stream(req, func(event types.Event) error {
+			var data ChatData
+			v1 := fmt.Sprintf("%s", event.Data)
+			v2 := []byte(v1)
+			_ = json.Unmarshal(v2, &data)
+			fmt.Printf("%s", data.Delta)
+			return nil
+		})
+		require.NoError(t, err)
+	})
+}

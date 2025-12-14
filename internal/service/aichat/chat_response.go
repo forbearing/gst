@@ -128,6 +128,12 @@ func handleStreaming(
 				if err = db.Update(assistantMsg); err != nil {
 					log.Errorw("failed to update message", "error", err)
 				}
+
+				// Auto-update conversation title if needed
+				if titleErr := UpdateConversationTitleIfNeeded(ctx, conversation.ID); titleErr != nil {
+					log.Warnw("failed to update conversation title", "error", titleErr)
+				}
+
 				log.Info("stream ended")
 				return false
 			}
@@ -213,6 +219,11 @@ func handleNonStreaming(
 
 	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 		return nil, errors.Wrap(err, "failed to update message")
+	}
+
+	// Auto-update conversation title if needed
+	if err := UpdateConversationTitleIfNeeded(ctx, conversation.ID); err != nil {
+		log.Warnw("failed to update conversation title", "error", err)
 	}
 
 	return &modelaichat.ChatCompletionRsp{

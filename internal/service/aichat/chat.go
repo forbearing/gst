@@ -60,7 +60,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 		// Create new conversation
 		conversation = &modelaichat.Conversation{
 			UserID:  ctx.UserID,
-			Title:   "New Conversation",
+			Title:   DefaultConversationTitle,
 			ModelID: req.ModelID,
 		}
 		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).Create(conversation); err != nil {
