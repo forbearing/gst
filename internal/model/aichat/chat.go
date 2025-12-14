@@ -38,3 +38,18 @@ type RegenerateMessageRsp struct {
 	ConversationID string `json:"conversation_id,omitempty"` // Conversation ID
 	Content        string `json:"content,omitempty"`         // Response content (non-streaming only)
 }
+
+// SubmitMessageFeedbackReq represents a request to submit feedback for a message
+type SubmitMessageFeedbackReq struct {
+	MessageID      string             `json:"message_id"`                // Message ID to provide feedback for
+	Type           FeedbackType       `json:"type"`                      // Feedback type (like/dislike)
+	Categories     []FeedbackCategory `json:"categories,omitempty"`      // Detailed feedback categories (optional)
+	Comment        string             `json:"comment,omitempty"`         // User comment (optional)
+	ExpectedAnswer string             `json:"expected_answer,omitempty"` // Expected answer (optional)
+}
+
+// SubmitMessageFeedbackRsp represents a response for submitted feedback
+type SubmitMessageFeedbackRsp struct {
+	FeedbackID string `json:"feedback_id,omitempty"` // Created or updated feedback ID
+	MessageID  string `json:"message_id,omitempty"`  // Message ID
+}

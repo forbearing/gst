@@ -90,14 +90,6 @@ type (
 //   - PUT      /api/ai/conversations/:conv_id/messages/batch
 //   - PATCH    /api/ai/conversations/:conv_id/messages/batch
 //
-// MessageFeedback module (full CRUD):
-//   - POST     /api/ai/conversations/:conv_id/messages/:msg_id/feedback
-//   - DELETE   /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
-//   - PUT      /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
-//   - PATCH    /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
-//   - GET      /api/ai/conversations/:conv_id/messages/:msg_id/feedback
-//   - GET      /api/ai/conversations/:conv_id/messages/:msg_id/feedback/:id
-//
 // ProviderTestConn module:
 //   - POST     /api/ai/providers/test-conn
 //     Request body: Provider (with config information)
@@ -189,6 +181,11 @@ type (
 //   - POST     /api/ai/messages/stop
 //     Request body: StopMessageReq with message_id
 //     Response: Empty response
+//
+// SubmitMessageFeedback module:
+//   - POST     /api/ai/messages/feedback
+//     Request body: SubmitMessageFeedbackReq with message_id, type, and optional feedback details
+//     Response: SubmitMessageFeedbackRsp with feedback_id and message_id
 //
 // Supported provider types:
 //   - openai: OpenAI API
@@ -312,21 +309,6 @@ func Register() {
 		consts.PHASE_DELETE_MANY,
 		consts.PHASE_UPDATE_MANY,
 		consts.PHASE_PATCH_MANY,
-	)
-
-	// Register "MessageFeedback" module.
-	module.Use[
-		*MessageFeedBack,
-		*MessageFeedBack,
-		*MessageFeedBack,
-		*service.Base[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]](
-		module.NewWrapper[*MessageFeedBack, *MessageFeedBack, *MessageFeedBack]("/ai/conversations/:conv_id/messages/:msg_id/feedback", "id", false),
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
 	)
 
 	// Register "KnowledgeBase" module.
@@ -537,6 +519,35 @@ func Register() {
 			*modelaichat.RegenerateMessageReq,
 			*modelaichat.RegenerateMessageRsp](
 			"/ai/messages/regenerate",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
+	)
+
+	// Register "SubmitMessageFeedback" module
+	//
+	/*
+		curl --location --request POST 'http://localhost:8090/api/ai/messages/feedback' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"message_id": "xxxxx-message-id-xxxxx",
+			"type": "like",
+			"categories": ["inaccurate", "incomplete"],
+			"comment": "The answer was not accurate enough",
+			"expected_answer": "Expected a more detailed explanation"
+		}'
+	*/
+	module.Use[
+		*model.Empty,
+		*modelaichat.SubmitMessageFeedbackReq,
+		*modelaichat.SubmitMessageFeedbackRsp,
+		*serviceaichat.SubmitMessageFeedback](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.SubmitMessageFeedbackReq,
+			*modelaichat.SubmitMessageFeedbackRsp](
+			"/ai/messages/feedback",
 			"id",
 			false,
 		),

@@ -28,9 +28,9 @@ const (
 
 // MessageFeedback represents user feedback for a message
 type MessageFeedback struct {
-	MessageID string       `gorm:"size:100;uniqueIndex;not null" json:"message_id,omitempty" schema:"message_id"` // Message ID
-	UserID    string       `gorm:"size:100;index;not null" json:"user_id,omitempty" schema:"user_id"`             // User ID
-	Type      FeedbackType `gorm:"size:20;not null;" json:"type,omitempty" schema:"type"`                         // Feedback type
+	MessageID string       `gorm:"size:100;uniqueIndex:idx_message_user,priority:1;not null" json:"message_id,omitempty" schema:"message_id"` // Message ID
+	UserID    string       `gorm:"size:100;uniqueIndex:idx_message_user,priority:2;index;not null" json:"user_id,omitempty" schema:"user_id"` // User ID
+	Type      FeedbackType `gorm:"size:20;not null;" json:"type,omitempty" schema:"type"`                                                     // Feedback type
 
 	// Detailed feedback (optional)
 	Categories     datatypes.JSONSlice[FeedbackCategory] `gorm:"serializer:json" json:"categories,omitempty"` // Feedback categories
