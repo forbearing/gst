@@ -27,9 +27,7 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 	}
 
 	aiProvider := new(modelaichat.Provider)
-	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Provider{Base: model.Base{ID: req.ID}}).
-		First(aiProvider); err != nil {
+	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).Get(aiProvider, req.ID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get provider: %s", req.ID)
 	}
 

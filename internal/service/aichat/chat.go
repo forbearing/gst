@@ -31,17 +31,13 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 
 	// 1. Get model information by model_id
 	aiModel := new(modelaichat.Model)
-	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Model{Base: model.Base{ID: req.ModelID}}).
-		First(aiModel); err != nil {
+	if err := database.Database[*modelaichat.Model](ctx.DatabaseContext()).Get(aiModel, req.ModelID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get ai model: %s", req.ModelID)
 	}
 
 	// 2. Get provider information by provider_id from model
 	provider := new(modelaichat.Provider)
-	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Provider{Base: model.Base{ID: aiModel.ProviderID}}).
-		First(provider); err != nil {
+	if err := database.Database[*modelaichat.Provider](ctx.DatabaseContext()).Get(provider, aiModel.ProviderID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get provider: %s", aiModel.ProviderID)
 	}
 
@@ -49,9 +45,7 @@ func (s *ChatCompletion) Create(ctx *types.ServiceContext, req *modelaichat.Chat
 	var conversation *modelaichat.Conversation
 	if len(req.ConversationID) > 0 {
 		conversation = new(modelaichat.Conversation)
-		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).
-			WithQuery(&modelaichat.Conversation{Base: model.Base{ID: req.ConversationID}}).
-			First(conversation); err != nil {
+		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).Get(conversation, req.ConversationID); err != nil {
 			return nil, errors.Wrapf(err, "failed to get conversation: %s", req.ConversationID)
 		}
 		// Verify conversation belongs to current user

@@ -25,18 +25,14 @@ func (s *StopMessage) Create(ctx *types.ServiceContext, req *modelaichat.StopMes
 
 	// Get message from database
 	msg := new(modelaichat.Message)
-	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).
-		WithQuery(&modelaichat.Message{Base: model.Base{ID: req.MessageID}}).
-		First(msg); err != nil {
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Get(msg, req.MessageID); err != nil {
 		return nil, errors.Wrapf(err, "failed to get message: %s", req.MessageID)
 	}
 
 	// Verify message belongs to current user
 	if msg.ConversationID != "" {
 		conversation := new(modelaichat.Conversation)
-		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).
-			WithQuery(&modelaichat.Conversation{Base: model.Base{ID: msg.ConversationID}}).
-			First(conversation); err == nil {
+		if err := database.Database[*modelaichat.Conversation](ctx.DatabaseContext()).Get(conversation, msg.ConversationID); err == nil {
 			if conversation.UserID != ctx.UserID {
 				return nil, errors.New("message does not belong to current user")
 			}
