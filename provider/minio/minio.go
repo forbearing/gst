@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -46,27 +48,10 @@ func Init() (err error) {
 	// Try to establish a connection to MinIO and verify the connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	if len(cfg.Bucket) > 0 {
-		// Check if bucket exists
-		exists, err := client.BucketExists(ctx, cfg.Bucket)
-		if err != nil {
-			// Close the client to avoid resource leaks
-			client = nil
-			return errors.Wrap(err, "failed to check bucket existence")
-		}
-		// Create bucket if it doesn't exist
-		if !exists {
-			zap.S().Infow("bucket does not exist, creating...", "bucket", cfg.Bucket, "region", cfg.Region)
-			err = client.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{
-				Region: cfg.Region,
-			})
-			if err != nil {
-				client = nil
-				return errors.Wrap(err, "failed to create bucket")
-			}
-			zap.S().Infow("bucket created successfully", "bucket", cfg.Bucket, "region", cfg.Region)
-		}
+	// Multiple buckets seperated by comma.
+	buckets := strings.Split(cfg.Bucket, ",")
+	if err := EnsureBucket(ctx, buckets...); err != nil {
+		return err
 	}
 
 	zap.S().Infow("successfully connected to minio", "endpoint", cfg.Endpoint, "bucket", cfg.Bucket, "region", cfg.Region)
@@ -174,4 +159,35 @@ func Get(filename string) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// EnsureBucket ensures that the bucket exists, creates it if not exists.
+func EnsureBucket(ctx context.Context, buckets ...string) error {
+	for _, bucket := range buckets {
+		bucket = strings.TrimSpace(bucket)
+		if len(bucket) == 0 {
+			continue
+		}
+		fmt.Println("----- ensure bucket", bucket)
+		if err := ensureBucket(ctx, bucket); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ensureBucket ensures that the bucket exists, creates it if not exists.
+func ensureBucket(ctx context.Context, bucket string) error {
+	exists, err := client.BucketExists(ctx, bucket)
+	if err != nil {
+		return fmt.Errorf("failed to check bucket existence: %w", err)
+	}
+
+	if !exists {
+		if err = client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{Region: config.App.Minio.Region}); err != nil {
+			return fmt.Errorf("failed to create bucket: %w", err)
+		}
+	}
+
+	return nil
 }
