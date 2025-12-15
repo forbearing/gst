@@ -5,8 +5,12 @@ import (
 	serviceaichat "github.com/forbearing/gst/internal/service/aichat"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
+	"github.com/forbearing/gst/response"
+	"github.com/forbearing/gst/router"
 	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
+	"github.com/gin-gonic/gin"
 )
 
 type (
@@ -91,6 +95,19 @@ type (
 //   - DELETE   /api/ai/conversations/:conv_id/messages/batch
 //   - PUT      /api/ai/conversations/:conv_id/messages/batch
 //   - PATCH    /api/ai/conversations/:conv_id/messages/batch
+//
+// Attachment module (full CRUD):
+//   - POST     /api/ai/messages/attachments
+//   - DELETE   /api/ai/messages/attachments/:id
+//   - PUT      /api/ai/messages/attachments/:id
+//   - PATCH    /api/ai/messages/attachments/:id
+//   - GET      /api/ai/messages/attachments
+//   - GET      /api/ai/messages/attachments/:id
+//   - POST     /api/ai/messages/attachments/batch
+//   - DELETE   /api/ai/messages/attachments/batch
+//   - PUT      /api/ai/messages/attachments/batch
+//   - PATCH    /api/ai/messages/attachments/batch
+//   - POST     /api/ai/messages/attachments/upload (custom upload)
 //
 // ProviderTestConn module:
 //   - POST     /api/ai/providers/test-conn
@@ -324,7 +341,7 @@ func Register() {
 		*Attachment,
 		*Attachment,
 		*serviceaichat.Attachment](
-		module.NewWrapper[*Attachment, *Attachment, *Attachment]("/ai/messages/:message_id/attachments", "id", false),
+		module.NewWrapper[*Attachment, *Attachment, *Attachment]("/ai/messages/attachments", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -336,6 +353,16 @@ func Register() {
 		consts.PHASE_UPDATE_MANY,
 		consts.PHASE_PATCH_MANY,
 	)
+
+	// Register custom Upload handler
+	// Using /ai/messages/attachments/upload as the endpoint
+	router.Auth().POST("/ai/messages/attachments/upload", func(c *gin.Context) {
+		if err := serviceaichat.Upload(types.NewServiceContext(c)); err != nil {
+			response.ResponseJSON(c, response.CodeFailure.WithErr(err), err)
+		} else {
+			response.ResponseJSON(c, response.CodeSuccess)
+		}
+	})
 
 	// Register "KnowledgeBase" module.
 	module.Use[
