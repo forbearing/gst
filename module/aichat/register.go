@@ -631,4 +631,32 @@ func Register() {
 		),
 		consts.PHASE_CREATE,
 	)
+
+	// Register "ImageGeneration" module
+	//
+	/*
+		curl --location 'http://localhost:8090/api/ai/images/generate' \
+		--header 'Content-Type: application/json' \
+		--data '{
+			"prompt": "A cute baby sea otter",
+			"model": "dall-e-3",
+			"n": 1,
+			"size": "1024x1024"
+		}'
+	*/
+	module.Use[
+		*model.Empty,
+		*modelaichat.ImageGenerationReq,
+		*modelaichat.ImageGenerationRsp,
+		*serviceaichat.ImageGeneration](
+		module.NewWrapper[
+			*model.Empty,
+			*modelaichat.ImageGenerationReq,
+			*modelaichat.ImageGenerationRsp](
+			"/ai/images/generate",
+			"id",
+			false,
+		),
+		consts.PHASE_CREATE,
+	)
 }

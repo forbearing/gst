@@ -134,7 +134,7 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 				Base:        model.Base{ID: m.ID},
 				Name:        m.ID,
 				ModelID:     m.ID,
-				Type:        modelaichat.ModelTypeChat,
+				Type:        determineOpenAIModelType(m.ID),
 				Description: m.ID,
 			})
 		}
@@ -323,4 +323,23 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 	}
 
 	return models, nil
+}
+
+func determineOpenAIModelType(modelID string) modelaichat.ModelType {
+	switch {
+	case strings.Contains(modelID, "dall-e"):
+		return modelaichat.ModelTypeImage
+	case strings.Contains(modelID, "tts"):
+		return modelaichat.ModelTypeAudio
+	case strings.Contains(modelID, "whisper"):
+		return modelaichat.ModelTypeAudio
+	case strings.Contains(modelID, "embedding"):
+		return modelaichat.ModelTypeEmbedding
+	case strings.Contains(modelID, "vision"): // optional
+		// Usually gpt-4-vision-preview is still chat, but if we strictly want vision:
+		// return modelaichat.ModelTypeVision
+		return modelaichat.ModelTypeChat
+	default:
+		return modelaichat.ModelTypeChat
+	}
 }
