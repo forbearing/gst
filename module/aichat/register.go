@@ -22,6 +22,7 @@ type (
 	Agent           = modelaichat.Agent
 	AgentTool       = modelaichat.AgentTool
 	Favorite        = modelaichat.Favorite
+	Attachment      = modelaichat.Attachment
 )
 
 // Register registers AI chat modules for managing AI providers, models, chats, messages, and knowledge bases.
@@ -31,6 +32,7 @@ type (
 //   - Provider: AI provider configuration (OpenAI, Anthropic, Ollama, etc.)
 //   - Conversation: Conversation sessions
 //   - Message: Messages within a chat conversation
+//   - Attachment: Attachments associated with messages
 //   - MessageFeedback: User feedback for messages
 //   - KnowledgeBase: Knowledge bases for RAG (Retrieval-Augmented Generation)
 //   - Document: Documents in knowledge bases
@@ -316,6 +318,25 @@ func Register() {
 		consts.PHASE_PATCH_MANY,
 	)
 
+	// Register "Attachment" module.
+	module.Use[
+		*Attachment,
+		*Attachment,
+		*Attachment,
+		*serviceaichat.Attachment](
+		module.NewWrapper[*Attachment, *Attachment, *Attachment]("/ai/messages/:message_id/attachments", "id", false),
+		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
+	)
+
 	// Register "KnowledgeBase" module.
 	module.Use[
 		*KnowledgeBase,
@@ -336,7 +357,7 @@ func Register() {
 		*Document,
 		*Document,
 		*Document,
-		*service.Base[*Document, *Document, *Document]](
+		*serviceaichat.Document](
 		module.NewWrapper[*Document, *Document, *Document]("/ai/knowledge-bases/:kb_id/documents", "doc_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
