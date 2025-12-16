@@ -109,3 +109,14 @@ func WithToken(token string) Option {
 		}
 	}
 }
+
+// WithAPI sets a custom API path for the client.
+// The path will be appended to the base address when making requests.
+// Leading and trailing slashes are automatically handled.
+func WithAPI(path string) Option {
+	return func(c *Client) {
+		if path = strings.TrimSpace(path); len(path) != 0 {
+			c.apiPath = strings.Trim(path, "/")
+		}
+	}
+}

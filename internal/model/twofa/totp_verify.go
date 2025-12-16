@@ -17,7 +17,7 @@ type TOTPVerifyReq struct {
 }
 
 type TOTPVerifyRsp struct {
-	Valid   bool   `json:"valid"`
+	Valid   bool   `json:"valid,omitempty"`
 	Message string `json:"message,omitempty"`
 }
 

@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 
@@ -252,6 +253,22 @@ func (sc *ServiceContext) SetCookie(name, value string, maxAge int, path, domain
 
 func (sc *ServiceContext) Cookie(name string) (string, error) {
 	return sc.ginCtx.Cookie(name)
+}
+
+func (sc *ServiceContext) PostForm(key string) string {
+	return sc.ginCtx.PostForm(key)
+}
+
+func (sc *ServiceContext) FormFile(name string) (*multipart.FileHeader, error) {
+	return sc.ginCtx.FormFile(name)
+}
+
+func (sc *ServiceContext) SSEvent(name string, message any) {
+	sc.ginCtx.SSEvent(name, message)
+}
+
+func (sc *ServiceContext) Stream(step func(io.Writer) bool) {
+	sc.ginCtx.Stream(step)
 }
 
 func (sc *ServiceContext) SetPhase(phase consts.Phase) { sc.phase = phase }

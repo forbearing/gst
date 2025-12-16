@@ -16,8 +16,8 @@ type TOTPCheckReq struct {
 }
 
 type TOTPCheckRsp struct {
-	Requires2FA bool   `json:"requires_2fa"` // 是否需要 2FA 验证
-	Message     string `json:"message"`      // 响应消息
+	Requires2FA bool   `json:"requires_2fa,omitempty"` // 是否需要 2FA 验证
+	Message     string `json:"message,omitempty"`      // 响应消息
 }
 
 func (TOTPCheck) Design() {

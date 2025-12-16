@@ -1872,6 +1872,7 @@ func addSchemaTitle[T any](schemaRef *openapi3.SchemaRef) {
 
 	// Create a mapping from JSON property names to field descriptions
 	propertyDescriptions := make(map[string]string)
+	fieldByJSON := make(map[string]reflect.StructField)
 
 	// Process model fields
 	typ := reflect.TypeOf(*new(T))
@@ -1884,6 +1885,7 @@ func addSchemaTitle[T any](schemaRef *openapi3.SchemaRef) {
 		if len(jsonTag) == 0 {
 			continue
 		}
+		fieldByJSON[jsonTag] = field
 
 		// Get field descriptions from model documentation
 		if description, exists := modelDocs[field.Name]; exists && description != "" {
@@ -1915,17 +1917,100 @@ func addSchemaTitle[T any](schemaRef *openapi3.SchemaRef) {
 		}
 
 		// Set description if available
-		if description, exists := propertyDescriptions[propName]; exists && description != "" {
-			// Create a copy of the schema to avoid shared reference issues
-			if propRef.Value != nil {
-				// Create a new schema that's a copy of the original
-				newSchema := *propRef.Value
-				// newSchema.Description = description
-				newSchema.Title = description
-				// Create a new SchemaRef and update the Properties map
-				schemaRef.Value.Properties[propName] = &openapi3.SchemaRef{Value: &newSchema}
+		description, exists := propertyDescriptions[propName]
+		if !exists || description == "" {
+			continue
+		}
+		if field, ok := fieldByJSON[propName]; ok {
+			if updatedSchema := convertDatatypesJSONTypeSchema(propRef, field, description); updatedSchema != nil {
+				propRef = updatedSchema
 			}
 		}
+		// Create a copy of the schema to avoid shared reference issues
+		if propRef.Value != nil {
+			newSchema := *propRef.Value
+			newSchema.Title = description
+			schemaRef.Value.Properties[propName] = &openapi3.SchemaRef{Value: &newSchema}
+		}
+	}
+}
+
+// convertDatatypesJSONTypeSchema unwraps gorm datatypes.JSONType[T] so the
+// generated schema uses the underlying T definition instead of the wrapper.
+func convertDatatypesJSONTypeSchema(propRef *openapi3.SchemaRef, field reflect.StructField, description string) *openapi3.SchemaRef {
+	if propRef == nil {
+		return nil
+	}
+	typ := field.Type
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ.PkgPath() != "gorm.io/datatypes" || (typ.Name() != "JSONType" && !strings.HasPrefix(typ.Name(), "JSONType[")) {
+		return propRef
+	}
+
+	var dataType reflect.Type
+	for i := 0; i < typ.NumField(); i++ {
+		f := typ.Field(i)
+		if f.Name == "Data" || f.Name == "data" || f.IsExported() {
+			dataType = f.Type
+			break
+		}
+	}
+
+	if dataType == nil {
+		return propRef
+	}
+
+	value := reflect.Zero(dataType).Interface()
+
+	gen := openapi3gen.NewGenerator()
+	schemaRef, err := gen.NewSchemaRefForValue(value, nil)
+	if err != nil || schemaRef == nil || schemaRef.Value == nil || (schemaRef.Value.Type == nil && len(schemaRef.Value.Properties) == 0) {
+		schemaRef = schemaFromType(dataType)
+		if schemaRef == nil {
+			zap.S().Warnf("failed to build schema for datatypes.JSONType[%s]: %v", dataType.String(), err)
+			return propRef
+		}
+	}
+
+	if schemaRef.Value != nil && description != "" {
+		schemaRef.Value.Title = description
+	}
+
+	return schemaRef
+}
+
+func schemaFromType(dataType reflect.Type) *openapi3.SchemaRef {
+	for dataType.Kind() == reflect.Pointer {
+		dataType = dataType.Elem()
+	}
+
+	switch dataType.Kind() {
+	case reflect.Struct:
+		schema := openapi3.NewObjectSchema()
+		for i := 0; i < dataType.NumField(); i++ {
+			f := dataType.Field(i)
+			if !f.IsExported() {
+				continue
+			}
+			jsonTag := getFieldTag(f, consts.TAG_JSON)
+			if jsonTag == "" {
+				continue
+			}
+			schema.WithPropertyRef(jsonTag, &openapi3.SchemaRef{Value: &openapi3.Schema{Type: fieldType2openapiType(f)}})
+		}
+		return &openapi3.SchemaRef{Value: schema}
+	case reflect.Slice, reflect.Array:
+		itemRef := schemaFromType(dataType.Elem())
+		if itemRef == nil {
+			return nil
+		}
+		arraySchema := openapi3.NewArraySchema()
+		arraySchema.Items = itemRef
+		return &openapi3.SchemaRef{Value: arraySchema}
+	default:
+		return &openapi3.SchemaRef{Value: &openapi3.Schema{Type: fieldType2openapiType(reflect.StructField{Type: dataType})}}
 	}
 }
 

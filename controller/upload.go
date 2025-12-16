@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"io"
+
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/provider/minio"
 	. "github.com/forbearing/gst/response"
@@ -38,24 +40,40 @@ func (*upload) Put(c *gin.Context) {
 	}
 	defer fd.Close()
 
-	filename, err := minio.Put(fd, file.Size)
-	if err != nil {
+	info, putErr := minio.Put(c.Request.Context(), file.Filename, fd, &minio.PutOptions{
+		Size:        file.Size,
+		ContentType: file.Header.Get("Content-Type"),
+	})
+	if putErr != nil {
+		err = putErr
 		zap.S().Error(err)
 		ResponseJSON(c, CodeFailure)
 		return
 	}
 	ResponseJSON(c, CodeSuccess, gin.H{
-		"filename": filename,
+		"filename": info.Key,
 	})
 }
 
 func (*upload) Preview(c *gin.Context) {
 	log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.Phase("Preview"))
-	data, err := minio.Get(c.Param(consts.PARAM_FILE))
-	if err != nil {
-		log.Error(err)
+	data, info, getErr := minio.Get(c.Request.Context(), c.Param(consts.PARAM_FILE))
+	if getErr != nil {
+		log.Error(getErr)
 		ResponseJSON(c, CodeFailure)
 		return
 	}
-	ResponseDATA(c, data)
+	defer data.Close()
+
+	content, readErr := io.ReadAll(data)
+	if readErr != nil {
+		log.Error(readErr)
+		ResponseJSON(c, CodeFailure)
+		return
+	}
+	headers := map[string]string{}
+	if info != nil && info.ContentType != "" {
+		headers["Content-Type"] = info.ContentType
+	}
+	ResponseDATA(c, content, headers)
 }
