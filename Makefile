@@ -1,9 +1,9 @@
 .PHONY: check build format vet modernize lint shadow nilness lostcancel stringintconv test testv fix install help
 
 # Tool versions - must match go.mod exactly
-GOLANGCI_LINT_VERSION := v2.6.2
+GOLANGCI_LINT_VERSION := v2.7.2
 GOFUMPT_VERSION := v0.9.2
-GOTOOLS_VERSION := v0.38.0
+GOTOOLS_VERSION := v0.40.0
 
 # Default target
 help:
