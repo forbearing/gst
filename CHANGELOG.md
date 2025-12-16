@@ -1,8 +1,78 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Build
+- make test add test for "service"
+
+### Chg
+- **aichat:** rename internal/service/aichat/chat_response.go -> internal/service/aichat/chat_handlers.go
+
+### Chore
+- **deps:** upgrade dependencies to latest version
+- **examples:** go mod tidy
+- **minio:** fix typo in comment and remove debug output
+- **style:** run gofumpt
+
+### Docs
+- **module:** simplify package docs and comments
+
+### Feat
+- **aichat:** refactor message feedback to submit-only API
+- **aichat:** add new models for attachments, sharing, and user management
+- **aichat:** add context window management with token counting
+- **aichat:** add stream cancellation support
+- **aichat:** auto-generate conversation title from first message
+- **aichat:** add conversation delete hooks to clean up messages and feedbacks
+- **aichat:** add clear conversation messages API
+- **aichat:** add message regeneration support
+- **aichat:** add Google Gemini provider support
+- **aichat:** implement attachment and document services with storage integration
+- **client:** add WithAPI option for custom API path prefix
+- **client:** add Stream, StreamPrint, StreamURL, StreamPrintURL
+- **minio:** enhance minio provider with comprehensive object operations
+- **minio:** support multiple buckets and extract bucket ensure logic
+- **openapigen:** support datatypes.JSONType
+- **types:** ServiceContext add method PostForm, FormFile
+- **types:** ServiceContext add method SSEvent, Stream
+
+### Fix
+- **aichat:** add validation for message feedback submission
+- **aichat:** explicitly set is_active for message lifecycle
+- **aichat:** fix is_active handling and add regenerate status validation
+- **aichat:** prevent goroutine leak in stream handling and improve stop logic
+- **aichat:** prevent nil pointer panic when accessing response.Content
+
+### Perf
+- **aichat:** optimize message query with composite index and fix null pointer issues
+
+### Refactor
+- add omitempty to response model JSON tags
+- **aichat:** simplify database queries using Get() method
+- **aichat:** optimize regenerate message queries and fix streaming response
+- **aichat:** extract response handlers to separate file
+- **aichat:** remove unnecessary schema tags from request models
+- **aichat:** improve stream handling concurrency and stop message response
+- **service:** includes REQ and RSP types int service key generation
+- **service:** service.Register support struct and pointer to struct
+
+### Style
+- **client:** align comments in WithAPI patch test
+
+### Test
+- **aichat:** add comprehensive StreamManager tests and fix nil cancel check
+- **aichat:** add comprehensive tests and fix context manager edge cases
+
+
+<a name="v0.10.5-beta.3"></a>
+## [v0.10.5-beta.3] - 2025-12-08
+### Chore
+- **release:** generate CHANGEME.md
+
 ### Refactor
 - **database:** combine model query and raw query in database option "WithQuery"
+
+### Pull Requests
+- Merge pull request [#72](https://github.com/forbearing/gst/issues/72) from forbearing/dev
 
 
 <a name="v0.10.5-beta.2"></a>
@@ -344,11 +414,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="v0.10.0-beta.3"></a>
-## [v0.10.0-beta.3] - 2025-11-08
-
 <a name="list"></a>
 ## [list] - 2025-11-08
+
+<a name="v0.10.0-beta.3"></a>
+## [v0.10.0-beta.3] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -460,11 +530,11 @@
 Plugin interface renamed to Module interface
 
 
-<a name="v0.9.7-beta.4"></a>
-## [v0.9.7-beta.4] - 2025-10-31
-
 <a name="v0.9.7"></a>
 ## [v0.9.7] - 2025-10-31
+
+<a name="v0.9.7-beta.4"></a>
+## [v0.9.7-beta.4] - 2025-10-31
 ### Chore
 - **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
@@ -2742,7 +2812,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.5-beta.2...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.5-beta.3...HEAD
+[v0.10.5-beta.3]: https://github.com/forbearing/gst/compare/v0.10.5-beta.2...v0.10.5-beta.3
 [v0.10.5-beta.2]: https://github.com/forbearing/gst/compare/v0.10.5-beta.1...v0.10.5-beta.2
 [v0.10.5-beta.1]: https://github.com/forbearing/gst/compare/v0.10.5-beta.0...v0.10.5-beta.1
 [v0.10.5-beta.0]: https://github.com/forbearing/gst/compare/v0.10.4...v0.10.5-beta.0
@@ -2753,14 +2824,14 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.10.0]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...v0.10.0
 [v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
-[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
-[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
-[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
+[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
