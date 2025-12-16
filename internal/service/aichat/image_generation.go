@@ -2,8 +2,8 @@ package serviceaichat
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +19,8 @@ import (
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
+	openai "github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
 )
 
 type ImageGeneration struct {
@@ -80,60 +82,64 @@ func (s *ImageGeneration) Create(ctx *types.ServiceContext, req *modelaichat.Ima
 	}
 	// Ensure BaseURL doesn't end with slash
 	baseURL = strings.TrimRight(baseURL, "/")
-
-	url := baseURL + "/images/generations"
-
-	// Prepare request body
-	// We can mostly use the request object as is, but we might need to adjust some defaults
-	if req.N == 0 {
-		req.N = 1
-	}
-	if req.Size == "" {
-		req.Size = "1024x1024"
-	}
-
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal request")
-	}
-
-	client := &http.Client{
-		Timeout: 60 * time.Second,
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx.Context(), "POST", url, bytes.NewBuffer(reqBytes))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create http request")
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-
-	// Add extra headers if any
+	// Create OpenAI client
+	client := openai.NewClient(
+		option.WithAPIKey(apiKey),
+		option.WithBaseURL(baseURL),
+	)
+	// Prepare options with extra headers
+	opts := make([]option.RequestOption, 0, len(providerConfig.ExtraHeaders))
 	for k, v := range providerConfig.ExtraHeaders {
-		httpReq.Header.Set(k, v)
+		opts = append(opts, option.WithHeader(k, v))
+	}
+	// Prepare generation parameters
+	params := openai.ImageGenerateParams{
+		Prompt: req.Prompt,
+		Model:  req.Model,
+	}
+	if req.N > 0 {
+		params.N = openai.Int(int64(req.N))
+	} else {
+		params.N = openai.Int(1)
+	}
+	if req.Size != "" {
+		params.Size = openai.ImageGenerateParamsSize(req.Size)
+	} else {
+		params.Size = openai.ImageGenerateParamsSize("1024x1024")
+	}
+	if req.Quality != "" {
+		params.Quality = openai.ImageGenerateParamsQuality(req.Quality)
+	}
+	if req.Style != "" {
+		params.Style = openai.ImageGenerateParamsStyle(req.Style)
+	}
+	if req.ResponseFormat != "" {
+		params.ResponseFormat = openai.ImageGenerateParamsResponseFormat(req.ResponseFormat)
+	}
+	if req.User != "" {
+		params.User = openai.String(req.User)
 	}
 
 	// 5. Send request
-	resp, err := client.Do(httpReq)
+	// Set a timeout for the request
+	timeoutCtx, cancel := context.WithTimeout(ctx.Context(), 60*time.Second)
+	defer cancel()
+	resp, err := client.Images.Generate(timeoutCtx, params, opts...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to send request to provider")
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read response body")
+		return nil, errors.Wrap(err, "failed to generate image")
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Newf("provider returned error: status=%d, body=%s", resp.StatusCode, string(bodyBytes))
+	// 6. Map response
+	openAIResp := &modelaichat.ImageGenerationRsp{
+		Created: resp.Created,
+		Data:    make([]modelaichat.ImageGenerationData, len(resp.Data)),
 	}
-
-	// 6. Parse response
-	var openAIResp modelaichat.ImageGenerationRsp
-	if err := json.Unmarshal(bodyBytes, &openAIResp); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal response")
+	for i, d := range resp.Data {
+		openAIResp.Data[i] = modelaichat.ImageGenerationData{
+			URL:           d.URL,
+			B64JSON:       d.B64JSON,
+			RevisedPrompt: d.RevisedPrompt,
+		}
 	}
 
 	// 7. Save to database (optional, but good for history)
@@ -143,6 +149,7 @@ func (s *ImageGeneration) Create(ctx *types.ServiceContext, req *modelaichat.Ima
 
 		// Try to upload to MinIO if enabled
 		if config.App.Minio.Enable {
+			log.Infow("starting upload image to minio", "index", i, "url", data.URL)
 			var imageData []byte
 			imageExt := ".png" // Default to png
 
@@ -156,7 +163,8 @@ func (s *ImageGeneration) Create(ctx *types.ServiceContext, req *modelaichat.Ima
 				}
 			} else if data.URL != "" {
 				// Download from URL
-				resp, err := http.Get(string(data.URL))
+				log.Infow("downloading image from openai", "url", data.URL)
+				resp, err := http.Get(data.URL)
 				if err != nil {
 					log.Errorw("failed to download image from openai", "url", data.URL, "error", err)
 				} else {
@@ -165,6 +173,8 @@ func (s *ImageGeneration) Create(ctx *types.ServiceContext, req *modelaichat.Ima
 						imageData, err = io.ReadAll(resp.Body)
 						if err != nil {
 							log.Errorw("failed to read image body", "error", err)
+						} else {
+							log.Infow("image downloaded successfully", "size", len(imageData))
 						}
 					} else {
 						log.Errorw("failed to download image", "status", resp.StatusCode)
@@ -183,10 +193,15 @@ func (s *ImageGeneration) Create(ctx *types.ServiceContext, req *modelaichat.Ima
 					if err != nil {
 						log.Errorw("failed to generate minio presigned url", "key", objectKey, "error", err)
 					} else {
+						log.Infow("image uploaded to minio successfully", "minio_url", minioURL)
 						data.URL = minioURL
 					}
 				}
+			} else {
+				log.Warn("image data is empty, skip uploading to minio")
 			}
+		} else {
+			log.Warnw("minio is disabled, skipping image upload", "config_enable", config.App.Minio.Enable)
 		}
 
 		imageGen := &modelaichat.ImageGeneration{
@@ -196,15 +211,14 @@ func (s *ImageGeneration) Create(ctx *types.ServiceContext, req *modelaichat.Ima
 			Size:          req.Size,
 			Quality:       req.Quality,
 			Style:         req.Style,
-			ImageURL:      string(data.URL),
+			ImageURL:      data.URL,
 			RevisedPrompt: data.RevisedPrompt,
 		}
-
 		if err := database.Database[*modelaichat.ImageGeneration](ctx.DatabaseContext()).Create(imageGen); err != nil {
 			log.Errorw("failed to save image generation record", "error", err)
 			// Don't fail the request just because saving history failed
 		}
 	}
 
-	return &openAIResp, nil
+	return openAIResp, nil
 }
