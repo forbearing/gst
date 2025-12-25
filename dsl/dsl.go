@@ -63,9 +63,14 @@ import (
 	"github.com/forbearing/gst/types/consts"
 )
 
-// Enabled controls whether API generation is enabled for the model.
-// When set to false, no API code will be generated for this model.
-// Default: true
+// Enabled controls whether API generation is enabled.
+// It has two usage scenarios:
+//  1. When used in Design() method, it controls whether API generation is enabled for the entire model.
+//     When set to false, no API code will be generated for this model.
+//     Default: true
+//  2. When used in action configuration functions (e.g., Create, Update, List, Get),
+//     it controls whether the specific action/route should be generated.
+//     Default: false (actions must be explicitly enabled)
 func Enabled(bool) {}
 
 // Endpoint sets a custom endpoint path for the model's API routes.
