@@ -7,12 +7,12 @@ import (
 )
 
 type (
-	t1 struct{ Empty }
+	t1 struct{ *Empty }
 	t2 struct{}
 	t3 struct{ Name string }
 	t4 struct {
 		Name string
-		Empty
+		*Empty
 	}
 )
 
