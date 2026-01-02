@@ -7,12 +7,12 @@ import (
 )
 
 type (
-	t1 struct{ Empty }
+	t1 struct{ *Empty }
 	t2 struct{}
 	t3 struct{ Name string }
 	t4 struct {
 		Name string
-		Empty
+		*Empty
 	}
 )
 
@@ -94,6 +94,8 @@ func TestIsEmpty(t *testing.T) {
 		a string
 		Any
 	}
+	type t15 = Empty
+	type t16 = Any
 
 	require.True(t, IsEmpty[t1]())
 	require.True(t, IsEmpty[t2]())
@@ -109,6 +111,10 @@ func TestIsEmpty(t *testing.T) {
 	require.False(t, IsEmpty[t12]())
 	require.False(t, IsEmpty[t13]())
 	require.False(t, IsEmpty[t14]())
+	require.True(t, IsEmpty[t15]())
+	require.True(t, IsEmpty[*t15]())
+	require.True(t, IsEmpty[t16]())
+	require.True(t, IsEmpty[*t16]())
 }
 
 func TestIsValid(t *testing.T) {

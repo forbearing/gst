@@ -16,6 +16,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/go-viper/encoding/ini"
 	"github.com/spf13/viper"
+	"github.com/stoewer/go-strcase"
 	"go.uber.org/zap"
 )
 
@@ -257,7 +258,7 @@ func Register[T any]() {
 	}
 
 	// Determine the configuration name
-	cfgName := strings.ToLower(typ.Name())
+	cfgName := buildConfigName(typ)
 
 	if inited {
 		registerType(cfgName, typ)
@@ -436,7 +437,7 @@ func Get[T any]() (t T) {
 	if typ.Kind() != reflect.Struct {
 		return t
 	}
-	cfgName := strings.ToLower(typ.Name())
+	cfgName := buildConfigName(typ)
 
 	config, exists := registeredConfigs[cfgName]
 	if !exists {
@@ -497,4 +498,8 @@ func AddPath(paths ...string) {
 // Save config instance to destination io.Writer
 func Save(out io.Writer) error {
 	return cv.WriteConfigTo(out)
+}
+
+func buildConfigName(typ reflect.Type) string {
+	return strings.ToLower(strcase.SnakeCase(typ.Name()))
 }
