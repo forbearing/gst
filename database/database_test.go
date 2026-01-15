@@ -1256,6 +1256,9 @@ func TestDatabaseWithDB(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	require.NoError(t, db2.AutoMigrate(TestUser{}))
+	require.NoError(t, db3.AutoMigrate(TestUser{}))
+
 	// List from the custom sqlite. the new sqlite db is always empty.
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
 	require.Equal(t, 0, len(users))
