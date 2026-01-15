@@ -208,7 +208,7 @@ func TestManageContext_ContextWindowExceeded(t *testing.T) {
 	})
 
 	t.Run("many history messages", func(t *testing.T) {
-		history := make([]*modelaichat.Message, 0)
+		history := make([]*modelaichat.Message, 0, 100)
 		for range 50 {
 			history = append(history, &modelaichat.Message{
 				Role:    modelaichat.MessageRoleUser,

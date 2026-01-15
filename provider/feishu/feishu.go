@@ -39,6 +39,7 @@ func New(cfg config.Feishu) (*lark.Client, error) {
 		return nil, errors.New("app_secret is empty")
 	}
 
+	//nolint:prealloc
 	opts := []lark.ClientOptionFunc{lark.WithEnableTokenCache(!cfg.DisableTokenCache)}
 
 	switch {

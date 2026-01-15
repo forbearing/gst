@@ -146,7 +146,7 @@ func Init() error {
 		Help:      "Current size of the task queue",
 	})
 
-	errs := make([]error, 0)
+	errs := make([]error, 0, 18)
 	errs = append(errs, prometheus.Register(State))
 	errs = append(errs, prometheus.Register(Uptime))
 	errs = append(errs, prometheus.Register(HTTPRequestsTotal))

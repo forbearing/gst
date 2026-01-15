@@ -81,7 +81,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 		fmt.Println("Available configurations:")
 
 		// Sort config names for consistent output
-		var names []string
+		names := make([]string, 0, len(availableConfigs))
 		for name := range availableConfigs {
 			names = append(names, name)
 		}

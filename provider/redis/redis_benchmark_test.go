@@ -20,7 +20,7 @@ func BenchmarkRedis(b *testing.B) {
 	os.Setenv(config.REDIS_EXPIRATION, "8h")
 	util.RunOrDie(bootstrap.Bootstrap)
 
-	groups := make([]*Group, 0)
+	groups := make([]*Group, 0, 1000)
 	for i := range 1000 {
 		groups = append(groups, &Group{
 			Name:        fmt.Sprintf("group-%d", i),

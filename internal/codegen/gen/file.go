@@ -22,7 +22,7 @@ func init() {
 */
 func BuildModelFile(pkgName string, modelImports []string, stmts ...ast.Stmt) (string, error) {
 	// Create init function body
-	body := make([]ast.Stmt, 0)
+	body := make([]ast.Stmt, 0, len(stmts))
 	body = append(body, stmts...)
 
 	// Create Init function declaration
@@ -114,7 +114,7 @@ func BuildServiceFile(pkgName string, modelImports []string, stmts ...ast.Stmt) 
 	// )
 	importAliases := ResolveImportConflicts(modelImports)
 
-	body := make([]ast.Stmt, 0)
+	body := make([]ast.Stmt, 0, len(stmts))
 	body = append(body, stmts...)
 
 	initDecl := &ast.FuncDecl{
@@ -213,7 +213,7 @@ func Init() error {
 */
 // FIXME: process imports automatically problem.
 func BuildRouterFile(pkgName string, modelImports []string, stmts ...ast.Stmt) (string, error) {
-	body := make([]ast.Stmt, 0)
+	body := make([]ast.Stmt, 0, len(stmts)+1)
 	body = append(body, stmts...)
 	body = append(body, &ast.ReturnStmt{
 		Results: []ast.Expr{

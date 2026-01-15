@@ -637,7 +637,7 @@ func TestDatabaseList(t *testing.T) {
 
 	// Test List with empty result - should overwrite existing slice
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
-	users = make([]*TestUser, 0)
+	users = make([]*TestUser, 0, len(ul))
 	users = append(users, u1, u2, u3) // Pre-populate with data
 	require.Equal(t, 3, len(users), "slice should have 3 items before List")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))

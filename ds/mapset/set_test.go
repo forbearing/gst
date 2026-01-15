@@ -152,7 +152,7 @@ func TestIsEmpty(t *testing.T) {
 
 func TestIter(t *testing.T) {
 	s, _ := mapset.NewFromSlice([]int{1, 2, 3}, mapset.WithSorted(intCmp))
-	elements := make([]int, 0)
+	elements := make([]int, 0, 3)
 	count := 0
 	for e := range s.Iter() {
 		elements = append(elements, e)
