@@ -388,66 +388,76 @@ func ApplyServiceFileWithModelSync(file *ast.File, action *dsl.Action, servicePk
 	return changed
 }
 
-// buildModelImportMapping builds a mapping from old package names to new package names
-// by comparing import paths with the correct model import path.
-//
-// This function only maps imports that share the same parent directory path with correctModelImportPath
-// to avoid accidentally updating unrelated model packages. For example:
-// - Will map: "model/oldpkg" -> "model/newpkg" (same parent: "model")
-// - Won't map: "model/config/setting" (different parent: "model/config")
-//
-// Returns a map where key is the old package name, and value is the new package name.
+// buildModelImportMapping builds a mapping from the currently-used service model package name
+// to correctModelPkgName (only when they differ), so we only rewrite the main model import/reference
+// instead of accidentally rewriting other sibling model packages used in user code.
 func buildModelImportMapping(file *ast.File, correctModelImportPath, correctModelPkgName string) map[string]string {
-	mapping := make(map[string]string)
+	currentModelPkgName := serviceModelPackageName(file)
+	if currentModelPkgName == "" || currentModelPkgName == correctModelPkgName {
+		return nil
+	}
+	return map[string]string{currentModelPkgName: correctModelPkgName}
+}
 
-	// Get the parent directory of the correct import path
-	// e.g., "nebula/model/iam" -> "nebula/model"
-	correctParentPath := filepath.Dir(correctModelImportPath)
+func serviceModelPackageName(file *ast.File) string {
+	if file == nil {
+		return ""
+	}
 
-	// Scan existing imports to find model imports that differ from the correct path
-	// but have the same parent directory
 	for _, decl := range file.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
-		if !ok || genDecl.Tok != token.IMPORT {
+		if !ok || genDecl.Tok != token.TYPE {
 			continue
 		}
-
 		for _, spec := range genDecl.Specs {
-			importSpec, ok := spec.(*ast.ImportSpec)
-			if !ok || importSpec.Path == nil {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok || !isServiceType(typeSpec) {
 				continue
 			}
 
-			// Get the import path without quotes
-			importPath := strings.Trim(importSpec.Path.Value, `"`)
-
-			// Skip if this is already the correct import path
-			if importPath == correctModelImportPath {
+			structType, ok := typeSpec.Type.(*ast.StructType)
+			if !ok || structType.Fields == nil {
 				continue
 			}
 
-			// Check if this import has the same parent directory as the correct path
-			// This ensures we only update sibling packages (e.g., model/identity -> model/iam)
-			// and don't touch unrelated packages (e.g., model/config/namespace)
-			importParentPath := filepath.Dir(importPath)
-			if importParentPath != correctParentPath {
-				continue
+			for _, field := range structType.Fields.List {
+				if len(field.Names) != 0 {
+					continue
+				}
+				indexListExpr, ok := field.Type.(*ast.IndexListExpr)
+				if !ok {
+					continue
+				}
+				sel, ok := indexListExpr.X.(*ast.SelectorExpr)
+				if !ok {
+					continue
+				}
+				pkgIdent, ok := sel.X.(*ast.Ident)
+				if !ok || pkgIdent.Name != "service" || sel.Sel == nil || sel.Sel.Name != "Base" {
+					continue
+				}
+				if len(indexListExpr.Indices) != 3 {
+					continue
+				}
+
+				return selectorPackageName(indexListExpr.Indices[0])
 			}
-
-			// Extract the old package name from the import path
-			oldPkgName := filepath.Base(importPath)
-
-			// If there's an explicit import alias, use it as the old package name
-			if importSpec.Name != nil && importSpec.Name.Name != "" && importSpec.Name.Name != "_" {
-				oldPkgName = importSpec.Name.Name
-			}
-
-			// Map old package name to new package name
-			mapping[oldPkgName] = correctModelPkgName
 		}
 	}
 
-	return mapping
+	return ""
+}
+
+func selectorPackageName(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		return selectorPackageName(t.X)
+	case *ast.SelectorExpr:
+		if ident, ok := t.X.(*ast.Ident); ok {
+			return ident.Name
+		}
+	}
+	return ""
 }
 
 // syncModelImports updates import statements based on the import mapping.
