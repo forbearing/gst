@@ -40,6 +40,7 @@ func Logger(filename ...string) gin.HandlerFunc {
 			}
 		}
 
+		//nolint:prealloc
 		fields := []zapcore.Field{
 			zap.Int("status", c.Writer.Status()),
 			zap.String("method", c.Request.Method),

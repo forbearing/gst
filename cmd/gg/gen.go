@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/forbearing/gst/ds/tree/trie"
@@ -132,7 +133,9 @@ func genRun() {
 	}
 
 	// Resolve import conflicts
-	serviceAliasMap := gen.ResolveImportConflicts(lo.Keys(serviceImportMap))
+	serviceImports := lo.Keys(serviceImportMap)
+	sort.Strings(serviceImports)
+	serviceAliasMap := gen.ResolveImportConflicts(serviceImports)
 	for _, m := range allModels {
 		m.Design.Range(func(route string, act *dsl.Action) {
 			if act.Service {
@@ -223,19 +226,25 @@ func genRun() {
 	// ============================================================
 	logSection("Generate Files")
 
-	modelCode, err := gen.BuildModelFile("model", lo.Keys(modelImportMap), modelStmts...)
+	modelImports := lo.Keys(modelImportMap)
+	sort.Strings(modelImports)
+	modelCode, err := gen.BuildModelFile("model", modelImports, modelStmts...)
 	checkErr(err)
 	writeFileWithLog(filepath.Join(modelDir, "model.go"), modelCode)
 
 	// generate service/service.go
-	serviceCode, err := gen.BuildServiceFile("service", lo.Keys(serviceImportMap), serviceStmts...)
+	serviceImports = lo.Keys(serviceImportMap)
+	sort.Strings(serviceImports)
+	serviceCode, err := gen.BuildServiceFile("service", serviceImports, serviceStmts...)
 	checkErr(err)
 	writeFileWithLog(filepath.Join(serviceDir, "service.go"), serviceCode)
 
 	// generate router/router.go
 	// router always imports "github.com/forbearing/gst/types"
 	routerImportMap["github.com/forbearing/gst/types"] = struct{}{}
-	routerCode, err := gen.BuildRouterFile("router", lo.Keys(routerImportMap), routerStmts...)
+	routerImports := lo.Keys(routerImportMap)
+	sort.Strings(routerImports)
+	routerCode, err := gen.BuildRouterFile("router", routerImports, routerStmts...)
 	checkErr(err)
 	writeFileWithLog(filepath.Join(routerDir, "router.go"), routerCode)
 

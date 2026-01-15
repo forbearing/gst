@@ -120,8 +120,8 @@ func TestTrie(t *testing.T) {
 	})
 	t.Run("keysValues", func(t *testing.T) {
 		keysValues := tt.KeysValues()
-		keys := make([][]rune, 0)
-		values := make([]string, 0)
+		keys := make([][]rune, 0, len(keysValues))
+		values := make([]string, 0, len(keysValues))
 		for _, kv := range keysValues {
 			keys = append(keys, kv.Keys)
 			values = append(values, kv.Value)
@@ -147,8 +147,8 @@ func TestTrie(t *testing.T) {
 	t.Run("PrefixKeysValue", func(t *testing.T) {
 		keysValues := tt.PrefixKeysValues([]rune("ba"))
 		assert.Len(t, keysValues, len(expectedKeys))
-		keys := make([][]rune, 0)
-		values := make([]string, 0)
+		keys := make([][]rune, 0, len(keysValues))
+		values := make([]string, 0, len(keysValues))
 		for _, keysValue := range keysValues {
 			keys = append(keys, keysValue.Keys)
 			values = append(values, keysValue.Value)

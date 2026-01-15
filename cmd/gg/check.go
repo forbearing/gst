@@ -65,6 +65,7 @@ func checkRun() {
 
 // CheckArchitectureDependency performs architecture dependency checks.
 func CheckArchitectureDependency() int {
+	//nolint:prealloc
 	var violations []string
 
 	// Check service files

@@ -109,6 +109,7 @@ func (cm *ContextManager) ManageContext(
 	availableTokens := cm.contextLength - reservedTokens
 
 	// Build initial eino messages from history
+	//nolint:prealloc
 	einoMessages := make([]*schema.Message, 0)
 
 	// Separate system messages from conversation messages
