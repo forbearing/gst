@@ -50,7 +50,7 @@ func New(cfg config.Postgres) (*gorm.DB, error) {
 }
 
 func buildDSN(cfg config.Postgres) string {
-	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s connect_timeout=5",
 		cfg.Host, cfg.Username, cfg.Password, cfg.Database, cfg.Port, cfg.SSLMode, cfg.TimeZone,
 	)
 }

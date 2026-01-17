@@ -1,11 +1,18 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Fix
+- **database:** use dialect-aware identifier quoting for WithQuery on Postgres
+
+
+<a name="v0.10.8"></a>
+## [v0.10.8] - 2026-01-15
 ### Build
 - upgrade go tools to v0.41.0, golangci-lint to v2.8.0
 
 ### Chore
 - **deps:** upgrade dependencies to latest version
+- **release:** generate CHANGELOG.md
 
 ### Ci
 - use "make install" and "make check" to avoid hardcode
@@ -20,6 +27,9 @@
 ### Test
 - **database:** auto migrate table in TestDatabaseWithDB
 - **database:** auto migrate table in TestDatabaseWithDB
+
+### Pull Requests
+- Merge pull request [#76](https://github.com/forbearing/gst/issues/76) from forbearing/dev
 
 
 <a name="v0.10.7"></a>
@@ -2871,7 +2881,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.7...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.8...HEAD
+[v0.10.8]: https://github.com/forbearing/gst/compare/v0.10.7...v0.10.8
 [v0.10.7]: https://github.com/forbearing/gst/compare/v0.10.6...v0.10.7
 [v0.10.6]: https://github.com/forbearing/gst/compare/v0.10.5...v0.10.6
 [v0.10.5]: https://github.com/forbearing/gst/compare/v0.10.5-beta.3...v0.10.5
