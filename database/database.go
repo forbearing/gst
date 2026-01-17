@@ -97,6 +97,32 @@ type database[M types.Model] struct {
 	shouldAutoMigrate *bool
 }
 
+func (db *database[M]) quoteIdent(name string) string {
+	if db == nil || db.ins == nil || db.ins.Statement == nil {
+		return name
+	}
+	return db.ins.Statement.Quote(name)
+}
+
+func (db *database[M]) quoteTableColumn(table, column string) string {
+	if len(table) == 0 {
+		return db.quoteIdent(column)
+	}
+	return db.quoteIdent(table) + "." + db.quoteIdent(column)
+}
+
+func (db *database[M]) regexpOperator() string {
+	if db == nil || db.ins == nil || db.ins.Dialector == nil {
+		return "REGEXP"
+	}
+	switch strings.ToLower(db.ins.Dialector.Name()) {
+	case "postgres":
+		return "~"
+	default:
+		return "REGEXP"
+	}
+}
+
 // reset resets the database instance to its initial state by clearing all query conditions,
 // restoring default settings, and preparing for the next operation.
 // This method must be called in all functions except option functions prefixed with 'With*'.
@@ -734,16 +760,16 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 				regexpVal = strings.TrimPrefix(regexpVal, "|")
 				// db.db = db.db.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
 				if cfg.UseOr && !isFirstCondition {
-					db.ins = db.ins.Or(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
+					db.ins = db.ins.Or(fmt.Sprintf("%s %s ?", db.quoteIdent(k), db.regexpOperator()), regexpVal)
 				} else {
-					db.ins = db.ins.Where(fmt.Sprintf("`%s` REGEXP ?", k), regexpVal)
+					db.ins = db.ins.Where(fmt.Sprintf("%s %s ?", db.quoteIdent(k), db.regexpOperator()), regexpVal)
 				}
 			} else { // If the query string has only one value, using LIKE
 				// db.db = db.db.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				if cfg.UseOr && !isFirstCondition {
-					db.ins = db.ins.Or(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
+					db.ins = db.ins.Or(fmt.Sprintf("%s LIKE ?", db.quoteIdent(k)), fmt.Sprintf("%%%v%%", v))
 				} else {
-					db.ins = db.ins.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
+					db.ins = db.ins.Where(fmt.Sprintf("%s LIKE ?", db.quoteIdent(k)), fmt.Sprintf("%%%v%%", v))
 				}
 			}
 			isFirstCondition = false
@@ -778,9 +804,9 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			hasValidCondition = true
 			// db.db = db.db.Where(fmt.Sprintf("`%s` IN (?)", k), items)
 			if cfg.UseOr && !isFirstCondition {
-				db.ins = db.ins.Or(fmt.Sprintf("`%s` IN (?)", k), items)
+				db.ins = db.ins.Or(fmt.Sprintf("%s IN ?", db.quoteIdent(k)), items)
 			} else {
-				db.ins = db.ins.Where(fmt.Sprintf("`%s` IN (?)", k), items)
+				db.ins = db.ins.Where(fmt.Sprintf("%s IN ?", db.quoteIdent(k)), items)
 			}
 			isFirstCondition = false
 		}
@@ -867,14 +893,14 @@ func (db *database[M]) applyCursorPagination() {
 		// Apply cursor condition based on direction
 		if db.cursorNext {
 			// Next page: get records after the cursor
-			db.ins = db.ins.Where(fmt.Sprintf("`%s` > ?", db.cursorField), db.cursorValue)
+			db.ins = db.ins.Where(fmt.Sprintf("%s > ?", db.quoteIdent(db.cursorField)), db.cursorValue)
 			// Order by cursor field ascending for next page
-			db.ins = db.ins.Order(fmt.Sprintf("`%s` ASC", db.cursorField))
+			db.ins = db.ins.Order(fmt.Sprintf("%s ASC", db.quoteIdent(db.cursorField)))
 		} else {
 			// Previous page: get records before the cursor
-			db.ins = db.ins.Where(fmt.Sprintf("`%s` < ?", db.cursorField), db.cursorValue)
+			db.ins = db.ins.Where(fmt.Sprintf("%s < ?", db.quoteIdent(db.cursorField)), db.cursorValue)
 			// Order by cursor field descending for previous page
-			db.ins = db.ins.Order(fmt.Sprintf("`%s` DESC", db.cursorField))
+			db.ins = db.ins.Order(fmt.Sprintf("%s DESC", db.quoteIdent(db.cursorField)))
 		}
 	}
 }
@@ -918,19 +944,19 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 
 	// Both times provided, use BETWEEN
 	if !startIsZero && !endIsZero {
-		db.ins = db.ins.Where(fmt.Sprintf("`%s` BETWEEN ? AND ?", columnName), startTime, endTime)
+		db.ins = db.ins.Where(fmt.Sprintf("%s BETWEEN ? AND ?", db.quoteIdent(columnName)), startTime, endTime)
 		return db
 	}
 
 	// Only start time provided, use >=
 	if !startIsZero && endIsZero {
-		db.ins = db.ins.Where(fmt.Sprintf("`%s` >= ?", columnName), startTime)
+		db.ins = db.ins.Where(fmt.Sprintf("%s >= ?", db.quoteIdent(columnName)), startTime)
 		return db
 	}
 
 	// Only end time provided, use <=
 	if startIsZero && !endIsZero {
-		db.ins = db.ins.Where(fmt.Sprintf("`%s` <= ?", columnName), endTime)
+		db.ins = db.ins.Where(fmt.Sprintf("%s <= ?", db.quoteIdent(columnName)), endTime)
 		return db
 	}
 
@@ -2520,7 +2546,7 @@ QUERY:
 		_, tableName, _ = buildCacheKey(db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)}).Where("id = ?", id).Find(dest).Statement, "get", id)
 	}
 	dest.ClearID()
-	if err = db.ins.Table(tableName).Where(fmt.Sprintf("`%s`.`id` = ?", tableName), id).Find(dest).Error; err != nil {
+	if err = db.ins.Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dest).Error; err != nil {
 		return err
 	}
 	// Invoke model hook: GetAfter.
