@@ -387,7 +387,7 @@ func logRequest(log types.Logger, phase consts.Phase, req any) {
 	if !config.App.Logger.Controller.LogRequest {
 		return
 	}
-	log.Info("request", zap.String("phase", phase.MethodName()), zap.Any("request", req))
+	log.Infow("request", zap.String("phase", phase.MethodName()), zap.Any("request", req))
 }
 
 // logResponse logs the HTTP response using zap logger if enabled in config
@@ -395,5 +395,5 @@ func logResponse(log types.Logger, phase consts.Phase, rsp any) {
 	if !config.App.Logger.Controller.LogResponse {
 		return
 	}
-	log.Info("response", zap.String("phase", phase.MethodName()), zap.Any("response", rsp))
+	log.Infow("response", zap.String("phase", phase.MethodName()), zap.Any("response", rsp))
 }
