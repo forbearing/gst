@@ -2,6 +2,17 @@
 ## [Unreleased]
 
 ### Fix
+- **controller:** skip request unmarshal if its a file upload request
+- **controller:** use structured logger instead of normal logger to log request and response
+- **database:** use correct quote for postgresql in `WithOrder`
+
+
+<a name="v0.10.9"></a>
+## [v0.10.9] - 2026-01-17
+### Chore
+- **release:** generate CHANGELOG.md
+
+### Fix
 - **database:** use dialect-aware identifier quoting for WithQuery on Postgres
 
 
@@ -2881,7 +2892,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.8...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.9...HEAD
+[v0.10.9]: https://github.com/forbearing/gst/compare/v0.10.8...v0.10.9
 [v0.10.8]: https://github.com/forbearing/gst/compare/v0.10.7...v0.10.8
 [v0.10.7]: https://github.com/forbearing/gst/compare/v0.10.6...v0.10.7
 [v0.10.6]: https://github.com/forbearing/gst/compare/v0.10.5...v0.10.6
