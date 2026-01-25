@@ -187,11 +187,15 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 				req = reflect.New(reqTyp).Interface().(REQ) //nolint:errcheck
 			}
 
-			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
-				log.Error(reqErr)
-				ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
-				otel.RecordError(span, err)
-				return
+			// If the request content type if "multipart/form-data", then the request body is a file.
+			// We should not try to parse it as JSON.
+			if !strings.EqualFold(c.ContentType(), "multipart/form-data") {
+				if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
+					log.Error(reqErr)
+					ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+					otel.RecordError(span, err)
+					return
+				}
 			}
 			if errors.Is(reqErr, io.EOF) {
 				log.Warn(ErrRequestBodyEmpty)
