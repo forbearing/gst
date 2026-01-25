@@ -111,6 +111,27 @@ func (db *database[M]) quoteTableColumn(table, column string) string {
 	return db.quoteIdent(table) + "." + db.quoteIdent(column)
 }
 
+func (db *database[M]) quoteOrderField(name string) string {
+	if len(name) == 0 {
+		return name
+	}
+	if strings.HasPrefix(name, "`") || strings.HasPrefix(name, "\"") || strings.HasPrefix(name, "[") {
+		return name
+	}
+	// Preserve raw expressions like functions or JSON operators.
+	if strings.ContainsAny(name, "()*+-/") {
+		return name
+	}
+	parts := strings.Split(name, ".")
+	for i := range parts {
+		if len(parts[i]) == 0 {
+			continue
+		}
+		parts[i] = db.quoteIdent(parts[i])
+	}
+	return strings.Join(parts, ".")
+}
+
 func (db *database[M]) regexpOperator() string {
 	if db == nil || db.ins == nil || db.ins.Dialector == nil {
 		return "REGEXP"
@@ -1338,7 +1359,7 @@ func (db *database[M]) WithHaving(query any, args ...any) types.Database[M] {
 
 // WithOrder adds ORDER BY clause to sort query results (List, Get, First, Last, etc.).
 // Supports multiple sorting criteria and directions (ASC/DESC).
-// Column names are automatically wrapped with backticks to handle SQL keywords.
+// Column names are automatically quoted with dialect-appropriate identifiers to handle SQL keywords.
 //
 // Parameters:
 //   - order: Column name(s) with optional direction. Multiple columns separated by commas.
@@ -1356,14 +1377,15 @@ func (db *database[M]) WithHaving(query any, args ...any) types.Database[M] {
 //	WithOrder("order DESC, limit ASC")       // Handles SQL keywords safely
 //
 // Note:
-//   - Column names are automatically escaped with backticks to prevent SQL injection
+//   - Column names are automatically escaped with dialect-specific quotes to prevent SQL injection
 //     and handle reserved keywords like "order", "limit", etc.
 //   - Direction keywords (ASC/DESC) are case-insensitive and will be converted to uppercase.
 func (db *database[M]) WithOrder(order string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	// 可以多多个字段进行排序, 每个字段之间通过逗号分隔,
+	// 可以多多个字段进行排序, 每个字段之间通过逗号分隔.
 	// order 的值比如: "field1, field2 desc, field3 asc"
+	// 字段会根据不同数据库方言进行引用, 以避免关键字冲突.
 	items := strings.SplitSeq(order, ",")
 	for item := range items {
 		if len(item) > 0 {
@@ -1372,11 +1394,7 @@ func (db *database[M]) WithOrder(order string) types.Database[M] {
 				if strings.EqualFold(items[i], "asc") || strings.EqualFold(items[i], "desc") {
 					items[i] = strings.ToUpper(items[i])
 				} else {
-					// 第一个是排序字段,必须加上反引号,因为排序的字符串可能是 sql 语句关键字
-					// 第二个可能是 "desc" 等关键字不需要加反引号
-					// items[0] = "`" + items[0] + "`"
-					// 如果不是关键字都加上反引号
-					items[i] = "`" + items[i] + "`"
+					items[i] = db.quoteOrderField(items[i])
 				}
 			}
 			db.ins = db.ins.Order(strings.Join(items, " "))
