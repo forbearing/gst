@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -89,8 +90,9 @@ func rangeAction(d *Design, fn func(string, *Action)) {
 		fn(d.Endpoint, d.PatchMany)
 	}
 
-	for route, actions := range d.routes {
-		emitRouteActions(route, actions, fn)
+	// Sort route keys to ensure deterministic iteration order.
+	for _, route := range slices.Sorted(maps.Keys(d.routes)) {
+		emitRouteActions(route, d.routes[route], fn)
 	}
 }
 
