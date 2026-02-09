@@ -508,6 +508,9 @@ func TestParseFilename(t *testing.T) {
 	if uploadAct.ServiceFilename() != "upload.go" {
 		t.Errorf("expected ServiceFilename 'upload.go', got %q", uploadAct.ServiceFilename())
 	}
+	if uploadAct.RoleName() != "Upload" {
+		t.Errorf("expected RoleName 'Upload', got %q", uploadAct.RoleName())
+	}
 
 	// Route: attachment/parse with Filename("parse")
 	parseAct, ok := routeActions["attachment/parse"]
@@ -520,6 +523,9 @@ func TestParseFilename(t *testing.T) {
 	if parseAct.ServiceFilename() != "parse.go" {
 		t.Errorf("expected ServiceFilename 'parse.go', got %q", parseAct.ServiceFilename())
 	}
+	if parseAct.RoleName() != "Parse" {
+		t.Errorf("expected RoleName 'Parse', got %q", parseAct.RoleName())
+	}
 }
 
 func TestParseFilenameDefault(t *testing.T) {
@@ -531,6 +537,32 @@ func TestParseFilenameDefault(t *testing.T) {
 	}
 	if design.Create.ServiceFilename() != "create.go" {
 		t.Errorf("expected ServiceFilename 'create.go', got %q", design.Create.ServiceFilename())
+	}
+}
+
+func TestRoleName(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		phase    consts.Phase
+		want     string
+	}{
+		{name: "default create", filename: "", phase: consts.PHASE_CREATE, want: "Creator"},
+		{name: "default delete", filename: "", phase: consts.PHASE_DELETE, want: "Deleter"},
+		{name: "default list", filename: "", phase: consts.PHASE_LIST, want: "Lister"},
+		{name: "custom upload", filename: "upload", phase: consts.PHASE_CREATE, want: "Upload"},
+		{name: "custom parse", filename: "parse", phase: consts.PHASE_CREATE, want: "Parse"},
+		{name: "with directory and ext", filename: "a/b/user_upload.rs", phase: consts.PHASE_CREATE, want: "UserUpload"},
+		{name: "uppercase", filename: "Upload", phase: consts.PHASE_CREATE, want: "Upload"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			act := &Action{Filename: tt.filename, Phase: tt.phase}
+			got := act.RoleName()
+			if got != tt.want {
+				t.Errorf("RoleName() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

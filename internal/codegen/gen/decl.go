@@ -113,7 +113,7 @@ type userCreator struct {
 	service.Base[*model.User, *model.User, *model.User]
 }
 */
-func types(modelPkgName, modelName, reqName, rspName string, phase consts.Phase, withComment bool) *ast.GenDecl {
+func types(modelPkgName, modelName, reqName, rspName string, phase consts.Phase, roleName string, withComment bool) *ast.GenDecl {
 	comments := []*ast.Comment{}
 
 	if withComment {
@@ -165,7 +165,7 @@ func types(modelPkgName, modelName, reqName, rspName string, phase consts.Phase,
 		Specs: []ast.Spec{
 			&ast.TypeSpec{
 				// eg: Creator, Updater, Deleter.
-				Name: ast.NewIdent(phase.RoleName()),
+				Name: ast.NewIdent(roleName),
 				Type: &ast.StructType{
 					Fields: &ast.FieldList{
 						List: []*ast.Field{
@@ -200,14 +200,14 @@ func types(modelPkgName, modelName, reqName, rspName string, phase consts.Phase,
 //
 //	"func (u *Creator) CreateBefore(ctx *types.ServiceContext, user *model.User) error {\n}"
 //	"func (g *Updater) UpdateAfter(ctx *types.ServiceContext, group *model.Group) error {\n}",
-func serviceMethod1(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod1(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -255,14 +255,14 @@ func serviceMethod1(recvName, modelName, modelPkgName string, phase consts.Phase
 //
 //	"func (u *Lister) ListBefore(ctx *types.ServiceContext, users *[]*model.User) error {\n}"
 //	"func (u *Lister) ListAfter(ctx *types.ServiceContext, users *[]*model.User) error {\n}"
-func serviceMethod2(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod2(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -314,14 +314,14 @@ func serviceMethod2(recvName, modelName, modelPkgName string, phase consts.Phase
 //
 //	"func (u *ManyCreator) CreateManyBefore(ctx *types.ServiceContext, users ...*model.User) error {\n}"
 //	"func (u *ManyCreator) CreateManyAfter(ctx *types.ServiceContext, users ...*model.User) error {\n}"
-func serviceMethod3(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod3(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -370,7 +370,7 @@ func serviceMethod3(recvName, modelName, modelPkgName string, phase consts.Phase
 // For example:
 //
 //	func (u *Creator) Create(ctx *types.ServiceContext, user *model.User) (rsp *model.User, err error) {\n}
-func serviceMethod4(recvName, modelName, modelPkgName, reqName, rspName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod4(recvName, modelName, modelPkgName, reqName, rspName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	// if reqName is equal to modelName or reqName starts with *, then the reqExpr use StarExpr,
 	// otherwise use SelectorExpr
 	var reqExpr ast.Expr
@@ -411,7 +411,7 @@ func serviceMethod4(recvName, modelName, modelPkgName, reqName, rspName string, 
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -458,14 +458,14 @@ func serviceMethod4(recvName, modelName, modelPkgName, reqName, rspName string, 
 // For example:
 //
 //	func (a *Importer) Import(ctx *types.ServiceContext, reader io.Reader) ([]*model.Asset, error) {\n}
-func serviceMethod5(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod5(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -522,7 +522,7 @@ func serviceMethod5(recvName, modelName, modelPkgName string, phase consts.Phase
 // For example:
 //
 //	func (a *Exporter) Export(ctx *types.ServiceContext, assets ...*model.Asset) ([]byte, error) {\n}
-func serviceMethod6(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod6(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	paramName := pluralizeCli.Plural(strings.ToLower(modelName))
 
 	return &ast.FuncDecl{
@@ -531,7 +531,7 @@ func serviceMethod6(recvName, modelName, modelPkgName string, phase consts.Phase
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -588,14 +588,14 @@ func serviceMethod6(recvName, modelName, modelPkgName string, phase consts.Phase
 //
 //	"func (u *Lister) Filter(ctx *types.ServiceContext, user *model.User) *model.User {\n}"
 //	"func (g *Lister) Filter(ctx *types.ServiceContext, group *model_auth.Group) *model_auth.Group {\n}"
-func serviceMethod7(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod7(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},
@@ -648,14 +648,14 @@ func serviceMethod7(recvName, modelName, modelPkgName string, phase consts.Phase
 //
 //	"func (u *Lister) FilterRaw(ctx *types.ServiceContext) string {\n}"
 //	"func (g *Lister) FilterRaw(ctx *types.ServiceContext) string {\n}"
-func serviceMethod8(recvName, modelName, modelPkgName string, phase consts.Phase, body ...ast.Stmt) *ast.FuncDecl {
+func serviceMethod8(recvName, modelName, modelPkgName string, phase consts.Phase, roleName string, body ...ast.Stmt) *ast.FuncDecl {
 	return &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
 				{
 					Names: []*ast.Ident{ast.NewIdent(recvName)},
 					Type: &ast.StarExpr{
-						X: ast.NewIdent(phase.RoleName()),
+						X: ast.NewIdent(roleName),
 					},
 				},
 			},

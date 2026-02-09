@@ -8,8 +8,8 @@ import (
 )
 
 func TestIsServiceMethod1(t *testing.T) {
-	fn1 := serviceMethod1("u", "User", "CreateBefore", "model")
-	fn2 := serviceMethod2("u", "User", "ListBefore", "model")
+	fn1 := serviceMethod1("u", "User", "CreateBefore", "model", "Creator")
+	fn2 := serviceMethod2("u", "User", "ListBefore", "model", "Lister")
 	if !isServiceMethod1(fn1) {
 		t.Fatalf("expected isServiceMethod1 to return true for ServiceMethod1-generated func")
 	}
@@ -19,8 +19,8 @@ func TestIsServiceMethod1(t *testing.T) {
 }
 
 func TestIsServiceMethod2(t *testing.T) {
-	fn := serviceMethod2("u", "User", "ListBefore", "model")
-	fnNeg := serviceMethod3("u", "User", "CreateManyBefore", "model")
+	fn := serviceMethod2("u", "User", "ListBefore", "model", "Lister")
+	fnNeg := serviceMethod3("u", "User", "CreateManyBefore", "model", "ManyCreator")
 	if !isServiceMethod2(fn) {
 		t.Fatalf("expected isServiceMethod2 to return true for ServiceMethod2-generated func")
 	}
@@ -30,8 +30,8 @@ func TestIsServiceMethod2(t *testing.T) {
 }
 
 func TestIsServiceMethod3(t *testing.T) {
-	fn := serviceMethod3("u", "User", "CreateManyBefore", "model")
-	fnNeg := serviceMethod1("u", "User", "CreateBefore", "model")
+	fn := serviceMethod3("u", "User", "CreateManyBefore", "model", "ManyCreator")
+	fnNeg := serviceMethod1("u", "User", "CreateBefore", "model", "Creator")
 	if !isServiceMethod3(fn) {
 		t.Fatalf("expected isServiceMethod3 to return true for ServiceMethod3-generated func")
 	}
@@ -41,8 +41,8 @@ func TestIsServiceMethod3(t *testing.T) {
 }
 
 func TestIsServiceMethod4(t *testing.T) {
-	fn := serviceMethod4("u", "User", "Create", "model", "UserReq", "UserRsp")
-	fnNeg := serviceMethod3("u", "User", "CreateManyBefore", "model")
+	fn := serviceMethod4("u", "User", "Create", "model", "UserReq", "UserRsp", "Creator")
+	fnNeg := serviceMethod3("u", "User", "CreateManyBefore", "model", "ManyCreator")
 	if !isServiceMethod4(fn) {
 		t.Fatalf("expected isServiceMethod4 to return true for ServiceMethod4-generated func")
 	}
@@ -53,7 +53,7 @@ func TestIsServiceMethod4(t *testing.T) {
 
 func TestIsServiceType(t *testing.T) {
 	// Positive case: struct embeds service.Base[*model.User, *model.User, *model.User]
-	gd := types("model", "User", "User", "User", consts.PHASE_CREATE, false)
+	gd := types("model", "User", "User", "User", consts.PHASE_CREATE, consts.PHASE_CREATE.RoleName(), false)
 	if len(gd.Specs) == 0 {
 		t.Fatalf("Types() returned no specs")
 	}

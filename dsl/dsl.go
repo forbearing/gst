@@ -77,6 +77,7 @@ import (
 	"strings"
 
 	"github.com/forbearing/gst/types/consts"
+	"github.com/stoewer/go-strcase"
 )
 
 // Enabled controls whether API generation is enabled.
@@ -452,6 +453,20 @@ type Action struct {
 	// The phase of the action
 	// not part of DSL, just used to identify the current Action.
 	Phase consts.Phase
+}
+
+// RoleName returns the struct name for the generated service file.
+// If Filename is set, it extracts the base name (stripping any directory prefix
+// and file extension) and converts it to UpperCamelCase.
+// For example, Filename("upload") returns "Upload", Filename("a/b/user_upload.rs") returns "UserUpload".
+// Otherwise, it falls back to Phase.RoleName() (e.g., "Creator", "Updater", "Deleter").
+func (a *Action) RoleName() string {
+	if len(a.Filename) > 0 {
+		name := filepath.Base(a.Filename)
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+		return strcase.UpperCamelCase(name)
+	}
+	return a.Phase.RoleName()
 }
 
 // ServiceFilename returns the filename for the generated service file.
