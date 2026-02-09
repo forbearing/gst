@@ -302,7 +302,7 @@ func genRun() {
 				// code = gen.MethodAddComments(code, m.ModelName)
 				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
 				dir = strings.TrimSuffix(dir, ".go")
-				filename := filepath.Join(dir, strings.ToLower(string(act.Phase))+".go")
+				filename := filepath.Join(dir, act.ServiceFilename())
 				// Use lowercase ModelName as service package name to ensure consistency
 				// with service registration logic and maintain original naming style
 				// For example: ModelName "ConfigSetting" -> package name "configsetting"
@@ -415,7 +415,7 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 			if act.Enabled && act.Service {
 				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
 				dir = strings.TrimSuffix(dir, ".go")
-				filename := filepath.Join(dir, strings.ToLower(string(act.Phase))+".go")
+				filename := filepath.Join(dir, act.ServiceFilename())
 				currentServiceFiles[filename] = true
 			}
 		})

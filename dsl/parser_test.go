@@ -484,6 +484,133 @@ func (RouteHost) Design() {
 }
 `
 
+func TestParseFilename(t *testing.T) {
+	design := parseDesignFromSource(t, filenameSource, "Attachment")
+
+	// Collect actions by route path
+	routeActions := make(map[string]*Action)
+	design.Range(func(route string, act *Action) {
+		routeActions[route] = act
+	})
+
+	if len(routeActions) != 2 {
+		t.Fatalf("expected 2 route actions, got %d", len(routeActions))
+	}
+
+	// Route: attachment/upload with Filename("upload")
+	uploadAct, ok := routeActions["attachment/upload"]
+	if !ok {
+		t.Fatal("expected route 'attachment/upload' not found")
+	}
+	if uploadAct.Filename != "upload" {
+		t.Errorf("expected Filename 'upload', got %q", uploadAct.Filename)
+	}
+	if uploadAct.ServiceFilename() != "upload.go" {
+		t.Errorf("expected ServiceFilename 'upload.go', got %q", uploadAct.ServiceFilename())
+	}
+
+	// Route: attachment/parse with Filename("parse")
+	parseAct, ok := routeActions["attachment/parse"]
+	if !ok {
+		t.Fatal("expected route 'attachment/parse' not found")
+	}
+	if parseAct.Filename != "parse" {
+		t.Errorf("expected Filename 'parse', got %q", parseAct.Filename)
+	}
+	if parseAct.ServiceFilename() != "parse.go" {
+		t.Errorf("expected ServiceFilename 'parse.go', got %q", parseAct.ServiceFilename())
+	}
+}
+
+func TestParseFilenameDefault(t *testing.T) {
+	design := parseDesignFromSource(t, filenameDefaultSource, "SimpleModel")
+
+	// Test that action without Filename uses Phase-based filename
+	if design.Create.Filename != "" {
+		t.Errorf("expected empty Filename, got %q", design.Create.Filename)
+	}
+	if design.Create.ServiceFilename() != "create.go" {
+		t.Errorf("expected ServiceFilename 'create.go', got %q", design.Create.ServiceFilename())
+	}
+}
+
+func TestServiceFilenameEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		phase    consts.Phase
+		want     string
+	}{
+		{name: "simple name", filename: "upload", phase: consts.PHASE_CREATE, want: "upload.go"},
+		{name: "with directory prefix", filename: "a/b/c", phase: consts.PHASE_CREATE, want: "c.go"},
+		{name: "with extension", filename: "upload.rs", phase: consts.PHASE_CREATE, want: "upload.go"},
+		{name: "with directory and extension", filename: "a/b/c.rs", phase: consts.PHASE_CREATE, want: "c.go"},
+		{name: "uppercase", filename: "Upload", phase: consts.PHASE_CREATE, want: "upload.go"},
+		{name: "empty falls back to phase", filename: "", phase: consts.PHASE_CREATE, want: "create.go"},
+		{name: "with .go extension", filename: "upload.go", phase: consts.PHASE_CREATE, want: "upload.go"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			act := &Action{Filename: tt.filename, Phase: tt.phase}
+			got := act.ServiceFilename()
+			if got != tt.want {
+				t.Errorf("ServiceFilename() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+const filenameSource = `
+package model
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+type Attachment struct {
+	model.Base
+}
+
+func (Attachment) Design() {
+	Migrate(true)
+	Route("/attachment/upload", func() {
+		Create(func() {
+			Enabled(true)
+			Service(true)
+			Filename("upload")
+		})
+	})
+	Route("/attachment/parse", func() {
+		Create(func() {
+			Enabled(true)
+			Service(true)
+			Filename("parse")
+		})
+	})
+}
+`
+
+const filenameDefaultSource = `
+package model
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+type SimpleModel struct {
+	model.Base
+}
+
+func (SimpleModel) Design() {
+	Create(func() {
+		Enabled(true)
+		Service(true)
+	})
+}
+`
+
 func parseDesignFromSource(t *testing.T, src, modelName string) *Design {
 	t.Helper()
 
