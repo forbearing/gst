@@ -380,6 +380,14 @@ func GenerateService(info *ModelInfo, action *dsl.Action, phase consts.Phase) *a
 
 	roleName := action.RoleName()
 
+	// When Filename is set, derive the receiver variable name from RoleName
+	// (e.g., Upload → "u", Parse → "p") instead of the model name (e.g., Attachment → "a").
+	if len(action.Filename) > 0 && len(roleName) > 0 {
+		copied := *info
+		copied.ModelVarName = strings.ToLower(roleName[:1])
+		info = &copied
+	}
+
 	otherPkgs := []string{}
 	if phase == consts.PHASE_IMPORT {
 		otherPkgs = append(otherPkgs, "io")

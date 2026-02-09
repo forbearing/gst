@@ -9,6 +9,134 @@ import (
 	"github.com/forbearing/gst/dsl"
 )
 
+// applyServiceRoleName renames the service struct type and all associated receiver
+// types and variable names to match the action's RoleName.
+// This is needed when Filename is set, causing the struct name to differ from the
+// default Phase-based name (e.g., "Creator" → "Upload").
+//
+// It performs three updates:
+//  1. Renames the struct type declaration (e.g., type Creator struct → type Upload struct)
+//  2. Renames receiver types in all methods (e.g., func (a *Creator) → func (u *Upload))
+//  3. Renames receiver variable names and all references in method bodies
+//     (e.g., "a" → "u", a.WithServiceContext → u.WithServiceContext)
+func applyServiceRoleName(file *ast.File, action *dsl.Action) bool {
+	if file == nil || action == nil || len(action.Filename) == 0 {
+		return false
+	}
+
+	newRoleName := action.RoleName()
+	if len(newRoleName) == 0 {
+		return false
+	}
+	newRecvVar := strings.ToLower(newRoleName[:1])
+
+	// Find the current service struct name
+	oldRoleName := findServiceTypeName(file)
+	if len(oldRoleName) == 0 {
+		return false
+	}
+
+	needRenameStruct := oldRoleName != newRoleName
+
+	var changed bool
+
+	// 1. Rename the struct type declaration (only if names differ)
+	if needRenameStruct {
+		for _, decl := range file.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok || genDecl.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range genDecl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok || !isServiceType(typeSpec) {
+					continue
+				}
+				if typeSpec.Name.Name != newRoleName {
+					typeSpec.Name = ast.NewIdent(newRoleName)
+					changed = true
+				}
+			}
+		}
+	}
+
+	// 2 & 3. Update receiver type and variable name in all methods.
+	// The receiver type is renamed when the struct name changed.
+	// The receiver variable name is always checked and updated to match newRecvVar,
+	// even when the struct name already matches (e.g., struct is "Upload" but receiver is still "a").
+	for _, decl := range file.Decls {
+		funcDecl, ok := decl.(*ast.FuncDecl)
+		if !ok || funcDecl == nil || funcDecl.Recv == nil || len(funcDecl.Recv.List) == 0 {
+			continue
+		}
+		recv := funcDecl.Recv.List[0]
+
+		starExpr, ok := recv.Type.(*ast.StarExpr)
+		if !ok {
+			continue
+		}
+		ident, ok := starExpr.X.(*ast.Ident)
+		if !ok {
+			continue
+		}
+
+		// Only process methods whose receiver type is the old or new role name
+		if ident.Name != oldRoleName && ident.Name != newRoleName {
+			continue
+		}
+
+		// Update receiver type if struct was renamed
+		if needRenameStruct && ident.Name == oldRoleName {
+			ident.Name = newRoleName
+			changed = true
+		}
+
+		// Update receiver variable name to match the new role name
+		if len(recv.Names) > 0 && recv.Names[0].Name != newRecvVar {
+			oldName := recv.Names[0].Name
+			recv.Names[0] = ast.NewIdent(newRecvVar)
+			changed = true
+
+			// Update all references to the old receiver variable in the method body
+			if funcDecl.Body != nil {
+				renameIdent(funcDecl.Body, oldName, newRecvVar)
+			}
+		}
+	}
+
+	return changed
+}
+
+// findServiceTypeName finds the name of the service struct type in the file.
+// It looks for a struct that embeds service.Base[...] and returns its name.
+func findServiceTypeName(file *ast.File) string {
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok || !isServiceType(typeSpec) {
+				continue
+			}
+			return typeSpec.Name.Name
+		}
+	}
+	return ""
+}
+
+// renameIdent walks an AST node and renames all *ast.Ident nodes
+// matching oldName to newName.
+func renameIdent(node ast.Node, oldName, newName string) {
+	ast.Inspect(node, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok && ident.Name == oldName {
+			ident.Name = newName
+		}
+		return true
+	})
+}
+
 // ApplyServiceFile will apply the dsl.Action to the ast.File.
 // It will modify the struct type and struct methods if Payload
 // or Result is changed, and returns true.
@@ -25,6 +153,11 @@ func ApplyServiceFile(file *ast.File, action *dsl.Action, servicePkgName string)
 	// Apply package name correction
 	if len(servicePkgName) > 0 && file.Name != nil && file.Name.Name != servicePkgName {
 		file.Name.Name = servicePkgName
+		changed = true
+	}
+
+	// Rename service struct type and receiver names when Filename is set
+	if applyServiceRoleName(file, action) {
 		changed = true
 	}
 

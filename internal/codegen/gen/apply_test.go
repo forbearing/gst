@@ -143,6 +143,293 @@ func (u *user) Create(ctx *types.ServiceContext, req *model.User) (rsp *model.Us
 `,
 		},
 		{
+			name: "rename_struct_and_receiver_with_filename",
+			code: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Creator struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (c *Creator) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := c.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+
+func (c *Creator) CreateBefore(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := c.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create before")
+	return nil
+}
+
+func (c *Creator) CreateAfter(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := c.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create after")
+	return nil
+}
+`,
+			action: &dsl.Action{
+				Enabled:  true,
+				Payload:  "*Attachment",
+				Result:   "*Attachment",
+				Filename: "upload",
+			},
+			servicePkgName: "attachment",
+			want: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Upload struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (u *Upload) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+
+func (u *Upload) CreateBefore(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create before")
+	return nil
+}
+
+func (u *Upload) CreateAfter(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create after")
+	return nil
+}
+`,
+		},
+		{
+			name: "rename_struct_and_receiver_with_filename_and_payload",
+			code: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Creator struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (c *Creator) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := c.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+`,
+			action: &dsl.Action{
+				Enabled:  true,
+				Payload:  "*AttachmentReq",
+				Result:   "*AttachmentRsp",
+				Filename: "upload",
+			},
+			servicePkgName: "attachment",
+			want: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Upload struct {
+	service.Base[*shared.Attachment, *shared.AttachmentReq, *shared.AttachmentRsp]
+}
+
+func (u *Upload) Create(ctx *types.ServiceContext, req *shared.AttachmentReq) (rsp *shared.AttachmentRsp, err error) {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+`,
+		},
+		{
+			name: "no_rename_when_filename_not_set",
+			code: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Creator struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (c *Creator) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := c.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+`,
+			action: &dsl.Action{
+				Enabled: true,
+				Payload: "*Attachment",
+				Result:  "*Attachment",
+			},
+			servicePkgName: "attachment",
+			want: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Creator struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (c *Creator) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := c.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+`,
+		},
+		{
+			name: "no_change_when_struct_and_receiver_already_match",
+			code: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Upload struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (u *Upload) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+`,
+			action: &dsl.Action{
+				Enabled:  true,
+				Payload:  "*Attachment",
+				Result:   "*Attachment",
+				Filename: "upload",
+			},
+			servicePkgName: "attachment",
+			want: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Upload struct {
+	service.Base[*shared.Attachment, *shared.Attachment, *shared.Attachment]
+}
+
+func (u *Upload) Create(ctx *types.ServiceContext, req *shared.Attachment) (rsp *shared.Attachment, err error) {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+`,
+		},
+		{
+			name: "rename_receiver_when_struct_already_matches",
+			code: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Upload struct {
+	service.Base[*shared.Attachment, *shared.AttachmentReq, *shared.AttachmentRsp]
+}
+
+func (a *Upload) Create(ctx *types.ServiceContext, req *shared.AttachmentReq) (rsp *shared.AttachmentRsp, err error) {
+	log := a.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+
+func (a *Upload) CreateBefore(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := a.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create before")
+	return nil
+}
+
+func (a *Upload) CreateAfter(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := a.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create after")
+	return nil
+}
+`,
+			action: &dsl.Action{
+				Enabled:  true,
+				Payload:  "*AttachmentReq",
+				Result:   "*AttachmentRsp",
+				Filename: "upload",
+			},
+			servicePkgName: "attachment",
+			want: `package attachment
+
+import (
+	"helloworld/model/shared"
+
+	"github.com/forbearing/gst/service"
+	"github.com/forbearing/gst/types"
+)
+
+type Upload struct {
+	service.Base[*shared.Attachment, *shared.AttachmentReq, *shared.AttachmentRsp]
+}
+
+func (u *Upload) Create(ctx *types.ServiceContext, req *shared.AttachmentReq) (rsp *shared.AttachmentRsp, err error) {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create")
+	return rsp, nil
+}
+
+func (u *Upload) CreateBefore(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create before")
+	return nil
+}
+
+func (u *Upload) CreateAfter(ctx *types.ServiceContext, attachment *shared.Attachment) error {
+	log := u.WithServiceContext(ctx, ctx.GetPhase())
+	log.Info("attachment create after")
+	return nil
+}
+`,
+		},
+		{
 			name: "package_name_correction_configsetting",
 			code: `package config_setting
 
