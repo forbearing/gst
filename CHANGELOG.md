@@ -1,10 +1,30 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Enh
+- **dsl:** ensure route order
+- **dsl:** apply service code receiver variable name according to role name
+
+### Feat
+- **dsl:** support use "Filename" to specific generated service filename
+
+### Fix
+- **database:** make init seed inserts idempotent across DBs
+- **dsl:** change the generated service struct name  depends on the dsl "Filename"
+
+
+<a name="v0.10.10"></a>
+## [v0.10.10] - 2026-01-25
+### Chore
+- **release:** generate CHANGELOG.md
+
 ### Fix
 - **controller:** skip request unmarshal if its a file upload request
 - **controller:** use structured logger instead of normal logger to log request and response
 - **database:** use correct quote for postgresql in `WithOrder`
+
+### Pull Requests
+- Merge pull request [#78](https://github.com/forbearing/gst/issues/78) from forbearing/dev
 
 
 <a name="v0.10.9"></a>
@@ -494,11 +514,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="v0.10.0-beta.3"></a>
-## [v0.10.0-beta.3] - 2025-11-08
-
 <a name="list"></a>
 ## [list] - 2025-11-08
+
+<a name="v0.10.0-beta.3"></a>
+## [v0.10.0-beta.3] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -610,11 +630,11 @@
 Plugin interface renamed to Module interface
 
 
-<a name="v0.9.7"></a>
-## [v0.9.7] - 2025-10-31
-
 <a name="v0.9.7-beta.4"></a>
 ## [v0.9.7-beta.4] - 2025-10-31
+
+<a name="v0.9.7"></a>
+## [v0.9.7] - 2025-10-31
 ### Chore
 - **release:** generate CHANGEME.md
 - **release:** generate CHANGEME.md
@@ -2892,7 +2912,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.9...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.10...HEAD
+[v0.10.10]: https://github.com/forbearing/gst/compare/v0.10.9...v0.10.10
 [v0.10.9]: https://github.com/forbearing/gst/compare/v0.10.8...v0.10.9
 [v0.10.8]: https://github.com/forbearing/gst/compare/v0.10.7...v0.10.8
 [v0.10.7]: https://github.com/forbearing/gst/compare/v0.10.6...v0.10.7
@@ -2909,14 +2930,14 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.10.0]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...v0.10.0
 [v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
-[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7...v0.10.0-beta.0
-[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.9.7
-[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7-beta.4
+[v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
+[v0.9.7-beta.4]: https://github.com/forbearing/gst/compare/v0.9.7...v0.9.7-beta.4
+[v0.9.7]: https://github.com/forbearing/gst/compare/v0.9.7-beta.3...v0.9.7
 [v0.9.7-beta.3]: https://github.com/forbearing/gst/compare/v0.9.7-beta.2...v0.9.7-beta.3
 [v0.9.7-beta.2]: https://github.com/forbearing/gst/compare/v0.9.7-beta.1...v0.9.7-beta.2
 [v0.9.7-beta.1]: https://github.com/forbearing/gst/compare/v0.9.7-beta.0...v0.9.7-beta.1
