@@ -19,6 +19,7 @@ type DatabaseConfig struct {
 	Password string
 	Host     string
 	Port     int
+	SSLMode  string
 }
 
 type MigrateOption struct {
@@ -44,6 +45,7 @@ func Migrate(schemas []string, dbtyp config.DBType, cfg *DatabaseConfig, opt *Mi
 		Password: cfg.Password,
 		Host:     cfg.Host,
 		Port:     cfg.Port,
+		SslMode:  cfg.SSLMode,
 	}
 	migOpt := &sqldef.Options{
 		DryRun:      opt.DryRun,
