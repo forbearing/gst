@@ -9,7 +9,8 @@ import (
 	"github.com/sqldef/sqldef/v3/database"
 	"github.com/sqldef/sqldef/v3/database/mysql"
 	"github.com/sqldef/sqldef/v3/database/postgres"
-	"github.com/sqldef/sqldef/v3/database/sqlite3"
+
+	// "github.com/sqldef/sqldef/v3/database/sqlite3"
 	"github.com/sqldef/sqldef/v3/parser"
 	"github.com/sqldef/sqldef/v3/schema"
 )
@@ -73,9 +74,13 @@ func Migrate(schemas []string, dbtyp config.DBType, cfg *DatabaseConfig, opt *Mi
 		parseMode = parser.ParserModePostgres
 		genMode = schema.GeneratorModePostgres
 	case config.DBSqlite:
-		db, err = sqlite3.NewDatabase(dbcfg)
-		parseMode = parser.ParserModeSQLite3
-		genMode = schema.GeneratorModeSQLite3
+		// db, err = sqlite3.NewDatabase(dbcfg)
+		// parseMode = parser.ParserModeSQLite3
+		// genMode = schema.GeneratorModeSQLite3
+		// 暂时不支持 sqlite, 因为 sqldef/sqlite3 引入的 modernc.org/sqlite 会注册 sqlite 驱动
+		// 而项目中其他地方(如 gorm-adapter) 可能使用了 glebarez/go-sqlite 也注册了 sqlite 驱动
+		// 导致 panic: sql: Register called twice for driver sqlite
+		return false, fmt.Errorf("sqlite migration is temporarily disabled due to driver conflict")
 	}
 	if err != nil {
 		return false, err

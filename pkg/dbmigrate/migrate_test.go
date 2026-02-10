@@ -75,7 +75,8 @@ func TestMigrate(t *testing.T) {
 			&dbmigrate.MigrateOption{
 				DryRun: true,
 			})
-		require.NoError(t, err)
-		require.True(t, migrated)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "sqlite migration is temporarily disabled")
+		require.False(t, migrated)
 	})
 }
