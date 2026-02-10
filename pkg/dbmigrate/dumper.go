@@ -80,6 +80,11 @@ func (s *SchemaDumper) Dump(driver config.DBType, dst ...any) (string, error) {
 		// We remove "IF NOT EXISTS" to ensure compatibility with sqldef.
 		if driver == config.DBPostgres {
 			sql = strings.ReplaceAll(sql, "CREATE INDEX IF NOT EXISTS", "CREATE INDEX")
+			// GORM generates "timestamptz" for time.Time fields, but PostgreSQL stores it as "timestamp with time zone".
+			// sqldef compares the desired DDL with the actual database schema string-wise.
+			// This mismatch causes sqldef to repeatedly generate "ALTER COLUMN ... TYPE timestamp with time zone" statements,
+			// thinking the schema has changed. We normalize it here to prevent unnecessary migrations.
+			sql = strings.ReplaceAll(sql, "timestamptz", "timestamp with time zone")
 		}
 		if _, err := sb.WriteString(sqlfmt.Format(sql) + ";\n"); err != nil {
 			return "", err

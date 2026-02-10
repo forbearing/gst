@@ -39,6 +39,7 @@ func TestDumper(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, schema)
 		// fmt.Println(schema)
+		t.Log(schema)
 	})
 
 	t.Run("sqlite", func(t *testing.T) {
