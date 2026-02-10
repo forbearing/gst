@@ -458,6 +458,7 @@ func parseDesign(fn *ast.FuncDecl) *Design {
 //   - Enabled(true/false): Sets whether the action is enabled
 //   - Service(true/false): Sets whether to generate service layer code
 //   - Public(true/false): Sets whether the API endpoint is public
+//   - Filename("name"): Sets a custom filename for the generated service file
 //   - Payload[Type]: Sets the request payload type
 //   - Result[Type]: Sets the response result type
 //
@@ -472,9 +473,10 @@ func parseDesign(fn *ast.FuncDecl) *Design {
 func parseAction(phase consts.Phase, funcName string, expr ast.Expr) (*Action, bool) {
 	var payload string
 	var result string
-	var enabled bool // default to false
-	var service bool // default to true
-	var public bool  // default to false
+	var enabled bool    // default to false
+	var service bool    // default to true
+	var public bool     // default to false
+	var filename string // default to ""
 
 	if phase.MethodName() != funcName {
 		return nil, false
@@ -555,6 +557,26 @@ func parseAction(phase consts.Phase, funcName string, expr ast.Expr) (*Action, b
 					}
 				}
 
+				// Parse Filename("upload")/Filename("parse")
+				var isFilenameCall bool
+				switch fun := call.Fun.(type) {
+				case *ast.Ident:
+					// anonymous import: Filename("upload")
+					if fun != nil && fun.Name == "Filename" {
+						isFilenameCall = true
+					}
+				case *ast.SelectorExpr:
+					// non-anonymous import: dsl.Filename("upload")
+					if fun != nil && fun.Sel != nil && fun.Sel.Name == "Filename" {
+						isFilenameCall = true
+					}
+				}
+				if isFilenameCall && len(call.Args) > 0 && call.Args[0] != nil {
+					if arg, ok := call.Args[0].(*ast.BasicLit); ok && arg != nil && arg.Kind == token.STRING {
+						filename = trimQuote(arg.Value)
+					}
+				}
+
 				// Parse Payload[User] or Result[*User].
 				if indexExpr, ok := call.Fun.(*ast.IndexExpr); ok && indexExpr != nil {
 					var isPayload bool
@@ -602,12 +624,13 @@ func parseAction(phase consts.Phase, funcName string, expr ast.Expr) (*Action, b
 	}
 
 	return &Action{
-		Payload: payload,
-		Result:  result,
-		Enabled: enabled,
-		Service: service,
-		Public:  public,
-		Phase:   phase,
+		Payload:  payload,
+		Result:   result,
+		Enabled:  enabled,
+		Service:  service,
+		Public:   public,
+		Filename: filename,
+		Phase:    phase,
 	}, true
 }
 

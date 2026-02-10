@@ -48,6 +48,19 @@
 //		Get(func() { Enabled(true) })
 //	}
 //
+// Custom Service Filenames:
+//
+// When multiple Route definitions share the same operation type (e.g., both use Create),
+// use Filename to specify distinct service filenames:
+//
+//	Route("/attachment/upload", func() {
+//		Create(func() {
+//			Enabled(true)
+//			Service(true)
+//			Filename("upload")  // generates upload.go instead of create.go
+//		})
+//	})
+//
 // Supported Operations:
 //   - Create, Update, Delete, Patch: Single record operations
 //   - CreateMany, UpdateMany, DeleteMany, PatchMany: Batch operations
@@ -60,7 +73,11 @@
 package dsl
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/forbearing/gst/types/consts"
+	"github.com/stoewer/go-strcase"
 )
 
 // Enabled controls whether API generation is enabled.
@@ -186,6 +203,41 @@ func Migrate(bool) {}
 // This affects the generation of business logic layer code.
 // Default: false
 func Service(bool) {}
+
+// Filename specifies a custom filename (without extension) for the generated service file.
+// When used inside an action configuration function (e.g., Create, Update), it overrides the
+// default filename derived from the operation phase (e.g., "create", "list").
+//
+// Background:
+// By default, the generated service filename is derived from the operation phase name
+// (e.g., Create generates "create.go", List generates "list.go"). When a model defines
+// multiple Route with the same operation type, such as two routes both using Create,
+// they share a single service file "create.go" because the filename is solely determined
+// by the phase. This leads to the second route's generated code overwriting the first.
+// Filename allows each action to specify a distinct output filename, ensuring that
+// each route's service logic is generated into its own dedicated file.
+//
+// Default: "" (uses the lowercase phase name as filename, e.g., "create.go", "list.go")
+//
+// Example:
+//
+//	// Without Filename, both routes would generate service/shared/attachment/create.go,
+//	// causing a conflict. With Filename, they produce separate files:
+//	Route("/attachment/upload", func() {
+//	    Create(func() {
+//	        Enabled(true)
+//	        Service(true)
+//	        Filename("upload")  // generates service/shared/attachment/upload.go
+//	    })
+//	})
+//	Route("/attachment/parse", func() {
+//	    Create(func() {
+//	        Enabled(true)
+//	        Service(true)
+//	        Filename("parse")   // generates service/shared/attachment/parse.go
+//	    })
+//	})
+func Filename(string) {}
 
 // Public controls whether the current action requires authentication/authorization.
 // When false, the action will be processed by auth middleware if registered via middleware.RegisterAuth.
@@ -392,9 +444,43 @@ type Action struct {
 	// Example: "*User", "UserResponse", "[]User"
 	Result string
 
+	// Filename specifies a custom filename (without extension) for the generated service file.
+	// When set, it overrides the default filename derived from the Phase.
+	// For example, Filename="upload" generates "upload.go" instead of "create.go".
+	// Default: "" (uses Phase-based filename)
+	Filename string
+
 	// The phase of the action
 	// not part of DSL, just used to identify the current Action.
 	Phase consts.Phase
+}
+
+// RoleName returns the struct name for the generated service file.
+// If Filename is set, it extracts the base name (stripping any directory prefix
+// and file extension) and converts it to UpperCamelCase.
+// For example, Filename("upload") returns "Upload", Filename("a/b/user_upload.rs") returns "UserUpload".
+// Otherwise, it falls back to Phase.RoleName() (e.g., "Creator", "Updater", "Deleter").
+func (a *Action) RoleName() string {
+	if len(a.Filename) > 0 {
+		name := filepath.Base(a.Filename)
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+		return strcase.UpperCamelCase(name)
+	}
+	return a.Phase.RoleName()
+}
+
+// ServiceFilename returns the filename for the generated service file.
+// If Filename is set, it extracts the base name (stripping any directory prefix
+// and file extension), converts it to lowercase, and appends ".go".
+// For example, "a/b/c.rs" becomes "c.go", "Upload" becomes "upload.go".
+// Otherwise, it falls back to the lowercase Phase name + ".go".
+func (a *Action) ServiceFilename() string {
+	if len(a.Filename) > 0 {
+		name := filepath.Base(a.Filename)
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+		return strings.ToLower(name) + ".go"
+	}
+	return strings.ToLower(string(a.Phase)) + ".go"
 }
 
 var methodList = []string{
@@ -405,6 +491,7 @@ var methodList = []string{
 	"Migrate",
 	"Payload",
 	"Result",
+	"Filename",
 
 	consts.PHASE_CREATE.MethodName(),
 	consts.PHASE_DELETE.MethodName(),

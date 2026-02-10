@@ -143,11 +143,11 @@ func genRun() {
 					// alias import package, eg:
 					// pkg1_user "service/pkg1/user"
 					// pkg2_user "service/pkg2/user"
-					serviceStmts = append(serviceStmts, gen.StmtServiceRegister(fmt.Sprintf("%s.%s", alias, act.Phase.RoleName()), act.Phase))
+					serviceStmts = append(serviceStmts, gen.StmtServiceRegister(fmt.Sprintf("%s.%s", alias, act.RoleName()), act.Phase))
 				} else {
 					// Use lowercase ModelName as package name to maintain original naming style
 					// For example: ModelName "ConfigSetting" -> package name "configsetting"
-					serviceStmts = append(serviceStmts, gen.StmtServiceRegister(fmt.Sprintf("%s.%s", strings.ToLower(m.ModelName), act.Phase.RoleName()), act.Phase))
+					serviceStmts = append(serviceStmts, gen.StmtServiceRegister(fmt.Sprintf("%s.%s", strings.ToLower(m.ModelName), act.RoleName()), act.Phase))
 				}
 			}
 			base := "Auth"
@@ -302,7 +302,7 @@ func genRun() {
 				// code = gen.MethodAddComments(code, m.ModelName)
 				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
 				dir = strings.TrimSuffix(dir, ".go")
-				filename := filepath.Join(dir, strings.ToLower(string(act.Phase))+".go")
+				filename := filepath.Join(dir, act.ServiceFilename())
 				// Use lowercase ModelName as service package name to ensure consistency
 				// with service registration logic and maintain original naming style
 				// For example: ModelName "ConfigSetting" -> package name "configsetting"
@@ -415,7 +415,7 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 			if act.Enabled && act.Service {
 				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
 				dir = strings.TrimSuffix(dir, ".go")
-				filename := filepath.Join(dir, strings.ToLower(string(act.Phase))+".go")
+				filename := filepath.Join(dir, act.ServiceFilename())
 				currentServiceFiles[filename] = true
 			}
 		})

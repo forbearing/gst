@@ -15,6 +15,7 @@ import (
 	"github.com/uptrace/opentelemetry-go-extra/otelgorm"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // startedTable is an atomic flag to ensure table processing goroutine starts only once
@@ -112,7 +113,10 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 						if val, exists := dbmap[strings.ToLower(r.DBName)]; exists {
 							handler = val
 						}
-						if err = handler.Table(r.Table.GetTableName()).Save(r.Rows).Error; err != nil {
+						// Use upsert-avoidance to keep seeding idempotent across DBs.
+						if err = handler.Table(r.Table.GetTableName()).
+							Clauses(clause.OnConflict{DoNothing: true}).
+							Create(r.Rows).Error; err != nil {
 							err = errors.Wrap(err, "failed to create table records")
 							panic(err)
 						}

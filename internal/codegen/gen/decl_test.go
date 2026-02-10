@@ -132,7 +132,7 @@ func TestTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := types(tt.modelPkgname, tt.modelName, tt.reqName, tt.rspName, tt.phase, tt.withComments)
+			res := types(tt.modelPkgname, tt.modelName, tt.reqName, tt.rspName, tt.phase, tt.phase.RoleName(), tt.withComments)
 			var buf bytes.Buffer
 			fset := token.NewFileSet()
 			if err := format.Node(&buf, fset, res); err != nil {
@@ -176,7 +176,7 @@ func TestServiceMethod1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FormatNode(serviceMethod1(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase))
+			got, err := FormatNode(serviceMethod1(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName()))
 			if err != nil {
 				t.Error(err)
 				return
@@ -217,7 +217,7 @@ func TestServiceMethod2(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := serviceMethod2(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase)
+			res := serviceMethod2(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Error(err)
@@ -259,7 +259,7 @@ func TestServiceMethod3(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := serviceMethod3(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase)
+			res := serviceMethod3(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Error(err)
@@ -317,7 +317,7 @@ func TestServiceMethod4(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := serviceMethod4(tt.recvName, tt.modelName, tt.modelPkgName, tt.reqName, tt.rspName, tt.phase)
+			res := serviceMethod4(tt.recvName, tt.modelName, tt.modelPkgName, tt.reqName, tt.rspName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Error(err)
@@ -352,7 +352,7 @@ func TestServiceMethod5(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := serviceMethod5(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase)
+			res := serviceMethod5(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Error(err)
@@ -386,7 +386,7 @@ func TestServiceMethod6(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := serviceMethod6(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase)
+			res := serviceMethod6(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Error(err)
@@ -428,7 +428,7 @@ func TestServiceMethod7(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := serviceMethod7(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase)
+			res := serviceMethod7(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Fatal(err)
@@ -470,7 +470,7 @@ func TestServiceMethod8(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := serviceMethod8(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase)
+			node := serviceMethod8(tt.recvName, tt.modelName, tt.modelPkgName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(node)
 			if err != nil {
 				t.Fatal(err)

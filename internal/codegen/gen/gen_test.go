@@ -399,7 +399,7 @@ func TestGenServiceMethod1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FormatNode(genServiceMethod1(tt.info, tt.phase))
+			got, err := FormatNode(genServiceMethod1(tt.info, tt.phase, tt.phase.RoleName()))
 			if err != nil {
 				t.Error(err)
 				return
@@ -438,7 +438,7 @@ func TestGenServiceMethod2(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FormatNode(genServiceMethod2(tt.info, tt.phase))
+			got, err := FormatNode(genServiceMethod2(tt.info, tt.phase, tt.phase.RoleName()))
 			if err != nil {
 				t.Error(err)
 				return
@@ -477,7 +477,7 @@ func TestGenServiceMethod3(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FormatNode(genServiceMethod3(tt.info, tt.phase))
+			got, err := FormatNode(genServiceMethod3(tt.info, tt.phase, tt.phase.RoleName()))
 			if err != nil {
 				t.Error(err)
 				return
@@ -556,7 +556,7 @@ func TestGenServiceMethod4(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := genServiceMethod4(tt.info, tt.reqName, tt.rspName, tt.phase)
+			res := genServiceMethod4(tt.info, tt.reqName, tt.rspName, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(res)
 			if err != nil {
 				t.Error(err)
@@ -596,7 +596,7 @@ func TestGenServiceMethod5(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FormatNode(genServiceMethod5(tt.info, tt.phase))
+			got, err := FormatNode(genServiceMethod5(tt.info, tt.phase, tt.phase.RoleName()))
 			if err != nil {
 				t.Error(err)
 				return
@@ -635,7 +635,7 @@ func TestGenServiceMethod6(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FormatNode(genServiceMethod6(tt.info, tt.phase))
+			got, err := FormatNode(genServiceMethod6(tt.info, tt.phase, tt.phase.RoleName()))
 			if err != nil {
 				t.Error(err)
 				return
@@ -672,7 +672,7 @@ func TestGenServiceMethod7(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := genServiceMethod7(tt.info, tt.phase)
+			node := genServiceMethod7(tt.info, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(node)
 			if err != nil {
 				t.Error(err)
@@ -710,7 +710,7 @@ func TestGenServiceMethod8(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			node := genServiceMethod8(tt.info, tt.phase)
+			node := genServiceMethod8(tt.info, tt.phase, tt.phase.RoleName())
 			got, err := FormatNode(node)
 			if err != nil {
 				t.Error(err)
