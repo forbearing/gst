@@ -1,12 +1,11 @@
 package dbmigrate_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/internal/dbmigrate"
 	"github.com/forbearing/gst/model"
+	"github.com/forbearing/gst/pkg/dbmigrate"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,6 +45,6 @@ func TestDumper(t *testing.T) {
 		schema, err := dumper.Dump(config.DBSqlite, User{}, &Group{})
 		require.NoError(t, err)
 		require.NotEmpty(t, schema)
-		fmt.Println(schema)
+		// fmt.Println(schema)
 	})
 }
