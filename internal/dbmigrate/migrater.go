@@ -1,6 +1,8 @@
 package dbmigrate
 
 import (
+	"strings"
+
 	"github.com/forbearing/gst/config"
 	"github.com/sqldef/sqldef/v3"
 	"github.com/sqldef/sqldef/v3/database"
@@ -43,7 +45,11 @@ func Migrate(schemas []string, dbtyp config.DBType, cfg *DatabaseConfig, opt *Mi
 		Host:     cfg.Host,
 		Port:     cfg.Port,
 	}
-	migOpt := &sqldef.Options{}
+	migOpt := &sqldef.Options{
+		DryRun:      opt.DryRun,
+		Export:      opt.Export,
+		DesiredDDLs: strings.Join(schemas, ";\n"),
+	}
 
 	var db database.Database
 	var parseMode parser.ParserMode

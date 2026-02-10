@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cockroachdb/errors"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/forbearing/gst/config"
 	"github.com/maxrichie5/go-sqlfmt/sqlfmt"
@@ -62,7 +64,11 @@ func (s *SchemaDumper) Dump(driver config.DBType, dst ...any) (string, error) {
 		return "", err
 	}
 
-	sqls := s.log.(*dumperLogger).SQLs
+	l, ok := s.log.(*dumperLogger)
+	if !ok {
+		return "", errors.New("invalid logger type")
+	}
+	sqls := l.SQLs
 	if len(sqls) == 0 {
 		return "", nil
 	}
@@ -85,6 +91,7 @@ func (s *SchemaDumper) Close() (err error) {
 	if s.db != nil {
 		err = s.db.Close()
 		s.db = nil
+		return err
 	}
 
 	return nil
