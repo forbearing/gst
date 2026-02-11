@@ -2,6 +2,8 @@ package dbmigrate
 
 import (
 	"database/sql"
+	"reflect"
+	"sort"
 	"strings"
 	"sync"
 
@@ -55,6 +57,19 @@ func (s *SchemaDumper) Dump(driver config.DBType, dst ...any) (string, error) {
 		// GORM sqlite driver might ping to check version
 		s.mock.ExpectQuery("select sqlite_version()").WillReturnRows(sqlmock.NewRows([]string{"version"}).AddRow("3.35.0"))
 	}
+
+	// Sort dst by type name to ensure deterministic output order
+	sort.Slice(dst, func(i, j int) bool {
+		t1 := reflect.TypeOf(dst[i])
+		for t1.Kind() == reflect.Pointer {
+			t1 = t1.Elem()
+		}
+		t2 := reflect.TypeOf(dst[j])
+		for t2.Kind() == reflect.Pointer {
+			t2 = t2.Elem()
+		}
+		return t1.String() < t2.String()
+	})
 
 	db, err := gorm.Open(dialector, &gorm.Config{DryRun: true, Logger: s.log})
 	if err != nil {
