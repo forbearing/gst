@@ -75,8 +75,27 @@ func (s *SchemaDumper) Dump(driver config.DBType, dst ...any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err = db.Set("gorm:table_options", tableOptions).Migrator().CreateTable(dst...); err != nil {
-		return "", err
+
+	for _, v := range dst {
+		var tableName string
+		if namer, ok := v.(interface{ GetTableName() string }); ok {
+			tableName = namer.GetTableName()
+		} else {
+			rv := reflect.ValueOf(v)
+			if rv.Kind() == reflect.Struct {
+				if namer, ok := reflect.New(rv.Type()).Interface().(interface{ GetTableName() string }); ok {
+					tableName = namer.GetTableName()
+				}
+			}
+		}
+
+		tx := db.Set("gorm:table_options", tableOptions)
+		if tableName != "" {
+			tx = tx.Table(tableName)
+		}
+		if err = tx.Migrator().CreateTable(v); err != nil {
+			return "", err
+		}
 	}
 
 	l, ok := s.log.(*dumperLogger)
