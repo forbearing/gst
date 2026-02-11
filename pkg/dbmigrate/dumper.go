@@ -122,6 +122,15 @@ func (s *SchemaDumper) Dump(driver config.DBType, dst ...any) (string, error) {
 			// thinking the schema has changed. We normalize it here to prevent unnecessary migrations.
 			sql = strings.ReplaceAll(sql, "timestamptz", "timestamp with time zone")
 		}
+		if driver == config.DBMySQL {
+			// GORM generates "boolean" for bool fields, but MySQL stores it as "tinyint(1)".
+			// sqldef compares the desired DDL with the actual database schema string-wise.
+			// This mismatch causes sqldef to repeatedly generate "ALTER COLUMN ... TYPE boolean" statements,
+			// thinking the schema has changed. We normalize it here to prevent unnecessary migrations.
+			sql = strings.ReplaceAll(sql, " boolean ", " tinyint(1) ")
+			sql = strings.ReplaceAll(sql, "DEFAULT true", "DEFAULT 1")
+			sql = strings.ReplaceAll(sql, "DEFAULT false", "DEFAULT 0")
+		}
 		if _, err := sb.WriteString(sqlfmt.Format(sql) + ";\n"); err != nil {
 			return "", err
 		}
