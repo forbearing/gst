@@ -31,13 +31,13 @@ var migrateCmd = &cobra.Command{
 
 		// 3. Create directory
 		targetDir := "cmd/migrate"
-		if err := os.MkdirAll(targetDir, 0755); err != nil {
+		if err := os.MkdirAll(targetDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
 		}
 
 		// 4. Write file
 		targetFile := filepath.Join(targetDir, "main.go")
-		if err := os.WriteFile(targetFile, []byte(fullContent), 0644); err != nil {
+		if err := os.WriteFile(targetFile, []byte(fullContent), 0o600); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", targetFile, err)
 		}
 		fmt.Printf("Generated %s\n", targetFile)
@@ -228,7 +228,7 @@ func performMigration(schema string, cfg *dbmigrate.DatabaseConfig) error {
 
 	// Confirm execution with the user.
 	if !confirmExecution() {
-		fmt.Println("Migration cancelled.")
+		fmt.Println("Migration canceled.")
 		return nil
 	}
 
