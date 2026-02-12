@@ -1,6 +1,33 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Build
+- always use the latest golangci-lint, go tools
+
+### Chore
+- **deps:** upgrade dependencies to latest version
+
+### Enh
+- **dbmigrate:** replace boolean by tinyint
+- **dbmigrate:** ensure the generate schema is always sorted
+- **dbmigrate:** remove schema "IF NOT EXISTS"
+- **dbmigrate:** enhance schema migration
+
+### Fix
+- **dbmigrate:** support model custom table
+- **dbmigrate:** fix migrate postgres
+- **golangci-lint:** fix issues
+- **golangci-lint:** fix issues
+
+### Wip
+- **dbmigrate:** add dbmigrate, support dump table schema and apply schema
+
+
+<a name="v0.10.11"></a>
+## [v0.10.11] - 2026-02-10
+### Chore
+- **release:** generate CHANGELOG.md
+
 ### Enh
 - **dsl:** ensure route order
 - **dsl:** apply service code receiver variable name according to role name
@@ -11,6 +38,9 @@
 ### Fix
 - **database:** make init seed inserts idempotent across DBs
 - **dsl:** change the generated service struct name  depends on the dsl "Filename"
+
+### Pull Requests
+- Merge pull request [#79](https://github.com/forbearing/gst/issues/79) from forbearing/dev
 
 
 <a name="v0.10.10"></a>
@@ -514,11 +544,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="list"></a>
-## [list] - 2025-11-08
-
 <a name="v0.10.0-beta.3"></a>
 ## [v0.10.0-beta.3] - 2025-11-08
+
+<a name="list"></a>
+## [list] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -2912,7 +2942,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.10...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.11...HEAD
+[v0.10.11]: https://github.com/forbearing/gst/compare/v0.10.10...v0.10.11
 [v0.10.10]: https://github.com/forbearing/gst/compare/v0.10.9...v0.10.10
 [v0.10.9]: https://github.com/forbearing/gst/compare/v0.10.8...v0.10.9
 [v0.10.8]: https://github.com/forbearing/gst/compare/v0.10.7...v0.10.8
@@ -2930,9 +2961,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.10.0]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...v0.10.0
 [v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
 [v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
