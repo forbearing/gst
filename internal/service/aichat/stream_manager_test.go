@@ -322,9 +322,7 @@ func TestStreamManager_Concurrency(t *testing.T) {
 		var mu sync.Mutex
 
 		for range numGoroutines {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				_, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				err := sm4.RegisterStream(messageID, cancel)
@@ -333,7 +331,7 @@ func TestStreamManager_Concurrency(t *testing.T) {
 					successCount++
 					mu.Unlock()
 				}
-			}()
+			})
 		}
 
 		wg.Wait()
@@ -526,13 +524,11 @@ func TestStreamManager_ThreadSafety(t *testing.T) {
 
 		// Multiple goroutines trying to register the same stream
 		for range 20 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				_, cancel := context.WithCancel(context.Background())
 				defer cancel()
 				_ = sm.RegisterStream(messageID, cancel)
-			}()
+			})
 		}
 
 		wg.Wait()
@@ -556,22 +552,18 @@ func TestStreamManager_ThreadSafety(t *testing.T) {
 		done := make(chan struct{})
 
 		// Writer goroutine
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := range 100 {
 				_, cancel := context.WithCancel(context.Background())
 				_ = sm2.RegisterStream("msg-rw-"+string(rune(i)), cancel)
 				time.Sleep(time.Millisecond)
 			}
 			close(done)
-		}()
+		})
 
 		// Reader goroutines
 		for range 5 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for {
 					select {
 					case <-done:
@@ -583,7 +575,7 @@ func TestStreamManager_ThreadSafety(t *testing.T) {
 						time.Sleep(time.Millisecond)
 					}
 				}
-			}()
+			})
 		}
 
 		wg.Wait()
