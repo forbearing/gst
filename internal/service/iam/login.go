@@ -71,7 +71,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 	defer func() {
 		// write login log.
 		if !success {
-			if err = database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
+			if logErr := database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
 				Username: req.Username,
 				ClientIP: ctx.ClientIP,
 				Status:   modellogmgmt.LoginStatusFailure,
@@ -79,8 +79,8 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 				Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
 				Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
 				Browser:  fmt.Sprintf("%s %s", browserName, browserVersion),
-			}); err != nil {
-				log.Warnz("failed to write login log", zap.Error(err))
+			}); logErr != nil {
+				log.Warnz("failed to write login log", zap.Error(logErr))
 			}
 		}
 	}()
