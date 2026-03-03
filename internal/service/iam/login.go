@@ -10,6 +10,8 @@ import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
+	servicelogmgmt "github.com/forbearing/gst/internal/service/logmgmt"
+	servicetwofa "github.com/forbearing/gst/internal/service/twofa"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -70,7 +72,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 	defer func() {
 		// write login log.
-		if !success {
+		if !success && servicelogmgmt.Enabled {
 			if logErr := database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
 				Username: req.Username,
 				ClientIP: ctx.ClientIP,
@@ -209,18 +211,20 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 	// write login log
 	success = true
-	if err = database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
-		UserID:   user.ID,
-		Username: user.Username,
-		ClientIP: ctx.ClientIP,
-		Status:   modellogmgmt.LoginStatusSuccess,
+	if servicelogmgmt.Enabled {
+		if err = database.Database[*modellogmgmt.LoginLog](ctx.DatabaseContext()).Create(&modellogmgmt.LoginLog{
+			UserID:   user.ID,
+			Username: user.Username,
+			ClientIP: ctx.ClientIP,
+			Status:   modellogmgmt.LoginStatusSuccess,
 
-		Source:   ctx.Request.UserAgent(),
-		Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
-		Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
-		Browser:  fmt.Sprintf("%s %s", browserName, browserVersion),
-	}); err != nil {
-		log.Warnz("failed to write login log", zap.Error(err))
+			Source:   ctx.Request.UserAgent(),
+			Platform: fmt.Sprintf("%s %s", ua.Platform(), ua.OS()),
+			Engine:   fmt.Sprintf("%s %s", engineName, engineVersion),
+			Browser:  fmt.Sprintf("%s %s", browserName, browserVersion),
+		}); err != nil {
+			log.Warnz("failed to write login log", zap.Error(err))
+		}
 	}
 
 	return &modeliam.LoginRsp{
@@ -230,6 +234,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 // checkUserHas2FA checks if the user has active TOTP devices
 func checkUserHas2FA(ctx *types.ServiceContext, userID string) (bool, error) {
+	if !servicetwofa.Enabled {
+		return false, nil
+	}
+
 	db := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext())
 	devices := make([]*modeltwofa.TOTPDevice, 0)
 

@@ -74,6 +74,7 @@ F. TOTP 状态服务
 package twofa
 
 import (
+	servicetwofa "github.com/forbearing/gst/internal/service/twofa"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
 )
@@ -103,6 +104,8 @@ import (
 //   - GET      /api/2fa/totp/devices
 //   - GET      /api/2fa/totp/devices/:id
 func Register() {
+	servicetwofa.Enabled = true
+
 	module.Use[
 		*TOTPBind,
 		*TOTPBind,

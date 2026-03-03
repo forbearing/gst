@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var Enabled bool
+
 type TOTPBindService struct {
 	service.Base[*modeltwofa.TOTPBind, *modeltwofa.TOTPBind, *modeltwofa.TOTPBindRsp]
 }
