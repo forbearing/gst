@@ -50,6 +50,7 @@ require (
 	github.com/go-ldap/ldap/v3 v3.4.12
 	github.com/go-viper/encoding/ini v0.1.1
 	github.com/gocql/gocql v1.7.0
+	github.com/goforj/godump v1.9.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-querystring v1.2.0
 	github.com/google/gops v0.3.29
