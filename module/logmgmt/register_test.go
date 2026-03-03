@@ -18,6 +18,7 @@ import (
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/module/logmgmt"
 	"github.com/forbearing/gst/response"
+	"github.com/forbearing/gst/types/consts"
 	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
 )
@@ -31,6 +32,7 @@ var (
 	logoutAPI       = fmt.Sprintf("http://localhost:%d/api/logout", port)
 	loginlogAPI     = fmt.Sprintf("http://localhost:%d/api/log/loginlog", port)
 	operationlogAPI = fmt.Sprintf("http://localhost:%d/api/log/operationlog", port)
+	groupAPI        = fmt.Sprintf("http://localhost:%d/api/iam/groups", port)
 )
 
 type ListResponse[T any] struct {
@@ -45,6 +47,9 @@ func init() {
 	os.Setenv(config.REDIS_ENABLE, "true")
 	os.Setenv(config.LOGGER_DIR, "./logs")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
+	// Enable audit and sync write before Bootstrap so operationlog test can list logs immediately.
+	os.Setenv(config.AUDIT_ENABLE, "true")
+	os.Setenv(config.AUDIT_ASYNC_WRITE, "false")
 
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
@@ -93,8 +98,7 @@ func TestLogmgmt(t *testing.T) {
 	username := "user01"
 	password := "12345678"
 	userID := ""
-
-	_ = userID
+	var sessionID string
 
 	t.Run("loginlog", func(t *testing.T) {
 		// signup a user
@@ -118,7 +122,6 @@ func TestLogmgmt(t *testing.T) {
 		})
 
 		// user login
-		var sessionID string
 		t.Run("login1", func(t *testing.T) {
 			cli, err := client.New(loginAPI)
 			require.NoError(t, err)
@@ -222,6 +225,70 @@ func TestLogmgmt(t *testing.T) {
 				require.Equal(t, l3.UserID, userID)
 				require.Equal(t, l3.Username, username)
 				require.Equal(t, string(l3.Status), modellogmgmt.LoginStatusSuccess)
+			})
+		})
+	})
+
+	t.Run("operationlog", func(t *testing.T) {
+		t.Run("operationlog1", func(t *testing.T) {
+			cli, err := client.New(operationlogAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			items := make([]*logmgmt.OperationLog, 0)
+			total := new(int64)
+
+			resp, err := cli.List(&items, total)
+			require.NoError(t, err)
+
+			// operation log count is 0
+			testResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+				require.Len(t, rsp.Items, 0)
+			})
+		})
+
+		t.Run("create-group", func(t *testing.T) {
+			cli, err := client.New(groupAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.Group{
+				Name: "g1",
+			})
+			require.NoError(t, err)
+
+			testResp(t, resp, func(t *testing.T, rsp *iam.Group) {
+				require.NotNil(t, rsp)
+				require.Equal(t, rsp.Name, "g1")
+			})
+		})
+
+		t.Run("operationlog2", func(t *testing.T) {
+			cli, err := client.New(operationlogAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			items := make([]*logmgmt.OperationLog, 0)
+			total := new(int64)
+
+			resp, err := cli.List(&items, total)
+			require.NoError(t, err)
+
+			// operation log count is 1
+			testResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+				require.Len(t, rsp.Items, 1)
+				l := rsp.Items[0]
+				require.NotNil(t, l)
+				require.Equal(t, l.User, username)
+				require.Equal(t, l.OP, consts.OP_CREATE)
+				require.Equal(t, l.Table, "groups")
+				require.Equal(t, l.Model, "Group")
 			})
 		})
 	})
