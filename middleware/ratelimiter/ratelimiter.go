@@ -104,7 +104,7 @@ func RateLimiter(opts ...RateLimiterOption) gin.HandlerFunc {
 		limiter, err := ratelimiterMap.Get(key)
 		if errors.Is(err, types.ErrEntryNotFound) {
 			limiter = rate.NewLimiter(conf.Rate, conf.Burst)
-			ratelimiterMap.Set(key, limiter, conf.TTL)
+			_ = ratelimiterMap.Set(key, limiter, conf.TTL)
 		} else if err != nil {
 			ResponseJSON(c, CodeFailure)
 			c.Abort()
