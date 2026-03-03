@@ -16,15 +16,15 @@ import (
 	"github.com/forbearing/gst/config"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/module/iam"
-	"github.com/forbearing/gst/module/logmgmt"
 	"github.com/forbearing/gst/response"
 	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	token             = "-"
-	port              = 8000
+	token = "-"
+	port  = 8000
+
 	signupAPI         = fmt.Sprintf("http://localhost:%d/api/signup", port)
 	loginAPI          = fmt.Sprintf("http://localhost:%d/api/login", port)
 	logoutAPI         = fmt.Sprintf("http://localhost:%d/api/logout", port)
@@ -55,7 +55,6 @@ func init() {
 
 	go func() {
 		iam.Register()
-		logmgmt.Register()
 
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
@@ -92,7 +91,7 @@ func testResp[RSP any](t *testing.T, resp *client.Resp, checkFn func(t *testing.
 	}
 }
 
-func Test(t *testing.T) {
+func TestIAM(t *testing.T) {
 	username := "user01"
 	oldPassword := "12345678"
 	newPassword := "123456789"
@@ -113,6 +112,7 @@ func Test(t *testing.T) {
 			require.Equal(t, rsp.Username, username)
 			require.NotEmpty(t, rsp.UserID)
 			require.NotEmpty(t, rsp.Message)
+			userID = rsp.UserID
 		})
 	})
 
@@ -203,8 +203,6 @@ func Test(t *testing.T) {
 			require.NotEmpty(t, u.ID)
 			require.Equal(t, u.Status, modeliam.UserStatusActive)
 			require.Equal(t, u.Type, modeliam.UserTypeRegular)
-
-			userID = u.ID
 		})
 	})
 
@@ -341,7 +339,7 @@ func Test(t *testing.T) {
 			ou := rsp.Items[0]
 			require.NotEmpty(t, ou)
 			require.Equal(t, ou.UserID, userID)
-			require.Empty(t, ou.Username, username)
+			require.Equal(t, ou.Username, username)
 		})
 	})
 
