@@ -93,6 +93,19 @@ func WithUserAgent(userAgent string) Option {
 	}
 }
 
+// WithCookie adds a cookie to the client request headers.
+func WithCookie(cookie *http.Cookie) Option {
+	return func(c *Client) {
+		if cookie == nil {
+			return
+		}
+		if c.header == nil {
+			c.header = http.Header{}
+		}
+		c.header.Add("Cookie", cookie.String())
+	}
+}
+
 func WithBaseAuth(username, password string) Option {
 	return func(c *Client) {
 		if username = strings.TrimSpace(username); len(username) != 0 {

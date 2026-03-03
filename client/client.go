@@ -66,10 +66,10 @@ type Client struct {
 }
 
 type Resp struct {
-	Code      int             `json:"code"`
-	Msg       string          `json:"msg"`
-	Data      json.RawMessage `json:"data"`
-	RequestID string          `json:"request_id"`
+	Code      int             `json:"code,omitempty"`
+	Msg       string          `json:"msg,omitempty"`
+	Data      json.RawMessage `json:"data,omitempty"`
+	RequestID string          `json:"request_id,omitempty"`
 }
 type batchReq struct {
 	// Ids is the id list that should be batch delete.
