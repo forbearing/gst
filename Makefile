@@ -84,6 +84,9 @@ test:
 	go test ./database/...
 	go test ./internal/codegen/gen/
 	go test ./module/helloworld
+	go test -v ./module/iam
+	go test -v ./module/logmgmt
+	go test -v ./module/version
 
 # Run unit tests with verbose output
 testv:
@@ -96,6 +99,9 @@ testv:
 	go test -v ./database/...
 	go test -v ./internal/codegen/gen/
 	go test -v ./module/helloworld
+	go test -v ./module/iam
+	go test -v ./module/logmgmt
+	go test -v ./module/version
 
 # Auto-fix code issues
 fix:
