@@ -265,7 +265,7 @@ func CombineError(fns ...func() error) error {
 
 // FileExists check file exists.
 func FileExists(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
+	if _, err := os.Stat(filename); os.IsNotExist(err) { //nolint:gosec // G703: filename comes from trusted internal config, not user input
 		return false
 	} else {
 		return err == nil

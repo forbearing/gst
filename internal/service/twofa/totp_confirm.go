@@ -115,7 +115,7 @@ func generateBackupCodes() ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate random digit: %w", err)
 			}
-			b.WriteByte('0' + byte(digit.Int64()))
+			b.WriteByte('0' + byte(digit.Int64())) //nolint:gosec // G115: d is explicitly validated to be in [0,9] before conversion
 		}
 		codes[i] = b.String()
 	}

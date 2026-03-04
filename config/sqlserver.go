@@ -19,7 +19,7 @@ type SQLServer struct {
 	Port        uint   `json:"port" mapstructure:"port" ini:"port" yaml:"port"`
 	Database    string `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
 	Username    string `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password    string `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password    string `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 	Encrypt     bool   `json:"encrypt" mapstructure:"encrypt" ini:"encrypt" yaml:"encrypt"`
 	TrustServer bool   `json:"trust_server" mapstructure:"trust_server" ini:"trust_server" yaml:"trust_server"`
 	AppName     string `json:"app_name" mapstructure:"app_name" ini:"app_name" yaml:"app_name"`

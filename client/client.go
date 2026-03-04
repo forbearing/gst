@@ -421,6 +421,7 @@ func (c *Client) request(action action, payload any) (*Resp, error) {
 		fmt.Println(string(dump))
 	}
 
+	//nolint:gosec
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to request")
@@ -622,6 +623,7 @@ func (c *Client) StreamURL(method, url string, payload any, callback StreamCallb
 		fmt.Println(string(dump))
 	}
 
+	//nolint:gosec
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to request")

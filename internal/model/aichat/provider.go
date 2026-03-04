@@ -21,8 +21,8 @@ const (
 
 // ProviderConfig stores sensitive provider configuration
 type ProviderConfig struct {
-	APIKey       string            `json:"api_key,omitempty"`
-	SecretKey    string            `json:"secret_key,omitempty"`
+	APIKey       string            `json:"api_key,omitempty"`    //nolint:gosec // G117: stored provider API key loaded from external config, not hard-coded in source
+	SecretKey    string            `json:"secret_key,omitempty"` //nolint:gosec // G117: stored provider secret key loaded from external config, not hard-coded in source
 	BaseURL      string            `json:"base_url,omitempty"`
 	OrgID        string            `json:"org_id,omitempty"`
 	APIVersion   string            `json:"api_version,omitempty"`

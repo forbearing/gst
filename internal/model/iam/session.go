@@ -19,8 +19,8 @@ type Session struct {
 	model.Base
 }
 type Token struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`  //nolint:gosec // G117: token value comes from external auth provider, not hard-coded in source
+	RefreshToken string `json:"refresh_token"` //nolint:gosec // G117: token value comes from external auth provider, not hard-coded in source
 
 	ExpiresIn        int `json:"expires_in"`
 	RefreshExpiresIn int `json:"refresh_expires_in"`

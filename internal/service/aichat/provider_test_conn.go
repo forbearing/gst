@@ -68,7 +68,7 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 			req.Header.Set(k, v)
 		}
 
-		resp, err := httpClient.Do(req)
+		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
 		if err != nil {
 			success = false
 			message = fmt.Sprintf("connection failed: %v", err)
@@ -102,7 +102,7 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 			req.Header.Set(k, v)
 		}
 
-		resp, err := httpClient.Do(req)
+		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
 		if err != nil {
 			success = false
 			message = fmt.Sprintf("connection failed: %v", err)
@@ -137,7 +137,7 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 		for k, v := range config.ExtraHeaders {
 			req.Header.Set(k, v)
 		}
-		resp, err := httpClient.Do(req)
+		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
 		if err != nil {
 			success = false
 			message = fmt.Sprintf("connection failed: %v", err)
@@ -166,7 +166,7 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 		for k, v := range config.ExtraHeaders {
 			req.Header.Set(k, v)
 		}
-		resp, err := httpClient.Do(req)
+		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
 		if err != nil {
 			success = false
 			message = fmt.Sprintf("connection failed: %v", err)
@@ -196,7 +196,7 @@ func (s *ProviderTestConn) Create(ctx *types.ServiceContext, req *modelaichat.Pr
 				for k, v := range config.ExtraHeaders {
 					req.Header.Set(k, v)
 				}
-				resp, err := httpClient.Do(req)
+				resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
 				if err != nil {
 					success = false
 					message = fmt.Sprintf("connection failed: %v", err)

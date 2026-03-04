@@ -16,7 +16,7 @@ type Postgres struct {
 	Port     uint   `json:"port" mapstructure:"port" ini:"port" yaml:"port"`
 	Database string `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
 	Username string `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password string `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password string `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 	SSLMode  string `json:"sslmode" mapstructure:"sslmode" ini:"sslmode" yaml:"sslmode"`
 	TimeZone string `json:"timezone" mapstructure:"timezone" ini:"timezone" yaml:"timezone"`
 	Enable   bool   `json:"enable" mapstructure:"enable" ini:"enable" yaml:"enable"`

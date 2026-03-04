@@ -219,7 +219,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 	os.Stdout = oldStdout
 
 	// Read the generated file and output to stdout
-	content, err := os.ReadFile(tempFile.Name())
+	content, err := os.ReadFile(tempFile.Name()) //nolint:gosec // G703: tempFile is created via os.CreateTemp, not user-controlle
 	if err != nil {
 		return fmt.Errorf("failed to read generated config file: %w", err)
 	}

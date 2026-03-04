@@ -66,7 +66,7 @@ const (
 type Scylla struct {
 	Hosts       []string    `json:"hosts" mapstructure:"hosts" ini:"hosts" yaml:"hosts"`
 	Username    string      `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password    string      `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password    string      `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 	Keyspace    string      `json:"keyspace" mapstructure:"keyspace" ini:"keyspace" yaml:"keyspace"`
 	Consistency Consistency `json:"consistency" mapstructure:"consistency" ini:"consistency" yaml:"consistency"`
 	NumConns    int         `json:"num_conns" mapstructure:"num_conns" ini:"num_conns" yaml:"num_conns"`

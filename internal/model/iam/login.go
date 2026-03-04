@@ -13,7 +13,7 @@ type Login struct {
 
 type LoginReq struct {
 	Username   string `json:"username"`
-	Password   string `json:"password"`
+	Password   string `json:"password"` //nolint:gosec // G117: request field carrying user-provided password, not a hard-coded secret
 	TOTPCode   string `json:"totp_code,omitempty"`   // Optional TOTP code
 	BackupCode string `json:"backup_code,omitempty"` // Optional backup code
 }

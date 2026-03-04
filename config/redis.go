@@ -38,7 +38,7 @@ type Redis struct {
 	Addr        string        `json:"addr" mapstructure:"addr" ini:"addr" yaml:"addr"`
 	Addrs       []string      `json:"addrs" mapstructure:"addrs" ini:"addrs" yaml:"addrs"`
 	DB          int           `json:"db" mapstructure:"db" ini:"db" yaml:"db"`
-	Password    string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password    string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 	Namespace   string        `json:"namespace" mapstructure:"namespace" ini:"namespace" yaml:"namespace"`
 	PoolSize    int           `json:"pool_size" mapstructure:"pool_size" ini:"pool_size" yaml:"pool_size"`
 	Expiration  time.Duration `json:"expiration" mapstructure:"expiration" ini:"expiration" yaml:"expiration"`

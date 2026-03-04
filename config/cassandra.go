@@ -33,7 +33,7 @@ type Cassandra struct {
 	Port     int      `json:"port" mapstructure:"port" ini:"port" yaml:"port"`
 	Keyspace string   `json:"keyspace" mapstructure:"keyspace" ini:"keyspace" yaml:"keyspace"`
 	Username string   `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password string   `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password string   `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 
 	Consistency       string        `json:"consistency" mapstructure:"consistency" ini:"consistency" yaml:"consistency"`
 	Timeout           time.Duration `json:"timeout" mapstructure:"timeout" ini:"timeout" yaml:"timeout"`

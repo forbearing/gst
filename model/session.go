@@ -10,8 +10,8 @@ import (
 
 // Session is deprecated
 type Session struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`  //nolint:gosec // G117: token value issued by external auth system, not hard-coded in source
+	RefreshToken string `json:"refresh_token"` //nolint:gosec // G117: token value issued by external auth system, not hard-coded in source
 	UserID       string `json:"user_id"`
 	Username     string `json:"username"`
 	SessionID    string `json:"session_id"`

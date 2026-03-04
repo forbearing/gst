@@ -30,7 +30,7 @@ const (
 type RethinkDB struct {
 	Hosts         []string `json:"hosts" mapstructure:"hosts" ini:"hosts" yaml:"hosts"`
 	Username      string   `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password      string   `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password      string   `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 	Database      string   `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
 	DiscoveryHost bool     `json:"discovery_host" mapstructure:"discovery_host" ini:"discovery_host" yaml:"discovery_host"`
 

@@ -39,7 +39,7 @@ type SASL struct {
 	Enable    bool   `json:"enable" mapstructure:"enable" ini:"enable" yaml:"enable"`
 	Mechanism string `json:"mechanism" mapstructure:"mechanism" ini:"mechanism" yaml:"mechanism"`
 	Username  string `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password  string `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
+	Password  string `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
 }
 
 // Producer defines Kafka producer specific configuration
