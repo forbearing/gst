@@ -31,6 +31,7 @@ var (
 	changepasswordAPI = fmt.Sprintf("http://localhost:%d/api/iam/change-password", port)
 	userAPI           = fmt.Sprintf("http://localhost:%d/api/iam/users", port)
 	groupAPI          = fmt.Sprintf("http://localhost:%d/api/iam/groups", port)
+	meAPI             = fmt.Sprintf("http://localhost:%d/api/me", port)
 	heartbeatAPI      = fmt.Sprintf("http://localhost:%d/api/heartbeat", port)
 	onlineuserAPI     = fmt.Sprintf("http://localhost:%d/api/online-users", port)
 	offlineAPI        = fmt.Sprintf("http://localhost:%d/api/offline", port)
@@ -298,14 +299,14 @@ func TestIAM(t *testing.T) {
 	})
 
 	t.Run("me", func(t *testing.T) {
-		cli, err := client.New(fmt.Sprintf("http://localhost:%d/api/", port), client.WithCookie(&http.Cookie{
+		cli, err := client.New(meAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
 			Value: sessionID,
 		}))
 		require.NoError(t, err)
 
 		empty := new(struct{})
-		resp, err := cli.Get("me", empty)
+		resp, err := cli.Request(http.MethodGet, empty)
 		require.NoError(t, err)
 
 		testResp(t, resp, func(t *testing.T, rsp iam.MeRsp) {
