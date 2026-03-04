@@ -130,18 +130,18 @@ func queryColumnsWithQuery(table string, columns []string, query map[string][]st
 				switch i {
 				case 0:
 					if len(items) == 1 {
-						out.WriteString(fmt.Sprintf(`('%s')`, regexp.QuoteMeta(strings.TrimSpace(item))))
+						fmt.Fprintf(&out, `('%s')`, regexp.QuoteMeta(strings.TrimSpace(item)))
 					} else {
-						out.WriteString(fmt.Sprintf(`('%s'`, regexp.QuoteMeta(strings.TrimSpace(item))))
+						fmt.Fprintf(&out, `('%s'`, regexp.QuoteMeta(strings.TrimSpace(item)))
 					}
 				case len(items) - 1:
-					out.WriteString(fmt.Sprintf(`,'%s')`, regexp.QuoteMeta(strings.TrimSpace(item))))
+					fmt.Fprintf(&out, `,'%s')`, regexp.QuoteMeta(strings.TrimSpace(item)))
 				default:
-					out.WriteString(fmt.Sprintf(`,'%s'`, regexp.QuoteMeta(strings.TrimSpace(item))))
+					fmt.Fprintf(&out, `,'%s'`, regexp.QuoteMeta(strings.TrimSpace(item)))
 				}
 			}
 			if len(strings.TrimSpace(out.String())) > 0 {
-				queryBuilder.WriteString(fmt.Sprintf(" AND `%s` IN %s", k, strings.TrimSpace(out.String())))
+				fmt.Fprintf(&queryBuilder, " AND `%s` IN %s", k, strings.TrimSpace(out.String()))
 			}
 		}
 	}

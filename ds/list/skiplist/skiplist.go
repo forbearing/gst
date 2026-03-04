@@ -475,10 +475,10 @@ func (sl *SkipList[K, V]) String() string {
 	}
 
 	for i := sl.level - 1; i >= 0; i-- {
-		sb.WriteString(fmt.Sprintf("Level %d: ", i))
+		fmt.Fprintf(&sb, "Level %d: ", i)
 		curr := sl.head.next[i]
 		for curr != nil {
-			sb.WriteString(fmt.Sprintf("%v -> ", formatter(curr.Key, curr.Value)))
+			fmt.Fprintf(&sb, "%v -> ", formatter(curr.Key, curr.Value))
 			curr = curr.next[i]
 		}
 		sb.WriteString("nil\n")

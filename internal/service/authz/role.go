@@ -74,7 +74,7 @@ func (s *RoleService) remarkMenus(ctx *types.ServiceContext, role *modelauthz.Ro
 	}
 	for _, mid := range role.MenuPartialIds {
 		if menu, ok := menuMap[mid]; ok {
-			sb.WriteString(fmt.Sprintf("    %s\n", menu.Label))
+			fmt.Fprintf(&sb, "    %s\n", menu.Label)
 		}
 	}
 	if len(role.MenuIds) > 0 {
@@ -82,7 +82,7 @@ func (s *RoleService) remarkMenus(ctx *types.ServiceContext, role *modelauthz.Ro
 	}
 	for _, mid := range role.MenuIds {
 		if menu, ok := menuMap[mid]; ok {
-			sb.WriteString(fmt.Sprintf("    %s\n", menu.Label))
+			fmt.Fprintf(&sb, "    %s\n", menu.Label)
 		}
 	}
 
