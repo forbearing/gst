@@ -1,7 +1,6 @@
 package iam_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -14,9 +13,9 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/internal/helper"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/module/iam"
-	"github.com/forbearing/gst/response"
 	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
 )
@@ -77,21 +76,6 @@ func init() {
 	}
 }
 
-func testResp[RSP any](t *testing.T, resp *client.Resp, checkFn func(t *testing.T, rsp RSP)) {
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Code, response.CodeSuccess.Code())
-	require.Equal(t, resp.Msg, response.CodeSuccess.Msg())
-	require.NotEmpty(t, resp.RequestID)
-	require.NotEmpty(t, resp.Data)
-
-	var rsp RSP
-	require.NoError(t, json.Unmarshal(resp.Data, &rsp))
-	if checkFn != nil {
-		checkFn(t, rsp)
-	}
-}
-
 func TestIAM(t *testing.T) {
 	username := "user01"
 	oldPassword := "12345678"
@@ -108,7 +92,7 @@ func TestIAM(t *testing.T) {
 			RePassword: oldPassword,
 		})
 		require.NoError(t, err)
-		testResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
 			godump.Dump(rsp)
 			require.Equal(t, rsp.Username, username)
 			require.NotEmpty(t, rsp.UserID)
@@ -128,7 +112,7 @@ func TestIAM(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		testResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
 			godump.Dump(rsp)
 			require.NotEmpty(t, rsp.SessionID)
 			sessionID = rsp.SessionID
@@ -146,7 +130,7 @@ func TestIAM(t *testing.T) {
 			resp, err := cli.Create(nil)
 			require.NoError(t, err)
 
-			testResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
+			helper.TestResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
 				godump.Dump(rsp)
 			})
 		})
@@ -176,7 +160,7 @@ func TestIAM(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			testResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
 				godump.Dump(rsp)
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
@@ -196,7 +180,7 @@ func TestIAM(t *testing.T) {
 		resp, err := cli.List(&items, total)
 		require.NoError(t, err)
 
-		testResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
 			require.Len(t, rsp.Items, 1)
 			u := rsp.Items[0]
 			require.NotEmpty(t, u)
@@ -222,7 +206,7 @@ func TestIAM(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp *iam.ChangePasswordRsp) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.ChangePasswordRsp) {
 				godump.Dump(rsp)
 				require.NotEmpty(t, rsp.Msg)
 			})
@@ -239,7 +223,7 @@ func TestIAM(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			testResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
 				godump.Dump(rsp)
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
@@ -259,7 +243,7 @@ func TestIAM(t *testing.T) {
 			resp, err := cli.List(&items, total)
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
 				require.Len(t, rsp.Items, 1)
 				u := rsp.Items[0]
 				require.NotEmpty(t, u)
@@ -282,7 +266,7 @@ func TestIAM(t *testing.T) {
 		resp, err := cli.List(&items, total)
 		require.NoError(t, err)
 
-		testResp[ListResponse[*iam.Group]](t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
+		helper.TestResp[ListResponse[*iam.Group]](t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
 			require.Len(t, rsp.Items, 0)
 		})
 	})
@@ -309,7 +293,7 @@ func TestIAM(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, empty)
 		require.NoError(t, err)
 
-		testResp(t, resp, func(t *testing.T, rsp iam.MeRsp) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.MeRsp) {
 			// godump.Dump(rsp)
 			require.NotEmpty(t, rsp)
 			for k, v := range rsp {
@@ -335,7 +319,7 @@ func TestIAM(t *testing.T) {
 		resp, err := cli.List(&items, total)
 		require.NoError(t, err)
 
-		testResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.OnlineUser]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.OnlineUser]) {
 			require.Len(t, rsp.Items, 1)
 			ou := rsp.Items[0]
 			require.NotEmpty(t, ou)

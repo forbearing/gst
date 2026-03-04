@@ -1,7 +1,6 @@
 package logmgmt_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -14,10 +13,10 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/internal/helper"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/module/logmgmt"
-	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
@@ -79,21 +78,6 @@ func init() {
 	}
 }
 
-func testResp[RSP any](t *testing.T, resp *client.Resp, checkFn func(t *testing.T, rsp RSP)) {
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Code, response.CodeSuccess.Code())
-	require.Equal(t, resp.Msg, response.CodeSuccess.Msg())
-	require.NotEmpty(t, resp.RequestID)
-	require.NotEmpty(t, resp.Data)
-
-	var rsp RSP
-	require.NoError(t, json.Unmarshal(resp.Data, &rsp))
-	if checkFn != nil {
-		checkFn(t, rsp)
-	}
-}
-
 func TestLogmgmt(t *testing.T) {
 	username := "user01"
 	password := "12345678"
@@ -112,7 +96,7 @@ func TestLogmgmt(t *testing.T) {
 				RePassword: password,
 			})
 			require.NoError(t, err)
-			testResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
 				godump.Dump(rsp)
 				require.Equal(t, rsp.Username, username)
 				require.NotEmpty(t, rsp.UserID)
@@ -132,7 +116,7 @@ func TestLogmgmt(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
 				godump.Dump(rsp)
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
@@ -152,7 +136,7 @@ func TestLogmgmt(t *testing.T) {
 			resp, err := cli.List(&items, total)
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.Equal(t, l.UserID, userID)
@@ -173,7 +157,7 @@ func TestLogmgmt(t *testing.T) {
 				resp, err := cli.Create(nil)
 				require.NoError(t, err)
 
-				testResp(t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
+				helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
 					godump.Dump(rsp)
 				})
 			})
@@ -190,7 +174,7 @@ func TestLogmgmt(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
 				godump.Dump(rsp)
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
@@ -210,7 +194,7 @@ func TestLogmgmt(t *testing.T) {
 			resp, err := cli.List(&items, total)
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
 				require.Len(t, rsp.Items, 3)
 				l1, l2, l3 := rsp.Items[0], rsp.Items[1], rsp.Items[2]
 
@@ -244,7 +228,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			// operation log count is 0
-			testResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
 				require.Len(t, rsp.Items, 0)
 			})
 		})
@@ -261,7 +245,7 @@ func TestLogmgmt(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			testResp(t, resp, func(t *testing.T, rsp *iam.Group) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.Group) {
 				require.NotNil(t, rsp)
 				require.Equal(t, rsp.Name, "g1")
 			})
@@ -281,7 +265,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			// operation log count is 1
-			testResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.NotNil(t, l)
