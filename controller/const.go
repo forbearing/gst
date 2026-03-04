@@ -12,5 +12,5 @@ const (
 	REFRESH_TOKEN = "refresh_token" //nolint:staticcheck
 	NAME          = "name"          //nolint:staticcheck
 	ID            = "id"
-	SESSION_ID    = "session_id"    //nolint:staticcheck
+	SESSION_ID    = "session_id" //nolint:staticcheck
 )

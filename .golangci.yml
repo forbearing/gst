@@ -49,6 +49,11 @@ linters:
     - predeclared
     - wastedassign
 
+    - copyloopvar
+    - importas
+    - nolintlint
+    # - revive
+
   # Linter-specific settings (moved under linters.settings for v2)
   settings:
     depguard:

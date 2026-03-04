@@ -26,8 +26,8 @@ import (
 type action int
 
 const (
-	create  action = iota
-	delete_        //nolint:staticcheck
+	create action = iota
+	delete_
 	update
 	patch
 	list
