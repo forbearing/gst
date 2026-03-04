@@ -353,8 +353,8 @@ func Init() error {
 				}
 
 				// 清空 map 和 slice，帮助 GC 自动回收内存
-				keyEvents = nil     //nolint:ineffassign
-				eventSlice = nil    //nolint:ineffassign
+				keyEvents = nil
+				eventSlice = nil
 				batchKeyMaxTS = nil //nolint:ineffassign,wastedassign
 
 				// // 系统每次重启时，都会从最新的偏移量开始消费, 所以不需要保存偏移量

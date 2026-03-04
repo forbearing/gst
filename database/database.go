@@ -1813,7 +1813,7 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	// 	return err
 	// }
 	//
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -1956,7 +1956,7 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 			return err
 		}
 	}
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -2106,7 +2106,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	// 	return err
 	// }
 	//
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -2205,7 +2205,7 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 	// }
 
 	// return db.db.Model(*new(M)).Where("id = ?", id).Update(name, value).Error
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -2354,7 +2354,7 @@ QUERY:
 		}
 	}
 	// if err = db.db.Find(dest).Error; err != nil {
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -2545,7 +2545,7 @@ QUERY:
 		}
 	}
 	// if err = db.db.Where("id = ?", id).Find(dest).Error; err != nil {
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -2675,7 +2675,7 @@ func (db *database[M]) Count(count *int64) (err error) {
 
 QUERY:
 	// if err = db.db.Model(*new(M)).Count(count).Error; err != nil {
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -2834,7 +2834,7 @@ QUERY:
 		}
 	}
 	// if err = db.db.First(dest).Error; err != nil {
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -3000,7 +3000,7 @@ QUERY:
 		}
 	}
 	// if err = db.db.Last(dest).Error; err != nil {
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -3166,7 +3166,7 @@ QUERY:
 		}
 	}
 	// if err = db.db.Take(dest).Error; err != nil {
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
@@ -3227,7 +3227,7 @@ func (db *database[M]) Cleanup() (err error) {
 	defer done(err)
 
 	// return db.db.Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0)).Error
-	tableName := db.m.GetTableName() //nolint:errcheck
+	tableName := db.m.GetTableName()
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}

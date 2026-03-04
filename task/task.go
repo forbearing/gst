@@ -175,9 +175,9 @@ func runtimestats() error {
 	// GC暂停历史记录（最近几次）
 	gcHistory := make(map[string]any)
 	for i := 0; i < int(rtm.NumGC) && i < 5; i++ {
-		idx := int(rtm.NumGC-uint32(i)) % 256 //nolint:gosec
+		idx := int(rtm.NumGC-uint32(i)) % 256
 		gcHistory[fmt.Sprintf("GC-%d-PauseNs", i+1)] = rtm.PauseNs[idx]
-		gcHistory[fmt.Sprintf("GC-%d-End", i+1)] = time.UnixMilli(int64(rtm.PauseEnd[idx] / 1_000_000)) //nolint:gosec
+		gcHistory[fmt.Sprintf("GC-%d-End", i+1)] = time.UnixMilli(int64(rtm.PauseEnd[idx] / 1_000_000))
 	}
 	logger.Runtime.Infow("Recent GC History", "gcHistory", gcHistory)
 

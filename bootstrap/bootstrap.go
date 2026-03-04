@@ -46,7 +46,7 @@ import (
 	"github.com/forbearing/gst/provider/rocketmq"
 	"github.com/forbearing/gst/router"
 	"github.com/forbearing/gst/service"
-	"github.com/forbearing/gst/task" // nolint:staticcheck
+	"github.com/forbearing/gst/task" //nolint:staticcheck
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 )
@@ -121,7 +121,7 @@ func Bootstrap() error {
 		grpc.Init,
 
 		// job
-		task.Init, // nolint:staticcheck
+		task.Init, //nolint:staticcheck
 		cronjob.Init,
 
 		// module system must be the last to be initialized.

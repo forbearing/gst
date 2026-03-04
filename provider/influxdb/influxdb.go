@@ -84,10 +84,10 @@ func New(cfg config.Influxdb) (influxdb2.Client, error) {
 		opts.SetBatchSize(cfg.BatchSize)
 	}
 	if cfg.FlushInterval > 0 {
-		opts.SetFlushInterval(uint(cfg.FlushInterval)) //nolint:gosec
+		opts.SetFlushInterval(uint(cfg.FlushInterval))
 	}
 	if cfg.RetryInterval > 0 {
-		opts.SetRetryInterval(uint(cfg.RetryInterval)) //nolint:gosec
+		opts.SetRetryInterval(uint(cfg.RetryInterval))
 	}
 	if cfg.MaxRetries > 0 {
 		opts.SetMaxRetries(cfg.MaxRetries)

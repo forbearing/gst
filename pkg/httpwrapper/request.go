@@ -38,7 +38,7 @@ func (r *WrappedRequest) MarshalJSON() ([]byte, error) {
 		r.Request.Body = io.NopCloser(bytes.NewReader(body))
 	}
 
-	// nolint:staticcheck
+	//nolint:staticcheck
 	return json.Marshal(&wrappedRequest{
 		Body:    body,
 		Request: r.Request,
