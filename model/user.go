@@ -37,8 +37,8 @@ type User struct {
 	LastPasswordChangeAt *GormTime `json:"last_password_change_at,omitempty" gorm:"-"`
 
 	Token        string `json:"token,omitempty" gorm:"-"`
-	AccessToken  string `json:"access_token,omitempty" gorm:"-"`
-	RefreshToken string `json:"refresh_token,omitempty" gorm:"-"`
+	AccessToken  string `json:"access_token,omitempty" gorm:"-"`  //nolint:gosec // G117: token value issued by auth system, not hard-coded in source
+	RefreshToken string `json:"refresh_token,omitempty" gorm:"-"` //nolint:gosec // G117: token value issued by auth system, not hard-coded in source
 	SessionID    string `json:"session_id,omitempty" gorm:"-"`
 
 	Base
