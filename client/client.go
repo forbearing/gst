@@ -39,8 +39,9 @@ const (
 )
 
 var (
-	ErrNotStringSlice = errors.New("payload must be a string slice")
-	ErrNotStructSlice = errors.New("payload must be a struct slice")
+	ErrNotStringSlice        = errors.New("payload must be a string slice")
+	ErrNotStructSlice        = errors.New("payload must be a struct slice")
+	ErrUnsupportedHTTPMethod = errors.New("unsupported http method")
 )
 
 type Client struct {
@@ -302,6 +303,36 @@ func (c *Client) PatchMany(payload any) (*Resp, error) {
 		return nil, ErrNotStructSlice
 	}
 	return c.request(patch_many, batchReq{Items: payload})
+}
+
+// Request sends a single HTTP request using the given method and optional payload.
+// It maps standard HTTP methods to resource actions:
+//   - GET: list (base URL, with optional query from WithQuery/WithQueryPagination etc.)
+//   - POST: create (base URL, body = payload)
+//   - PUT: update (base URL + "/" + resource id; requires c.param to be set, e.g. by a prior Get/Update/Patch/Delete call)
+//   - PATCH: patch (same URL as PUT)
+//   - DELETE: delete (same URL as PUT)
+//
+// For GET and POST, the request URL is the client's base address (and apiPath if set).
+// For PUT, PATCH, DELETE the URL includes the resource id from c.param; param is not set by Request.
+// Prefer Get(id, dst), List(...), Create(payload), Update(id, payload), Patch(id, payload), Delete(id)
+// when operating on resources by id; use Request only for list-like GET or create-like POST endpoints
+// that do not need an id in the path (e.g. /api/version).
+func (c *Client) Request(method string, payload any) (*Resp, error) {
+	switch method {
+	case http.MethodGet:
+		return c.request(list, payload)
+	case http.MethodPost:
+		return c.request(create, payload)
+	case http.MethodPut:
+		return c.request(update, payload)
+	case http.MethodPatch:
+		return c.request(patch, payload)
+	case http.MethodDelete:
+		return c.request(delete_, payload)
+	default:
+		return nil, ErrUnsupportedHTTPMethod
+	}
 }
 
 // request send a request to backend server.
