@@ -84,9 +84,10 @@ test:
 	go test ./database/...
 	go test ./internal/codegen/gen/
 	go test ./module/helloworld
-	go test -v ./module/iam
-	go test -v ./module/logmgmt
-	go test -v ./module/version
+	go test ./module/iam
+	go test ./module/logmgmt
+	go test ./module/version
+	go test ./pkg/dbmigrate
 
 # Run unit tests with verbose output
 testv:
@@ -102,6 +103,7 @@ testv:
 	go test -v ./module/iam
 	go test -v ./module/logmgmt
 	go test -v ./module/version
+	go test -v ./pkg/dbmigrate
 
 # Auto-fix code issues
 fix:
