@@ -15,7 +15,6 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/internal/helper"
 	"github.com/forbearing/gst/module/version"
-	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,7 +70,17 @@ func TestVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	helper.TestResp(t, resp, func(t *testing.T, rsp *version.VersionRsp) {
-		godump.Dump(rsp)
+		// #*version.VersionRsp {
+		//   +Version     => "" #string
+		//   +BuildTime   => 1772694405 #int64
+		//   +GitCommit   => "" #string
+		//   +GitBranch   => "" #string
+		//   +GoVersion   => "go1.25.7" #string
+		//   +Environment => "dev" #string
+		//   +Uptime      => 1 #int64
+		//   +Timestamp   => 1772694406 #int64
+		// }
+
 		require.NotEmpty(t, rsp)
 		require.NotEmpty(t, rsp.BuildTime)
 		require.NotEmpty(t, rsp.GoVersion)
