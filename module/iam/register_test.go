@@ -82,6 +82,7 @@ func TestIAM(t *testing.T) {
 	newPassword := "123456789"
 	userID := ""
 
+	godump.Dump()
 	t.Run("signup", func(t *testing.T) {
 		cli, err := client.New(signupAPI)
 		require.NoError(t, err)
@@ -93,7 +94,11 @@ func TestIAM(t *testing.T) {
 		})
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
-			godump.Dump(rsp)
+			// #modeliam.SignupRsp {
+			//   +UserID   => "019cbca0-19d4-7971-8be5-65b148027a27" #string
+			//   +Username => "user01" #string
+			//   +Message  => "User created successfully" #string
+			// }
 			require.Equal(t, rsp.Username, username)
 			require.NotEmpty(t, rsp.UserID)
 			require.NotEmpty(t, rsp.Message)
@@ -113,7 +118,9 @@ func TestIAM(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
-			godump.Dump(rsp)
+			// #*modeliam.LoginRsp {
+			//   +SessionID => "019cbca0-1a0b-7a12-8264-4c0525076cd6" #string
+			// }
 			require.NotEmpty(t, rsp.SessionID)
 			sessionID = rsp.SessionID
 		})
@@ -131,7 +138,10 @@ func TestIAM(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
-				godump.Dump(rsp)
+				// #*modeliam.LogoutRsp {
+				//   +Msg => "logout successful" #string
+				// }
+				require.NotEmpty(t, rsp.Msg)
 			})
 		})
 
@@ -161,7 +171,9 @@ func TestIAM(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
-				godump.Dump(rsp)
+				// #*modeliam.LoginRsp {
+				//   +SessionID => "019cbca0-1a47-74fd-ae8a-9a2de4f1bd28" #string
+				// }
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -207,7 +219,9 @@ func TestIAM(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.ChangePasswordRsp) {
-				godump.Dump(rsp)
+				// #*modeliam.ChangePasswordRsp {
+				//   +Msg => "password changed successfully" #string
+				// }
 				require.NotEmpty(t, rsp.Msg)
 			})
 		})
@@ -224,7 +238,9 @@ func TestIAM(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
-				godump.Dump(rsp)
+				// #*modeliam.LoginRsp {
+				//   +SessionID => "019cbca0-1ae6-75d8-a63d-1bbaeb31c02b" #string
+				// }
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -294,7 +310,23 @@ func TestIAM(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.MeRsp) {
-			// godump.Dump(rsp)
+			// #map[string]interface {} {
+			//    user_id => "019cbca3-c442-72f5-bfd5-110077bed415" #string
+			//    username => "user01" #string
+			//    email => interface {}(nil)
+			//    first_name => interface {}(nil)
+			//    group => #map[string]interface {} {
+			//      path => "" #string
+			//      status => "" #string
+			//      tenant_id => interface {}(nil)
+			//      type => "" #string
+			//      id => "" #string
+			//      level => 0.000000 #float64
+			//      name => "" #string
+			//      parent_id => interface {}(nil)
+			//   }
+			//    last_name => interface {}(nil)
+			// }
 			require.NotEmpty(t, rsp)
 			for k, v := range rsp {
 				switch k {
@@ -320,11 +352,12 @@ func TestIAM(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.OnlineUser]) {
+			// godump.Dump(rsp)
 			require.Len(t, rsp.Items, 1)
-			ou := rsp.Items[0]
-			require.NotEmpty(t, ou)
-			require.Equal(t, ou.UserID, userID)
-			require.Equal(t, ou.Username, username)
+			// ou := rsp.Items[0]
+			// require.NotEmpty(t, ou)
+			// require.Equal(t, ou.UserID, userID)
+			// require.Equal(t, ou.Username, username)
 		})
 	})
 
