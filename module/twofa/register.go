@@ -1,6 +1,6 @@
 /*
 用户登录流程：
-1. POST /api/identity/login → 普通登录
+1. POST /api/login → 普通登录
 2. POST /api/2fa/totp/verify → 验证TOTP码（如果启用2FA）
 3. 登录成功
 

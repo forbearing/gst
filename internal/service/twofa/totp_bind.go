@@ -9,6 +9,7 @@ import (
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
+	"github.com/forbearing/gst/types/consts"
 	"github.com/pquerna/otp/totp"
 	"github.com/skip2/go-qrcode"
 	"go.uber.org/zap"
@@ -38,7 +39,7 @@ func (t *TOTPBindService) Create(ctx *types.ServiceContext, req *modeltwofa.TOTP
 
 	// 生成 TOTP 密钥
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "Nebula",
+		Issuer:      consts.FrameworkName,
 		AccountName: ctx.Username,
 		SecretSize:  32, // 32 bytes = 256 bits
 	})
@@ -62,7 +63,7 @@ func (t *TOTPBindService) Create(ctx *types.ServiceContext, req *modeltwofa.TOTP
 		Secret:      key.Secret(),
 		OtpauthURL:  qrCodeURL,
 		QRCodeImage: qrCodeImage,
-		Issuer:      "Nebula",
+		Issuer:      consts.FrameworkName,
 		AccountName: ctx.Username,
 	}
 
