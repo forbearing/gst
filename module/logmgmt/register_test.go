@@ -18,7 +18,6 @@ import (
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/module/logmgmt"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
 )
 
@@ -97,7 +96,11 @@ func TestLogmgmt(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
-				godump.Dump(rsp)
+				// #modeliam.SignupRsp {
+				//   +UserID   => "019cbcc0-d2dd-7399-a4be-fc4ba2cd6775" #string
+				//   +Username => "user01" #string
+				//   +Message  => "User created successfully" #string
+				// }
 				require.Equal(t, rsp.Username, username)
 				require.NotEmpty(t, rsp.UserID)
 				userID = rsp.UserID
@@ -117,7 +120,9 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
-				godump.Dump(rsp)
+				// #*modeliam.LoginRsp {
+				//   +SessionID => "019cbcc0-d312-7b46-a67d-57877893c929" #string
+				// }
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -137,6 +142,24 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+				// #logmgmt_test.ListResponse[*github.com/forbearing/gst/internal/model/logmgmt.LoginLog] {
+				//   +Items => #[]*modellogmgmt.LoginLog [
+				//     0 => #*modellogmgmt.LoginLog {
+				//       +UserID      => "019cbcc0-d2dd-7399-a4be-fc4ba2cd6775" #string
+				//       +Username    => "user01" #string
+				//       +ClientIP    => "::1" #string
+				//       +Status      => "success" #modellogmgmt.LoginStatus
+				//       +Source      => "gst" #string
+				//       +Platform    => " " #string
+				//       +Engine      => " " #string
+				//       +Browser     => "gst " #string
+				//       +Base        => #model.Base {
+				//         +ID        => "019cbcc0-d314-7edc-9652-3a5d91222bb6" #string
+				//       }
+				//     }
+				//   ]
+				//   +Total => 1 #int64
+				// }
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.Equal(t, l.UserID, userID)
@@ -158,7 +181,9 @@ func TestLogmgmt(t *testing.T) {
 				require.NoError(t, err)
 
 				helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
-					godump.Dump(rsp)
+					// #*modeliam.LogoutRsp {
+					//   +Msg => "logout successful" #string
+					// }
 				})
 			})
 		})
@@ -175,7 +200,9 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
-				godump.Dump(rsp)
+				// #*modeliam.LoginRsp {
+				//   +SessionID => "019cbcc0-d34d-7e0d-9b9e-89d08c3ada3c" #string
+				// }
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -246,11 +273,27 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.Group) {
+				// #*modeliam.Group {
+				//   +Name        => "g1" #string
+				//   +Type        => "regular" #modeliam.GroupType
+				//   +Status      => "active" #modeliam.GroupStatus
+				//   +ParentID    => *string(nil)
+				//   +Path        => "" #string
+				//   +Level       => 0 #int
+				//   +TenantID    => *string(nil)
+				//   +Tenant      => *modeliam.Tenant(nil)
+				//   +Base        => #model.Base {
+				//     +ID        => "019cbcc5-0da0-7874-bd81-740fa7fdfe1f" #string
+				//     +CreatedBy => "user01" #string
+				//   }
+				// }
 				require.NotNil(t, rsp)
 				require.Equal(t, rsp.Name, "g1")
 			})
 		})
 
+		// 记录 operationlog 可能会有延迟，因为是异步写入的。
+		time.Sleep(1 * time.Second)
 		t.Run("operationlog2", func(t *testing.T) {
 			cli, err := client.New(operationlogAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
@@ -266,6 +309,32 @@ func TestLogmgmt(t *testing.T) {
 
 			// operation log count is 1
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+				// #logmgmt_test.ListResponse[*github.com/forbearing/gst/internal/model/logmgmt.OperationLog] {
+				//   +Items => #[]*modellogmgmt.OperationLog [
+				//     0 => #*modellogmgmt.OperationLog {
+				//       +User        => "user01" #string
+				//       +IP          => "::1" #string
+				//       +OP          => "create" #consts.OP
+				//       +Table       => "groups" #string
+				//       +Model       => "Group" #string
+				//       +RecordID    => "019cbcc7-3f8e-7c96-b369-e3e16b543a23" #string
+				//       +RecordName  => "" #string
+				//       +Record      => "{"name":"g1","type":"regular","status":"active","parent_id":null,"path":"","level":0,"tenant_id":null,"id":"019cbcc7-3f8e-7c96-b369-e3e16b543a23","created_by":"user01","updated_by":"user01","created_at":"2026-03-05T14:55:00.494825+08:00","updated_at":"2026-03-05T14:55:00.494848+08:00"}" #string
+				//       +Request     => "{"name":"g1","type":"regular","status":"active","parent_id":null,"path":"","level":0,"tenant_id":null,"id":"019cbcc7-3f8e-7c96-b369-e3e16b543a23","created_by":"user01","updated_by":"user01","created_at":"2026-03-05T14:55:00.494825+08:00","updated_at":"2026-03-05T14:55:00.494848+08:00"}" #string
+				//       +Response    => "{"name":"g1","type":"regular","status":"active","parent_id":null,"path":"","level":0,"tenant_id":null,"id":"019cbcc7-3f8e-7c96-b369-e3e16b543a23","created_by":"user01","updated_by":"user01","created_at":"2026-03-05T14:55:00.494825+08:00","updated_at":"2026-03-05T14:55:00.494848+08:00"}" #string
+				//       +OldRecord   => "" #string
+				//       +NewRecord   => "" #string
+				//       +Method      => "POST" #string
+				//       +URI         => "/api/iam/groups" #string
+				//       +UserAgent   => "gst" #string
+				//       +RequestID   => "d6kihh65shg82oca209g" #string
+				//       +Base        => #model.Base {
+				//         +ID        => "019cbcc7-3f8f-7130-a72a-d68ec0a7c0f9" #string
+				//       }
+				//     }
+				//   ]
+				//   +Total => 1 #int64
+				// }
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.NotNil(t, l)
