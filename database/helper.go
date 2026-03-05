@@ -238,7 +238,7 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 			schemaTag = schemaTagItems[0]
 		}
 		if len(schemaTag) > 0 && schemaTag != jsonTag {
-			fmt.Printf("------------------ json tag replace by schema tag: %s -> %s\n", jsonTag, schemaTag)
+			logger.Database.WithDatabaseContext(ctx, consts.Phase("StructFieldToMap")).Infoz("json tag replace by schema tag", zap.String("old", jsonTag), zap.String("new", schemaTag))
 			jsonTag = schemaTag
 		}
 
