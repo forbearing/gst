@@ -1,4 +1,6 @@
-package version
+// Package pkgversion provides version string helpers; the name avoids conflicting
+// with the standard library "runtime/version" package.
+package pkgversion
 
 import (
 	"strconv"
