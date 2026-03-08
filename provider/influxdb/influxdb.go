@@ -19,8 +19,8 @@ import (
 var (
 	initialized bool
 	client      influxdb2.Client
-	writeAPI    api.WriteAPIBlocking //nolint:staticcheck
-	queryAPI    api.QueryAPI         //nolint:staticcheck
+	writeAPI api.WriteAPIBlocking
+	queryAPI api.QueryAPI
 	mu          sync.RWMutex
 )
 
