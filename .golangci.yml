@@ -52,7 +52,7 @@ linters:
     - copyloopvar
     - importas
     - nolintlint
-    # - revive
+    - revive
 
   # Linter-specific settings (moved under linters.settings for v2)
   settings:
@@ -69,6 +69,10 @@ linters:
         - io/ioutil.ReadFile
         - io.Copy(*bytes.Buffer)
         - io.Copy(os.Stdout)
+
+    revive:
+      rules:
+        - name: exported
 
     godoclint:
       # Default set of rules to enable.
