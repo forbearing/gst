@@ -73,6 +73,9 @@ linters:
     revive:
       rules:
         - name: exported
+        # Forbid dot imports (e.g. . "pkg/path") to keep symbol origin clear.
+        # Use allowedPackages to permit specific packages (e.g. ginkgo/gomega in tests).
+        - name: dot-imports
 
     godoclint:
       # Default set of rules to enable.
