@@ -284,6 +284,7 @@ func genRun() {
 				checkErr(err)
 				logUpdate(safePath)
 				checkErr(ensureParentDir(safePath))
+				// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
 				checkErr(os.WriteFile(safePath, []byte(code), 0o600))
 			} else {
 				logSkip(safePath)
@@ -291,6 +292,7 @@ func genRun() {
 		} else {
 			logCreate(safePath)
 			checkErr(ensureParentDir(safePath))
+			// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
 			checkErr(os.WriteFile(safePath, []byte(code), 0o600))
 		}
 	}
