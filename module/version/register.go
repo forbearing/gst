@@ -1,4 +1,6 @@
-package version
+// Package versionmod provides the version API module; the name avoids conflicting
+// with the standard library "runtime/version" package.
+package versionmod
 
 import (
 	"github.com/forbearing/gst/module"

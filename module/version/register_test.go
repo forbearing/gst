@@ -1,4 +1,4 @@
-package version_test
+package versionmod_test
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ import (
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/internal/helper"
-	"github.com/forbearing/gst/module/version"
+	versionmod "github.com/forbearing/gst/module/version"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,7 +40,7 @@ func init() {
 	}
 
 	go func() {
-		version.Register()
+		versionmod.Register()
 
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
@@ -69,7 +69,7 @@ func TestVersion(t *testing.T) {
 	resp, err := cli.Request(http.MethodGet, nil)
 	require.NoError(t, err)
 
-	helper.TestResp(t, resp, func(t *testing.T, rsp *version.VersionRsp) {
+	helper.TestResp(t, resp, func(t *testing.T, rsp *versionmod.VersionRsp) {
 		// #*version.VersionRsp {
 		//   +Version     => "" #string
 		//   +BuildTime   => 1772694405 #int64
