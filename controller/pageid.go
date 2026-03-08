@@ -11,5 +11,5 @@ import (
 var PAGE_ID = time.Now().Unix() //nolint:staticcheck
 
 func PageID(c *gin.Context) {
-	ResponseJSON(c, CodeSuccess, gin.H{"page_id": PAGE_ID})
+	JSON(c, CodeSuccess, gin.H{"page_id": PAGE_ID})
 }

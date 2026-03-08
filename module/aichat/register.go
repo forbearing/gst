@@ -358,9 +358,9 @@ func Register() {
 	// Using /ai/messages/attachments/upload as the endpoint
 	router.Auth().POST("/ai/messages/attachments/upload", func(c *gin.Context) {
 		if err := serviceaichat.Upload(types.NewServiceContext(c)); err != nil {
-			response.ResponseJSON(c, response.CodeFailure.WithErr(err), err)
+			response.JSON(c, response.CodeFailure.WithErr(err), err)
 		} else {
-			response.ResponseJSON(c, response.CodeSuccess)
+			response.JSON(c, response.CodeSuccess)
 		}
 	})
 

@@ -374,12 +374,12 @@ func handleServiceError(c *gin.Context, ctx *types.ServiceContext, err error) {
 	// Check if it's a ServiceError
 	var serviceErr *types.ServiceError
 	if errors.As(err, &serviceErr) {
-		ResponseJSON(c, CodeFailure.WithStatus(serviceErr.StatusCode).WithErr(err))
+		JSON(c, CodeFailure.WithStatus(serviceErr.StatusCode).WithErr(err))
 		return
 	}
 
 	// Default error handling
-	ResponseJSON(c, CodeFailure.WithErr(err))
+	JSON(c, CodeFailure.WithErr(err))
 }
 
 // logRequest logs the HTTP request using zap logger if enabled in config

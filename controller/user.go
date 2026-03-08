@@ -43,7 +43,7 @@ func (*user) Login(c *gin.Context) {
 	}
 	if !limiter.Allow() {
 		log.Error("too many login requests")
-		ResponseJSON(c, NewCode(CodeTooManyRequests, http.StatusTooManyRequests, "too many login requests"))
+		JSON(c, NewCode(CodeTooManyRequests, http.StatusTooManyRequests, "too many login requests"))
 		return
 	}
 
@@ -51,35 +51,35 @@ func (*user) Login(c *gin.Context) {
 	var err error
 	if err = c.ShouldBindJSON(req); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeInvalidLogin)
+		JSON(c, CodeInvalidLogin)
 		return
 	}
 	users := make([]*model.User, 0)
 	if err = database.Database[*model.User](types.NewDatabaseContext(c)).WithLimit(1).WithQuery(&model.User{Name: req.Name}).List(&users); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeInvalidLogin)
+		JSON(c, CodeInvalidLogin)
 		return
 	}
 	if len(users) == 0 {
 		log.Error("not found any accounts")
-		ResponseJSON(c, CodeInvalidLogin)
+		JSON(c, CodeInvalidLogin)
 		return
 	}
 	if len(users) != 1 {
 		log.Errorf("too many accounts: %d", len(users))
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	u := users[0]
 	if err = comparePasswd(req.Password, u.Password); err != nil {
 		log.Errorf("user password not match: %v", err)
-		ResponseJSON(c, CodeInvalidLogin)
+		JSON(c, CodeInvalidLogin)
 		return
 	}
 	// TODO: 把以前的 token 失效掉
 	aToken, rToken, err := jwt.GenTokens(u.ID, req.Name, createSession(c))
 	if err != nil {
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	u.Token = aToken
@@ -96,15 +96,15 @@ func (*user) Login(c *gin.Context) {
 	u.LastLoginIP = util.IPv6ToIPv4(c.ClientIP())
 	if err = database.Database[*model.User](types.NewDatabaseContext(c)).UpdateByID(u.ID, "last_login", u.LastLoginAt); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	if err = database.Database[*model.User](types.NewDatabaseContext(c)).UpdateByID(u.ID, "last_login_ip", u.LastLoginIP); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
-	ResponseJSON(c, CodeSuccess, u)
+	JSON(c, CodeSuccess, u)
 }
 
 func (*user) Logout(c *gin.Context) {
@@ -112,12 +112,12 @@ func (*user) Logout(c *gin.Context) {
 	_, claims, err := jwt.ParseTokenFromHeader(c.Request.Header)
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	jwt.RevokeTokens(claims.Subject)
 
-	ResponseJSON(c, CodeSuccess)
+	JSON(c, CodeSuccess)
 }
 
 func (*user) RefreshToken(c *gin.Context) {
@@ -132,7 +132,7 @@ func (*user) Signup(c *gin.Context) {
 	}
 	if !limiter.Allow() {
 		log.Error("too many signup requests")
-		ResponseJSON(c, NewCode(CodeTooManyRequests, http.StatusTooManyRequests, "too many signup requests"))
+		JSON(c, NewCode(CodeTooManyRequests, http.StatusTooManyRequests, "too many signup requests"))
 		return
 	}
 
@@ -140,39 +140,39 @@ func (*user) Signup(c *gin.Context) {
 	var err error
 	if err = c.ShouldBindJSON(req); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeInvalidSignup)
+		JSON(c, CodeInvalidSignup)
 		return
 	}
 	if err = validateUsername(req.Name); err != nil {
 		log.Error(err)
-		ResponseJSON(c, NewCode(CodeFailure, http.StatusBadRequest, err.Error()))
+		JSON(c, NewCode(CodeFailure, http.StatusBadRequest, err.Error()))
 		return
 	}
 	if err = validatePassword(req.Password); err != nil {
 		log.Error(err)
-		ResponseJSON(c, NewCode(CodeFailure, http.StatusBadRequest, err.Error()))
+		JSON(c, NewCode(CodeFailure, http.StatusBadRequest, err.Error()))
 		return
 	}
 	if req.Password != req.RePassword {
 		log.Error("password and rePassword not the same")
-		ResponseJSON(c, CodeInvalidSignup)
+		JSON(c, CodeInvalidSignup)
 		return
 	}
 
 	users := make([]*model.User, 0)
 	if err = database.Database[*model.User](types.NewDatabaseContext(c)).WithLimit(1).WithQuery(&model.User{Name: req.Name}).List(&users); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	if len(users) > 0 {
-		ResponseJSON(c, CodeAlreadyExistsUser)
+		JSON(c, CodeAlreadyExistsUser)
 		return
 	}
 	hashedPasswd, err := encryptPasswd(req.Password)
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	req.Password = hashedPasswd
@@ -182,10 +182,10 @@ func (*user) Signup(c *gin.Context) {
 	req.LastLoginIP = util.IPv6ToIPv4(c.ClientIP())
 	if err := database.Database[*model.User](types.NewDatabaseContext(c)).Create(req); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
-	ResponseJSON(c, CodeSuccess)
+	JSON(c, CodeSuccess)
 }
 
 func (*user) ChangePasswd(c *gin.Context) {
@@ -194,61 +194,61 @@ func (*user) ChangePasswd(c *gin.Context) {
 	req := new(model.User)
 	if err := c.ShouldBindJSON(req); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	if len(req.ID) == 0 {
 		log.Error(CodeNotFoundUserID)
-		ResponseJSON(c, CodeNotFoundUserID)
+		JSON(c, CodeNotFoundUserID)
 		return
 	}
 	u := new(model.User)
 	if err := database.Database[*model.User](types.NewDatabaseContext(c)).Get(u, req.ID); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	if len(u.ID) == 0 {
 		log.Error(CodeNotFoundUser)
-		ResponseJSON(c, CodeNotFoundUser)
+		JSON(c, CodeNotFoundUser)
 		return
 	}
 	hashedPasswd, err := encryptPasswd(req.Password)
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	if hashedPasswd != u.Password {
 		log.Error(CodeOldPasswordNotMatch)
-		ResponseJSON(c, CodeOldPasswordNotMatch)
+		JSON(c, CodeOldPasswordNotMatch)
 		return
 	}
 	if req.NewPassword != req.RePassword {
 		log.Error(CodeNewPasswordNotMatch)
-		ResponseJSON(c, CodeNewPasswordNotMatch)
+		JSON(c, CodeNewPasswordNotMatch)
 		return
 	}
 	hashedPasswd, err = encryptPasswd(req.NewPassword)
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	u.Password = hashedPasswd
 	if err = database.Database[*model.User](types.NewDatabaseContext(c)).Update(u); err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	_, claims, err := jwt.ParseTokenFromHeader(c.Request.Header)
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	jwt.RevokeTokens(claims.Subject)
-	ResponseJSON(c, CodeSuccess)
+	JSON(c, CodeSuccess)
 }
 
 func encryptPasswd(pass string) (string, error) {

@@ -106,7 +106,7 @@ func RateLimiter(opts ...Option) gin.HandlerFunc {
 			limiter = rate.NewLimiter(conf.Rate, conf.Burst)
 			_ = ratelimiterMap.Set(key, limiter, conf.TTL)
 		} else if err != nil {
-			ResponseJSON(c, CodeFailure)
+			JSON(c, CodeFailure)
 			c.Abort()
 			return
 		}
@@ -116,7 +116,7 @@ func RateLimiter(opts ...Option) gin.HandlerFunc {
 				c.Abort()
 				return
 			}
-			ResponseJSON(c, CodeTooManyRequests)
+			JSON(c, CodeTooManyRequests)
 			c.Abort()
 			return
 		}

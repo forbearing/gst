@@ -222,7 +222,7 @@ func NewCode(code Code, status int, msg string) Code {
 	return code
 }
 
-func ResponseJSON(c *gin.Context, responder Responder, data ...any) {
+func JSON(c *gin.Context, responder Responder, data ...any) {
 	if len(data) > 0 {
 		c.JSON(responder.Status(), gin.H{
 			"code":            responder.Code(),
@@ -240,7 +240,7 @@ func ResponseJSON(c *gin.Context, responder Responder, data ...any) {
 	}
 }
 
-func ResponseBytes(c *gin.Context, responder Responder, data ...[]byte) {
+func Bytes(c *gin.Context, responder Responder, data ...[]byte) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
 	c.Header("X-cached", "true")
 	var dataStr string
@@ -253,7 +253,7 @@ func ResponseBytes(c *gin.Context, responder Responder, data ...[]byte) {
 	_, _ = c.Writer.Write(util.StringToBytes(dataStr))
 }
 
-func ResponseBytesList(c *gin.Context, responder Responder, total int64, data ...[]byte) {
+func BytesList(c *gin.Context, responder Responder, total int64, data ...[]byte) {
 	c.Header("Content-Type", "application/json; charset=utf-8")
 	var dataStr string
 	if len(data) > 0 {
@@ -265,7 +265,7 @@ func ResponseBytesList(c *gin.Context, responder Responder, total int64, data ..
 	_, _ = c.Writer.Write(util.StringToBytes(dataStr))
 }
 
-func ResponseTEXT(c *gin.Context, responder Responder, data ...any) {
+func Text(c *gin.Context, responder Responder, data ...any) {
 	if len(data) > 0 {
 		c.String(responder.Status(), stringAny(data))
 	} else {
@@ -273,7 +273,7 @@ func ResponseTEXT(c *gin.Context, responder Responder, data ...any) {
 	}
 }
 
-func ResponseDATA(c *gin.Context, data []byte, headers ...map[string]string) {
+func Data(c *gin.Context, data []byte, headers ...map[string]string) {
 	header := make(map[string]string)
 	if len(headers) > 0 {
 		if headers[0] != nil {
@@ -286,7 +286,7 @@ func ResponseDATA(c *gin.Context, data []byte, headers ...map[string]string) {
 	c.Data(http.StatusOK, "application/octet-stream", data)
 }
 
-func ResponesFILE(c *gin.Context, filename string) {
+func File(c *gin.Context, filename string) {
 	c.File(filename)
 }
 
@@ -317,7 +317,7 @@ func stringAny(v any) string {
 	}
 }
 
-// ResponseSSE sends a Server-Sent Events (SSE) response.
+// SSE sends a Server-Sent Events (SSE) response.
 // This function sets the appropriate headers for SSE and writes the event to the response.
 //
 // Note: This function sends a single event, not a stream. If you need to send a [DONE] marker
@@ -330,11 +330,11 @@ func stringAny(v any) string {
 //
 // Example:
 //
-//	ResponseSSE(c, types.Event{
+//	SSE(c, types.Event{
 //	    Event: "message",
 //	    Data:  "Hello, World!",
 //	})
-func ResponseSSE(c *gin.Context, event types.Event) error {
+func SSE(c *gin.Context, event types.Event) error {
 	return sse.SendSSE(c.Writer, event)
 }
 

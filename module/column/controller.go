@@ -40,10 +40,10 @@ func (cs *column) GetColumns(c *gin.Context, tableName string, columns []string,
 	columnRes, err := queryColumnsWithQuery(tableName, columns, c.Request.URL.Query(), db...)
 	if err != nil {
 		zap.S().Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
-	ResponseJSON(c, CodeSuccess, columnRes)
+	JSON(c, CodeSuccess, columnRes)
 }
 
 // queryColumns 只查询字段有多少种
