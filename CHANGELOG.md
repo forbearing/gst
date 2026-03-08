@@ -2,10 +2,73 @@
 ## [Unreleased]
 
 ### Build
+- test ds
+- test moudle/twofa
+- test pkg/dbmigrate
+- test module/iam, module/logmgmt, module/version
+
+### Chore
+- remove unused nolint:gosec directives (G117, G703, G704)
+- update CLAUDE.md
+- **client:** remove unused nolint:gosec directives
+- **client:** remove unused nolint:gosec directives
+- **controller:** add gosec G117 nosec for session marshal (redis storage only)
+- **database:** use logger replace fmt
+- **deps:** upgrade dependencies to latest version
+- **deps:** upgrade dependencies to latest version
+- **examples:** ignore gitguardian check
+
+### Ci
+- add revive "dot-imports" check
+- add revive "exported" check
+
+### Feat
+- **client:** add `Request` method
+- **client:** add `WithCookie` option function
+
+### Fix
+- address revive linter findings (26 files)
+- **authz:** use initialism IDs in var and field names for revive
+- **codegen:** rename ast to codegenast to resolve revive stdlib conflict
+- **gg:** use correct "air" package path
+- **golangci-lint:** fix nolintlint issues
+- **golangci-lint:** fix revive exported issues
+- **golangci-lint:** fix gosec issues
+- **golangci-lint:** fix lint issues
+- **golangci-lint:** fix issues
+- **lint:** exclude top-level types/ and util/ from meaningless package name check
+- **middleware:** resolve golangci-lint issues
+- **staticcheck:** fix issues
+- **task:** call context cancel when task goroutine exits (gosec G118)
+
+### Refactor
+- **cache:** rename `TracingWrapper` -> `Wrapper`, `NewTracingWrapper` -> `NewWrapper`
+- **metrics:** rename package to prommetrics to avoid stdlib conflict
+- **middleware:** export RouteParamsManager type for unexported-return
+- **middleware:** `RateLimiterConfig` -> `Config`, `RateLimiterOption` -> `Option`
+- **middleware:** refactor ratelimiter middleware
+- **response:** rename exported funcs to satisfy revive exported rule
+- **service:** rename ServiceFactory to Factory, Factory to NewFactory (revive exported)
+- **sse:** put context.Context as first parameter for revive
+- **types:** export SSEBuilder type for unexported-return (revive)
+- **types:** NewModelContext(ctx, dbctx) for revive context-as-argument
+
+### Style
+- **model:** omit redundant type in Routes declaration (revive var-declaration)
+
+### Test
+- **authz:** add menu, role, user_role register tests and fix permission/shadow
+- **module:** move testResp to internal/helper.TestResp
+
+
+<a name="v0.10.12"></a>
+## [v0.10.12] - 2026-02-12
+### Build
 - always use the latest golangci-lint, go tools
 
 ### Chore
 - **deps:** upgrade dependencies to latest version
+- **release:** generate CHANGELOG.md
 
 ### Enh
 - **dbmigrate:** replace boolean by tinyint
@@ -21,6 +84,9 @@
 
 ### Wip
 - **dbmigrate:** add dbmigrate, support dump table schema and apply schema
+
+### Pull Requests
+- Merge pull request [#80](https://github.com/forbearing/gst/issues/80) from forbearing/dbmigrate
 
 
 <a name="v0.10.11"></a>
@@ -2942,7 +3008,8 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.11...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.12...HEAD
+[v0.10.12]: https://github.com/forbearing/gst/compare/v0.10.11...v0.10.12
 [v0.10.11]: https://github.com/forbearing/gst/compare/v0.10.10...v0.10.11
 [v0.10.10]: https://github.com/forbearing/gst/compare/v0.10.9...v0.10.10
 [v0.10.9]: https://github.com/forbearing/gst/compare/v0.10.8...v0.10.9
