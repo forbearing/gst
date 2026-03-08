@@ -170,7 +170,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_CREATE)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_CREATE)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_CREATE)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -384,7 +384,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_DELETE)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_DELETE)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_DELETE)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var err error
@@ -632,7 +632,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_UPDATE)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_UPDATE)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_UPDATE)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -892,7 +892,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_PATCH)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_PATCH)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_PATCH)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var err error
@@ -1189,7 +1189,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_LIST)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_LIST)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_LIST)
 		ctx := types.NewServiceContext(c)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
@@ -1556,7 +1556,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_GET)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_GET)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_GET)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var err error
@@ -1934,7 +1934,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_CREATE_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_CREATE_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_CREATE_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2157,7 +2157,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_DELETE_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_DELETE_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_DELETE_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2357,7 +2357,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_UPDATE_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_UPDATE_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_UPDATE_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2552,7 +2552,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_PATCH_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_PATCH_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_PATCH_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2846,7 +2846,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			// fmt.Println("expands: ", expands)
 		}
 
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_EXPORT)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_EXPORT)
 		svcCtx := types.NewServiceContext(c)
 		// 1.Perform business logic processing before list resources.
 		if err = traceServiceHook[M](ctrlSpanCtx, consts.PHASE_EXPORT, func(spanCtx context.Context) error {
@@ -2979,7 +2979,7 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// check filetype
 
 		ml, err := traceServiceImport(ctrlSpanCtx, consts.PHASE_IMPORT, func(spanCtx context.Context) ([]M, error) {
-			return service.Factory[M, REQ, RSP]().Service(consts.PHASE_IMPORT).
+			return service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_IMPORT).
 				Import(types.NewServiceContext(c, spanCtx).WithPhase(consts.PHASE_IMPORT), buf)
 		})
 		if err != nil {
