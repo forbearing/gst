@@ -13,23 +13,23 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TracingWrapper wraps a Cache implementation with distributed tracing capabilities
-type TracingWrapper[T any] struct {
+// Wrapper wraps a Cache implementation with distributed tracing capabilities
+type Wrapper[T any] struct {
 	cache     types.Cache[T]
 	ctx       context.Context
 	cacheType string
 }
 
-// NewTracingWrapper creates a new tracing wrapper for the given cache
-func NewTracingWrapper[T any](cache types.Cache[T], cacheType string) *TracingWrapper[T] {
-	return &TracingWrapper[T]{
+// NewWrapper creates a new tracing wrapper for the given cache
+func NewWrapper[T any](cache types.Cache[T], cacheType string) *Wrapper[T] {
+	return &Wrapper[T]{
 		cache:     cache,
 		ctx:       context.Background(),
 		cacheType: cacheType,
 	}
 }
 
-func (tw *TracingWrapper[T]) WithContext(ctx context.Context) types.Cache[T] {
+func (tw *Wrapper[T]) WithContext(ctx context.Context) types.Cache[T] {
 	if ctx != nil {
 		tw.ctx = ctx
 	}
@@ -37,7 +37,7 @@ func (tw *TracingWrapper[T]) WithContext(ctx context.Context) types.Cache[T] {
 }
 
 // Set stores a key-value pair with tracing
-func (tw *TracingWrapper[T]) Set(key string, value T, ttl time.Duration) error {
+func (tw *Wrapper[T]) Set(key string, value T, ttl time.Duration) error {
 	spanCtx, span := tw.startSpan("Cache.Set")
 	defer span.End()
 
@@ -76,7 +76,7 @@ func (tw *TracingWrapper[T]) Set(key string, value T, ttl time.Duration) error {
 }
 
 // Get retrieves a value by key with tracing
-func (tw *TracingWrapper[T]) Get(key string) (T, error) {
+func (tw *Wrapper[T]) Get(key string) (T, error) {
 	spanCtx, span := tw.startSpan("Cache.Get")
 	defer span.End()
 
@@ -120,7 +120,7 @@ func (tw *TracingWrapper[T]) Get(key string) (T, error) {
 }
 
 // Peek retrieves a value by key without affecting its position with tracing
-func (tw *TracingWrapper[T]) Peek(key string) (T, error) {
+func (tw *Wrapper[T]) Peek(key string) (T, error) {
 	spanCtx, span := tw.startSpan("Cache.Peek")
 	defer span.End()
 
@@ -164,7 +164,7 @@ func (tw *TracingWrapper[T]) Peek(key string) (T, error) {
 }
 
 // Delete removes a key from the cache with tracing
-func (tw *TracingWrapper[T]) Delete(key string) error {
+func (tw *Wrapper[T]) Delete(key string) error {
 	spanCtx, span := tw.startSpan("Cache.Delete")
 	defer span.End()
 
@@ -202,7 +202,7 @@ func (tw *TracingWrapper[T]) Delete(key string) error {
 }
 
 // Exists checks if a key exists in the cache with tracing
-func (tw *TracingWrapper[T]) Exists(key string) bool {
+func (tw *Wrapper[T]) Exists(key string) bool {
 	spanCtx, span := tw.startSpan("Cache.Exists")
 	defer span.End()
 
@@ -231,7 +231,7 @@ func (tw *TracingWrapper[T]) Exists(key string) bool {
 }
 
 // Len returns the number of items in the cache with tracing
-func (tw *TracingWrapper[T]) Len() int {
+func (tw *Wrapper[T]) Len() int {
 	spanCtx, span := tw.startSpan("Cache.Len")
 	defer span.End()
 
@@ -259,7 +259,7 @@ func (tw *TracingWrapper[T]) Len() int {
 }
 
 // Clear removes all items from the cache with tracing
-func (tw *TracingWrapper[T]) Clear() {
+func (tw *Wrapper[T]) Clear() {
 	spanCtx, span := tw.startSpan("Cache.Clear")
 	defer span.End()
 
@@ -285,7 +285,7 @@ func (tw *TracingWrapper[T]) Clear() {
 }
 
 // startSpan creates a new span for the given operation
-func (tw *TracingWrapper[T]) startSpan(operationName string) (context.Context, trace.Span) {
+func (tw *Wrapper[T]) startSpan(operationName string) (context.Context, trace.Span) {
 	tracer := otel.GetTracer()
 	ctx, span := tracer.Start(tw.ctx, operationName)
 	return ctx, span

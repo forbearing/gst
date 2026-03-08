@@ -42,7 +42,7 @@ func Cache[T any]() types.Cache[T] {
 
 	val, exists = cacheMap.Get(key)
 	if !exists {
-		val = tracing.NewTracingWrapper(&cache[T]{c: freecache.NewCache(config.App.Cache.Capacity), ctx: context.Background()}, "freecache")
+		val = tracing.NewWrapper(&cache[T]{c: freecache.NewCache(config.App.Cache.Capacity), ctx: context.Background()}, "freecache")
 		cacheMap.Set(key, val)
 	}
 	//nolint:errcheck
