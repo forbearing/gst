@@ -6,7 +6,6 @@ import (
 	"demo/model/config/namespace"
 	"demo/model/config/namespace/app"
 	"demo/model/config/namespace/app/env"
-	"demo/model/iam"
 	"demo/model/setting"
 
 	"github.com/forbearing/gst/router"
@@ -59,10 +58,6 @@ func Init() error {
 	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces/:ns", &types.ControllerConfig[*config.Namespace]{ParamName: "ns"}, consts.Patch)
 	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces", &types.ControllerConfig[*config.Namespace]{}, consts.List)
 	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces/:ns", &types.ControllerConfig[*config.Namespace]{ParamName: "ns"}, consts.Get)
-	router.Register[*iam.Group, *iam.Group, *iam.Group](router.Auth(), "iam/group", &types.ControllerConfig[*iam.Group]{}, consts.List)
-	router.Register[*iam.Group, *iam.Group, *iam.Group](router.Auth(), "iam/group/:id", &types.ControllerConfig[*iam.Group]{ParamName: "id"}, consts.Get)
-	router.Register[*iam.User, *iam.User, *iam.User](router.Auth(), "iam/user", &types.ControllerConfig[*iam.User]{}, consts.List)
-	router.Register[*iam.User, *iam.User, *iam.User](router.Auth(), "iam/user/:id", &types.ControllerConfig[*iam.User]{ParamName: "id"}, consts.Get)
 	router.Register[*setting.Project, *setting.Project, *setting.Project](router.Auth(), "setting/project", &types.ControllerConfig[*setting.Project]{}, consts.List)
 	router.Register[*setting.Project, *setting.Project, *setting.Project](router.Auth(), "setting/project/:id", &types.ControllerConfig[*setting.Project]{ParamName: "id"}, consts.Get)
 	router.Register[*setting.Region, *setting.Region, *setting.Region](router.Auth(), "setting/region", &types.ControllerConfig[*setting.Region]{}, consts.List)

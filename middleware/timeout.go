@@ -64,7 +64,7 @@ func Timeout(timeout time.Duration) gin.HandlerFunc {
 					"method", c.Request.Method,
 					"timeout", timeout,
 				)
-				ResponseJSON(c, CodeContextTimeout)
+				JSON(c, CodeContextTimeout)
 				c.Abort()
 			}
 			// Cancel the context to signal handlers to stop

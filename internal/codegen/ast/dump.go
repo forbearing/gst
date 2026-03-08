@@ -1,4 +1,6 @@
-package ast
+// Package codegenast provides AST helpers for codegen; the name avoids
+// conflicting with the standard library "go/ast" package.
+package codegenast
 
 import (
 	"bytes"

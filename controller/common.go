@@ -57,6 +57,7 @@ func writeLocalSessionAndCookie(c *gin.Context, aToken, rToken string, user *mod
 	userID := user.ID
 	sessionID := user.SessionID
 	zap.S().Info("user.SessionId: ", user.SessionID)
+	// #nosec G117 -- session data stored server-side in redis only, not logged or exposed
 	sessionData, err := json.Marshal(user)
 	if err != nil {
 		zap.S().Error(err)
@@ -114,6 +115,7 @@ func writeFeishuSessionAndCookie(c *gin.Context, aToken, rToken string, userInfo
 	}
 	name := userInfo.Name
 	userID := userInfo.UserID
+	// #nosec G117 -- session data stored server-side in redis only, not logged or exposed
 	sessionData, err := json.Marshal(userInfo)
 	if err != nil {
 		zap.S().Error(err)

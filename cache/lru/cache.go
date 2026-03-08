@@ -48,7 +48,7 @@ func Cache[T any]() types.Cache[T] {
 	if !exists {
 		// lru.New() only error on negative size.
 		_lru, _ := lru.New[string, T](config.App.Cache.Capacity)
-		val = tracing.NewTracingWrapper(&cache[T]{c: _lru, ctx: context.Background()}, "lru")
+		val = tracing.NewWrapper(&cache[T]{c: _lru, ctx: context.Background()}, "lru")
 		cacheMap.Set(key, val)
 	}
 	//nolint:errcheck

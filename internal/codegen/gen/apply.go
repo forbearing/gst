@@ -456,14 +456,13 @@ func applyServiceTypeParam(indexListExpr *ast.IndexListExpr, paramIndex int, act
 			}
 			indexListExpr.Indices[paramIndex] = starExpr
 			return true
-		} else {
-			// Keep as non-pointer type, just update the name
-			if sel.Sel.Name != actionName {
-				newIdent := ast.NewIdent(actionName)
-				newIdent.NamePos = sel.Sel.NamePos
-				sel.Sel = newIdent
-				return true
-			}
+		}
+		// Keep as non-pointer type, just update the name
+		if sel.Sel.Name != actionName {
+			newIdent := ast.NewIdent(actionName)
+			newIdent.NamePos = sel.Sel.NamePos
+			sel.Sel = newIdent
+			return true
 		}
 	}
 

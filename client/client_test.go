@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"sync"
 	"syscall"
@@ -631,4 +633,22 @@ type User struct {
 
 func (u *User) GetTableName() string {
 	return "test_users"
+}
+
+func Test_Client_WithCookie(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "session=abc123", r.Header.Get("Cookie"))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":0,"msg":"","data":null,"request_id":"test"}`))
+	}))
+	defer srv.Close()
+
+	cli, err := client.New(srv.URL, client.WithCookie(&http.Cookie{
+		Name:  "session",
+		Value: "abc123",
+	}))
+	require.NoError(t, err)
+
+	_, err = cli.Create(nil)
+	require.NoError(t, err)
 }

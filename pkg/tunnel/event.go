@@ -10,8 +10,8 @@ import (
 type Cmd uint32
 
 var (
-	Ping Cmd = NewCmd("ping", 1)
-	Pong Cmd = NewCmd("pong", 2)
+	Ping = NewCmd("ping", 1)
+	Pong = NewCmd("pong", 2)
 )
 
 var cmdMap sync.Map

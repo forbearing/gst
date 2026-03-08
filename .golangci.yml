@@ -49,6 +49,11 @@ linters:
     - predeclared
     - wastedassign
 
+    - copyloopvar
+    - importas
+    - nolintlint
+    - revive
+
   # Linter-specific settings (moved under linters.settings for v2)
   settings:
     depguard:
@@ -64,6 +69,30 @@ linters:
         - io/ioutil.ReadFile
         - io.Copy(*bytes.Buffer)
         - io.Copy(os.Stdout)
+
+    revive:
+      rules:
+        - name: exported
+        - name: dot-imports
+          arguments:
+            - allowedPackages:
+                - "github.com/forbearing/gst/dsl"
+                - "github.com/forbearing/gst/response"
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: var-declaration
+        - name: var-naming
 
     godoclint:
       # Default set of rules to enable.
@@ -117,6 +146,15 @@ linters:
       # - linters:
       #     - nilerr
       #   text: "error is not nil but it returns nil"
+      # Revive var-naming: ignore ALL_CAPS (redundant with staticcheck) and underscores in names.
+      - linters:
+          - revive
+        text: "don't use (ALL_CAPS|underscores) in Go names"
+      # Allow package names "types" and "util" (meaningful in our context).
+      - linters:
+          - revive
+        text: "avoid meaningless package names"
+        path: "^(types|util)/|.*/(types|util)/"
 
 issues:
   # Increase max issues to avoid truncation

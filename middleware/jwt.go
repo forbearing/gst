@@ -16,12 +16,12 @@ func JwtAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accessToken, claims, err := jwt.ParseTokenFromHeader(c.Request.Header)
 		if err != nil {
-			ResponseJSON(c, NewCode(CodeUnauthorized, http.StatusUnauthorized, err.Error()))
+			JSON(c, NewCode(CodeUnauthorized, http.StatusUnauthorized, err.Error()))
 			c.Abort()
 			return
 		}
 		if err := jwt.Verify(claims, accessToken, c.Request.UserAgent()); err != nil {
-			ResponseJSON(c, NewCode(CodeUnauthorized, http.StatusUnauthorized, err.Error()))
+			JSON(c, NewCode(CodeUnauthorized, http.StatusUnauthorized, err.Error()))
 			c.Abort()
 			return
 		}

@@ -18,7 +18,7 @@ func TestMigrate(t *testing.T) {
 		migrated, err := dbmigrate.Migrate([]string{schema}, config.DBMySQL,
 			&dbmigrate.DatabaseConfig{
 				Host:     "127.0.0.1",
-				Port:     3307,
+				Port:     3306,
 				Username: "test",
 				Password: "test",
 				Database: "test",

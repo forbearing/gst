@@ -73,7 +73,7 @@ func isAirInstalled() bool {
 
 // installAir installs air using go install
 func installAir() error {
-	cmd := exec.Command("go", "install", "github.com/cosmtrek/air@latest")
+	cmd := exec.Command("go", "install", "github.com/air-verse/air@latest")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

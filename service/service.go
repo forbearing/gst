@@ -132,18 +132,16 @@ func Init() error {
 	return nil
 }
 
-func Factory[M types.Model, REQ types.Request, RSP types.Response]() *factory[M, REQ, RSP] {
-	return &factory[M, REQ, RSP]{}
+// NewFactory returns a factory that produces service instances for the given model/request/response types.
+func NewFactory[M types.Model, REQ types.Request, RSP types.Response]() *Factory[M, REQ, RSP] {
+	return &Factory[M, REQ, RSP]{}
 }
 
-// factory is a service factory used to product service instance.
-// The service instance should registered by function `Register()` in init()
-//
-// The service defined by user should be unexported (structure name is lowercase).
-// service instance are only returns by the `factory`.
-type factory[M types.Model, REQ types.Request, RSP types.Response] struct{}
+// Factory produces service instances; instances should be registered via Register() in init().
+// User-defined services are typically unexported; instances are obtained via NewFactory().Service(phase).
+type Factory[M types.Model, REQ types.Request, RSP types.Response] struct{}
 
-func (f factory[M, REQ, RSP]) Service(phase consts.Phase) types.Service[M, REQ, RSP] {
+func (f *Factory[M, REQ, RSP]) Service(phase consts.Phase) types.Service[M, REQ, RSP] {
 	svc, ok := serviceMap[serviceKey[M, REQ, RSP](phase)]
 	if !ok {
 		logger.Service.Debugz(ErrNotFoundService.Error(), zap.String("model", serviceKey[M, REQ, RSP](phase)))

@@ -41,7 +41,7 @@ func Cache[T any]() types.Cache[T] {
 
 	val, exists = cacheMap.Get(key)
 	if !exists {
-		val = tracing.NewTracingWrapper(&cache[T]{
+		val = tracing.NewWrapper(&cache[T]{
 			c:   pkgcache.New(config.App.Cache.Expiration, config.App.Cache.CleanWindow),
 			ctx: context.Background(),
 		}, "gocache")

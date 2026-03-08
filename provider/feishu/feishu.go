@@ -51,11 +51,11 @@ func New(cfg config.Feishu) (*lark.Client, error) {
 
 	httpClient := new(http.Client)
 	if cfg.EnableTLS {
-		if tlsConf, err := util.BuildTLSConfig(cfg.CertFile, cfg.KeyFile, cfg.CAFile, cfg.InsecureSkipVerify); err != nil {
-			return nil, errors.Wrap(err, "failed to build tls config")
-		} else {
-			httpClient = &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConf}}
+		tlsConf, e := util.BuildTLSConfig(cfg.CertFile, cfg.KeyFile, cfg.CAFile, cfg.InsecureSkipVerify)
+		if e != nil {
+			return nil, errors.Wrap(e, "failed to build tls config")
 		}
+		httpClient = &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConf}}
 	}
 	if cfg.RequestTimeout > 0 {
 		httpClient.Timeout = cfg.RequestTimeout

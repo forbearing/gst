@@ -260,11 +260,14 @@ func genRun() {
 
 	fset := token.NewFileSet()
 	applyFile := func(filename string, code string, action *dsl.Action, servicePkgName string, modelInfo *gen.ModelInfo) {
-		if fileExists(filename) {
+		safePath, err := pathUnderRoot(filename, serviceDir)
+		checkErr(err)
+
+		if fileExists(safePath) {
 			// Read original file content to preserve comments and formatting
-			src, err := os.ReadFile(filename)
+			src, err := os.ReadFile(safePath)
 			checkErr(err)
-			f, err := parser.ParseFile(fset, filename, src, parser.ParseComments)
+			f, err := parser.ParseFile(fset, safePath, src, parser.ParseComments)
 			checkErr(err)
 
 			// Calculate the correct model import path and package name
@@ -279,16 +282,18 @@ func genRun() {
 				// Use original FileSet to preserve comment positions
 				code, err = gen.FormatNodeExtraWithFileSet(f, fset)
 				checkErr(err)
-				logUpdate(filename)
-				checkErr(ensureParentDir(filename))
-				checkErr(os.WriteFile(filename, []byte(code), 0o600))
+				logUpdate(safePath)
+				checkErr(ensureParentDir(safePath))
+				// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
+				checkErr(os.WriteFile(safePath, []byte(code), 0o600))
 			} else {
-				logSkip(filename)
+				logSkip(safePath)
 			}
 		} else {
-			logCreate(filename)
-			checkErr(ensureParentDir(filename))
-			checkErr(os.WriteFile(filename, []byte(code), 0o600))
+			logCreate(safePath)
+			checkErr(ensureParentDir(safePath))
+			// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
+			checkErr(os.WriteFile(safePath, []byte(code), 0o600))
 		}
 	}
 
@@ -485,6 +490,28 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 	removeEmptyDirectories(serviceDir)
 }
 
+// pathUnderRoot returns path cleaned and verified to be under root (no path traversal).
+// It satisfies gosec G703 by ensuring the write path is constrained to the output directory.
+func pathUnderRoot(path, root string) (string, error) {
+	path = filepath.Clean(path)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	rel, err := filepath.Rel(absRoot, absPath)
+	if err != nil {
+		return "", err
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("path %s is not under root %s", path, root)
+	}
+	return path, nil
+}
+
 // removeEmptyDirectories recursively removes empty directories starting from the given root directory
 func removeEmptyDirectories(rootDir string) {
 	_ = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
@@ -512,6 +539,7 @@ func removeEmptyDirectories(rootDir string) {
 
 		// If directory is empty, remove it
 		if len(entries) == 0 {
+			// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
 			if err := os.Remove(path); err == nil {
 				fmt.Printf("  %s Removed empty directory %s\n", green("✔"), path)
 			}
@@ -537,6 +565,7 @@ func removeEmptyDirectories(rootDir string) {
 			}
 
 			if len(entries) == 0 {
+				// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
 				if err := os.Remove(path); err == nil {
 					fmt.Printf("  %s Removed empty directory %s\n", green("✔"), path)
 					emptyDirsFound = true

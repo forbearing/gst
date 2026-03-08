@@ -22,7 +22,7 @@ var (
 	// Routes map an API path to its allowed HTTP methods.
 	// The key is the API endpoint path (e.g., "/user/:id")
 	// and the value is a list of supported HTTP methods (e.g., GET, POST, DELETE).
-	Routes map[string][]string = make(map[string][]string)
+	Routes = make(map[string][]string)
 
 	// TableChan is a buffered channel for asynchronous table registration.
 	// It receives table models from Register() function for processing by InitDatabase.

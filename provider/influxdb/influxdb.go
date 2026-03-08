@@ -19,8 +19,8 @@ import (
 var (
 	initialized bool
 	client      influxdb2.Client
-	writeApi    api.WriteAPIBlocking //nolint:staticcheck
-	queryAPI    api.QueryAPI         //nolint:staticcheck
+	writeAPI    api.WriteAPIBlocking
+	queryAPI    api.QueryAPI
 	mu          sync.RWMutex
 )
 
@@ -62,7 +62,7 @@ func Init() (err error) {
 	}
 
 	// Get write and query APIs
-	writeApi = client.WriteAPIBlocking(cfg.Org, cfg.Bucket)
+	writeAPI = client.WriteAPIBlocking(cfg.Org, cfg.Bucket)
 	queryAPI = client.QueryAPI(cfg.Org)
 
 	zap.S().Infow("successfully connected to influxdb",
@@ -84,10 +84,10 @@ func New(cfg config.Influxdb) (influxdb2.Client, error) {
 		opts.SetBatchSize(cfg.BatchSize)
 	}
 	if cfg.FlushInterval > 0 {
-		opts.SetFlushInterval(uint(cfg.FlushInterval)) //nolint:gosec
+		opts.SetFlushInterval(uint(cfg.FlushInterval))
 	}
 	if cfg.RetryInterval > 0 {
-		opts.SetRetryInterval(uint(cfg.RetryInterval)) //nolint:gosec
+		opts.SetRetryInterval(uint(cfg.RetryInterval))
 	}
 	if cfg.MaxRetries > 0 {
 		opts.SetMaxRetries(cfg.MaxRetries)
@@ -153,7 +153,7 @@ func WritePoint(measurement string, tags map[string]string, fields map[string]an
 
 	// Write the point
 	ctx := context.Background()
-	return writeApi.WritePoint(ctx, p)
+	return writeAPI.WritePoint(ctx, p)
 }
 
 // Query executes a Flux query against InfluxDB
@@ -180,7 +180,7 @@ func Client() influxdb2.Client {
 func WriteAPI() api.WriteAPIBlocking {
 	mu.RLock()
 	defer mu.RUnlock()
-	return writeApi
+	return writeAPI
 }
 
 // QueryAPI returns the global InfluxDB query API

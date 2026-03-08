@@ -16,18 +16,20 @@ func RouteParams() gin.HandlerFunc {
 	}
 }
 
-type routeParamsManager struct {
+// RouteParamsManager holds parsed route path parameters for middleware.
+type RouteParamsManager struct {
 	paramsMap map[string][]string
 	mu        sync.RWMutex
 }
 
-func NewRouteParamsManager() *routeParamsManager {
-	return &routeParamsManager{
+// NewRouteParamsManager returns a new RouteParamsManager.
+func NewRouteParamsManager() *RouteParamsManager {
+	return &RouteParamsManager{
 		paramsMap: make(map[string][]string),
 	}
 }
 
-func (rpm *routeParamsManager) Add(path string) {
+func (rpm *RouteParamsManager) Add(path string) {
 	path = strings.TrimSpace(path)
 	if len(path) == 0 {
 		return
@@ -37,7 +39,7 @@ func (rpm *routeParamsManager) Add(path string) {
 	rpm.mu.Unlock()
 }
 
-func (rpm *routeParamsManager) Get(path string) []string {
+func (rpm *RouteParamsManager) Get(path string) []string {
 	rpm.mu.RLock()
 	defer rpm.mu.RUnlock()
 	val := rpm.paramsMap[path]
@@ -49,7 +51,7 @@ func (rpm *routeParamsManager) Get(path string) []string {
 	return val
 }
 
-func (rpm *routeParamsManager) parsePath(path string) []string {
+func (rpm *RouteParamsManager) parsePath(path string) []string {
 	parts := strings.Split(path, "/")
 	var params []string
 

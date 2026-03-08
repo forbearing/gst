@@ -2,15 +2,12 @@
 package model
 
 import (
-	"demo/model/iam"
 	"demo/model/setting"
 
 	"github.com/forbearing/gst/model"
 )
 
 func init() {
-	model.Register[*iam.Group]()
-	model.Register[*iam.User]()
 	model.Register[*setting.Project]()
 	model.Register[*setting.Region]()
 	model.Register[*setting.Tenant]()

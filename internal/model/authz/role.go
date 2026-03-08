@@ -26,9 +26,9 @@ type Role struct {
 	Scope datatypes.JSONMap `json:"scope,omitempty"`
 
 	// Menu permissions owned by this role
-	MenuIds        datatypes.JSONSlice[string] `json:"menu_ids,omitempty"`
-	MenuPartialIds datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"`
-	ButtonIds      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`
+	MenuIDs        datatypes.JSONSlice[string] `json:"menu_ids,omitempty"`
+	MenuPartialIDs datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"`
+	ButtonIDs      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`
 
 	Menus        []*Menu `json:"menus,omitempty" gorm:"-"`
 	MenuPartials []*Menu `json:"menu_partials,omitempty" gorm:"-"`
@@ -72,7 +72,7 @@ func (r *Role) DeleteBefore(ctx *types.ModelContext) error {
 	menus := make([]*Menu, 0)
 	permissions := make([]*Permission, 0)
 	if err := database.Database[*Menu](ctx.DatabaseContext()).
-		WithQuery(&Menu{Base: model.Base{ID: strings.Join(r.MenuIds, ",")}}).
+		WithQuery(&Menu{Base: model.Base{ID: strings.Join(r.MenuIDs, ",")}}).
 		List(&menus); err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (r *Role) UpdatePermission(ctx *types.ModelContext) error {
 
 	// query the new role's menus
 	if err := database.Database[*Menu](ctx.DatabaseContext()).
-		WithQuery(&Menu{Base: model.Base{ID: strings.Join(r.MenuIds, ",")}}).
+		WithQuery(&Menu{Base: model.Base{ID: strings.Join(r.MenuIDs, ",")}}).
 		List(&newMenus); err != nil {
 		zap.S().Error(err)
 		return err

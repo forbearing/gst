@@ -12,6 +12,7 @@ func intCmp(a, b int) int {
 }
 
 func stringCmp(a, b string) int {
+	//nolint:revive
 	if a < b {
 		return -1
 	} else if a > b {

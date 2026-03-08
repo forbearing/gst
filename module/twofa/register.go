@@ -1,6 +1,6 @@
 /*
 用户登录流程：
-1. POST /api/identity/login → 普通登录
+1. POST /api/login → 普通登录
 2. POST /api/2fa/totp/verify → 验证TOTP码（如果启用2FA）
 3. 登录成功
 
@@ -74,6 +74,7 @@ F. TOTP 状态服务
 package twofa
 
 import (
+	servicetwofa "github.com/forbearing/gst/internal/service/twofa"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
 )
@@ -103,6 +104,8 @@ import (
 //   - GET      /api/2fa/totp/devices
 //   - GET      /api/2fa/totp/devices/:id
 func Register() {
+	servicetwofa.Enabled = true
+
 	module.Use[
 		*TOTPBind,
 		*TOTPBind,

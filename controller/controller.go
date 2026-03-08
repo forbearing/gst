@@ -170,7 +170,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_CREATE)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_CREATE)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_CREATE)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -192,7 +192,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			if !strings.EqualFold(c.ContentType(), "multipart/form-data") {
 				if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 					log.Error(reqErr)
-					ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+					JSON(c, CodeInvalidParam.WithErr(reqErr))
 					otel.RecordError(span, err)
 					return
 				}
@@ -214,7 +214,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			logResponse(log, consts.PHASE_CREATE, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -223,7 +223,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		req := reflect.New(typ).Interface().(M) //nolint:errcheck
 		if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 			log.Error(reqErr)
-			ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+			JSON(c, CodeInvalidParam.WithErr(reqErr))
 			otel.RecordError(span, err)
 			return
 		}
@@ -255,7 +255,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if !errors.Is(reqErr, io.EOF) {
 			if err = handler(types.NewDatabaseContext(c)).WithExpand(req.Expands()).Create(req); err != nil {
 				log.Error(err)
-				ResponseJSON(c, CodeFailure.WithErr(err))
+				JSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -309,7 +309,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}
 
 		logResponse(log, consts.PHASE_CREATE, req)
-		ResponseJSON(c, CodeSuccess.WithStatus(http.StatusCreated), req)
+		JSON(c, CodeSuccess.WithStatus(http.StatusCreated), req)
 	}
 }
 
@@ -384,7 +384,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_DELETE)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_DELETE)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_DELETE)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var err error
@@ -404,7 +404,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 
 			if reqErr := c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+				JSON(c, CodeInvalidParam.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -422,7 +422,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			logResponse(log, consts.PHASE_DELETE, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -456,9 +456,9 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			addID(cctx.Params[util.Deref(cfg[0]).ParamName])
 		}
 		// Delete multiple records accoding to "http body data".
-		bodyIds := make([]string, 0)
-		if err := c.ShouldBindJSON(&bodyIds); err == nil && len(bodyIds) > 0 {
-			for _, id := range bodyIds {
+		bodyIDs := make([]string, 0)
+		if err := c.ShouldBindJSON(&bodyIDs); err == nil && len(bodyIDs) > 0 {
+			for _, id := range bodyIDs {
 				addID(id)
 			}
 		}
@@ -499,7 +499,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// 2.Delete resources in database.
 		if err := handler(types.NewDatabaseContext(c)).Delete(ml...); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -551,7 +551,7 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			}
 		}
 
-		ResponseJSON(c, CodeSuccess.WithStatus(http.StatusNoContent))
+		JSON(c, CodeSuccess.WithStatus(http.StatusNoContent))
 	}
 }
 
@@ -632,7 +632,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_UPDATE)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_UPDATE)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_UPDATE)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -651,7 +651,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+				JSON(c, CodeInvalidParam.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -672,7 +672,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			logResponse(log, consts.PHASE_UPDATE, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -681,7 +681,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		req := reflect.New(typ).Interface().(M) //nolint:errcheck
 		if reqErr := c.ShouldBindJSON(&req); reqErr != nil {
 			log.Error(reqErr)
-			ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+			JSON(c, CodeInvalidParam.WithErr(reqErr))
 			otel.RecordError(span, err)
 			return
 		}
@@ -707,7 +707,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			id = bodyID
 		} else {
 			log.Error("id missing")
-			ResponseJSON(c, CodeFailure.WithErr(errors.New("id missing")))
+			JSON(c, CodeFailure.WithErr(errors.New("id missing")))
 			otel.RecordError(span, err)
 			return
 		}
@@ -721,13 +721,13 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// Make sure the record must be already exists.
 		if err = handler(types.NewDatabaseContext(c)).WithLimit(1).WithQuery(m).List(&data); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
 		if len(data) != 1 {
 			log.Errorz(fmt.Sprintf("the total number of records query from database not equal to 1(%d)", len(data)), zap.String("id", id))
-			ResponseJSON(c, CodeNotFound)
+			JSON(c, CodeNotFound)
 			return
 		}
 
@@ -750,7 +750,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		log.Infoz("update in database", zap.Object(typ.Name(), req))
 		if err = handler(types.NewDatabaseContext(c)).Update(req); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -803,7 +803,7 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}
 
 		logResponse(log, consts.PHASE_UPDATE, req)
-		ResponseJSON(c, CodeSuccess, req)
+		JSON(c, CodeSuccess, req)
 	}
 }
 
@@ -892,7 +892,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_PATCH)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_PATCH)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_PATCH)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var err error
@@ -913,7 +913,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+				JSON(c, CodeInvalidParam.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -934,7 +934,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 			logResponse(log, consts.PHASE_PATCH, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -946,7 +946,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -956,7 +956,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		}
 		if len(id) == 0 {
 			log.Error(CodeNotFoundRouteParam)
-			ResponseJSON(c, CodeNotFoundRouteParam)
+			JSON(c, CodeNotFoundRouteParam)
 			otel.RecordError(span, errors.New(CodeNotFoundRouteParam.Msg()))
 			return
 		}
@@ -970,13 +970,13 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		// Make sure the record must be already exists.
 		if err := handler(types.NewDatabaseContext(c)).WithLimit(1).WithQuery(m).List(&data); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
 		if len(data) != 1 {
 			log.Errorz(fmt.Sprintf("the total number of records query from database not equal to 1(%d)", len(data)), zap.String("id", id))
-			ResponseJSON(c, CodeNotFound)
+			JSON(c, CodeNotFound)
 			return
 		}
 		// req.SetCreatedAt(data[0].GetCreatedAt())
@@ -1003,7 +1003,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		// 2.Partial update resource in database.
 		if err := handler(types.NewDatabaseContext(c)).Update(cur); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -1059,7 +1059,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		// NOTE: You should response `oldVal` instead of `req`.
 		// The req is `newVal`.
 		logResponse(log, consts.PHASE_PATCH, cur)
-		ResponseJSON(c, CodeSuccess, cur)
+		JSON(c, CodeSuccess, cur)
 	}
 }
 
@@ -1189,7 +1189,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_LIST)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_LIST)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_LIST)
 		ctx := types.NewServiceContext(c)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
@@ -1210,7 +1210,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 
 			if err = c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
 				log.Error(err)
-				ResponseJSON(c, CodeInvalidParam.WithErr(err))
+				JSON(c, CodeInvalidParam.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -1228,7 +1228,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			logResponse(log, consts.PHASE_LIST, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -1372,7 +1372,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			WithCache(!nocache).
 			List(&data); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -1407,7 +1407,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 				WithCache(!nocache).
 				Count(total); err != nil {
 				log.Error(err)
-				ResponseJSON(c, CodeFailure.WithErr(err))
+				JSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -1440,12 +1440,12 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 
 		log.Infoz(fmt.Sprintf("%s: length: %d, total: %d", typ.Name(), len(data), *total), zap.Object(typ.Name(), m))
 		if !nototal {
-			ResponseJSON(c, CodeSuccess, gin.H{
+			JSON(c, CodeSuccess, gin.H{
 				"items": data,
 				"total": *total,
 			})
 		} else {
-			ResponseJSON(c, CodeSuccess, gin.H{
+			JSON(c, CodeSuccess, gin.H{
 				"items": data,
 			})
 		}
@@ -1556,7 +1556,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 
 		cctx := types.NewControllerContext(c)
 		log := logger.Controller.WithControllerContext(cctx, consts.PHASE_GET)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_GET)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_GET)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var err error
@@ -1576,7 +1576,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 
 			if err = c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
 				log.Error(err)
-				ResponseJSON(c, CodeInvalidParam.WithErr(err))
+				JSON(c, CodeInvalidParam.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -1594,7 +1594,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			logResponse(log, consts.PHASE_GET, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -1605,7 +1605,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}
 		if len(param) == 0 {
 			log.Error(CodeNotFoundRouteParam)
-			ResponseJSON(c, CodeNotFoundRouteParam)
+			JSON(c, CodeNotFoundRouteParam)
 			otel.RecordError(span, errors.New(CodeNotFoundRouteParam.Msg()))
 			return
 		}
@@ -1698,7 +1698,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			WithCache(!nocache).
 			Get(m, param); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -1717,7 +1717,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		// we should response status code "CodeNotFound".
 		if len(m.GetID()) == 0 || (m.GetCreatedAt().Equal(time.Time{})) {
 			log.Error(CodeNotFound)
-			ResponseJSON(c, CodeNotFound)
+			JSON(c, CodeNotFound)
 			otel.RecordError(span, errors.New(CodeNotFound.Msg()))
 			return
 		}
@@ -1747,7 +1747,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			log.Warn(err)
 		}
 
-		ResponseJSON(c, CodeSuccess, m)
+		JSON(c, CodeSuccess, m)
 	}
 }
 
@@ -1833,8 +1833,8 @@ Response Data:
 */
 
 type requestData[M types.Model] struct {
-	// Ids is the id list that should be batch delete.
-	Ids []string `json:"ids,omitempty"`
+	// IDs is the id list that should be batch delete.
+	IDs []string `json:"ids,omitempty"`
 	// Items is the resource list that should be batch create/update/partial update.
 	Items []M `json:"items,omitempty"`
 	// Options is the batch operation options.
@@ -1934,7 +1934,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_CREATE_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_CREATE_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_CREATE_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -1953,7 +1953,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+				JSON(c, CodeInvalidParam.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -1974,7 +1974,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 			logResponse(log, consts.PHASE_CREATE_MANY, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -1984,7 +1984,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		val := reflect.New(typ).Interface().(M) //nolint:errcheck
 		if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 			log.Error(reqErr)
-			ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+			JSON(c, CodeInvalidParam.WithErr(reqErr))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2018,7 +2018,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		if !errors.Is(reqErr, io.EOF) {
 			if err = handler(types.NewDatabaseContext(c)).WithExpand(val.Expands()).Create(req.Items...); err != nil {
 				log.Error(err)
-				ResponseJSON(c, CodeFailure.WithErr(err))
+				JSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2078,7 +2078,7 @@ func CreateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 			}
 		}
 		logResponse(log, consts.PHASE_CREATE_MANY, req)
-		ResponseJSON(c, CodeSuccess.WithStatus(http.StatusCreated), req)
+		JSON(c, CodeSuccess.WithStatus(http.StatusCreated), req)
 	}
 }
 
@@ -2157,7 +2157,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_DELETE_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_DELETE_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_DELETE_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2176,7 +2176,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeInvalidParam.WithErr(reqErr))
+				JSON(c, CodeInvalidParam.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2197,7 +2197,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 			logResponse(log, consts.PHASE_DELETE_MANY, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -2205,7 +2205,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		var req requestData[M]
 		if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 			log.Error(reqErr)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2215,8 +2215,8 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 
 		// 1.Perform business logic processing before batch delete resources.
 		typ := reflect.TypeOf(*new(M)).Elem()
-		req.Items = make([]M, 0, len(req.Ids))
-		for _, id := range req.Ids {
+		req.Items = make([]M, 0, len(req.IDs))
+		for _, id := range req.IDs {
 			m := reflect.New(typ).Interface().(M) //nolint:errcheck
 			m.SetID(id)
 			req.Items = append(req.Items, m)
@@ -2241,7 +2241,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 			// if err = handler(types.NewDatabaseContext(c)).WithPurge(req.Options.Purge).Delete(req.Items...); err != nil {
 			if err = handler(types.NewDatabaseContext(c)).Delete(req.Items...); err != nil {
 				log.Error(err)
-				ResponseJSON(c, CodeFailure.WithErr(err))
+				JSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2294,11 +2294,11 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 				Failed:    0,
 			}
 		}
-		req.Ids = nil
+		req.IDs = nil
 		req.Items = nil
 		req.Options = nil
 		// not response req.
-		ResponseJSON(c, CodeSuccess.WithStatus(http.StatusNoContent))
+		JSON(c, CodeSuccess.WithStatus(http.StatusNoContent))
 	}
 }
 
@@ -2357,7 +2357,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_UPDATE_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_UPDATE_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_UPDATE_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2376,7 +2376,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeFailure.WithErr(reqErr))
+				JSON(c, CodeFailure.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2397,7 +2397,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 			logResponse(log, consts.PHASE_UPDATE_MANY, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -2405,7 +2405,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		var req requestData[M]
 		if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 			log.Error(reqErr)
-			ResponseJSON(c, CodeFailure.WithErr(reqErr))
+			JSON(c, CodeFailure.WithErr(reqErr))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2429,7 +2429,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		if !errors.Is(reqErr, io.EOF) {
 			if err = handler(types.NewDatabaseContext(c)).Update(req.Items...); err != nil {
 				log.Error(err)
-				ResponseJSON(c, CodeFailure.WithErr(err))
+				JSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2490,7 +2490,7 @@ func UpdateManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 			}
 		}
 		logResponse(log, consts.PHASE_UPDATE_MANY, req)
-		ResponseJSON(c, CodeSuccess, req)
+		JSON(c, CodeSuccess, req)
 	}
 }
 
@@ -2552,7 +2552,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 		defer span.End()
 
 		log := logger.Controller.WithControllerContext(types.NewControllerContext(c), consts.PHASE_PATCH_MANY)
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_PATCH_MANY)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_PATCH_MANY)
 
 		if !model.AreTypesEqual[M, REQ, RSP]() {
 			var req REQ
@@ -2571,7 +2571,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
-				ResponseJSON(c, CodeFailure.WithErr(reqErr))
+				JSON(c, CodeFailure.WithErr(reqErr))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2592,7 +2592,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 			logResponse(log, consts.PHASE_PATCH_MANY, rsp)
 			// Check if response is already written (e.g., SSE streaming)
 			if !c.Writer.Written() {
-				ResponseJSON(c, CodeSuccess, rsp)
+				JSON(c, CodeSuccess, rsp)
 			}
 			return
 		}
@@ -2602,7 +2602,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 		typ := reflect.TypeOf(*new(M)).Elem()
 		if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 			log.Error(reqErr)
-			ResponseJSON(c, CodeFailure.WithErr(reqErr))
+			JSON(c, CodeFailure.WithErr(reqErr))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2647,7 +2647,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 		if !errors.Is(reqErr, io.EOF) {
 			if err = handler(types.NewDatabaseContext(c)).Update(shouldUpdates...); err != nil {
 				log.Error(err)
-				ResponseJSON(c, CodeFailure.WithErr(err))
+				JSON(c, CodeFailure.WithErr(err))
 				otel.RecordError(span, err)
 				return
 			}
@@ -2708,7 +2708,7 @@ func PatchManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg 
 			}
 		}
 		logResponse(log, consts.PHASE_PATCH_MANY, req)
-		ResponseJSON(c, CodeSuccess, req)
+		JSON(c, CodeSuccess, req)
 	}
 }
 
@@ -2846,14 +2846,14 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			// fmt.Println("expands: ", expands)
 		}
 
-		svc := service.Factory[M, REQ, RSP]().Service(consts.PHASE_EXPORT)
+		svc := service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_EXPORT)
 		svcCtx := types.NewServiceContext(c)
 		// 1.Perform business logic processing before list resources.
 		if err = traceServiceHook[M](ctrlSpanCtx, consts.PHASE_EXPORT, func(spanCtx context.Context) error {
 			return svc.ListBefore(types.NewServiceContext(c, spanCtx).WithPhase(consts.PHASE_EXPORT), &data)
 		}); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2877,7 +2877,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			WithTimeRange(columnName, startTime, endTime).
 			List(&data); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2886,7 +2886,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			return svc.ListAfter(types.NewServiceContext(c, spanCtx).WithPhase(consts.PHASE_EXPORT), &data)
 		}); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2897,7 +2897,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		})
 		if err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2922,7 +2922,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// }); err != nil {
 		// 	log.Error("failed to write operation log to database: ", err.Error())
 		// }
-		ResponseDATA(c, exported, map[string]string{
+		Data(c, exported, map[string]string{
 			"Content-Disposition": "attachment; filename=exported.xlsx",
 		})
 	}
@@ -2945,21 +2945,21 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		file, err := c.FormFile("file")
 		if err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
 		// check file size.
 		if file.Size > int64(MAX_IMPORT_SIZE) {
 			log.Error(CodeTooLargeFile)
-			ResponseJSON(c, CodeTooLargeFile)
+			JSON(c, CodeTooLargeFile)
 			otel.RecordError(span, errors.New(CodeTooLargeFile.Msg()))
 			return
 		}
 		fd, err := file.Open()
 		if err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2968,7 +2968,7 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		buf := new(bytes.Buffer)
 		if _, err = io.Copy(buf, fd); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2979,12 +2979,12 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// check filetype
 
 		ml, err := traceServiceImport(ctrlSpanCtx, consts.PHASE_IMPORT, func(spanCtx context.Context) ([]M, error) {
-			return service.Factory[M, REQ, RSP]().Service(consts.PHASE_IMPORT).
+			return service.NewFactory[M, REQ, RSP]().Service(consts.PHASE_IMPORT).
 				Import(types.NewServiceContext(c, spanCtx).WithPhase(consts.PHASE_IMPORT), buf)
 		})
 		if err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -2996,7 +2996,7 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}
 		if err := handler(types.NewDatabaseContext(c)).Update(ml...); err != nil {
 			log.Error(err)
-			ResponseJSON(c, CodeFailure.WithErr(err))
+			JSON(c, CodeFailure.WithErr(err))
 			otel.RecordError(span, err)
 			return
 		}
@@ -3022,6 +3022,6 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		// }); err != nil {
 		// 	log.Error("failed to write operation log to database: ", err.Error())
 		// }
-		ResponseJSON(c, CodeSuccess)
+		JSON(c, CodeSuccess)
 	}
 }

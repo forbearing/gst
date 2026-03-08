@@ -40,7 +40,7 @@ func Cache[T any]() types.Cache[T] {
 
 	val, exists = cacheMap.Get(key)
 	if !exists {
-		val = tracing.NewTracingWrapper(&cache[T]{
+		val = tracing.NewWrapper(&cache[T]{
 			c:   expirable.NewLRU[string, T](config.App.Cache.Capacity, nil, config.App.Cache.Expiration),
 			ctx: context.Background(),
 		}, "lrue")
