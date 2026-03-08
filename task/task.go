@@ -56,6 +56,7 @@ func Register(fn func() error, interval time.Duration, name string) {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// #nosec G118 -- cancel is stored on task and called in task goroutine via defer t.cancel() when it exits
 	ctx, cancel := context.WithCancel(context.Background())
 	if inited {
 		register(&task{name: name, fn: fn, interval: interval, ctx: ctx, cancel: cancel})
@@ -178,6 +179,7 @@ func runtimestats() error {
 	for i := 0; i < int(rtm.NumGC) && i < 5; i++ {
 		idx := int(rtm.NumGC-uint32(i)) % 256
 		gcHistory[fmt.Sprintf("GC-%d-PauseNs", i+1)] = rtm.PauseNs[idx]
+		// #nosec G115 -- PauseEnd is runtime ns timestamp; conversion to ms for display is best-effort
 		gcHistory[fmt.Sprintf("GC-%d-End", i+1)] = time.UnixMilli(int64(rtm.PauseEnd[idx] / 1_000_000))
 	}
 	logger.Runtime.Infow("Recent GC History", "gcHistory", gcHistory)
