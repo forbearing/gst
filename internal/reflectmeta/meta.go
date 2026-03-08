@@ -43,7 +43,7 @@ func GetStructMeta(t reflect.Type) *StructMeta {
 	}
 	key := t.PkgPath() + "|" + t.String()
 	if meta, ok := metaCache.Load(key); ok {
-		return meta.(*StructMeta) // nolint:errcheck
+		return meta.(*StructMeta) //nolint:errcheck
 	}
 
 	fieldCount := t.NumField()

@@ -10,7 +10,7 @@ type TOTPConfirm struct {
 	model.Empty
 }
 type TOTPConfirmReq struct {
-	Secret     string `json:"secret" validate:"required"`     // The secret from bind step
+	Secret     string `json:"secret" validate:"required"`
 	Code       string `json:"code" validate:"required,len=6"` // 6-digit TOTP code to confirm
 	DeviceName string `json:"device_name" validate:"required,max=100"`
 }

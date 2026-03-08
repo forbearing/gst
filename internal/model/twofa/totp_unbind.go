@@ -10,8 +10,8 @@ type TOTPUnbind struct {
 	model.Empty
 }
 type TOTPUnbindReq struct {
-	DeviceID string `json:"device_id" validate:"required"`                // 要解绑的设备ID
-	Password string `json:"password,omitempty"`                           // 用户密码（可选，用于额外验证）
+	DeviceID string `json:"device_id" validate:"required"` // 要解绑的设备ID
+	Password string `json:"password,omitempty"`
 	TOTPCode string `json:"totp_code,omitempty" validate:"len=6,numeric"` // TOTP验证码（可选，用于额外验证）
 }
 

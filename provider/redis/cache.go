@@ -18,7 +18,7 @@ type cache[T any] struct {
 }
 
 func Cache[T any]() types.Cache[T] {
-	return tracing.NewTracingWrapper(&cache[T]{ctx: context.Background()}, "redis")
+	return tracing.NewWrapper(&cache[T]{ctx: context.Background()}, "redis")
 }
 
 func (c *cache[T]) Set(key string, data T, ttl time.Duration) error {

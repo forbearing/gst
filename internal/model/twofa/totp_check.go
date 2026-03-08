@@ -12,7 +12,7 @@ type TOTPCheck struct {
 
 type TOTPCheckReq struct {
 	Username string `json:"username" validate:"required"` // 用户名
-	Password string `json:"password" validate:"required"` // 密码（用于验证权限）
+	Password string `json:"password" validate:"required"`
 }
 
 type TOTPCheckRsp struct {

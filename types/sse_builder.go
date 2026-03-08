@@ -7,9 +7,9 @@ import (
 	"github.com/forbearing/gst/internal/sse"
 )
 
-// sseBuilder provides a fluent interface for building and sending SSE events.
+// SSEBuilder provides a fluent interface for building and sending SSE events.
 // It supports chaining methods to configure and send SSE events or streams.
-type sseBuilder struct {
+type SSEBuilder struct {
 	ctx      *ServiceContext
 	interval time.Duration
 }
@@ -33,11 +33,11 @@ type sseBuilder struct {
 //
 //	// Send [DONE] marker
 //	_ = ctx.SSE().Done()
-func (sc *ServiceContext) SSE() *sseBuilder {
+func (sc *ServiceContext) SSE() *SSEBuilder {
 	if sc == nil {
 		return nil
 	}
-	return &sseBuilder{ctx: sc}
+	return &SSEBuilder{ctx: sc}
 }
 
 // Stream starts a Server-Sent Events stream.
@@ -59,7 +59,7 @@ func (sc *ServiceContext) SSE() *sseBuilder {
 //	})
 //	// Send [DONE] marker if required by your protocol
 //	_ = ctx.SSE().Done()
-func (b *sseBuilder) Stream(fn func(io.Writer) bool) {
+func (b *SSEBuilder) Stream(fn func(io.Writer) bool) {
 	if b == nil || b.ctx == nil {
 		return
 	}
@@ -82,7 +82,7 @@ func (b *sseBuilder) Stream(fn func(io.Writer) bool) {
 //	    _ = ctx.Encode(w, types.Event{Data: "chunk"})
 //	    return true
 //	})
-func (b *sseBuilder) WithInterval(duration time.Duration) *sseBuilder {
+func (b *SSEBuilder) WithInterval(duration time.Duration) *SSEBuilder {
 	if b == nil {
 		return b
 	}
@@ -108,7 +108,7 @@ func (b *sseBuilder) WithInterval(duration time.Duration) *sseBuilder {
 //
 // Returns:
 //   - error: Any error that occurred during encoding
-func (b *sseBuilder) Done() error {
+func (b *SSEBuilder) Done() error {
 	if b == nil || b.ctx == nil {
 		return nil
 	}
@@ -116,25 +116,25 @@ func (b *sseBuilder) Done() error {
 }
 
 // streamSSE starts a Server-Sent Events stream.
-// This is an internal method used by sseBuilder.
+// This is an internal method used by SSEBuilder.
 func streamSSE(sc *ServiceContext, fn func(io.Writer) bool) {
 	if sc == nil || sc.ginCtx == nil {
 		return
 	}
-	sse.StreamSSE(sc.ginCtx.Writer, sc.Context(), sc.ginCtx.Stream, fn)
+	sse.StreamSSE(sc.Context(), sc.ginCtx.Writer, sc.ginCtx.Stream, fn)
 }
 
 // streamSSEWithInterval starts a Server-Sent Events stream with a fixed interval between events.
-// This is an internal method used by sseBuilder.
+// This is an internal method used by SSEBuilder.
 func streamSSEWithInterval(sc *ServiceContext, interval time.Duration, fn func(io.Writer) bool) {
 	if sc == nil || sc.ginCtx == nil {
 		return
 	}
-	sse.StreamSSEWithInterval(sc.ginCtx.Writer, sc.Context(), sc.ginCtx.Stream, interval, fn)
+	sse.StreamSSEWithInterval(sc.Context(), sc.ginCtx.Writer, sc.ginCtx.Stream, interval, fn)
 }
 
 // sendSSEDone sends a [DONE] marker to indicate the end of an SSE stream.
-// This is an internal method used by sseBuilder.
+// This is an internal method used by SSEBuilder.
 func sendSSEDone(sc *ServiceContext) error {
 	if sc == nil || sc.ginCtx == nil {
 		return nil

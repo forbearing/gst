@@ -37,9 +37,14 @@ func Authz() gin.HandlerFunc {
 		if len(sub) == 0 {
 			sub = consts.AUTHZ_USER_BLOCKED
 		}
+		// When RBAC is disabled, Enforcer is nil; skip enforcement and allow the request.
+		if rbac.Enforcer == nil {
+			c.Next()
+			return
+		}
 		if allow, err = rbac.Enforcer.Enforce(sub, obj, act); err != nil {
 			zap.S().Error(err)
-			ResponseJSON(c, CodeFailure)
+			JSON(c, CodeFailure)
 			c.Abort()
 			return
 		}
@@ -54,7 +59,7 @@ func Authz() gin.HandlerFunc {
 				zap.String("trace_id", c.GetString(consts.TRACE_ID)),
 			)
 		} else {
-			ResponseJSON(c, CodeForbidden)
+			JSON(c, CodeForbidden)
 			c.Abort()
 			logger.Authz.Infoz("",
 				zap.String("sub", sub),

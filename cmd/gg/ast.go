@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	pkgast "github.com/forbearing/gst/internal/codegen/ast"
+	codegenast "github.com/forbearing/gst/internal/codegen/ast"
 	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
@@ -20,7 +20,7 @@ var astdumpCmd = &cobra.Command{
 	Short: "dump ast info",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		f, dump, err := pkgast.Dump(args[0], nil)
+		f, dump, err := codegenast.Dump(args[0], nil)
 		checkErr(err)
 		if ispretty {
 			pretty.Println(f)

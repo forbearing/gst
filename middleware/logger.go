@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/forbearing/gst/logger"
-	"github.com/forbearing/gst/metrics"
+	prommetrics "github.com/forbearing/gst/metrics"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
 	"github.com/gin-gonic/gin"
@@ -24,8 +24,8 @@ func Logger(filename ...string) gin.HandlerFunc {
 		c.Set(consts.CTX_ROUTE, path)
 		c.Next()
 
-		metrics.HTTPRequestsTotal.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Inc()
-		metrics.HTTPRequestDuration.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Observe(time.Since(start).Seconds())
+		prommetrics.HTTPRequestsTotal.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Inc()
+		prommetrics.HTTPRequestDuration.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Observe(time.Since(start).Seconds())
 
 		// Add tracing information to logs
 		span := GetSpanFromContext(c)

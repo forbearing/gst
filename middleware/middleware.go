@@ -16,7 +16,7 @@ import (
 
 var (
 	cb           *gobreaker.CircuitBreaker
-	RouteManager *routeParamsManager
+	RouteManager *RouteParamsManager
 
 	CommonMiddlewaresChan = make(chan gin.HandlerFunc, 1024)
 	AuthMiddlewaresChan   = make(chan gin.HandlerFunc, 1024)

@@ -21,7 +21,7 @@ type cache[T any] struct {
 }
 
 func Cache[T any]() types.Cache[T] {
-	return tracing.NewTracingWrapper(new(cache[T]), "memcached")
+	return tracing.NewWrapper(new(cache[T]), "memcached")
 }
 
 func (c *cache[T]) Set(key string, value T, ttl time.Duration) error {

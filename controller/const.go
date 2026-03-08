@@ -7,10 +7,10 @@ const (
 )
 
 const (
-	TOKEN         = "token"         //nolint:staticcheck
+	TOKEN         = "token"
 	ACCESS_TOKEN  = "access_token"  //nolint:staticcheck
 	REFRESH_TOKEN = "refresh_token" //nolint:staticcheck
 	NAME          = "name"          //nolint:staticcheck
-	ID            = "id"            //nolint:staticcheck
-	SESSION_ID    = "session_id"    //nolint:staticcheck
+	ID            = "id"
+	SESSION_ID    = "session_id" //nolint:staticcheck
 )

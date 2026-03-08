@@ -6,6 +6,7 @@ import (
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/cronjob"
 	cronjoblogmgmt "github.com/forbearing/gst/internal/cronjob/logmgmt"
+	servicelogmgmt "github.com/forbearing/gst/internal/service/logmgmt"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/types/consts"
 )
@@ -27,6 +28,8 @@ import (
 //
 // Enable Audit to records all operation logs.
 func Register() {
+	servicelogmgmt.Enabled = true
+
 	// enable audit function to records the operation logs.
 	os.Setenv(config.AUDIT_ENABLE, "true")
 

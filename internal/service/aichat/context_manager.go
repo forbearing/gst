@@ -185,7 +185,7 @@ func (cm *ContextManager) trimMessages(messages []*schema.Message, maxTokens int
 	// Iterate backwards through messages
 	// i is guaranteed to be valid: starts at len(messages)-1 and decrements to 0
 	for i := len(messages) - 1; i >= 0; i-- {
-		msgTokens := cm.CountTokens(messages[i]) //nolint:gosec // i is always valid in this loop
+		msgTokens := cm.CountTokens(messages[i])
 		if currentTokens+msgTokens > maxTokens {
 			// Can't fit this message, stop
 			break

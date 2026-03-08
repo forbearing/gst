@@ -323,7 +323,7 @@ type ModelContext struct {
 	dbctx *DatabaseContext
 }
 
-func NewModelContext(dbctx *DatabaseContext, ctx context.Context) *ModelContext {
+func NewModelContext(ctx context.Context, dbctx *DatabaseContext) *ModelContext {
 	if ctx == nil {
 		ctx = context.Background()
 	}

@@ -48,7 +48,7 @@ func Cache[T any]() types.Cache[T] {
 	val, exists = cacheMap.Get(key)
 	if !exists {
 		_ristretto, _ := ristretto.NewCache(buildConf[T]())
-		val = tracing.NewTracingWrapper(&cache[T]{c: _ristretto, ctx: context.Background()}, "ristretto")
+		val = tracing.NewWrapper(&cache[T]{c: _ristretto, ctx: context.Background()}, "ristretto")
 		cacheMap.Set(key, val)
 	}
 	//nolint:errcheck

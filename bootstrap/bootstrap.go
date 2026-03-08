@@ -20,12 +20,12 @@ import (
 	"github.com/forbearing/gst/database/sqlite"
 	"github.com/forbearing/gst/database/sqlserver"
 	"github.com/forbearing/gst/debug/gops"
-	"github.com/forbearing/gst/debug/pprof"
+	debugpprof "github.com/forbearing/gst/debug/pprof"
 	"github.com/forbearing/gst/debug/statsviz"
 	"github.com/forbearing/gst/grpc"
 	"github.com/forbearing/gst/logger/logrus"
 	pkgzap "github.com/forbearing/gst/logger/zap"
-	"github.com/forbearing/gst/metrics"
+	prommetrics "github.com/forbearing/gst/metrics"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/provider/cassandra"
@@ -46,7 +46,7 @@ import (
 	"github.com/forbearing/gst/provider/rocketmq"
 	"github.com/forbearing/gst/router"
 	"github.com/forbearing/gst/service"
-	"github.com/forbearing/gst/task" // nolint:staticcheck
+	"github.com/forbearing/gst/task" //nolint:staticcheck
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 )
@@ -69,7 +69,7 @@ func Bootstrap() error {
 		config.Init,
 		pkgzap.Init,
 		logrus.Init,
-		metrics.Init,
+		prommetrics.Init,
 
 		// cache
 		cache.Init,
@@ -121,7 +121,7 @@ func Bootstrap() error {
 		grpc.Init,
 
 		// job
-		task.Init, // nolint:staticcheck
+		task.Init, //nolint:staticcheck
 		cronjob.Init,
 
 		// module system must be the last to be initialized.
@@ -158,14 +158,14 @@ func Run() error {
 		router.Run,
 		grpc.Run,
 		statsviz.Run,
-		pprof.Run,
+		debugpprof.Run,
 		gops.Run,
 	)
 
 	RegisterCleanup(router.Stop)
 	RegisterCleanup(grpc.Stop)
 	RegisterCleanup(statsviz.Stop)
-	RegisterCleanup(pprof.Stop)
+	RegisterCleanup(debugpprof.Stop)
 	RegisterCleanup(gops.Stop)
 
 	sigCh := make(chan os.Signal, 1)

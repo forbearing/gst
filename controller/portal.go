@@ -29,7 +29,7 @@ func (p *portal) Tick(c *gin.Context) {
 	header := c.Request.Header.Get("Authorization")
 	if len(header) == 0 {
 		// ResponseJSON(c, CodeNeedLogin)
-		ResponseJSON(c, CodeSuccess, gin.H{
+		JSON(c, CodeSuccess, gin.H{
 			"redirect": redirectURL,
 		})
 		return
@@ -39,14 +39,14 @@ func (p *portal) Tick(c *gin.Context) {
 	items := strings.SplitN(header, " ", 2)
 	if len(items) != 2 {
 		// ResponseJSON(c, CodeInvalidToken)
-		ResponseJSON(c, CodeSuccess, gin.H{
+		JSON(c, CodeSuccess, gin.H{
 			"redirect": redirectURL,
 		})
 		return
 	}
 	if items[0] != "Bearer" {
 		// ResponseJSON(c, CodeInvalidToken)
-		ResponseJSON(c, CodeSuccess, gin.H{
+		JSON(c, CodeSuccess, gin.H{
 			"redirect": redirectURL,
 		})
 		return
@@ -55,12 +55,12 @@ func (p *portal) Tick(c *gin.Context) {
 	// items[1] 是获取到的 tokenString, 我们使用之前定义好的解析 jwt 的函数来解析它
 	if _, err := jwt.ParseToken(items[1]); err != nil {
 		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
-		ResponseJSON(c, CodeSuccess, gin.H{
+		JSON(c, CodeSuccess, gin.H{
 			"redirect": redirectURL,
 		})
 		return
 	}
-	ResponseJSON(c, CodeSuccess, gin.H{
+	JSON(c, CodeSuccess, gin.H{
 		"redirect": config.App.Domain,
 	})
 }

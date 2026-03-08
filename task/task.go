@@ -56,6 +56,7 @@ func Register(fn func() error, interval time.Duration, name string) {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// #nosec G118 -- cancel is stored on task and called in task goroutine via defer t.cancel() when it exits
 	ctx, cancel := context.WithCancel(context.Background())
 	if inited {
 		register(&task{name: name, fn: fn, interval: interval, ctx: ctx, cancel: cancel})
@@ -78,6 +79,7 @@ func register(t *task) {
 		return
 	}
 	go func() {
+		defer t.cancel()
 		defer func() {
 			if err := recover(); err != nil {
 				logger.Task.Errorw(fmt.Sprintf("task panic: %s", err), "name", t.name, "interval", t.interval.String())
@@ -175,9 +177,10 @@ func runtimestats() error {
 	// GC暂停历史记录（最近几次）
 	gcHistory := make(map[string]any)
 	for i := 0; i < int(rtm.NumGC) && i < 5; i++ {
-		idx := int(rtm.NumGC-uint32(i)) % 256 //nolint:gosec
+		idx := int(rtm.NumGC-uint32(i)) % 256
 		gcHistory[fmt.Sprintf("GC-%d-PauseNs", i+1)] = rtm.PauseNs[idx]
-		gcHistory[fmt.Sprintf("GC-%d-End", i+1)] = time.UnixMilli(int64(rtm.PauseEnd[idx] / 1_000_000)) //nolint:gosec
+		// #nosec G115 -- PauseEnd is runtime ns timestamp; conversion to ms for display is best-effort
+		gcHistory[fmt.Sprintf("GC-%d-End", i+1)] = time.UnixMilli(int64(rtm.PauseEnd[idx] / 1_000_000))
 	}
 	logger.Runtime.Infow("Recent GC History", "gcHistory", gcHistory)
 

@@ -82,8 +82,14 @@ test:
 	go test ./dsl
 	go test ./client
 	go test ./database/...
+	go test ./ds/...
 	go test ./internal/codegen/gen/
 	go test ./module/helloworld
+	go test ./module/iam
+	go test ./module/twofa
+	go test ./module/logmgmt
+	go test ./module/version
+	go test ./pkg/dbmigrate
 
 # Run unit tests with verbose output
 testv:
@@ -94,8 +100,14 @@ testv:
 	go test -v ./dsl
 	go test -v ./client
 	go test -v ./database/...
+	go test -v ./ds/...
 	go test -v ./internal/codegen/gen/
 	go test -v ./module/helloworld
+	go test -v ./module/iam
+	go test -v ./module/twofa
+	go test -v ./module/logmgmt
+	go test -v ./module/version
+	go test -v ./pkg/dbmigrate
 
 # Auto-fix code issues
 fix:

@@ -23,13 +23,13 @@ func fileExists(filename string) bool {
 func ensureParentDir(filename string) error {
 	dir := filepath.Dir(filename)
 
-	if _, err := os.Stat(dir); err == nil {
+	var err error
+	if _, err = os.Stat(dir); err == nil {
 		return nil
 	} else if os.IsNotExist(err) {
 		return os.MkdirAll(dir, 0o755)
-	} else {
-		return err
 	}
+	return err
 }
 
 var (

@@ -265,11 +265,11 @@ func CombineError(fns ...func() error) error {
 
 // FileExists check file exists.
 func FileExists(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
 		return false
-	} else {
-		return err == nil
 	}
+	return err == nil
 }
 
 // Round returns a rounded version of x with a specified precision.

@@ -23,19 +23,19 @@ func (*upload) Put(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	// check file size.
 	if file.Size > MAX_UPLOAD_SIZE {
 		log.Error(CodeTooLargeFile)
-		ResponseJSON(c, CodeTooLargeFile)
+		JSON(c, CodeTooLargeFile)
 		return
 	}
 	fd, err := file.Open()
 	if err != nil {
 		log.Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	defer fd.Close()
@@ -47,10 +47,10 @@ func (*upload) Put(c *gin.Context) {
 	if putErr != nil {
 		err = putErr
 		zap.S().Error(err)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
-	ResponseJSON(c, CodeSuccess, gin.H{
+	JSON(c, CodeSuccess, gin.H{
 		"filename": info.Key,
 	})
 }
@@ -60,7 +60,7 @@ func (*upload) Preview(c *gin.Context) {
 	data, info, getErr := minio.Get(c.Request.Context(), c.Param(consts.PARAM_FILE))
 	if getErr != nil {
 		log.Error(getErr)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	defer data.Close()
@@ -68,12 +68,12 @@ func (*upload) Preview(c *gin.Context) {
 	content, readErr := io.ReadAll(data)
 	if readErr != nil {
 		log.Error(readErr)
-		ResponseJSON(c, CodeFailure)
+		JSON(c, CodeFailure)
 		return
 	}
 	headers := map[string]string{}
 	if info != nil && info.ContentType != "" {
 		headers["Content-Type"] = info.ContentType
 	}
-	ResponseDATA(c, content, headers)
+	Data(c, content, headers)
 }

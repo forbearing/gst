@@ -1,5 +1,4 @@
 // Package arraylist provides a generic implementation of a resizable array-backed list.
-
 package arraylist
 
 import (

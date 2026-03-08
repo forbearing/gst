@@ -138,7 +138,7 @@ func IPFilter(config *IPFilterConfig) gin.HandlerFunc {
 		ip := net.ParseIP(clientIP)
 		if ip == nil {
 			zap.S().Warnw("failed to parse client IP", "ip", clientIP)
-			ResponseJSON(c, CodeForbidden.WithMsg("invalid client IP"))
+			JSON(c, CodeForbidden.WithMsg("invalid client IP"))
 			c.Abort()
 			return
 		}
@@ -148,14 +148,14 @@ func IPFilter(config *IPFilterConfig) gin.HandlerFunc {
 			return ip.Equal(blockedIP)
 		}) {
 			zap.S().Warnw("request blocked by blacklist", "ip", clientIP)
-			ResponseJSON(c, CodeForbidden.WithMsg("access denied"))
+			JSON(c, CodeForbidden.WithMsg("access denied"))
 			c.Abort()
 			return
 		}
 		for _, blockedNet := range blacklistNets {
 			if blockedNet.Contains(ip) {
 				zap.S().Warnw("request blocked by blacklist", "ip", clientIP, "cidr", blockedNet.String())
-				ResponseJSON(c, CodeForbidden.WithMsg("access denied"))
+				JSON(c, CodeForbidden.WithMsg("access denied"))
 				c.Abort()
 				return
 			}
@@ -177,7 +177,7 @@ func IPFilter(config *IPFilterConfig) gin.HandlerFunc {
 
 			if !allowed {
 				zap.S().Warnw("request blocked by whitelist", "ip", clientIP)
-				ResponseJSON(c, CodeForbidden.WithMsg("access denied"))
+				JSON(c, CodeForbidden.WithMsg("access denied"))
 				c.Abort()
 				return
 			}
