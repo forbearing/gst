@@ -25,7 +25,7 @@ import (
 	"github.com/forbearing/gst/grpc"
 	"github.com/forbearing/gst/logger/logrus"
 	pkgzap "github.com/forbearing/gst/logger/zap"
-	"github.com/forbearing/gst/metrics"
+	prommetrics "github.com/forbearing/gst/metrics"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/provider/cassandra"
@@ -69,7 +69,7 @@ func Bootstrap() error {
 		config.Init,
 		pkgzap.Init,
 		logrus.Init,
-		metrics.Init,
+		prommetrics.Init,
 
 		// cache
 		cache.Init,

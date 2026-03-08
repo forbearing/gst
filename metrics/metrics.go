@@ -1,4 +1,6 @@
-package metrics
+// Package prommetrics provides Prometheus metrics for the application; the name
+// avoids conflicting with standard library or common "metrics" package names.
+package prommetrics
 
 import (
 	"github.com/cockroachdb/errors"
