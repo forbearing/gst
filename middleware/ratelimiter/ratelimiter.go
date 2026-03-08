@@ -25,8 +25,8 @@ func init() {
 
 var ratelimiterMap = ristretto.Cache[*rate.Limiter]()
 
-// RateLimiterConfig holds the configuration for the RateLimiter middleware.
-type RateLimiterConfig struct {
+// Config holds the configuration for the RateLimiter middleware.
+type Config struct {
 	// Rate is the number of requests allowed per second.
 	// Defaults to 10 req/s if not set or non-positive.
 	Rate rate.Limit
@@ -71,8 +71,8 @@ type RateLimiterConfig struct {
 //	    ratelimiter.WithKeyFunc(func(c *gin.Context) string { return c.ClientIP() }),
 //	    ratelimiter.WithSkipFunc(func(c *gin.Context) bool { return c.FullPath() == "/health" }),
 //	))
-func RateLimiter(opts ...RateLimiterOption) gin.HandlerFunc {
-	conf := new(RateLimiterConfig)
+func RateLimiter(opts ...Option) gin.HandlerFunc {
+	conf := new(Config)
 	for _, op := range opts {
 		if op == nil {
 			continue
