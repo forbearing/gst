@@ -37,6 +37,11 @@ func Authz() gin.HandlerFunc {
 		if len(sub) == 0 {
 			sub = consts.AUTHZ_USER_BLOCKED
 		}
+		// When RBAC is disabled, Enforcer is nil; skip enforcement and allow the request.
+		if rbac.Enforcer == nil {
+			c.Next()
+			return
+		}
 		if allow, err = rbac.Enforcer.Enforce(sub, obj, act); err != nil {
 			zap.S().Error(err)
 			JSON(c, CodeFailure)
