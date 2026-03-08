@@ -51,14 +51,14 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*modelauth
 
 	// query all "Role" according to the "UserRole"
 	if len(userRoles) > 0 {
-		roleIds := make([]string, 0)
+		roleIDs := make([]string, 0)
 		for _, ur := range userRoles {
 			if len(ur.RoleID) > 0 {
-				roleIds = append(roleIds, ur.RoleID)
+				roleIDs = append(roleIDs, ur.RoleID)
 			}
 		}
 		if err := database.Database[*modelauthz.Role](ctx.DatabaseContext()).
-			WithQuery(&modelauthz.Role{Base: model.Base{ID: strings.Join(roleIds, ",")}}).List(&roles); err != nil {
+			WithQuery(&modelauthz.Role{Base: model.Base{ID: strings.Join(roleIDs, ",")}}).List(&roles); err != nil {
 			log.Error(err)
 			return err
 		}

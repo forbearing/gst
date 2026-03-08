@@ -28,7 +28,7 @@ type Role struct {
 	// Menu permissions owned by this role
 	MenuIDs        datatypes.JSONSlice[string] `json:"menu_ids,omitempty"`
 	MenuPartialIDs datatypes.JSONSlice[string] `json:"menu_partial_ids,omitempty"`
-	ButtonIds      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`
+	ButtonIDs      datatypes.JSONSlice[string] `json:"button_ids,omitempty"`
 
 	Menus        []*Menu `json:"menus,omitempty" gorm:"-"`
 	MenuPartials []*Menu `json:"menu_partials,omitempty" gorm:"-"`

@@ -114,21 +114,21 @@ func (m *Menu) DeleteBefore(ctx *types.ModelContext) error {
 		// If the role contains the current menu, then update role's permissions
 		if slices.Contains(r.MenuIDs, m.ID) {
 			// update the role's MenuIDs to remove the current menu
-			menuIds := make([]string, 0)
+			menuIDs := make([]string, 0)
 			for _, mid := range r.MenuIDs {
 				if mid != m.ID {
-					menuIds = append(menuIds, mid)
+					menuIDs = append(menuIDs, mid)
 				}
 			}
-			r.MenuIDs = menuIds
-			// update the role's MenuPartialIds to remove the current menu
-			menuPartialIds := make([]string, 0)
+			r.MenuIDs = menuIDs
+			// update the role's MenuPartialIDs to remove the current menu
+			menuPartialIDs := make([]string, 0)
 			for _, mid := range r.MenuPartialIDs {
 				if mid != m.ID {
-					menuPartialIds = append(menuPartialIds, mid)
+					menuPartialIDs = append(menuPartialIDs, mid)
 				}
 			}
-			r.MenuPartialIDs = menuPartialIds
+			r.MenuPartialIDs = menuPartialIDs
 
 			if err := database.Database[*Role](ctx.DatabaseContext()).Update(r); err != nil {
 				return err
