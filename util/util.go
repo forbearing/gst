@@ -265,11 +265,11 @@ func CombineError(fns ...func() error) error {
 
 // FileExists check file exists.
 func FileExists(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) { //nolint:gosec // G703: filename comes from trusted internal config, not user input
+	_, err := os.Stat(filename) //nolint:gosec // G703: filename comes from trusted internal config, not user input
+	if os.IsNotExist(err) {
 		return false
-	} else {
-		return err == nil
 	}
+	return err == nil
 }
 
 // Round returns a rounded version of x with a specified precision.

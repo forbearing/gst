@@ -117,14 +117,13 @@ func maskUsername(realName string) string {
 	if n := len(runeRealName); n >= 2 {
 		if n == 2 {
 			return string(append(runeRealName[0:1], rune('*')))
-		} else {
-			count := n - 2
-			newRealName := runeRealName[0:1]
-			for temp := 1; temp <= count; temp++ {
-				newRealName = append(newRealName, rune('*'))
-			}
-			return string(append(newRealName, runeRealName[n-1]))
 		}
+		count := n - 2
+		newRealName := runeRealName[0:1]
+		for temp := 1; temp <= count; temp++ {
+			newRealName = append(newRealName, rune('*'))
+		}
+		return string(append(newRealName, runeRealName[n-1]))
 	}
 	return realName
 }

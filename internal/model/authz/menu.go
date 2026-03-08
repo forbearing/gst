@@ -93,12 +93,11 @@ func (m *Menu) UpdateAfter(ctx *types.ModelContext) error {
 	}
 	for _, r := range roles {
 		// If the role contains the current menu, then update role's permissions
-		if slices.Contains(r.MenuIds, m.ID) {
+		if slices.Contains(r.MenuIDs, m.ID) {
 			if err := r.UpdatePermission(ctx); err != nil {
 				return err
-			} else {
-				zap.L().Info("successfully update role's permissions", zap.Object("role", r))
 			}
+			zap.L().Info("successfully update role's permissions", zap.Object("role", r))
 		}
 	}
 
@@ -113,23 +112,23 @@ func (m *Menu) DeleteBefore(ctx *types.ModelContext) error {
 	}
 	for _, r := range roles {
 		// If the role contains the current menu, then update role's permissions
-		if slices.Contains(r.MenuIds, m.ID) {
+		if slices.Contains(r.MenuIDs, m.ID) {
 			// update the role's MenuIDs to remove the current menu
 			menuIds := make([]string, 0)
-			for _, mid := range r.MenuIds {
+			for _, mid := range r.MenuIDs {
 				if mid != m.ID {
 					menuIds = append(menuIds, mid)
 				}
 			}
-			r.MenuIds = menuIds
+			r.MenuIDs = menuIds
 			// update the role's MenuPartialIds to remove the current menu
 			menuPartialIds := make([]string, 0)
-			for _, mid := range r.MenuPartialIds {
+			for _, mid := range r.MenuPartialIDs {
 				if mid != m.ID {
 					menuPartialIds = append(menuPartialIds, mid)
 				}
 			}
-			r.MenuPartialIds = menuPartialIds
+			r.MenuPartialIDs = menuPartialIds
 
 			if err := database.Database[*Role](ctx.DatabaseContext()).Update(r); err != nil {
 				return err

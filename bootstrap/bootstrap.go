@@ -20,7 +20,7 @@ import (
 	"github.com/forbearing/gst/database/sqlite"
 	"github.com/forbearing/gst/database/sqlserver"
 	"github.com/forbearing/gst/debug/gops"
-	"github.com/forbearing/gst/debug/pprof"
+	debugpprof "github.com/forbearing/gst/debug/pprof"
 	"github.com/forbearing/gst/debug/statsviz"
 	"github.com/forbearing/gst/grpc"
 	"github.com/forbearing/gst/logger/logrus"
@@ -158,14 +158,14 @@ func Run() error {
 		router.Run,
 		grpc.Run,
 		statsviz.Run,
-		pprof.Run,
+		debugpprof.Run,
 		gops.Run,
 	)
 
 	RegisterCleanup(router.Stop)
 	RegisterCleanup(grpc.Stop)
 	RegisterCleanup(statsviz.Stop)
-	RegisterCleanup(pprof.Stop)
+	RegisterCleanup(debugpprof.Stop)
 	RegisterCleanup(gops.Stop)
 
 	sigCh := make(chan os.Signal, 1)

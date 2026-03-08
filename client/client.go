@@ -73,8 +73,8 @@ type Resp struct {
 	RequestID string          `json:"request_id,omitempty"`
 }
 type batchReq struct {
-	// Ids is the id list that should be batch delete.
-	Ids any `json:"ids,omitempty"`
+	// IDs is the id list that should be batch delete.
+	IDs any `json:"ids,omitempty"`
 	// Items is the resource list that should be batch create/update/partial update.
 	Items any `json:"items,omitempty"`
 }
@@ -284,7 +284,7 @@ func (c *Client) DeleteMany(payload any) (*Resp, error) {
 	if !isStringSlice(payload) {
 		return nil, ErrNotStringSlice
 	}
-	return c.request(delete_many, batchReq{Ids: payload})
+	return c.request(delete_many, batchReq{IDs: payload})
 }
 
 // UpdateMany send a PUT request to batch update multiple resources.

@@ -60,14 +60,12 @@ func Init() (err error) {
 		cli = cluster
 		zap.S().Infow("successfully connect to redis", "addrs", cfg.Addrs, "cluster_mode", cfg.ClusterMode)
 		return nil
-	} else {
-		if client, err = New(cfg); err != nil {
-			return errors.Wrap(err, "failed to connect to redis")
-		}
-		cli = client
-		zap.S().Infow("successfully connect to redis", "addr", cfg.Addr, "db", cfg.DB, "cluster_mode", cfg.ClusterMode)
-
 	}
+	if client, err = New(cfg); err != nil {
+		return errors.Wrap(err, "failed to connect to redis")
+	}
+	cli = client
+	zap.S().Infow("successfully connect to redis", "addr", cfg.Addr, "db", cfg.DB, "cluster_mode", cfg.ClusterMode)
 
 	if err = cli.Set(context.TODO(), cfg.Namespace+"_"+"now", time.Now().Format(consts.DATE_TIME_LAYOUT), cfg.Expiration).Err(); err != nil {
 		zap.S().Error(err)

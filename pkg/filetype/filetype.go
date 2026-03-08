@@ -71,9 +71,8 @@ func Detect(filename string) (Filetype, Mime) {
 		ft := strings.TrimPrefix(mtype.Extension(), ".")
 		if ft == "application/octec-stream" {
 			return FiletypeZIP, MimeZIP
-		} else {
-			return GetFiletypeAndMime(ft)
 		}
+		return GetFiletypeAndMime(ft)
 
 	// If the filetype is Unknown, the filetype may be text/plain files,
 	// you should check filetype again by package "mimetype".
@@ -126,9 +125,8 @@ func DetectBytes(data []byte) (Filetype, Mime) {
 		ft := strings.TrimPrefix(mtype.Extension(), ".")
 		if ft == "application/octec-stream" {
 			return FiletypeZIP, MimeZIP
-		} else {
-			return GetFiletypeAndMime(ft)
 		}
+		return GetFiletypeAndMime(ft)
 
 	// If the filetype is Unknown, the filetype may be text/plain files,
 	// you should check filetype again by package "mimetype".

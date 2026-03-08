@@ -121,10 +121,10 @@ func Init() error {
 				})
 
 				// 重置批次计数器
-				totalRecords := 0            // 总消息数
-				var successRecords int64 = 0 // 成功处理的消息数
-				var failedRecords int64 = 0  // 处理失败的消息数
-				skippedRecords := 0          // 跳过的无效的消息数
+				totalRecords := 0        // 总消息数
+				var successRecords int64 // 成功处理的消息数
+				var failedRecords int64  // 处理失败的消息数
+				skippedRecords := 0      // 跳过的无效的消息数
 
 				// 用于跟踪本批次处理的消息的偏移量
 				offsets := make(map[string]map[int32]kgo.EpochOffset)

@@ -102,9 +102,8 @@ func releaseRun(cmd *cobra.Command, args []string) error {
 	// Build release
 	if releasePublish {
 		return buildRelease(false)
-	} else {
-		return buildRelease(true)
 	}
+	return buildRelease(true)
 }
 
 // isGoreleaserInstalled checks if goreleaser is installed

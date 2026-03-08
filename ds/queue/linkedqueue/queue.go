@@ -179,9 +179,9 @@ func (q *Queue[E]) Clone() *Queue[E] {
 	return clone
 }
 
-func (s *Queue[E]) options() []Option[E] {
+func (q *Queue[E]) options() []Option[E] {
 	ops := make([]Option[E], 0)
-	if s.safe {
+	if q.safe {
 		ops = append(ops, WithSafe[E]())
 	}
 	return ops

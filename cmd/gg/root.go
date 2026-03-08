@@ -3,10 +3,10 @@ package main
 import "github.com/spf13/cobra"
 
 var (
-	modelDir   string = "model"
-	serviceDir string = "service"
-	routerDir  string = "router"
-	daoDir     string = "dao"
+	modelDir   = "model"
+	serviceDir = "service"
+	routerDir  = "router"
+	daoDir     = "dao"
 	excludes   []string
 	module     string
 	debug      bool

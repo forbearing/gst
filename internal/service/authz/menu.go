@@ -85,11 +85,11 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*modelauth
 	{
 		menuMap := make(map[string]struct{})
 		for _, role := range roles {
-			for _, id := range role.MenuIds {
+			for _, id := range role.MenuIDs {
 				menuMap[id] = struct{}{}
 			}
 			// 这里需要把 MenuPartialIds 加进去, 父菜单下面有多个菜单, 如果只选中了部分, 则是将 id 放在 MenuPartialIds.
-			for _, id := range role.MenuPartialIds {
+			for _, id := range role.MenuPartialIDs {
 				menuMap[id] = struct{}{}
 			}
 		}

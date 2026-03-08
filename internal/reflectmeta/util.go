@@ -329,7 +329,6 @@ func StructFieldToMap(typ reflect.Type, val reflect.Value, q map[string]string) 
 func boolToInt(b bool) int {
 	if b {
 		return 1
-	} else {
-		return 0
 	}
+	return 0
 }

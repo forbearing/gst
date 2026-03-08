@@ -456,9 +456,9 @@ func DeleteFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			addID(cctx.Params[util.Deref(cfg[0]).ParamName])
 		}
 		// Delete multiple records accoding to "http body data".
-		bodyIds := make([]string, 0)
-		if err := c.ShouldBindJSON(&bodyIds); err == nil && len(bodyIds) > 0 {
-			for _, id := range bodyIds {
+		bodyIDs := make([]string, 0)
+		if err := c.ShouldBindJSON(&bodyIDs); err == nil && len(bodyIDs) > 0 {
+			for _, id := range bodyIDs {
 				addID(id)
 			}
 		}
@@ -1833,8 +1833,8 @@ Response Data:
 */
 
 type requestData[M types.Model] struct {
-	// Ids is the id list that should be batch delete.
-	Ids []string `json:"ids,omitempty"`
+	// IDs is the id list that should be batch delete.
+	IDs []string `json:"ids,omitempty"`
 	// Items is the resource list that should be batch create/update/partial update.
 	Items []M `json:"items,omitempty"`
 	// Options is the batch operation options.
@@ -2215,8 +2215,8 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 
 		// 1.Perform business logic processing before batch delete resources.
 		typ := reflect.TypeOf(*new(M)).Elem()
-		req.Items = make([]M, 0, len(req.Ids))
-		for _, id := range req.Ids {
+		req.Items = make([]M, 0, len(req.IDs))
+		for _, id := range req.IDs {
 			m := reflect.New(typ).Interface().(M) //nolint:errcheck
 			m.SetID(id)
 			req.Items = append(req.Items, m)
@@ -2294,7 +2294,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 				Failed:    0,
 			}
 		}
-		req.Ids = nil
+		req.IDs = nil
 		req.Items = nil
 		req.Options = nil
 		// not response req.

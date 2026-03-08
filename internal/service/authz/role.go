@@ -69,18 +69,18 @@ func (s *RoleService) remarkMenus(ctx *types.ServiceContext, role *modelauthz.Ro
 	}
 
 	var sb strings.Builder
-	if len(role.MenuPartialIds) > 0 {
+	if len(role.MenuPartialIDs) > 0 {
 		sb.WriteString("父菜单\n")
 	}
-	for _, mid := range role.MenuPartialIds {
+	for _, mid := range role.MenuPartialIDs {
 		if menu, ok := menuMap[mid]; ok {
 			fmt.Fprintf(&sb, "    %s\n", menu.Label)
 		}
 	}
-	if len(role.MenuIds) > 0 {
+	if len(role.MenuIDs) > 0 {
 		sb.WriteString("\n子菜单\n")
 	}
-	for _, mid := range role.MenuIds {
+	for _, mid := range role.MenuIDs {
 		if menu, ok := menuMap[mid]; ok {
 			fmt.Fprintf(&sb, "    %s\n", menu.Label)
 		}

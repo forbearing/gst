@@ -1,4 +1,6 @@
-package pprof
+// Package debugpprof provides an HTTP server for pprof endpoints; the package name
+// avoids conflicting with the standard library "pprof" packages.
+package debugpprof
 
 import (
 	"context"
