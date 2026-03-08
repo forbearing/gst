@@ -15,7 +15,6 @@ var startTime = time.Now()
 
 var _ types.Module[*Version, *Version, *VersionRsp] = (*VersionModule)(nil)
 
-//nolint:revive // exported: VersionModule is the module type for version package
 type VersionModule struct{}
 
 func (*VersionModule) Service() types.Service[*Version, *Version, *VersionRsp] {
@@ -44,8 +43,6 @@ func (Version) Design() {
 }
 
 // VersionRsp contains version information returned to frontend
-//
-//nolint:revive // exported: VersionRsp is the response type for version API
 type VersionRsp struct {
 	Version     string `json:"version"`     // Backend version string (semantic version)
 	BuildTime   int64  `json:"build_time"`  // Build timestamp (Unix timestamp)
@@ -57,7 +54,6 @@ type VersionRsp struct {
 	Timestamp   int64  `json:"timestamp"`   // Current server timestamp
 }
 
-//nolint:revive // exported: VersionService is the service type for version package
 type VersionService struct {
 	service.Base[*Version, *Version, *VersionRsp]
 }
