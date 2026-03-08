@@ -150,11 +150,11 @@ linters:
       - linters:
           - revive
         text: "don't use (ALL_CAPS|underscores) in Go names"
-      # Allow package names "types" and "util" only (meaningful in our ds/ context).
+      # Allow package names "types" and "util" (meaningful in our context).
       - linters:
           - revive
         text: "avoid meaningless package names"
-        path: ".*/(types|util)/.*"
+        path: "^(types|util)/|.*/(types|util)/"
 
 issues:
   # Increase max issues to avoid truncation
