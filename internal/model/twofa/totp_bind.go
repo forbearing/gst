@@ -10,7 +10,7 @@ type TOTPBind struct {
 	model.Empty
 }
 type TOTPBindRsp struct {
-	Secret      string `json:"secret,omitempty"`        //nolint:gosec // G117: response field for user-specific TOTP secret, not a hard-coded secret
+	Secret      string `json:"secret,omitempty"`
 	OtpauthURL  string `json:"otpauth_url,omitempty"`   // TOTP 认证 URL
 	QRCodeImage string `json:"qr_code_image,omitempty"` // Base64 编码的二维码图片数据
 	Issuer      string `json:"issuer,omitempty"`        // 应用发行者名称（如 "Nebula"）

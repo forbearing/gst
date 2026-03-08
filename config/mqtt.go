@@ -21,7 +21,7 @@ const (
 type Mqtt struct {
 	Addr               string        `json:"addr" mapstructure:"addr" ini:"addr" yaml:"addr"`
 	Username           string        `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password           string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password           string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	ClientPrefix       string        `json:"client_prefix" mapstructure:"client_prefix" ini:"client_prefix" yaml:"client_prefix"`
 	ConnectTimeout     time.Duration `json:"connect_timeout" mapstructure:"connect_timeout" ini:"connect_timeout" yaml:"connect_timeout"`
 	Keepalive          time.Duration `json:"keepalive" mapstructure:"keepalive" ini:"keepalive" yaml:"keepalive"`

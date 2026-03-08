@@ -109,7 +109,7 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			req.Header.Set(k, v)
 		}
 
-		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}
@@ -163,7 +163,7 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			req.Header.Set(k, v)
 		}
 
-		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}
@@ -216,7 +216,7 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			req.Header.Set(k, v)
 		}
 
-		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}
@@ -279,7 +279,7 @@ func fetchProviderModels(ctx *types.ServiceContext, provider *modelaichat.Provid
 			req.Header.Set(k, v)
 		}
 
-		resp, err := httpClient.Do(req) //nolint:gosec // G704: provider base URL is configured by trusted admin, not end-user input
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch models")
 		}

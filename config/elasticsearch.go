@@ -36,9 +36,9 @@ const (
 type Elasticsearch struct {
 	Addrs                 []string      `json:"addrs" mapstructure:"addrs" ini:"addrs" yaml:"addrs"`
 	Username              string        `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password              string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password              string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	CloudID               string        `json:"cloud_id" mapstructure:"cloud_id" ini:"cloud_id" yaml:"cloud_id"`
-	APIKey                string        `json:"api_key" mapstructure:"api_key" ini:"api_key" yaml:"api_key"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	APIKey                string        `json:"api_key" mapstructure:"api_key" ini:"api_key" yaml:"api_key"`
 	MaxRetries            int           `json:"max_retries" mapstructure:"max_retries" ini:"max_retries" yaml:"max_retries"`
 	RetryOnStatus         []int         `json:"retry_on_status" mapstructure:"retry_on_status" ini:"retry_on_status" yaml:"retry_on_status"`
 	DisableRetries        bool          `json:"disable_retries" mapstructure:"disable_retries" ini:"disable_retries" yaml:"disable_retries"`

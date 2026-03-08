@@ -10,7 +10,7 @@ import (
 type User struct {
 	Name        string `json:"name,omitempty"`
 	EnName      string `json:"en_name,omitempty"`
-	Password    string `json:"password,omitempty"` //nolint:gosec // G117: request/model field carrying user-provided password, not a hard-coded secret
+	Password    string `json:"password,omitempty"`
 	RePassword  string `json:"re_password,omitempty" gorm:"-"`
 	NewPassword string `json:"new_password,omitempty" gorm:"-"`
 	Nickname    string `json:"nickname,omitempty"`
@@ -37,8 +37,8 @@ type User struct {
 	LastPasswordChangeAt *GormTime `json:"last_password_change_at,omitempty" gorm:"-"`
 
 	Token        string `json:"token,omitempty" gorm:"-"`
-	AccessToken  string `json:"access_token,omitempty" gorm:"-"`  //nolint:gosec // G117: token value issued by auth system, not hard-coded in source
-	RefreshToken string `json:"refresh_token,omitempty" gorm:"-"` //nolint:gosec // G117: token value issued by auth system, not hard-coded in source
+	AccessToken  string `json:"access_token,omitempty" gorm:"-"`
+	RefreshToken string `json:"refresh_token,omitempty" gorm:"-"`
 	SessionID    string `json:"session_id,omitempty" gorm:"-"`
 
 	Base

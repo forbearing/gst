@@ -4,7 +4,7 @@ package model
 import "go.uber.org/zap/zapcore"
 
 type UserInfo struct {
-	AccessToken      string `json:"access_token,omitempty"`       //nolint:gosec // G117: token value issued by external auth system, not hard-coded in source
+	AccessToken      string `json:"access_token,omitempty"`
 	TokenType        string `json:"token_type,omitempty"`         // token 类型
 	ExpiresIn        int    `json:"expires_in,omitempty"`         // `access_token`的有效期，单位: 秒
 	Name             string `json:"name,omitempty"`               // 用户姓名
@@ -21,8 +21,8 @@ type UserInfo struct {
 	Mobile           string `json:"mobile,omitempty"`             // 用户手机号
 	TenantKey        string `json:"tenant_key,omitempty"`         // 当前企业标识
 	RefreshExpiresIn int    `json:"refresh_expires_in,omitempty"` // `refresh_token` 的有效期，单位: 秒
-	RefreshToken     string `json:"refresh_token,omitempty"`      //nolint:gosec // G117: token value issued by external auth system, not hard-coded in source
-	Sid              string `json:"sid,omitempty"`                // 用户当前登录态session的唯一标识，为空则不返回
+	RefreshToken     string `json:"refresh_token,omitempty"`
+	Sid              string `json:"sid,omitempty"` // 用户当前登录态session的唯一标识，为空则不返回
 
 	Base
 }

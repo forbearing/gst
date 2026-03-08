@@ -46,7 +46,7 @@ const (
 
 type RocketMQ struct {
 	NameServerAddrs []string `json:"name_server_addrs" mapstructure:"name_server_addrs" ini:"name_server_addrs" yaml:"name_server_addrs"`
-	AccessKey       string   `json:"access_key" mapstructure:"access_key" ini:"access_key" yaml:"access_key"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	AccessKey       string   `json:"access_key" mapstructure:"access_key" ini:"access_key" yaml:"access_key"`
 	SecretKey       string   `json:"secret_key" mapstructure:"secret_key" ini:"secret_key" yaml:"secret_key"`
 	Namespace       string   `json:"namespace" mapstructure:"namespace" ini:"namespace" yaml:"namespace"`
 	GroupName       string   `json:"group_name" mapstructure:"group_name" ini:"group_name" yaml:"group_name"`

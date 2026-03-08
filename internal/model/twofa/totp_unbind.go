@@ -10,8 +10,8 @@ type TOTPUnbind struct {
 	model.Empty
 }
 type TOTPUnbindReq struct {
-	DeviceID string `json:"device_id" validate:"required"`                // 要解绑的设备ID
-	Password string `json:"password,omitempty"`                           //nolint:gosec // G117: optional request field for user-provided password, not a hard-coded secret
+	DeviceID string `json:"device_id" validate:"required"` // 要解绑的设备ID
+	Password string `json:"password,omitempty"`
 	TOTPCode string `json:"totp_code,omitempty" validate:"len=6,numeric"` // TOTP验证码（可选，用于额外验证）
 }
 

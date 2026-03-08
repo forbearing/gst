@@ -31,7 +31,7 @@ const (
 
 type UserReq struct {
 	Username string `json:"username"`
-	Password string `json:"password"` //nolint:gosec // G117: request field carrying user-provided password, not a hard-coded secret
+	Password string `json:"password"`
 	Email    string `json:"email"`
 
 	Status           UserStatus `json:"status"`
@@ -61,7 +61,7 @@ type User struct {
 	Gender      *string    `json:"gender" gorm:"type:varchar(10)"`
 
 	// 认证信息
-	Password         string `json:"password" gorm:"-"` //nolint:gosec // G117: transient field for user-provided password, not stored as plain text
+	Password         string `json:"password" gorm:"-"`
 	PasswordHash     string `json:"-" gorm:"type:varchar(255)"`
 	Salt             string `json:"-" gorm:"type:varchar(50)"`
 	EmailVerified    *bool  `json:"email_verified" gorm:"default:false"`

@@ -34,7 +34,7 @@ const (
 
 type Minio struct {
 	Endpoint     string        `json:"endpoint" mapstructure:"endpoint" ini:"endpoint" yaml:"endpoint"`
-	AccessKey    string        `json:"access_key" mapstructure:"access_key" ini:"access_key" yaml:"access_key"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	AccessKey    string        `json:"access_key" mapstructure:"access_key" ini:"access_key" yaml:"access_key"`
 	SecretKey    string        `json:"secret_key" mapstructure:"secret_key" ini:"secret_key" yaml:"secret_key"`
 	Bucket       string        `json:"bucket" mapstructure:"bucket" ini:"bucket" yaml:"bucket"`
 	Location     string        `json:"location" mapstructure:"location" ini:"location" yaml:"location"`
@@ -45,7 +45,7 @@ type Minio struct {
 	Concurrency  int           `json:"concurrency" mapstructure:"concurrency" ini:"concurrency" yaml:"concurrency"`
 	Compress     bool          `json:"compress" mapstructure:"compress" ini:"compress" yaml:"compress"`
 	Trace        bool          `json:"trace" mapstructure:"trace" ini:"trace" yaml:"trace"`
-	SessionToken string        `json:"session_token" mapstructure:"session_token" ini:"session_token" yaml:"session_token"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	SessionToken string        `json:"session_token" mapstructure:"session_token" ini:"session_token" yaml:"session_token"`
 	UseIAM       bool          `json:"use_iam" mapstructure:"use_iam" ini:"use_iam" yaml:"use_iam"`
 	UseSTS       bool          `json:"use_sts" mapstructure:"use_sts" ini:"use_sts" yaml:"use_sts"`
 	IAMEndpoint  string        `json:"iam_endpoint" mapstructure:"iam_endpoint" ini:"iam_endpoint" yaml:"iam_endpoint"`

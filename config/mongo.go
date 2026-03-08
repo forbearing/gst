@@ -60,7 +60,7 @@ type Mongo struct {
 	Host        string `json:"host" mapstructure:"host" ini:"host" yaml:"host"`
 	Port        int    `json:"port" mapstructure:"port" ini:"port" yaml:"port"`
 	Username    string `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password    string `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password    string `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	Database    string `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
 	AuthSource  string `json:"auth_source" mapstructure:"auth_source" ini:"auth_source" yaml:"auth_source"`
 	MaxPoolSize uint64 `json:"max_pool_size" mapstructure:"max_pool_size" ini:"max_pool_size" yaml:"max_pool_size"`

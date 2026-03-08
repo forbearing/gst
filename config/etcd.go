@@ -32,7 +32,7 @@ type Etcd struct {
 	Endpoints           []string      `json:"endpoints" mapstructure:"endpoints" ini:"endpoints" yaml:"endpoints"`
 	DialTimeout         time.Duration `json:"dial_timeout" mapstructure:"dial_timeout" ini:"dial_timeout" yaml:"dial_timeout"`
 	Username            string        `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password            string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password            string        `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	AutoSync            bool          `json:"auto_sync" mapstructure:"auto_sync" ini:"auto_sync" yaml:"auto_sync"`
 	AutoSyncInterval    time.Duration `json:"auto_sync_interval" mapstructure:"auto_sync_interval" ini:"auto_sync_interval" yaml:"auto_sync_interval"`
 	KeepAliveTime       time.Duration `json:"keepalive_time" mapstructure:"keepalive_time" ini:"keepalive_time" yaml:"keepalive_time"`

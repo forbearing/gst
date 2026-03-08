@@ -11,7 +11,7 @@ type Signup struct {
 
 type SignupReq struct {
 	Username   string `json:"username"`
-	Password   string `json:"password"` //nolint:gosec // G117: request field carrying user-provided password, not a hard-coded secret
+	Password   string `json:"password"`
 	RePassword string `json:"re_password"`
 	Email      string `json:"email,omitempty"`
 	FirstName  string `json:"first_name,omitempty"`

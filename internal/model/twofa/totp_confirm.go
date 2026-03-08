@@ -10,7 +10,7 @@ type TOTPConfirm struct {
 	model.Empty
 }
 type TOTPConfirmReq struct {
-	Secret     string `json:"secret" validate:"required"`     //nolint:gosec // G117: request field carrying user-specific TOTP secret from bind step, not a hard-coded secret
+	Secret     string `json:"secret" validate:"required"`
 	Code       string `json:"code" validate:"required,len=6"` // 6-digit TOTP code to confirm
 	DeviceName string `json:"device_name" validate:"required,max=100"`
 }

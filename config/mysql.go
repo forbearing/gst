@@ -15,7 +15,7 @@ type MySQL struct {
 	Port     uint   `json:"port" mapstructure:"port" ini:"port" yaml:"port"`
 	Database string `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
 	Username string `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password string `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password string `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	Charset  string `json:"charset" mapstructure:"charset" ini:"charset" yaml:"charset"`
 	Enable   bool   `json:"enable" mapstructure:"enable" ini:"enable" yaml:"enable"`
 }

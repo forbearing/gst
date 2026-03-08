@@ -18,7 +18,7 @@ import (
 type DatabaseConfig struct {
 	Database string
 	Username string
-	Password string //nolint:gosec // G117: database password comes from external configuration, not hard-coded in source
+	Password string
 	Host     string
 	Port     int
 	SSLMode  string

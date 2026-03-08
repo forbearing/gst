@@ -19,7 +19,7 @@ type Clickhouse struct {
 	Port         uint   `json:"port" mapstructure:"port" ini:"port" yaml:"port"`
 	Database     string `json:"database" mapstructure:"database" ini:"database" yaml:"database"`
 	Username     string `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password     string `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password     string `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	DialTimeout  string `json:"dial_timeout" mapstructure:"dial_timeout" ini:"dial_timeout" yaml:"dial_timeout"`
 	ReadTimeout  string `json:"read_timeout" mapstructure:"read_timeout" ini:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout string `json:"write_timeout" mapstructure:"write_timeout" ini:"write_timeout" yaml:"write_timeout"`

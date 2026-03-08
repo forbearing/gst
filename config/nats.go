@@ -33,7 +33,7 @@ type Nats struct {
 	Addrs           []string `json:"addrs" mapstructure:"addrs" ini:"addrs" yaml:"addrs"`
 	ClientName      string   `json:"client_name" mapstructure:"client_name" ini:"client_name" yaml:"client_name"`
 	Username        string   `json:"username" mapstructure:"username" ini:"username" yaml:"username"`
-	Password        string   `json:"password" mapstructure:"password" ini:"password" yaml:"password"` //nolint:gosec // G117: configuration field, actual secret is loaded from external config
+	Password        string   `json:"password" mapstructure:"password" ini:"password" yaml:"password"`
 	Token           string   `json:"token" mapstructure:"token" ini:"token" yaml:"token"`
 	CredentialsFile string   `json:"credentials_file" mapstructure:"credentials_file" ini:"credentials_file" yaml:"credentials_file"`
 	NKeyFile        string   `json:"nkey_file" mapstructure:"nkey_file" ini:"nkey_file" yaml:"nkey_file"`
