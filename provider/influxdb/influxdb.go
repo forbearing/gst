@@ -19,7 +19,7 @@ import (
 var (
 	initialized bool
 	client      influxdb2.Client
-	writeApi    api.WriteAPIBlocking //nolint:staticcheck
+	writeAPI    api.WriteAPIBlocking //nolint:staticcheck
 	queryAPI    api.QueryAPI         //nolint:staticcheck
 	mu          sync.RWMutex
 )
@@ -62,7 +62,7 @@ func Init() (err error) {
 	}
 
 	// Get write and query APIs
-	writeApi = client.WriteAPIBlocking(cfg.Org, cfg.Bucket)
+	writeAPI = client.WriteAPIBlocking(cfg.Org, cfg.Bucket)
 	queryAPI = client.QueryAPI(cfg.Org)
 
 	zap.S().Infow("successfully connected to influxdb",
@@ -153,7 +153,7 @@ func WritePoint(measurement string, tags map[string]string, fields map[string]an
 
 	// Write the point
 	ctx := context.Background()
-	return writeApi.WritePoint(ctx, p)
+	return writeAPI.WritePoint(ctx, p)
 }
 
 // Query executes a Flux query against InfluxDB
@@ -180,7 +180,7 @@ func Client() influxdb2.Client {
 func WriteAPI() api.WriteAPIBlocking {
 	mu.RLock()
 	defer mu.RUnlock()
-	return writeApi
+	return writeAPI
 }
 
 // QueryAPI returns the global InfluxDB query API
