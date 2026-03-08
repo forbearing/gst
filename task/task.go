@@ -78,6 +78,7 @@ func register(t *task) {
 		return
 	}
 	go func() {
+		defer t.cancel()
 		defer func() {
 			if err := recover(); err != nil {
 				logger.Task.Errorw(fmt.Sprintf("task panic: %s", err), "name", t.name, "interval", t.interval.String())
