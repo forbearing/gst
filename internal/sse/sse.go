@@ -229,12 +229,12 @@ func SendSSEDone(w http.ResponseWriter) error {
 // manually call SendSSEDone() after StreamSSE() returns.
 //
 // Parameters:
-//   - w: HTTP response writer for setting headers
 //   - ctx: Context for cancellation support
+//   - w: HTTP response writer for setting headers
 //   - stream: Function that starts the stream (typically gin.Context.Stream)
 //   - fn: Function that sends events. Returns false to stop streaming.
 //     The function receives the writer and should check context cancellation if needed.
-func StreamSSE(w http.ResponseWriter, ctx context.Context, stream StreamCallback, fn StreamFunc) {
+func StreamSSE(ctx context.Context, w http.ResponseWriter, stream StreamCallback, fn StreamFunc) {
 	setHeaders(w)
 
 	stream(func(w io.Writer) bool {
@@ -269,13 +269,13 @@ func StreamSSE(w http.ResponseWriter, ctx context.Context, stream StreamCallback
 // manually call SendSSEDone() after StreamSSEWithInterval() returns.
 //
 // Parameters:
-//   - w: HTTP response writer for setting headers
 //   - ctx: Context for cancellation support
+//   - w: HTTP response writer for setting headers
 //   - stream: Function that starts the stream (typically gin.Context.Stream)
 //   - interval: Time interval between events
 //   - fn: Function that sends events. Returns false to stop streaming.
 //     The function receives the writer and should check context cancellation if needed.
-func StreamSSEWithInterval(w http.ResponseWriter, ctx context.Context, stream StreamCallback, interval time.Duration, fn StreamFunc) {
+func StreamSSEWithInterval(ctx context.Context, w http.ResponseWriter, stream StreamCallback, interval time.Duration, fn StreamFunc) {
 	setHeaders(w)
 
 	stream(func(w io.Writer) bool {

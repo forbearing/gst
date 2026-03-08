@@ -366,7 +366,7 @@ func SSE(c *gin.Context, event types.Event) error {
 //	// Send [DONE] marker if required by your protocol
 //	sse.EncodeDone(c.Writer)
 func StreamSSE(c *gin.Context, fn func(io.Writer) bool) {
-	sse.StreamSSE(c.Writer, c.Request.Context(), c.Stream, fn)
+	sse.StreamSSE(c.Request.Context(), c.Writer, c.Stream, fn)
 }
 
 // StreamSSEWithInterval starts a Server-Sent Events stream with a fixed interval between events.
@@ -398,5 +398,5 @@ func StreamSSE(c *gin.Context, fn func(io.Writer) bool) {
 //	// Send [DONE] marker if required by your protocol
 //	sse.EncodeDone(c.Writer)
 func StreamSSEWithInterval(c *gin.Context, interval time.Duration, fn func(io.Writer) bool) {
-	sse.StreamSSEWithInterval(c.Writer, c.Request.Context(), c.Stream, interval, fn)
+	sse.StreamSSEWithInterval(c.Request.Context(), c.Writer, c.Stream, interval, fn)
 }
