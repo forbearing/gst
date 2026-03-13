@@ -17,3 +17,4 @@ TODO
 *.db
 docs
 .trae
+pkg/filetype/testdata/
