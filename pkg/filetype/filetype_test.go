@@ -86,7 +86,15 @@ func TestDetectFiletype(t *testing.T) {
 		wantMime Mime
 	}
 
-	var cases []testCase
+	cases := make([]testCase, 0,
+		len(documentFiles)+
+			len(textFiles)+
+			len(compressFiles)+
+			len(imageFiles)+
+			len(videoFiles)+
+			len(audoFiles)+
+			len(otherFiles),
+	)
 
 	for _, filename := range documentFiles {
 		cases = append(cases, testCase{
@@ -138,11 +146,7 @@ func TestDetectFiletype(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
-
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			require.NotPanics(t, func() {
 				_, _ = Detect(tc.filename)
 			})
