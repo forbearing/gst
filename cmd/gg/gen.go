@@ -330,8 +330,9 @@ func genRun() {
 	fmt.Printf("\n%s Code generation completed successfully!\n", green("🎉"))
 }
 
-// scanExistingServiceFiles scans existing service files in the service directory
-// Only includes files that match phase names (e.g., create.go, update.go, etc.)
+// scanExistingServiceFiles scans existing service files in the service directory.
+// It includes standard phase filenames (e.g., create.go, list.go) and any other .go file
+// that embeds service.Base[...] (per-action handlers), such as DSL Filename("x") outputs.
 func scanExistingServiceFiles(serviceDir string) []string {
 	var files []string
 
@@ -363,8 +364,14 @@ func scanExistingServiceFiles(serviceDir string) []string {
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".go") {
 			fileName := filepath.Base(path)
-			// Only include files that match phase names
+			if strings.HasSuffix(fileName, "_test.go") {
+				return nil
+			}
 			if validPhases[fileName] {
+				files = append(files, path)
+				return nil
+			}
+			if gen.IsActionServiceSource(path) {
 				files = append(files, path)
 			}
 		}
