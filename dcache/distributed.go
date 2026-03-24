@@ -173,13 +173,13 @@ type distributedCache[T any] struct {
 	hostname string
 
 	// stats
-	localHits         int64
-	localMisses       int64
-	localDelete       int64
-	redisHits         int64
-	redisMisses       int64
-	distributedSet    int64
-	distributedDelete int64
+	localHits         atomic.Int64
+	localMisses       atomic.Int64
+	localDelete       atomic.Int64
+	redisHits         atomic.Int64
+	redisMisses       atomic.Int64
+	distributedSet    atomic.Int64
+	distributedDelete atomic.Int64
 
 	kafkaBrokers []string
 	// pubSetDel is the kafka producer, publish the event that the entry associated with the key was updated/delete.
@@ -365,13 +365,13 @@ func (dc *distributedCache[T]) Get(key string) (value T, err error) {
 	// get from local cache.
 	if value, err = dc.localCache.Get(prefixedKey); err == nil {
 		// local cache hit.
-		atomic.AddInt64(&dc.localHits, 1)
+		dc.localHits.Add(1)
 		return value, nil
 	}
 	var zero T
 	if errors.Is(err, types.ErrEntryNotFound) {
 		// local cache miss.
-		atomic.AddInt64(&dc.localMisses, 1)
+		dc.localMisses.Add(1)
 		return zero, types.ErrEntryNotFound
 	}
 
@@ -389,12 +389,12 @@ func (dc *distributedCache[T]) GetWithSync(key string, localTTL time.Duration) (
 	// get from local cache.
 	if value, err = dc.localCache.Get(prefixedKey); err == nil {
 		// local cache hit.
-		atomic.AddInt64(&dc.localHits, 1)
+		dc.localHits.Add(1)
 		return value, nil
 	}
 	if errors.Is(err, types.ErrEntryNotFound) {
 		// local cache miss.
-		atomic.AddInt64(&dc.localMisses, 1)
+		dc.localMisses.Add(1)
 	} else {
 		dc.logger.Warn("failed to get from local cache", zap.Error(err))
 		return zero, err
@@ -412,7 +412,7 @@ func (dc *distributedCache[T]) GetWithSync(key string, localTTL time.Duration) (
 			return zero, types.ErrEntryNotFound
 		}
 		// redis cache hit.
-		atomic.AddInt64(&dc.redisHits, 1)
+		dc.redisHits.Add(1)
 		if err = dc.localCache.Set(prefixedKey, redisVal, localTTL); err != nil {
 			dc.logger.Warn("failed to set local cache", zap.Error(err))
 			return redisVal, err
@@ -421,7 +421,7 @@ func (dc *distributedCache[T]) GetWithSync(key string, localTTL time.Duration) (
 	}
 	if errors.Is(err, types.ErrEntryNotFound) {
 		// redis cache miss.
-		atomic.AddInt64(&dc.redisMisses, 1)
+		dc.redisMisses.Add(1)
 		return zero, types.ErrEntryNotFound
 	}
 	dc.logger.Warn("failed to get from redis cache", zap.Error(err))
@@ -432,7 +432,7 @@ func (dc *distributedCache[T]) Delete(key string) (err error) {
 	// done := dc.trace("Delete")
 	// defer done(err)
 
-	atomic.AddInt64(&dc.localDelete, 1)
+	dc.localDelete.Add(1)
 	prefixedKey := dc.prefix + key
 
 	// NOTE: After recive kafka "delete" event, we will delete the entry from local cache again, it is a no-op.
@@ -453,7 +453,7 @@ func (dc *distributedCache[T]) DeleteWithSync(key string) (err error) {
 	// done := dc.trace("Delete")
 	// defer done(err)
 
-	atomic.AddInt64(&dc.localDelete, 1)
+	dc.localDelete.Add(1)
 	prefixedKey := dc.prefix + key
 
 	// NOTE: After recive kafka "delete" event, we will delete the entry from local cache again, it is a no-op.
@@ -544,7 +544,7 @@ func (dc *distributedCache[T]) listenEvents() {
 						// TODO: 如何解决这个问题
 						// 本地缓存已经删除了, 收到 opSetDone 事件后,又要再删除一次, 我觉得没必要重复删除
 
-						atomic.AddInt64(&dc.distributedSet, 1)
+						dc.distributedSet.Add(1)
 						// 这里不需要使用 prefix + key, 状态节点传过来的 key, 已经是 prefix+key 了.
 						if err := dc.localCache.Set(evt.Key, val, evt.TTL); err != nil {
 							dc.logger.Warn("failed to set to local cache", zap.Error(err))
@@ -560,7 +560,7 @@ func (dc *distributedCache[T]) listenEvents() {
 						// fmt.Println("------ delete 缓存类型不匹配:", dc.mark, dc.typ, evt.Typ)
 						continue
 					}
-					atomic.AddInt64(&dc.distributedDelete, 1)
+					dc.distributedDelete.Add(1)
 					// 这里不需要使用 prefix + key, 状态节点传过来的 key, 已经是 prefix+key 了.
 					// 但凡收到 opDelDone 事件, 都需要从本地缓存中删除, 我们无法得知这个 key 是不是属于我们当前缓存的
 					if err := dc.localCache.Delete(evt.Key); err != nil && !errors.Is(err, types.ErrEntryNotFound) {
@@ -636,16 +636,16 @@ func (dc *distributedCache[T]) startMonitor() {
 
 func (dc *distributedCache[T]) Metrics() *distributedMetrics {
 	return &distributedMetrics{
-		LocalHists:  atomic.LoadInt64(&dc.localHits),
-		LocalMisses: atomic.LoadInt64(&dc.localMisses),
-		LocalRatio:  calculateHitRatio(atomic.LoadInt64(&dc.localHits), atomic.LoadInt64(&dc.localMisses)),
-		LocalDelete: atomic.LoadInt64(&dc.localDelete),
+		LocalHists:  dc.localHits.Load(),
+		LocalMisses: dc.localMisses.Load(),
+		LocalRatio:  calculateHitRatio(dc.localHits.Load(), dc.localMisses.Load()),
+		LocalDelete: dc.localDelete.Load(),
 
-		RedisHits:   atomic.LoadInt64(&dc.redisHits),
-		RedisMisses: atomic.LoadInt64(&dc.redisMisses),
+		RedisHits:   dc.redisHits.Load(),
+		RedisMisses: dc.redisMisses.Load(),
 
-		DistributedSet:    atomic.LoadInt64(&dc.distributedSet),
-		DistributedDelete: atomic.LoadInt64(&dc.distributedDelete),
+		DistributedSet:    dc.distributedSet.Load(),
+		DistributedDelete: dc.distributedDelete.Load(),
 
 		GoroutinesPoolCap: int64(dc.gopool.Cap()),
 		GoroutinesUsed:    int64(dc.gopool.Running()),
