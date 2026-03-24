@@ -39,10 +39,40 @@ type ModelInfo struct {
 	Design *dsl.Design
 }
 
+// ServiceOutputRel returns the path under the service root where generated service .go files
+// for a model file should live, relative to the service directory (e.g. "common" for
+// model/common/common.go, or "config/namespace/app/env/item" for model/.../env/item.go).
+//
+// When the file base name (without .go) equals the immediate parent directory name — a common
+// Go layout such as model/pkg/pkg.go — redundant segments are collapsed so output is
+// service/pkg/... instead of service/pkg/pkg/...
+func ServiceOutputRel(modelFilePath, modelDir string) string {
+	modelDir = filepath.Clean(modelDir)
+	modelFilePath = filepath.Clean(modelFilePath)
+	rel, err := filepath.Rel(modelDir, modelFilePath)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		// Unexpected layout; best-effort: strip modelDir prefix then apply the same collapse.
+		rel = strings.TrimPrefix(modelFilePath, modelDir+string(filepath.Separator))
+	}
+	outRel := strings.TrimSuffix(rel, ".go")
+	for outRel != "." && outRel != "" {
+		stem := filepath.Base(outRel)
+		parent := filepath.Dir(outRel)
+		if parent == "." || parent == "" {
+			break
+		}
+		if filepath.Base(parent) == stem {
+			outRel = parent
+			continue
+		}
+		break
+	}
+	return outRel
+}
+
 func (m *ModelInfo) ServiceImportPath(modelDir, serviceDir string) string {
-	path := strings.Replace(filepath.Join(m.ModulePath, m.ModelFilePath), modelDir, serviceDir, 1)
-	path = strings.TrimSuffix(path, ".go")
-	return path
+	rel := ServiceOutputRel(m.ModelFilePath, modelDir)
+	return filepath.Join(m.ModulePath, serviceDir, rel)
 }
 
 func (m *ModelInfo) RouterImportPath() string {

@@ -305,8 +305,7 @@ func genRun() {
 				// pretty.Println(file)
 				checkErr(err)
 				// code = gen.MethodAddComments(code, m.ModelName)
-				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
-				dir = strings.TrimSuffix(dir, ".go")
+				dir := filepath.Join(serviceDir, gen.ServiceOutputRel(m.ModelFilePath, modelDir))
 				filename := filepath.Join(dir, act.ServiceFilename())
 				// Use lowercase ModelName as service package name to ensure consistency
 				// with service registration logic and maintain original naming style
@@ -418,8 +417,7 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 	for _, m := range allModels {
 		m.Design.Range(func(route string, act *dsl.Action) {
 			if act.Enabled && act.Service {
-				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
-				dir = strings.TrimSuffix(dir, ".go")
+				dir := filepath.Join(serviceDir, gen.ServiceOutputRel(m.ModelFilePath, modelDir))
 				filename := filepath.Join(dir, act.ServiceFilename())
 				currentServiceFiles[filename] = true
 			}
