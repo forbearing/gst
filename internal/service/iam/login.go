@@ -88,9 +88,8 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 	}()
 
 	// Find user by username
-	db := database.Database[*modeliam.User](ctx.DatabaseContext())
 	users := make([]*modeliam.User, 0)
-	if err = db.WithLimit(1).WithQuery(&modeliam.User{Username: req.Username}).List(&users); err != nil {
+	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: req.Username}).List(&users); err != nil {
 		log.Errorz("failed to query user", zap.Error(err))
 		return nil, fmt.Errorf("invalid username or password")
 	}
@@ -149,7 +148,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 	// Update last login time
 	now := time.Now()
 	user.LastLoginAt = &now
-	if err = db.Update(user); err != nil {
+	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Update(user); err != nil {
 		log.Errorz("failed to update last login time", zap.Error(err))
 		// Don't fail the login for this
 	}
@@ -316,8 +315,8 @@ func validateBackupCode(ctx *types.ServiceContext, userID, code string) error {
 					}
 					device.BackupCodes = updatedCodes
 
-					// Update the device in database
-					if err := db.Update(device); err != nil {
+					// Update the device in database (fresh handle; do not reuse db after List).
+					if err := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext()).Update(device); err != nil {
 						return fmt.Errorf("failed to update backup codes: %w", err)
 					}
 

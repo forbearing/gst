@@ -24,7 +24,6 @@ func handleStreaming(
 	conversation *modelaichat.Conversation,
 ) (*modelaichat.ChatCompletionRsp, error) {
 	_ = conversation
-	db := database.Database[*modelaichat.Message](ctx.DatabaseContext())
 
 	// Create a cancellable context for this stream
 	streamCtx, cancel := context.WithCancel(ctx.Context())
@@ -43,7 +42,7 @@ func handleStreaming(
 		assistantMsg.Status = modelaichat.MessageStatusFailed
 		assistantMsg.ErrMessage = err.Error()
 		assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
-		if e := db.Update(assistantMsg); e != nil {
+		if e := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); e != nil {
 			log.Errorw("failed to update message", "error", e)
 		}
 		return nil, errors.Wrap(err, "failed to start streaming")
@@ -52,7 +51,7 @@ func handleStreaming(
 
 	// Update message status
 	assistantMsg.Status = modelaichat.MessageStatusStreaming
-	if err := db.Update(assistantMsg); err != nil {
+	if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 		log.Errorw("failed to update message", "error", err)
 	}
 
@@ -95,7 +94,7 @@ func handleStreaming(
 			assistantMsg.IsActive = util.ValueOf(false) // Mark as inactive when stopped
 			assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
 
-			if err := db.Update(assistantMsg); err != nil {
+			if err := database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 				log.Errorw("failed to update message", "error", err)
 			}
 
@@ -125,7 +124,7 @@ func handleStreaming(
 					assistantMsg.TotalTokens = chunk.ResponseMeta.Usage.TotalTokens
 				}
 
-				if err = db.Update(assistantMsg); err != nil {
+				if err = database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 					log.Errorw("failed to update message", "error", err)
 				}
 
@@ -144,7 +143,7 @@ func handleStreaming(
 				assistantMsg.ErrMessage = err.Error()
 				assistantMsg.StopReason = util.ValueOf(modelaichat.StopReasonError)
 				assistantMsg.LatencyMs = time.Since(startTime).Milliseconds()
-				if err = db.Update(assistantMsg); err != nil {
+				if err = database.Database[*modelaichat.Message](ctx.DatabaseContext()).Update(assistantMsg); err != nil {
 					log.Errorw("failed to update message", "error", err)
 				}
 

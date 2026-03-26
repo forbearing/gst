@@ -36,9 +36,8 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliam.
 	}
 
 	// Get user from database
-	db := database.Database[*modeliam.User](ctx.DatabaseContext())
 	users := make([]*modeliam.User, 0)
-	if err = db.WithLimit(1).WithQuery(&modeliam.User{Username: session.Username}).List(&users); err != nil {
+	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: session.Username}).List(&users); err != nil {
 		log.Error("failed to query user", err)
 		return nil, fmt.Errorf("database error")
 	}
@@ -64,7 +63,7 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliam.
 	// Update password in database
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
-	if err := db.Update(user); err != nil {
+	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Update(user); err != nil {
 		log.Error("failed to update password", err)
 		return nil, fmt.Errorf("failed to update password")
 	}
