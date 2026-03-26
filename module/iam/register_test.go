@@ -419,13 +419,12 @@ func TestIAM(t *testing.T) {
 		})
 
 		t.Run("promote_actor_superuser", func(t *testing.T) {
-			db := database.Database[*iam.User](nil)
 			actors := make([]*iam.User, 0)
-			require.NoError(t, db.WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
 			require.Len(t, actors, 1)
 			tru := true
 			actors[0].IsSuperuser = &tru
-			require.NoError(t, db.Update(actors[0]))
+			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
 		})
 
 		t.Run("reset_success", func(t *testing.T) {
@@ -526,13 +525,12 @@ func TestIAM(t *testing.T) {
 		})
 
 		t.Run("demote_actor_superuser", func(t *testing.T) {
-			db := database.Database[*iam.User](nil)
 			actors := make([]*iam.User, 0)
-			require.NoError(t, db.WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
 			require.Len(t, actors, 1)
 			fal := false
 			actors[0].IsSuperuser = &fal
-			require.NoError(t, db.Update(actors[0]))
+			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
 		})
 	})
 

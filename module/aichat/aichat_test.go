@@ -15,8 +15,11 @@ import (
 
 var (
 	token = "-"
-	port  = 8000
-	addr  = fmt.Sprintf("http://localhost:%d/api", port)
+	// Use a port distinct from other module tests (e.g. module/iam uses 8000). Parallel `go test`
+	// runs separate packages in separate processes; sharing 8000 makes this package's init() exit
+	// on EADDRINUSE while another package's server is bound, so requests hit the wrong router (404).
+	port = 18080
+	addr = fmt.Sprintf("http://localhost:%d/api", port)
 )
 
 func init() {
