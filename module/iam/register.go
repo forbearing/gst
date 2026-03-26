@@ -33,6 +33,7 @@ type Config struct {
 // Models:
 //   - ChangePassword
 //   - ResetPassword
+//   - AccountStatus
 //   - Group
 //   - Heartbeat
 //   - Login
@@ -47,6 +48,7 @@ type Config struct {
 // Routes:
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
+//   - POST   /api/iam/account-status
 //   - POST   /api/iam/groups
 //   - DELETE /api/iam/groups/:id
 //   - PUT    /api/iam/groups/:id
@@ -116,6 +118,16 @@ func Register(config ...Config) {
 		*ResetPasswordRsp,
 		*ResetPasswordService](
 		&ResetPasswordModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "AccountStatusModule" (privileged: set another user's active / inactive / locked)
+	module.Use[
+		*AccountStatus,
+		*AccountStatusReq,
+		*AccountStatusRsp,
+		*AccountStatusService](
+		&AccountStatusModule{},
 		consts.PHASE_CREATE,
 	)
 

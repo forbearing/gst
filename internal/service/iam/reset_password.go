@@ -22,16 +22,21 @@ func privilegedActor(actor *modeliam.User, username string) bool {
 	return actor.IsSuperuser != nil && *actor.IsSuperuser
 }
 
-func mayResetUserPassword(actorUsername string, actor, target *modeliam.User) error {
+// mayManageProtectedUser allows privileged actors to act on another user; superuser targets require root or admin.
+func mayManageProtectedUser(actorUsername string, actor, target *modeliam.User) error {
 	if !privilegedActor(actor, actorUsername) {
 		return errors.New("forbidden: superuser privileges required")
 	}
 	if target.IsSuperuser != nil && *target.IsSuperuser {
 		if actorUsername != consts.AUTHZ_USER_ROOT && actorUsername != consts.AUTHZ_USER_ADMIN {
-			return errors.New("forbidden: only root or admin may reset a superuser password")
+			return errors.New("forbidden: only root or admin may modify a superuser")
 		}
 	}
 	return nil
+}
+
+func mayResetUserPassword(actorUsername string, actor, target *modeliam.User) error {
+	return mayManageProtectedUser(actorUsername, actor, target)
 }
 
 func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliam.ResetPasswordReq) (rsp *modeliam.ResetPasswordRsp, err error) {
@@ -44,13 +49,20 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliam.R
 	}
 
 	sessionKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	_, err = redis.Cache[modeliam.Session]().Get(sessionKey)
+	session, err := redis.Cache[modeliam.Session]().Get(sessionKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid session")
 	}
+	actorUsername := session.Username
+	if actorUsername == "" {
+		actorUsername = ctx.Username
+	}
+	if actorUsername == "" {
+		return nil, errors.New("actor username not found")
+	}
 
 	actors := make([]*modeliam.User, 0)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: ctx.Username}).List(&actors); err != nil {
+	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: actorUsername}).List(&actors); err != nil {
 		log.Error("failed to query actor user", err)
 		return nil, errors.Wrap(err, "database error")
 	}
@@ -65,7 +77,7 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliam.R
 		return nil, errors.Wrap(err, "user not found")
 	}
 
-	if err = mayResetUserPassword(ctx.Username, actor, target); err != nil {
+	if err = mayResetUserPassword(actorUsername, actor, target); err != nil {
 		log.Error("reset password denied", err)
 		return nil, err
 	}
@@ -88,6 +100,6 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliam.R
 
 	invalidateUserSessionsByUserID(req.UserID)
 
-	log.Info("password reset successfully", "target_user_id", req.UserID, "actor", ctx.Username)
+	log.Info("password reset successfully", "target_user_id", req.UserID, "actor", actorUsername)
 	return &modeliam.ResetPasswordRsp{Msg: "password reset successfully"}, nil
 }

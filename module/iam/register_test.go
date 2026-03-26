@@ -17,7 +17,6 @@ import (
 	"github.com/forbearing/gst/internal/helper"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/module/iam"
-	"github.com/goforj/godump"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,6 +29,7 @@ var (
 	logoutAPI         = fmt.Sprintf("http://localhost:%d/api/logout", port)
 	changepasswordAPI = fmt.Sprintf("http://localhost:%d/api/iam/change-password", port)
 	resetpasswordAPI  = fmt.Sprintf("http://localhost:%d/api/iam/reset-password", port)
+	accountstatusAPI  = fmt.Sprintf("http://localhost:%d/api/iam/account-status", port)
 	userAPI           = fmt.Sprintf("http://localhost:%d/api/iam/users", port)
 	groupAPI          = fmt.Sprintf("http://localhost:%d/api/iam/groups", port)
 	meAPI             = fmt.Sprintf("http://localhost:%d/api/me", port)
@@ -84,7 +84,6 @@ func TestIAM(t *testing.T) {
 	newPassword := "123456789"
 	userID := ""
 
-	godump.Dump()
 	t.Run("signup", func(t *testing.T) {
 		cli, err := client.New(signupAPI)
 		require.NoError(t, err)
@@ -521,6 +520,246 @@ func TestIAM(t *testing.T) {
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
 				require.GreaterOrEqual(t, len(rsp.Items), 2)
+			})
+		})
+
+		t.Run("demote_actor_superuser", func(t *testing.T) {
+			actors := make([]*iam.User, 0)
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
+			require.Len(t, actors, 1)
+			fal := false
+			actors[0].IsSuperuser = &fal
+			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
+		})
+	})
+
+	t.Run("accountstatus", func(t *testing.T) {
+		acctVictimName := "acctvic01"
+		acctVictimPass := "acctpass11"
+		var acctVictimID string
+		var acctVictimSessionID string
+
+		t.Run("signup_acctvictim", func(t *testing.T) {
+			cli, err := client.New(signupAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.SignupReq{
+				Username:   acctVictimName,
+				Password:   acctVictimPass,
+				RePassword: acctVictimPass,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+				require.Equal(t, rsp.Username, acctVictimName)
+				require.NotEmpty(t, rsp.UserID)
+				acctVictimID = rsp.UserID
+			})
+		})
+
+		t.Run("acctvictim_login", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.LoginReq{
+				Username: acctVictimName,
+				Password: acctVictimPass,
+			})
+			require.NoError(t, err)
+			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				acctVictimSessionID = rsp.SessionID
+			})
+		})
+
+		t.Run("forbidden_when_not_superuser", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			_, err = cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusInactive,
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "code:")
+		})
+
+		t.Run("promote_actor_superuser", func(t *testing.T) {
+			actors := make([]*iam.User, 0)
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
+			require.Len(t, actors, 1)
+			tru := true
+			actors[0].IsSuperuser = &tru
+			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
+		})
+
+		t.Run("disable_acctvictim", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusInactive,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+				require.Contains(t, rsp.Msg, "success")
+			})
+		})
+
+		t.Run("session_invalid_after_disable", func(t *testing.T) {
+			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: acctVictimSessionID,
+			}))
+			require.NoError(t, err)
+
+			items := make([]iam.User, 0)
+			total := new(int64)
+			_, err = cli.List(&items, total)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "401")
+		})
+
+		t.Run("login_fails_when_inactive", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			_, err = cli.Create(iam.LoginReq{
+				Username: acctVictimName,
+				Password: acctVictimPass,
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "disabled")
+		})
+
+		t.Run("enable_acctvictim", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusActive,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+				require.Contains(t, rsp.Msg, "success")
+			})
+		})
+
+		var acctVictimSessionAfterEnable string
+		t.Run("login_after_enable", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.LoginReq{
+				Username: acctVictimName,
+				Password: acctVictimPass,
+			})
+			require.NoError(t, err)
+			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				acctVictimSessionAfterEnable = rsp.SessionID
+			})
+		})
+
+		t.Run("invalid_status_rejected", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			_, err = cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatus("not-a-valid-status"),
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "invalid")
+		})
+
+		t.Run("lock_acctvictim", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusLocked,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+				require.Contains(t, rsp.Msg, "success")
+			})
+		})
+
+		t.Run("session_invalid_after_lock", func(t *testing.T) {
+			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: acctVictimSessionAfterEnable,
+			}))
+			require.NoError(t, err)
+
+			items := make([]iam.User, 0)
+			total := new(int64)
+			_, err = cli.List(&items, total)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "401")
+		})
+
+		t.Run("login_fails_when_locked", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			_, err = cli.Create(iam.LoginReq{
+				Username: acctVictimName,
+				Password: acctVictimPass,
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "locked")
+		})
+
+		t.Run("unlock_acctvictim", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusActive,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+				require.Contains(t, rsp.Msg, "success")
+			})
+		})
+
+		t.Run("status_unchanged_idempotent", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusActive,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+				require.Contains(t, rsp.Msg, "unchanged")
 			})
 		})
 
