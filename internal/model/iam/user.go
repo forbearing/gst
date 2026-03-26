@@ -71,6 +71,8 @@ type User struct {
 	// 状态管理
 	IsStaff     *bool `json:"is_staff" gorm:"default:false"`
 	IsSuperuser *bool `json:"is_superuser" gorm:"default:false"`
+	// MustChangePassword is set when an administrator resets the password; the user must change it before other protected APIs are allowed.
+	MustChangePassword bool `json:"must_change_password" gorm:"default:false;not null"`
 
 	// 多租户支持
 	TenantID *string `json:"tenant_id" gorm:"index"`

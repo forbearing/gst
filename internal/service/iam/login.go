@@ -175,12 +175,13 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 		EngineName:  engineName,
 		BrowserName: browserName,
 		UserInfo: map[string]any{
-			"user_id":    user.ID,
-			"username":   user.Username,
-			"email":      user.Email,
-			"first_name": user.FirstName,
-			"last_name":  user.LastName,
-			"group":      group,
+			"user_id":              user.ID,
+			"username":             user.Username,
+			"email":                user.Email,
+			"first_name":           user.FirstName,
+			"last_name":            user.LastName,
+			"group":                group,
+			"must_change_password": user.MustChangePassword,
 		},
 	}
 
