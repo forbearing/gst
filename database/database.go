@@ -144,9 +144,11 @@ func (db *database[M]) regexpOperator() string {
 	}
 }
 
-// reset resets the database instance to its initial state by clearing all query conditions,
-// restoring default settings, and preparing for the next operation.
-// This method must be called in all functions except option functions prefixed with 'With*'.
+// reset clears this wrapper's option fields (WithQuery, WithSelect, limits, etc.) after each
+// CRUD method returns. It does not replace the underlying *gorm.DB session: GORM may still
+// retain WHERE/ORDER/JOIN clauses on that chain. Reusing the same Database handle for another
+// independent operation is incorrect; callers must call Database[M](ctx) again for each new
+// operation chain. See Database function documentation.
 func (db *database[M]) reset() {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -3555,13 +3557,25 @@ func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 //   - Default query limit protection
 //   - Panic protection for uninitialized database
 //
+// Required usage:
+//
+//	You must call Database[M](ctx) again for each separate operation chain. Assigning the return
+//	value to a variable and running another independent operation on it afterward (e.g.
+//	WithQuery(...).List(...) then Get(...) or Update(...) on the same variable) is incorrect:
+//	after each method, reset() clears this wrapper's options but the underlying GORM session
+//	keeps prior clauses, so later calls can combine wrong WHERE conditions, return empty models,
+//	or corrupt data.
+//
 // Example:
 //
-//	// Service layer usage with context
-//	db := Database[*User](ctx.DatabaseContext())
-//	// Non-service layer usage
-//	db := Database[*User](nil)
-//	users := db.WithQuery(&User{Name: "John"}).List()
+//	var users []*User
+//	// Service layer: one Database() call per operation chain (required; anything else is wrong).
+//	_ = Database[*User](ctx.DatabaseContext()).WithQuery(&User{Name: "John"}).List(&users)
+//	u := new(User)
+//	_ = Database[*User](ctx.DatabaseContext()).Get(u, id)
+//
+//	// Non-service layer
+//	_ = Database[*User](nil).WithQuery(&User{Name: "John"}).List(&users)
 func Database[M types.Model](ctx *types.DatabaseContext) types.Database[M] {
 	if DB == nil || DB == new(gorm.DB) {
 		panic("database is not initialized")
