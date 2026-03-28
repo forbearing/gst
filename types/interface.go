@@ -391,6 +391,14 @@ type Module[M Model, REQ Request, RSP Response] interface {
 	Param() string
 }
 
+// Coder is implemented by API response code types (e.g. response.Code) so service errors
+// can attach a stable client-facing numeric code and default message.
+type Coder interface {
+	Code() int
+	Status() int
+	Msg() string
+}
+
 // ESDocumenter represents a document that can be indexed into Elasticsearch.
 // Types implementing this interface should be able to convert themselves
 // into a document format suitable for Elasticsearch indexing.

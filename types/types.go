@@ -132,6 +132,9 @@ type ServiceError struct {
 	StatusCode int
 	Message    string
 	Err        error
+	// Coder optionally maps the error to a client-facing API code (JSON "code" field).
+	// When nil, the controller uses CodeFailure (-1).
+	Coder Coder
 }
 
 // Error implements the error interface
@@ -147,19 +150,30 @@ func (e *ServiceError) Unwrap() error {
 	return e.Err
 }
 
-// NewServiceError creates a new ServiceError with the given status code and message
-func NewServiceError(statusCode int, message string) *ServiceError {
-	return &ServiceError{
+// NewServiceError creates a new ServiceError with the given status code and message.
+// Optional coders: if one or more Coder values are passed, only the first is kept and
+// used by the controller to set the JSON "code" field (see handleServiceError).
+func NewServiceError(statusCode int, message string, coder ...Coder) *ServiceError {
+	se := &ServiceError{
 		StatusCode: statusCode,
 		Message:    message,
 	}
+	if len(coder) > 0 {
+		se.Coder = coder[0]
+	}
+	return se
 }
 
-// NewServiceErrorWithCause creates a new ServiceError with the given status code, message and underlying error
-func NewServiceErrorWithCause(statusCode int, message string, err error) *ServiceError {
-	return &ServiceError{
+// NewServiceErrorWithCause creates a new ServiceError with the given status code, message and underlying error.
+// Optional coders: if one or more Coder values are passed, only the first is kept.
+func NewServiceErrorWithCause(statusCode int, message string, err error, coder ...Coder) *ServiceError {
+	se := &ServiceError{
 		StatusCode: statusCode,
 		Message:    message,
 		Err:        err,
 	}
+	if len(coder) > 0 {
+		se.Coder = coder[0]
+	}
+	return se
 }
