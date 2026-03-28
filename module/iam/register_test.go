@@ -773,6 +773,88 @@ func TestIAM(t *testing.T) {
 		})
 	})
 
+	t.Run("deleteuser", func(t *testing.T) {
+		delName := "delvic01"
+		delPass := "delpass01"
+		var delUserID string
+		var delSessionID string
+
+		t.Run("signup_delvic", func(t *testing.T) {
+			cli, err := client.New(signupAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.SignupReq{
+				Username:   delName,
+				Password:   delPass,
+				RePassword: delPass,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+				require.Equal(t, rsp.Username, delName)
+				require.NotEmpty(t, rsp.UserID)
+				delUserID = rsp.UserID
+			})
+		})
+
+		t.Run("delvic_login", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.LoginReq{
+				Username: delName,
+				Password: delPass,
+			})
+			require.NoError(t, err)
+			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				delSessionID = rsp.SessionID
+			})
+		})
+
+		t.Run("promote_actor_superuser", func(t *testing.T) {
+			actors := make([]*iam.User, 0)
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
+			require.Len(t, actors, 1)
+			tru := true
+			actors[0].IsSuperuser = &tru
+			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
+		})
+
+		t.Run("delete_delvic_by_id", func(t *testing.T) {
+			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			_, err = cli.Delete(delUserID)
+			require.NoError(t, err)
+		})
+
+		t.Run("session_invalid_after_delete", func(t *testing.T) {
+			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: delSessionID,
+			}))
+			require.NoError(t, err)
+
+			items := make([]iam.User, 0)
+			total := new(int64)
+			_, err = cli.List(&items, total)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "401")
+		})
+
+		t.Run("demote_actor_superuser", func(t *testing.T) {
+			actors := make([]*iam.User, 0)
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&actors))
+			require.Len(t, actors, 1)
+			fal := false
+			actors[0].IsSuperuser = &fal
+			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
+		})
+	})
+
 	t.Run("offline", func(t *testing.T) {
 		cli, err := client.New(offlineAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
