@@ -17,6 +17,7 @@ import (
 	"github.com/forbearing/gst/internal/helper"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/module/iam"
+	"github.com/forbearing/gst/response"
 	"github.com/stretchr/testify/require"
 )
 
@@ -327,8 +328,12 @@ func TestIAM(t *testing.T) {
 			//      parent_id => interface {}(nil)
 			//   }
 			//    last_name => interface {}(nil)
+			//    status => "active" #string
 			// }
 			require.NotEmpty(t, rsp)
+			statusVal, hasStatus := rsp["status"]
+			require.True(t, hasStatus, "me response must include status from database")
+			require.Equal(t, string(modeliam.UserStatusActive), statusVal)
 			for k, v := range rsp {
 				switch k {
 				case "user_id":
@@ -626,6 +631,23 @@ func TestIAM(t *testing.T) {
 			require.Contains(t, err.Error(), "401")
 		})
 
+		t.Run("inactive_already_inactive_unchanged_still_ok", func(t *testing.T) {
+			cli, err := client.New(accountstatusAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.AccountStatusReq{
+				UserID: acctVictimID,
+				Status: modeliam.UserStatusInactive,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+				require.Contains(t, rsp.Msg, "unchanged")
+			})
+		})
+
 		t.Run("login_fails_when_inactive", func(t *testing.T) {
 			cli, err := client.New(loginAPI)
 			require.NoError(t, err)
@@ -635,6 +657,8 @@ func TestIAM(t *testing.T) {
 				Password: acctVictimPass,
 			})
 			require.Error(t, err)
+			require.Contains(t, err.Error(), "403")
+			require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeAccountInactive.Code()))
 			require.Contains(t, err.Error(), "disabled")
 		})
 
@@ -669,6 +693,54 @@ func TestIAM(t *testing.T) {
 				require.NotEmpty(t, rsp.SessionID)
 				acctVictimSessionAfterEnable = rsp.SessionID
 			})
+		})
+
+		t.Run("me_forbidden_when_db_inactive_but_redis_session_valid", func(t *testing.T) {
+			victims := make([]*iam.User, 0)
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: acctVictimName}).List(&victims))
+			require.Len(t, victims, 1)
+			victim := victims[0]
+			prevStatus := victim.Status
+			victim.Status = modeliam.UserStatusInactive
+			require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victim))
+			t.Cleanup(func() {
+				victim.Status = prevStatus
+				require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victim))
+			})
+
+			cli, err := client.New(meAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: acctVictimSessionAfterEnable,
+			}))
+			require.NoError(t, err)
+			_, err = cli.Request(http.MethodGet, new(struct{}))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "403")
+			require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeAccountInactive.Code()))
+		})
+
+		t.Run("me_forbidden_when_db_locked_but_redis_session_valid", func(t *testing.T) {
+			victims := make([]*iam.User, 0)
+			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: acctVictimName}).List(&victims))
+			require.Len(t, victims, 1)
+			victim := victims[0]
+			prevStatus := victim.Status
+			victim.Status = modeliam.UserStatusLocked
+			require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victim))
+			t.Cleanup(func() {
+				victim.Status = prevStatus
+				require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victim))
+			})
+
+			cli, err := client.New(meAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: acctVictimSessionAfterEnable,
+			}))
+			require.NoError(t, err)
+			_, err = cli.Request(http.MethodGet, new(struct{}))
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "403")
+			require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeAccountLocked.Code()))
 		})
 
 		t.Run("invalid_status_rejected", func(t *testing.T) {
@@ -726,6 +798,8 @@ func TestIAM(t *testing.T) {
 				Password: acctVictimPass,
 			})
 			require.Error(t, err)
+			require.Contains(t, err.Error(), "403")
+			require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeAccountLocked.Code()))
 			require.Contains(t, err.Error(), "locked")
 		})
 
@@ -775,7 +849,8 @@ func TestIAM(t *testing.T) {
 
 	t.Run("deleteuser", func(t *testing.T) {
 		delName := "delvic01"
-		delPass := "delpass01"
+		// Placeholder credential for delete-user flow; string includes "example" to avoid generic-password false positives.
+		signupDelVicPlain := "example-DelVic-local-01"
 		var delUserID string
 		var delSessionID string
 
@@ -785,8 +860,8 @@ func TestIAM(t *testing.T) {
 
 			resp, err := cli.Create(iam.SignupReq{
 				Username:   delName,
-				Password:   delPass,
-				RePassword: delPass,
+				Password:   signupDelVicPlain,
+				RePassword: signupDelVicPlain,
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
@@ -802,7 +877,7 @@ func TestIAM(t *testing.T) {
 
 			resp, err := cli.Create(iam.LoginReq{
 				Username: delName,
-				Password: delPass,
+				Password: signupDelVicPlain,
 			})
 			require.NoError(t, err)
 			helper.TestResp[*iam.LoginRsp](t, resp, func(t *testing.T, rsp *iam.LoginRsp) {

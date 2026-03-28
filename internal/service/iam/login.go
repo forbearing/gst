@@ -13,6 +13,7 @@ import (
 	servicelogmgmt "github.com/forbearing/gst/internal/service/logmgmt"
 	servicetwofa "github.com/forbearing/gst/internal/service/twofa"
 	"github.com/forbearing/gst/provider/redis"
+	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
@@ -101,10 +102,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 
 	// Check if user is enabled
 	if user.Status == modeliam.UserStatusInactive {
-		return nil, fmt.Errorf("user account is disabled")
+		return nil, types.NewServiceError(http.StatusForbidden, "", response.CodeAccountInactive)
 	}
 	if user.Status == modeliam.UserStatusLocked {
-		return nil, fmt.Errorf("user account is locked")
+		return nil, types.NewServiceError(http.StatusForbidden, "", response.CodeAccountLocked)
 	}
 
 	// Verify password

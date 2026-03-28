@@ -1,8 +1,6 @@
 package serviceiam
 
 import (
-	"time"
-
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
@@ -68,12 +66,14 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliam.A
 	}
 
 	if target.Status == req.Status {
+		// Still revoke sessions when the target state is inactive or locked so Redis cannot drift.
+		if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
+			invalidateUserSessionsByUserID(req.UserID)
+		}
 		return &modeliam.AccountStatusRsp{Msg: "account status unchanged"}, nil
 	}
 
 	target.Status = req.Status
-	now := time.Now()
-	target.UpdatedAt = &now
 	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).
 		WithoutHook().
 		WithSelect("username", "status").
