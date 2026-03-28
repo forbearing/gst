@@ -2250,7 +2250,7 @@ func DeleteManyFactory[M types.Model, REQ types.Request, RSP types.Response](cfg
 		var serviceCtxAfter *types.ServiceContext
 		if err = traceServiceHook[M](ctrlSpanCtx, consts.PHASE_DELETE_MANY_AFTER, func(spanCtx context.Context) error {
 			serviceCtxAfter = types.NewServiceContext(c, spanCtx).WithPhase(consts.PHASE_DELETE_MANY_AFTER)
-			return svc.DeleteManyAfter(serviceCtxBefore, req.Items...)
+			return svc.DeleteManyAfter(serviceCtxAfter, req.Items...)
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxAfter, err)
