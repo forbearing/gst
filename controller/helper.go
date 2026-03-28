@@ -374,6 +374,35 @@ func handleServiceError(c *gin.Context, ctx *types.ServiceContext, err error) {
 	// Check if it's a ServiceError
 	var serviceErr *types.ServiceError
 	if errors.As(err, &serviceErr) {
+		if serviceErr.Coder != nil {
+			// Code and CodeInstance both expose WithStatus → CodeInstance; same handling.
+			switch co := serviceErr.Coder.(type) {
+			case interface {
+				WithStatus(int) CodeInstance
+			}:
+				ci := co.WithStatus(serviceErr.StatusCode)
+				if serviceErr.Message != "" {
+					ci = ci.WithMsg(serviceErr.Message)
+				}
+				JSON(c, ci)
+			default:
+				msg := serviceErr.Message
+				if msg == "" {
+					msg = serviceErr.Coder.Msg()
+				}
+				st := serviceErr.StatusCode
+				if st == 0 {
+					st = serviceErr.Coder.Status()
+				}
+				c.JSON(st, gin.H{
+					"code":            serviceErr.Coder.Code(),
+					"msg":             msg,
+					"data":            nil,
+					consts.REQUEST_ID: c.GetString(consts.REQUEST_ID),
+				})
+			}
+			return
+		}
 		JSON(c, CodeFailure.WithStatus(serviceErr.StatusCode).WithErr(err))
 		return
 	}
