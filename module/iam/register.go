@@ -34,6 +34,9 @@ type Config struct {
 //   - ChangePassword
 //   - ResetPassword
 //   - AccountStatus
+//   - EmailChangeConfirm
+//   - EmailChangeRequest
+//   - EmailChangeResend
 //   - EmailVerificationConfirm
 //   - EmailVerificationRequest
 //   - EmailVerificationResend
@@ -52,6 +55,9 @@ type Config struct {
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
 //   - POST   /api/iam/account-status
+//   - POST   /api/iam/email-change-confirm
+//   - POST   /api/iam/email-change-request
+//   - POST   /api/iam/email-change-resend
 //   - POST   /api/iam/email-verification-confirm
 //   - POST   /api/iam/email-verification-request
 //   - POST   /api/iam/email-verification-resend
@@ -134,6 +140,36 @@ func Register(config ...Config) {
 		*AccountStatusRsp,
 		*AccountStatusService](
 		&AccountStatusModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailChangeConfirmModule"
+	module.Use[
+		*EmailChangeConfirm,
+		*EmailChangeConfirmReq,
+		*EmailChangeConfirmRsp,
+		*EmailChangeConfirmService](
+		&EmailChangeConfirmModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailChangeRequestModule"
+	module.Use[
+		*EmailChangeRequest,
+		*EmailChangeRequestReq,
+		*EmailChangeRequestRsp,
+		*EmailChangeRequestService](
+		&EmailChangeRequestModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailChangeResendModule"
+	module.Use[
+		*EmailChangeResend,
+		*EmailChangeResendReq,
+		*EmailChangeResendRsp,
+		*EmailChangeResendService](
+		&EmailChangeResendModule{},
 		consts.PHASE_CREATE,
 	)
 
