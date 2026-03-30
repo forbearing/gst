@@ -31,12 +31,10 @@ go install ./cmd/gg
 ```
 
 - 优先使用的包: 错误处理使用 `github.com/cockroachdb/errors `而不是 golang 内置的 errors 包.
-
 - 禁止在 golib 项目根目录执行 `cmd/gg` 的任何命令\*\* - 很容易破坏当前项目代码。测试 `cmd/gg` 命令请到 `examples/demo` 项目目录下执行。
-
 - 修改了代码，当前代码如果有测试用例，必须确保测试用例通过
+- internal/model 不需要使用 dsl 来定义接口行为
 
 ### 开发完后
 
 - 必须执行 `make check` 确保代码检查能通过
-- 必须执行 `make test` 确保代码能测试通过 `make test`, 如果没有修改相关代码则不用执行这一步骤

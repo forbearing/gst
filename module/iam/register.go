@@ -34,6 +34,9 @@ type Config struct {
 //   - ChangePassword
 //   - ResetPassword
 //   - AccountStatus
+//   - EmailVerificationConfirm
+//   - EmailVerificationRequest
+//   - EmailVerificationResend
 //   - Group
 //   - Heartbeat
 //   - Login
@@ -49,6 +52,9 @@ type Config struct {
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
 //   - POST   /api/iam/account-status
+//   - POST   /api/iam/email-verification-confirm
+//   - POST   /api/iam/email-verification-request
+//   - POST   /api/iam/email-verification-resend
 //   - POST   /api/iam/groups
 //   - DELETE /api/iam/groups/:id
 //   - PUT    /api/iam/groups/:id
@@ -128,6 +134,36 @@ func Register(config ...Config) {
 		*AccountStatusRsp,
 		*AccountStatusService](
 		&AccountStatusModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailVerificationConfirmModule"
+	module.Use[
+		*EmailVerificationConfirm,
+		*EmailVerificationConfirmReq,
+		*EmailVerificationConfirmRsp,
+		*EmailVerificationConfirmService](
+		&EmailVerificationConfirmModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailVerificationRequestModule"
+	module.Use[
+		*EmailVerificationRequest,
+		*EmailVerificationRequestReq,
+		*EmailVerificationRequestRsp,
+		*EmailVerificationRequestService](
+		&EmailVerificationRequestModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailVerificationResendModule"
+	module.Use[
+		*EmailVerificationResend,
+		*EmailVerificationResendReq,
+		*EmailVerificationResendRsp,
+		*EmailVerificationResendService](
+		&EmailVerificationResendModule{},
 		consts.PHASE_CREATE,
 	)
 
