@@ -3,6 +3,7 @@ package iam
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
 )
 
 // account
@@ -30,4 +31,11 @@ type (
 	MeRsp      = modeliam.MeRsp
 	OnlineUser = modeliam.OnlineUser
 	OfflineReq = modeliam.OfflineReq
+
+	EmailVerificationConfirmReq = modeliamemail.VerificationConfirmReq
+	EmailVerificationConfirmRsp = modeliamemail.VerificationConfirmRsp
+	EmailVerificationResendReq  = modeliamemail.VerificationResendReq
+	EmailVerificationResendRsp  = modeliamemail.VerificationResendRsp
+	EmailVerificationRequestReq = modeliamemail.VerificationRequestReq
+	EmailVerificationRequestRsp = modeliamemail.VerificationRequestRsp
 )

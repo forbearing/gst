@@ -8,6 +8,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -15,7 +16,7 @@ import (
 // VerificationConfirmService handles the token confirmation step that finalizes
 // the email verification flow.
 type VerificationConfirmService struct {
-	service.Base[*modeliamemail.VerificationConfirm, *modeliamemail.VerificationConfirmReq, *modeliamemail.VerificationConfirmRsp]
+	service.Base[*model.Empty, *modeliamemail.VerificationConfirmReq, *modeliamemail.VerificationConfirmRsp]
 }
 
 var (

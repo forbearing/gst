@@ -8,6 +8,7 @@ import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	serviceiamaccount "github.com/forbearing/gst/internal/service/iam/account"
+	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
@@ -35,15 +36,15 @@ type Config struct {
 //   - ChangePassword
 //   - ResetPassword
 //   - AccountStatus
+//   - EmailVerificationConfirm
+//   - EmailVerificationRequest
+//   - EmailVerificationResend
+//   - EmailPasswordResetConfirm
+//   - EmailPasswordResetRequest
 //   - EmailChangeConfirm
 //   - EmailChangeCancel
 //   - EmailChangeRequest
 //   - EmailChangeResend
-//   - EmailPasswordResetConfirm
-//   - EmailPasswordResetRequest
-//   - EmailVerificationConfirm
-//   - EmailVerificationRequest
-//   - EmailVerificationResend
 //   - Group
 //   - Heartbeat
 //   - Login
@@ -230,32 +231,9 @@ func Register(config ...Config) {
 		consts.PHASE_CREATE,
 	)
 
-	// Use module "EmailVerificationConfirmModule"
-	module.Use[
-		*EmailVerificationConfirm,
-		*EmailVerificationConfirmReq,
-		*EmailVerificationConfirmRsp](
-		&EmailVerificationConfirmModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailVerificationRequestModule"
-	module.Use[
-		*EmailVerificationRequest,
-		*EmailVerificationRequestReq,
-		*EmailVerificationRequestRsp](
-		&EmailVerificationRequestModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailVerificationResendModule"
-	module.Use[
-		*EmailVerificationResend,
-		*EmailVerificationResendReq,
-		*EmailVerificationResendRsp](
-		&EmailVerificationResendModule{},
-		consts.PHASE_CREATE,
-	)
+	module.Use(module.NewWrapper("/iam/email/verification-request", "id", true, &serviceiamemail.VerificationRequestService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/verification-resend", "id", true, &serviceiamemail.VerificationResendService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/verification-confirm", "id", true, &serviceiamemail.VerificationConfirmService{}), consts.PHASE_CREATE)
 
 	// create default users
 	if len(cfg.DefaultUsers) > 0 {

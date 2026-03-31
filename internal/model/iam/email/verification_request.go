@@ -1,13 +1,5 @@
 package modeliamemail
 
-import "github.com/forbearing/gst/model"
-
-// VerificationRequest is the model for POST /api/iam/email/verification-request.
-// It starts an email verification flow for the target email address.
-type VerificationRequest struct {
-	model.Empty
-}
-
 // VerificationRequestReq is the payload for POST /api/iam/email/verification-request.
 // It accepts the email address that should receive the verification message.
 type VerificationRequestReq struct {

@@ -5,6 +5,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -12,7 +13,7 @@ import (
 // VerificationRequestService handles public requests that start the email
 // verification flow for an eligible user account.
 type VerificationRequestService struct {
-	service.Base[*modeliamemail.VerificationRequest, *modeliamemail.VerificationRequestReq, *modeliamemail.VerificationRequestRsp]
+	service.Base[*model.Empty, *modeliamemail.VerificationRequestReq, *modeliamemail.VerificationRequestRsp]
 }
 
 // verificationLookupUserByEmail resolves the user bound to the requested email.
