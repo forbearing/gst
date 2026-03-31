@@ -35,8 +35,11 @@ type Config struct {
 //   - ResetPassword
 //   - AccountStatus
 //   - EmailChangeConfirm
+//   - EmailChangeCancel
 //   - EmailChangeRequest
 //   - EmailChangeResend
+//   - EmailPasswordResetConfirm
+//   - EmailPasswordResetRequest
 //   - EmailVerificationConfirm
 //   - EmailVerificationRequest
 //   - EmailVerificationResend
@@ -55,12 +58,15 @@ type Config struct {
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
 //   - POST   /api/iam/account-status
-//   - POST   /api/iam/email-change-confirm
-//   - POST   /api/iam/email-change-request
-//   - POST   /api/iam/email-change-resend
-//   - POST   /api/iam/email-verification-confirm
-//   - POST   /api/iam/email-verification-request
-//   - POST   /api/iam/email-verification-resend
+//   - POST   /api/iam/email/change-confirm
+//   - POST   /api/iam/email/change-cancel
+//   - POST   /api/iam/email/change-request
+//   - POST   /api/iam/email/change-resend
+//   - POST   /api/iam/email/password-reset-confirm
+//   - POST   /api/iam/email/password-reset-request
+//   - POST   /api/iam/email/verification-confirm
+//   - POST   /api/iam/email/verification-request
+//   - POST   /api/iam/email/verification-resend
 //   - POST   /api/iam/groups
 //   - DELETE /api/iam/groups/:id
 //   - PUT    /api/iam/groups/:id
@@ -153,6 +159,16 @@ func Register(config ...Config) {
 		consts.PHASE_CREATE,
 	)
 
+	// Use module "EmailChangeCancelModule"
+	module.Use[
+		*EmailChangeCancel,
+		*EmailChangeCancelReq,
+		*EmailChangeCancelRsp,
+		*EmailChangeCancelService](
+		&EmailChangeCancelModule{},
+		consts.PHASE_CREATE,
+	)
+
 	// Use module "EmailChangeRequestModule"
 	module.Use[
 		*EmailChangeRequest,
@@ -170,6 +186,26 @@ func Register(config ...Config) {
 		*EmailChangeResendRsp,
 		*EmailChangeResendService](
 		&EmailChangeResendModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailPasswordResetConfirmModule"
+	module.Use[
+		*EmailPasswordResetConfirm,
+		*EmailPasswordResetConfirmReq,
+		*EmailPasswordResetConfirmRsp,
+		*EmailPasswordResetConfirmService](
+		&EmailPasswordResetConfirmModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailPasswordResetRequestModule"
+	module.Use[
+		*EmailPasswordResetRequest,
+		*EmailPasswordResetRequestReq,
+		*EmailPasswordResetRequestRsp,
+		*EmailPasswordResetRequestService](
+		&EmailPasswordResetRequestModule{},
 		consts.PHASE_CREATE,
 	)
 

@@ -21,7 +21,7 @@ const (
 	UserStatusLocked   UserStatus = "locked"
 )
 
-// UserType 用户类型枚举
+// UserType defines IAM user categories.
 type UserType string
 
 const (
@@ -53,7 +53,7 @@ type User struct {
 	GroupID string     `json:"group_id" gorm:"type:varchar(100);index"`
 	Group   *Group     `json:"group,omitempty" gorm:"-"`
 
-	// 个人信息
+	// Profile
 	Email       *string    `json:"email" gorm:"type:varchar(100);uniqueIndex"`
 	Phone       *string    `json:"phone" gorm:"type:varchar(20);index"`
 	FirstName   *string    `json:"first_name" gorm:"type:varchar(50)"`
@@ -64,42 +64,34 @@ type User struct {
 	Birthday    *time.Time `json:"birthday"`
 	Gender      *string    `json:"gender" gorm:"type:varchar(10)"`
 
-	// 认证信息
+	// Credentials and auth settings
 	Password         string `json:"password" gorm:"-"`
 	PasswordHash     string `json:"-" gorm:"type:varchar(255)"`
 	Salt             string `json:"-" gorm:"type:varchar(50)"`
-	EmailVerified    *bool  `json:"email_verified" gorm:"default:false"`
-	PhoneVerified    *bool  `json:"phone_verified" gorm:"default:false"`
 	TwoFactorEnabled *bool  `json:"two_factor_enabled" gorm:"default:false"`
-
-	// 状态管理
-	IsStaff     *bool `json:"is_staff" gorm:"default:false"`
-	IsSuperuser *bool `json:"is_superuser" gorm:"default:false"`
 	// MustChangePassword is set when an administrator resets the password; the user must change it before other protected APIs are allowed.
 	MustChangePassword bool `json:"must_change_password" gorm:"default:false;not null"`
 
-	// 多租户支持
+	// Verification and email lifecycle
+	EmailVerified      *bool      `json:"email_verified" gorm:"default:false"`
+	EmailVerifiedAt    *time.Time `json:"email_verified_at"`
+	PhoneVerified      *bool      `json:"phone_verified" gorm:"default:false"`
+	LastEmailChangedAt *time.Time `json:"last_email_changed_at"`
+
+	// Authorization flags
+	IsStaff     *bool `json:"is_staff" gorm:"default:false"`
+	IsSuperuser *bool `json:"is_superuser" gorm:"default:false"`
+
+	// Multi-tenant scope
 	TenantID *string `json:"tenant_id" gorm:"index"`
 	Tenant   *Tenant `json:"tenant,omitempty" gorm:"-"`
 
-	// 登录信息
+	// Login activity
 	LastLoginAt      *time.Time `json:"last_login_at"`
 	LastLoginIP      *string    `json:"last_login_ip" gorm:"type:varchar(45)"`
 	LoginCount       *int       `json:"login_count" gorm:"default:0"`
 	FailedLoginCount int        `json:"failed_login_count" gorm:"default:0"`
 	LockedUntil      *time.Time `json:"locked_until"`
-
-	// // 验证状态
-	// EmailVerificationToken  *string    `json:"-" gorm:"type:varchar(255)"`
-	// EmailVerificationExpiry *time.Time `json:"-"`
-	// PhoneVerificationCode   *string    `json:"-" gorm:"type:varchar(10)"`
-	// PhoneVerificationExpiry *time.Time `json:"-"`
-	// PasswordResetToken      *string    `json:"-" gorm:"type:varchar(255)"`
-	// PasswordResetExpiry     *time.Time `json:"-"`
-
-	// // 扩展字段
-	// Preferences datatypes.JSONMap `json:"preferences"`
-	// Metadata    datatypes.JSONMap `json:"metadata"`
 
 	model.Base
 }

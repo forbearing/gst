@@ -12,11 +12,10 @@
 
 - 代码风格、测试用例风格、程序输出风格等必须和当前包中保持一致.
 - 修改完代码后, 需要同时检查下相关的文档/注释是否需要更新.
-- 不要处理以 `.bak `结尾的文件
-- golang 中, 表示任意类型请使用 any 而不是 interface{}
 - 代码新增功能、bug修复完后, 需要更新其对应的函数、结构体、接口、类的代码注释和文档、代码注释请使用英文
 - module, internal/model 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq
 - module, internal/model 中使用自定义 Response 时, 命名偏向于 XXXRsp, 例如 SignupRsp
+- 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释。
 
 ### Sandbox
 
@@ -34,7 +33,6 @@ go install ./cmd/gg
 - 禁止在 golib 项目根目录执行 `cmd/gg` 的任何命令\*\* - 很容易破坏当前项目代码。测试 `cmd/gg` 命令请到 `examples/demo` 项目目录下执行。
 - 修改了代码，当前代码如果有测试用例，必须确保测试用例通过
 - internal/model 不需要使用 dsl 来定义接口行为
-- 总是按照最佳实践方式来实现代码
 
 ### 开发完后
 

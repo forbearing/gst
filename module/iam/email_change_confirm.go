@@ -1,18 +1,18 @@
 package iam
 
 import (
-	modeliam "github.com/forbearing/gst/internal/model/iam"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
 	"github.com/forbearing/gst/types"
 )
 
 var _ types.Module[*EmailChangeConfirm, *EmailChangeConfirmReq, *EmailChangeConfirmRsp] = (*EmailChangeConfirmModule)(nil)
 
 type (
-	EmailChangeConfirm        = modeliam.EmailChangeConfirm
-	EmailChangeConfirmReq     = modeliam.EmailChangeConfirmReq
-	EmailChangeConfirmRsp     = modeliam.EmailChangeConfirmRsp
-	EmailChangeConfirmService = serviceiam.EmailChangeConfirmService
+	EmailChangeConfirm        = modeliamemail.ChangeConfirm
+	EmailChangeConfirmReq     = modeliamemail.ChangeConfirmReq
+	EmailChangeConfirmRsp     = modeliamemail.ChangeConfirmRsp
+	EmailChangeConfirmService = serviceiamemail.ChangeConfirmService
 	EmailChangeConfirmModule  struct{}
 )
 
@@ -20,6 +20,6 @@ func (*EmailChangeConfirmModule) Service() types.Service[*EmailChangeConfirm, *E
 	return &EmailChangeConfirmService{}
 }
 
-func (*EmailChangeConfirmModule) Route() string { return "/iam/email-change-confirm" }
+func (*EmailChangeConfirmModule) Route() string { return "/iam/email/change-confirm" }
 func (*EmailChangeConfirmModule) Pub() bool     { return false }
 func (*EmailChangeConfirmModule) Param() string { return "id" }
