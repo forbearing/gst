@@ -191,7 +191,7 @@ func reserveEmailThrottle(ctx context.Context, kind iamEmailFlowKind, action ema
 	key := emailThrottleKey(kind, action, scope)
 	record, err := emailThrottleCache().WithContext(normalizeContext(ctx)).Get(key)
 	if err == nil {
-		if wait := time.Until(record.AvailableAt); wait > 0 {
+		if wait := record.AvailableAt.Sub(emailNow()); wait > 0 {
 			return wait, errEmailFlowThrottled
 		}
 	} else if !errors.Is(err, types.ErrEntryNotFound) {

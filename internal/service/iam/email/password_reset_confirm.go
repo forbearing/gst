@@ -13,11 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// PasswordResetConfirmService handles the token confirmation step that finalizes
+// the email-driven password reset flow.
 type PasswordResetConfirmService struct {
 	service.Base[*modeliamemail.PasswordResetConfirm, *modeliamemail.PasswordResetConfirmReq, *modeliamemail.PasswordResetConfirmRsp]
 }
 
 var (
+	// passwordResetLoadUserByID loads the account referenced by the password reset token.
 	passwordResetLoadUserByID = func(ctx *types.ServiceContext, userID string) (*modeliam.User, error) {
 		user := new(modeliam.User)
 		if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, userID); err != nil {
@@ -25,12 +28,16 @@ var (
 		}
 		return user, nil
 	}
+	// passwordResetUpdateUser persists the new password state while skipping hooks that
+	// are unrelated to the reset flow and selecting only the fields changed here.
 	passwordResetUpdateUser = func(ctx *types.ServiceContext, user *modeliam.User) error {
 		return database.Database[*modeliam.User](ctx.DatabaseContext()).
 			WithoutHook().
 			WithSelect("username", "password_hash", "must_change_password").
 			Update(user)
 	}
+	// passwordResetInvalidateSessions clears the cached session mapping so a password
+	// reset immediately revokes access granted by previously issued sessions.
 	passwordResetInvalidateSessions = func(userID string) {
 		if userID == "" {
 			return
@@ -44,6 +51,8 @@ var (
 	}
 )
 
+// Create completes the password reset flow by consuming the one-time token,
+// updating the stored password hash, and invalidating active sessions.
 func (s *PasswordResetConfirmService) Create(ctx *types.ServiceContext, req *modeliamemail.PasswordResetConfirmReq) (rsp *modeliamemail.PasswordResetConfirmRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
@@ -90,6 +99,8 @@ func (s *PasswordResetConfirmService) Create(ctx *types.ServiceContext, req *mod
 	}, nil
 }
 
+// applyPasswordReset hashes the supplied password and updates the in-memory user
+// model before persistence.
 func applyPasswordReset(user *modeliam.User, newPassword string) error {
 	if user == nil {
 		return errors.New("password reset user is required")

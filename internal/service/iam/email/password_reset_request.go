@@ -11,10 +11,15 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
+// PasswordResetRequestService handles public password reset requests that start
+// the email-driven password recovery flow.
 type PasswordResetRequestService struct {
 	service.Base[*modeliamemail.PasswordResetRequest, *modeliamemail.PasswordResetRequestReq, *modeliamemail.PasswordResetRequestRsp]
 }
 
+// passwordResetLookupUserByEmail resolves the account bound to the requested email.
+// The indirection keeps the production query simple and allows focused tests to stub
+// the lookup without requiring a database fixture.
 var passwordResetLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliam.User, error) {
 	users := make([]*modeliam.User, 0, 1)
 	queryEmail := email
@@ -30,6 +35,10 @@ var passwordResetLookupUserByEmail = func(ctx *types.ServiceContext, email strin
 	return users[0], nil
 }
 
+// Create starts the password reset flow for the provided email address.
+// It always returns the same public-facing message for accepted requests so the
+// caller cannot infer whether the account exists, while still enforcing throttle
+// limits before any token is created or email is sent.
 func (s *PasswordResetRequestService) Create(ctx *types.ServiceContext, req *modeliamemail.PasswordResetRequestReq) (rsp *modeliamemail.PasswordResetRequestRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	rsp = &modeliamemail.PasswordResetRequestRsp{Msg: publicAcceptedMessage(iamEmailFlowKindPasswordReset)}
@@ -73,6 +82,8 @@ func (s *PasswordResetRequestService) Create(ctx *types.ServiceContext, req *mod
 	return rsp, nil
 }
 
+// eligiblePasswordResetUser ensures the reset flow is only issued for an active
+// account whose persisted email still matches the normalized request email.
 func eligiblePasswordResetUser(user *modeliam.User, email string) bool {
 	if user == nil || user.ID == "" {
 		return false
@@ -83,6 +94,9 @@ func eligiblePasswordResetUser(user *modeliam.User, email string) bool {
 	return user.Status == "" || user.Status == modeliam.UserStatusActive
 }
 
+// passwordResetDelivery builds the delivery payload consumed by the configured
+// email sender. The template data mirrors the flow state so downstream renderers
+// can build reset links or customized message bodies.
 func passwordResetDelivery(token string, flow iamEmailFlowState) emailDelivery {
 	return emailDelivery{
 		To:       flow.Email,
@@ -97,6 +111,7 @@ func passwordResetDelivery(token string, flow iamEmailFlowState) emailDelivery {
 	}
 }
 
+// normalizePasswordResetEmail safely normalizes a nullable user email field.
 func normalizePasswordResetEmail(email *string) string {
 	if email == nil {
 		return ""
@@ -104,6 +119,8 @@ func normalizePasswordResetEmail(email *string) string {
 	return normalizeEmailScope(*email)
 }
 
+// passwordResetContext returns a non-nil context for flow operations triggered by
+// the password reset services.
 func passwordResetContext(ctx *types.ServiceContext) context.Context {
 	if ctx == nil {
 		return context.Background()

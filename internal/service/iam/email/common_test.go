@@ -236,6 +236,297 @@ func TestMissingTokenReturnsNotFound(t *testing.T) {
 	require.True(t, errors.Is(err, errEmailFlowNotFound))
 }
 
+func TestVerificationRequestCreate(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 30, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{11}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	verified := false
+	previousLookup := verificationLookupUserByEmail
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+		require.Equal(t, "user@example.com", email)
+		emailCopy := "user@example.com"
+		return &modeliam.User{
+			Base:          model.Base{ID: "user-verify-1"},
+			Status:        modeliam.UserStatusActive,
+			Email:         &emailCopy,
+			EmailVerified: &verified,
+		}, nil
+	}
+	t.Cleanup(func() {
+		verificationLookupUserByEmail = previousLookup
+	})
+
+	svc := &VerificationRequestService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationRequestReq{Email: " USER@example.com "})
+	require.NoError(t, err)
+	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
+	require.Equal(t, "user@example.com", sender.last.To)
+	require.Equal(t, "Email verification", sender.last.Subject)
+	require.NotEmpty(t, sender.last.Data["token"])
+	require.Equal(t, "user-verify-1", sender.last.Data["user_id"])
+	require.Equal(t, 1, flowCache.Len())
+}
+
+func TestVerificationRequestCreateVerifiedUser(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 45, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{12}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	verified := true
+	previousLookup := verificationLookupUserByEmail
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		emailCopy := "user@example.com"
+		return &modeliam.User{
+			Base:          model.Base{ID: "user-verify-2"},
+			Status:        modeliam.UserStatusActive,
+			Email:         &emailCopy,
+			EmailVerified: &verified,
+		}, nil
+	}
+	t.Cleanup(func() {
+		verificationLookupUserByEmail = previousLookup
+	})
+
+	svc := &VerificationRequestService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationRequestReq{Email: "user@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
+	require.Equal(t, 0, flowCache.Len())
+	require.Equal(t, "", sender.last.To)
+}
+
+func TestVerificationResendCreate(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 50, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{13}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	verified := false
+	previousLookup := verificationLookupUserByEmail
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+		require.Equal(t, "user@example.com", email)
+		emailCopy := "user@example.com"
+		return &modeliam.User{
+			Base:          model.Base{ID: "user-verify-3"},
+			Status:        modeliam.UserStatusActive,
+			Email:         &emailCopy,
+			EmailVerified: &verified,
+		}, nil
+	}
+	t.Cleanup(func() {
+		verificationLookupUserByEmail = previousLookup
+	})
+
+	svc := &VerificationResendService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationResendReq{Email: "user@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
+	require.Equal(t, "user@example.com", sender.last.To)
+	require.Equal(t, "Email verification", sender.last.Subject)
+	require.Equal(t, 1, flowCache.Len())
+}
+
+func TestVerificationResendCreateThrottled(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 55, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{14}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	verified := false
+	previousLookup := verificationLookupUserByEmail
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		emailCopy := "user@example.com"
+		return &modeliam.User{
+			Base:          model.Base{ID: "user-verify-4"},
+			Status:        modeliam.UserStatusActive,
+			Email:         &emailCopy,
+			EmailVerified: &verified,
+		}, nil
+	}
+	t.Cleanup(func() {
+		verificationLookupUserByEmail = previousLookup
+	})
+
+	err := throttleCache.Set(emailThrottleKey(iamEmailFlowKindVerification, emailThrottleResend, "user@example.com"), emailThrottleRecord{
+		Kind:        iamEmailFlowKindVerification,
+		Action:      emailThrottleResend,
+		Scope:       "user@example.com",
+		CreatedAt:   now,
+		AvailableAt: now.Add(30 * time.Second),
+	}, time.Minute)
+	require.NoError(t, err)
+
+	svc := &VerificationResendService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationResendReq{Email: "user@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
+	require.Equal(t, 0, flowCache.Len())
+	require.Equal(t, "", sender.last.To)
+}
+
+func TestVerificationConfirmCreate(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 58, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{15}, 64)))
+	t.Cleanup(restore)
+
+	token, err := newEmailFlowToken()
+	require.NoError(t, err)
+	err = flowCache.Set(emailFlowKey(iamEmailFlowKindVerification, token), iamEmailFlowState{
+		Kind:      iamEmailFlowKindVerification,
+		UserID:    "user-verify-5",
+		Email:     "user@example.com",
+		IssuedAt:  now,
+		ExpiresAt: now.Add(24 * time.Hour),
+	}, 24*time.Hour)
+	require.NoError(t, err)
+
+	verified := false
+	emailCopy := "user@example.com"
+	user := &modeliam.User{
+		Base:          model.Base{ID: "user-verify-5"},
+		Email:         &emailCopy,
+		EmailVerified: &verified,
+	}
+
+	previousLoad := verificationLoadUserByID
+	previousUpdate := verificationUpdateUser
+	verificationLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+		require.Equal(t, "user-verify-5", userID)
+		return user, nil
+	}
+	verificationUpdateUser = func(_ *types.ServiceContext, updated *modeliam.User) error {
+		user = updated
+		return nil
+	}
+	t.Cleanup(func() {
+		verificationLoadUserByID = previousLoad
+		verificationUpdateUser = previousUpdate
+	})
+
+	svc := &VerificationConfirmService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationConfirmReq{Token: token})
+	require.NoError(t, err)
+	require.True(t, rsp.Verified)
+	require.Equal(t, "email verified successfully", rsp.Msg)
+	require.NotNil(t, user.EmailVerified)
+	require.True(t, *user.EmailVerified)
+	require.NotNil(t, user.EmailVerifiedAt)
+	_, err = loadEmailFlow(context.Background(), iamEmailFlowKindVerification, token)
+	require.ErrorIs(t, err, errEmailFlowNotFound)
+}
+
+func TestVerificationConfirmCreateInvalidToken(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 59, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{16}, 64)))
+	t.Cleanup(restore)
+
+	svc := &VerificationConfirmService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationConfirmReq{Token: "missing"})
+	require.NoError(t, err)
+	require.False(t, rsp.Verified)
+	require.Equal(t, "invalid or expired verification token", rsp.Msg)
+}
+
+func TestVerificationConfirmCreateAlreadyVerified(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 14, 1, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{17}, 64)))
+	t.Cleanup(restore)
+
+	token, err := newEmailFlowToken()
+	require.NoError(t, err)
+	err = flowCache.Set(emailFlowKey(iamEmailFlowKindVerification, token), iamEmailFlowState{
+		Kind:      iamEmailFlowKindVerification,
+		UserID:    "user-verify-6",
+		Email:     "user@example.com",
+		IssuedAt:  now,
+		ExpiresAt: now.Add(24 * time.Hour),
+	}, 24*time.Hour)
+	require.NoError(t, err)
+
+	verified := true
+	verifiedAt := now.Add(-time.Hour)
+	emailCopy := "user@example.com"
+	user := &modeliam.User{
+		Base:            model.Base{ID: "user-verify-6"},
+		Email:           &emailCopy,
+		EmailVerified:   &verified,
+		EmailVerifiedAt: &verifiedAt,
+	}
+
+	previousLoad := verificationLoadUserByID
+	previousUpdate := verificationUpdateUser
+	verificationLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		return user, nil
+	}
+	verificationUpdateUser = func(_ *types.ServiceContext, _ *modeliam.User) error {
+		t.Fatalf("verificationUpdateUser should not be called for already verified user")
+		return nil
+	}
+	t.Cleanup(func() {
+		verificationLoadUserByID = previousLoad
+		verificationUpdateUser = previousUpdate
+	})
+
+	svc := &VerificationConfirmService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationConfirmReq{Token: token})
+	require.NoError(t, err)
+	require.True(t, rsp.Verified)
+	require.Equal(t, "email already verified", rsp.Msg)
+}
+
 func TestPasswordResetRequestCreate(t *testing.T) {
 	flowCache := newTestCache[iamEmailFlowState]()
 	throttleCache := newTestCache[emailThrottleRecord]()
