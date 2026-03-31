@@ -82,11 +82,13 @@ func (c *testCache[T]) WithContext(context.Context) types.Cache[T] {
 }
 
 type testEmailSender struct {
-	last emailDelivery
+	last       emailDelivery
+	deliveries []emailDelivery
 }
 
 func (s *testEmailSender) Send(_ context.Context, delivery emailDelivery) error {
 	s.last = delivery
+	s.deliveries = append(s.deliveries, delivery)
 	return nil
 }
 
@@ -525,6 +527,215 @@ func TestVerificationConfirmCreateAlreadyVerified(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, rsp.Verified)
 	require.Equal(t, "email already verified", rsp.Msg)
+}
+
+func TestChangeRequestCreate(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 14, 5, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{18}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("current-password"), bcrypt.DefaultCost)
+	require.NoError(t, err)
+
+	oldEmail := "old@example.com"
+	user := &modeliam.User{
+		Base:         model.Base{ID: "user-change-1"},
+		Status:       modeliam.UserStatusActive,
+		Email:        &oldEmail,
+		PasswordHash: string(passwordHash),
+	}
+
+	previousLoad := changeLoadUserByID
+	previousLookup := changeLookupUserByEmail
+	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+		require.Equal(t, "user-change-1", userID)
+		return user, nil
+	}
+	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+		require.Equal(t, "new@example.com", email)
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		changeLoadUserByID = previousLoad
+		changeLookupUserByEmail = previousLookup
+	})
+
+	svc := &ChangeRequestService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+	ctx.UserID = "user-change-1"
+
+	rsp, err := svc.Create(ctx, &modeliamemail.ChangeRequestReq{
+		NewEmail:        " NEW@example.com ",
+		CurrentPassword: "current-password",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "email change request submitted successfully", rsp.Msg)
+	require.Equal(t, 2, flowCache.Len())
+	require.Len(t, sender.deliveries, 2)
+	require.Equal(t, "new@example.com", sender.deliveries[0].To)
+	require.Equal(t, "Email change confirmation", sender.deliveries[0].Subject)
+	require.Equal(t, "old@example.com", sender.deliveries[1].To)
+	require.Equal(t, "Email change cancellation", sender.deliveries[1].Subject)
+}
+
+func TestChangeRequestCreateEmailAlreadyUsed(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 14, 6, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{19}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("current-password"), bcrypt.DefaultCost)
+	require.NoError(t, err)
+
+	oldEmail := "old@example.com"
+	usedEmail := "new@example.com"
+	user := &modeliam.User{
+		Base:         model.Base{ID: "user-change-2"},
+		Status:       modeliam.UserStatusActive,
+		Email:        &oldEmail,
+		PasswordHash: string(passwordHash),
+	}
+	existingUser := &modeliam.User{
+		Base:  model.Base{ID: "user-change-other"},
+		Email: &usedEmail,
+	}
+
+	previousLoad := changeLoadUserByID
+	previousLookup := changeLookupUserByEmail
+	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		return user, nil
+	}
+	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		return existingUser, nil
+	}
+	t.Cleanup(func() {
+		changeLoadUserByID = previousLoad
+		changeLookupUserByEmail = previousLookup
+	})
+
+	svc := &ChangeRequestService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+	ctx.UserID = "user-change-2"
+
+	_, err = svc.Create(ctx, &modeliamemail.ChangeRequestReq{
+		NewEmail:        "new@example.com",
+		CurrentPassword: "current-password",
+	})
+	require.EqualError(t, err, "new email is already in use")
+	require.Zero(t, flowCache.Len())
+	require.Empty(t, sender.deliveries)
+}
+
+func TestChangeResendCreate(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 14, 7, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{20}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	oldEmail := "old@example.com"
+	user := &modeliam.User{
+		Base:   model.Base{ID: "user-change-3"},
+		Status: modeliam.UserStatusActive,
+		Email:  &oldEmail,
+	}
+
+	previousLoad := changeLoadUserByID
+	previousLookup := changeLookupUserByEmail
+	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+		require.Equal(t, "user-change-3", userID)
+		return user, nil
+	}
+	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+		require.Equal(t, "new@example.com", email)
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		changeLoadUserByID = previousLoad
+		changeLookupUserByEmail = previousLookup
+	})
+
+	svc := &ChangeResendService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+	ctx.UserID = "user-change-3"
+
+	rsp, err := svc.Create(ctx, &modeliamemail.ChangeResendReq{NewEmail: "new@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, "email change confirmation resent successfully", rsp.Msg)
+	require.Equal(t, 1, flowCache.Len())
+	require.Len(t, sender.deliveries, 1)
+	require.Equal(t, "new@example.com", sender.deliveries[0].To)
+	require.Equal(t, "Email change confirmation", sender.deliveries[0].Subject)
+}
+
+func TestChangeResendCreateThrottled(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 14, 8, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{21}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	oldEmail := "old@example.com"
+	user := &modeliam.User{
+		Base:   model.Base{ID: "user-change-4"},
+		Status: modeliam.UserStatusActive,
+		Email:  &oldEmail,
+	}
+
+	previousLoad := changeLoadUserByID
+	previousLookup := changeLookupUserByEmail
+	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		return user, nil
+	}
+	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+		return nil, nil
+	}
+	t.Cleanup(func() {
+		changeLoadUserByID = previousLoad
+		changeLookupUserByEmail = previousLookup
+	})
+
+	err := throttleCache.Set(emailThrottleKey(iamEmailFlowKindChangeConfirm, emailThrottleResend, "new@example.com"), emailThrottleRecord{
+		Kind:        iamEmailFlowKindChangeConfirm,
+		Action:      emailThrottleResend,
+		Scope:       "new@example.com",
+		CreatedAt:   now,
+		AvailableAt: now.Add(30 * time.Second),
+	}, time.Minute)
+	require.NoError(t, err)
+
+	svc := &ChangeResendService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+	ctx.UserID = "user-change-4"
+
+	rsp, err := svc.Create(ctx, &modeliamemail.ChangeResendReq{NewEmail: "new@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, "email change confirmation resent successfully", rsp.Msg)
+	require.Zero(t, flowCache.Len())
+	require.Empty(t, sender.deliveries)
 }
 
 func TestPasswordResetRequestCreate(t *testing.T) {
