@@ -123,8 +123,7 @@ func Register(config ...Config) {
 	module.Use[
 		*ChangePassword,
 		*ChangePasswordReq,
-		*ChangePasswordRsp,
-		*ChangePasswordService](
+		*ChangePasswordRsp](
 		&ChangePasswordModule{},
 		consts.PHASE_CREATE,
 	)
@@ -133,8 +132,7 @@ func Register(config ...Config) {
 	module.Use[
 		*ResetPassword,
 		*ResetPasswordReq,
-		*ResetPasswordRsp,
-		*ResetPasswordService](
+		*ResetPasswordRsp](
 		&ResetPasswordModule{},
 		consts.PHASE_CREATE,
 	)
@@ -143,8 +141,7 @@ func Register(config ...Config) {
 	module.Use[
 		*AccountStatus,
 		*AccountStatusReq,
-		*AccountStatusRsp,
-		*AccountStatusService](
+		*AccountStatusRsp](
 		&AccountStatusModule{},
 		consts.PHASE_CREATE,
 	)
@@ -153,8 +150,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailChangeConfirm,
 		*EmailChangeConfirmReq,
-		*EmailChangeConfirmRsp,
-		*EmailChangeConfirmService](
+		*EmailChangeConfirmRsp](
 		&EmailChangeConfirmModule{},
 		consts.PHASE_CREATE,
 	)
@@ -163,8 +159,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailChangeCancel,
 		*EmailChangeCancelReq,
-		*EmailChangeCancelRsp,
-		*EmailChangeCancelService](
+		*EmailChangeCancelRsp](
 		&EmailChangeCancelModule{},
 		consts.PHASE_CREATE,
 	)
@@ -173,8 +168,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailChangeRequest,
 		*EmailChangeRequestReq,
-		*EmailChangeRequestRsp,
-		*EmailChangeRequestService](
+		*EmailChangeRequestRsp](
 		&EmailChangeRequestModule{},
 		consts.PHASE_CREATE,
 	)
@@ -183,8 +177,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailChangeResend,
 		*EmailChangeResendReq,
-		*EmailChangeResendRsp,
-		*EmailChangeResendService](
+		*EmailChangeResendRsp](
 		&EmailChangeResendModule{},
 		consts.PHASE_CREATE,
 	)
@@ -193,8 +186,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailPasswordResetConfirm,
 		*EmailPasswordResetConfirmReq,
-		*EmailPasswordResetConfirmRsp,
-		*EmailPasswordResetConfirmService](
+		*EmailPasswordResetConfirmRsp](
 		&EmailPasswordResetConfirmModule{},
 		consts.PHASE_CREATE,
 	)
@@ -203,8 +195,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailPasswordResetRequest,
 		*EmailPasswordResetRequestReq,
-		*EmailPasswordResetRequestRsp,
-		*EmailPasswordResetRequestService](
+		*EmailPasswordResetRequestRsp](
 		&EmailPasswordResetRequestModule{},
 		consts.PHASE_CREATE,
 	)
@@ -213,8 +204,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailVerificationConfirm,
 		*EmailVerificationConfirmReq,
-		*EmailVerificationConfirmRsp,
-		*EmailVerificationConfirmService](
+		*EmailVerificationConfirmRsp](
 		&EmailVerificationConfirmModule{},
 		consts.PHASE_CREATE,
 	)
@@ -223,8 +213,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailVerificationRequest,
 		*EmailVerificationRequestReq,
-		*EmailVerificationRequestRsp,
-		*EmailVerificationRequestService](
+		*EmailVerificationRequestRsp](
 		&EmailVerificationRequestModule{},
 		consts.PHASE_CREATE,
 	)
@@ -233,8 +222,7 @@ func Register(config ...Config) {
 	module.Use[
 		*EmailVerificationResend,
 		*EmailVerificationResendReq,
-		*EmailVerificationResendRsp,
-		*EmailVerificationResendService](
+		*EmailVerificationResendRsp](
 		&EmailVerificationResendModule{},
 		consts.PHASE_CREATE,
 	)
@@ -243,8 +231,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Group,
 		*Group,
-		*Group,
-		*GroupService](
+		*Group](
 		&GroupModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -258,8 +245,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Heartbeat,
 		*Heartbeat,
-		*Heartbeat,
-		*HeartbeatService](
+		*Heartbeat](
 		&HeartbeatModule{},
 		consts.PHASE_CREATE,
 	)
@@ -268,8 +254,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Login,
 		*LoginReq,
-		*LoginRsp,
-		*LoginService](
+		*LoginRsp](
 		&LoginModule{},
 		consts.PHASE_CREATE,
 	)
@@ -278,8 +263,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Logout,
 		*Logout,
-		*LogoutRsp,
-		*LogoutService](
+		*LogoutRsp](
 		&LogoutModule{},
 		consts.PHASE_CREATE,
 	)
@@ -288,8 +272,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Me,
 		*Me,
-		MeRsp,
-		*MeService](
+		MeRsp](
 		&MeModule{},
 		consts.PHASE_LIST,
 	)
@@ -298,8 +281,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Offline,
 		*OfflineReq,
-		*Offline,
-		*OfflineService](
+		*Offline](
 		&OfflineModule{},
 		consts.PHASE_CREATE,
 	)
@@ -308,8 +290,7 @@ func Register(config ...Config) {
 	module.Use[
 		*OnlineUser,
 		*OnlineUser,
-		*OnlineUser,
-		*OnlineUserService](
+		*OnlineUser](
 		&OnlineUserModule{},
 		consts.PHASE_LIST,
 	)
@@ -318,8 +299,7 @@ func Register(config ...Config) {
 	module.Use[
 		*Signup,
 		*SignupReq,
-		*SignupRsp,
-		*SignupService](
+		*SignupRsp](
 		&SignupModule{},
 		consts.PHASE_CREATE,
 	)
@@ -329,8 +309,7 @@ func Register(config ...Config) {
 		module.Use[
 			*Tenant,
 			*Tenant,
-			*Tenant,
-			*TenantService](
+			*Tenant](
 			&TenantModule{},
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
@@ -345,8 +324,7 @@ func Register(config ...Config) {
 	module.Use[
 		*User,
 		*User,
-		*User,
-		*UserService](
+		*User](
 		&UserModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,

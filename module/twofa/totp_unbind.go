@@ -9,15 +9,14 @@ import (
 var _ types.Module[*TOTPUnbind, *TOTPUnbindReq, *TOTPUnbindRsp] = (*TOTPUnbindModule)(nil)
 
 type (
-	TOTPUnbind        = modeltwofa.TOTPUnbind
-	TOTPUnbindReq     = modeltwofa.TOTPUnbindReq
-	TOTPUnbindRsp     = modeltwofa.TOTPUnbindRsp
-	TOTPUnbindService = servicetwofa.TOTPUnbindService
-	TOTPUnbindModule  struct{}
+	TOTPUnbind       = modeltwofa.TOTPUnbind
+	TOTPUnbindReq    = modeltwofa.TOTPUnbindReq
+	TOTPUnbindRsp    = modeltwofa.TOTPUnbindRsp
+	TOTPUnbindModule struct{}
 )
 
 func (*TOTPUnbindModule) Service() types.Service[*TOTPUnbind, *TOTPUnbindReq, *TOTPUnbindRsp] {
-	return &TOTPUnbindService{}
+	return &servicetwofa.TOTPUnbindService{}
 }
 func (*TOTPUnbindModule) Route() string { return "2fa/totp/unbind" }
 func (*TOTPUnbindModule) Pub() bool     { return false }

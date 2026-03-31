@@ -9,13 +9,12 @@ import (
 var _ types.Module[*Menu, *Menu, *Menu] = (*MenuModule)(nil)
 
 type (
-	Menu        = modelauthz.Menu
-	MenuService = serviceauthz.MenuService
-	MenuModule  struct{}
+	Menu       = modelauthz.Menu
+	MenuModule struct{}
 )
 
 func (*MenuModule) Service() types.Service[*Menu, *Menu, *Menu] {
-	return &MenuService{}
+	return &serviceauthz.MenuService{}
 }
 func (*MenuModule) Route() string { return "menus" }
 func (*MenuModule) Pub() bool     { return false }

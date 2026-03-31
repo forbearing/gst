@@ -9,13 +9,12 @@ import (
 var _ types.Module[*Role, *Role, *Role] = (*RoleModule)(nil)
 
 type (
-	Role        = modelauthz.Role
-	RoleService = serviceauthz.RoleService
-	RoleModule  struct{}
+	Role       = modelauthz.Role
+	RoleModule struct{}
 )
 
 func (*RoleModule) Service() types.Service[*Role, *Role, *Role] {
-	return &RoleService{}
+	return &serviceauthz.RoleService{}
 }
 func (*RoleModule) Route() string { return "authz/roles" }
 func (*RoleModule) Pub() bool     { return false }

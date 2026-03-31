@@ -9,15 +9,14 @@ import (
 var _ types.Module[*ResetPassword, *ResetPasswordReq, *ResetPasswordRsp] = (*ResetPasswordModule)(nil)
 
 type (
-	ResetPassword        = modeliam.ResetPassword
-	ResetPasswordReq     = modeliam.ResetPasswordReq
-	ResetPasswordRsp     = modeliam.ResetPasswordRsp
-	ResetPasswordService = serviceiam.ResetPasswordService
-	ResetPasswordModule  struct{}
+	ResetPassword       = modeliam.ResetPassword
+	ResetPasswordReq    = modeliam.ResetPasswordReq
+	ResetPasswordRsp    = modeliam.ResetPasswordRsp
+	ResetPasswordModule struct{}
 )
 
 func (*ResetPasswordModule) Service() types.Service[*ResetPassword, *ResetPasswordReq, *ResetPasswordRsp] {
-	return &ResetPasswordService{}
+	return &serviceiam.ResetPasswordService{}
 }
 func (*ResetPasswordModule) Route() string { return "/iam/reset-password" }
 func (*ResetPasswordModule) Pub() bool     { return false }

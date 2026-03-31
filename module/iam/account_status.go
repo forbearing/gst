@@ -9,15 +9,14 @@ import (
 var _ types.Module[*AccountStatus, *AccountStatusReq, *AccountStatusRsp] = (*AccountStatusModule)(nil)
 
 type (
-	AccountStatus        = modeliam.AccountStatus
-	AccountStatusReq     = modeliam.AccountStatusReq
-	AccountStatusRsp     = modeliam.AccountStatusRsp
-	AccountStatusService = serviceiam.AccountStatusService
-	AccountStatusModule  struct{}
+	AccountStatus       = modeliam.AccountStatus
+	AccountStatusReq    = modeliam.AccountStatusReq
+	AccountStatusRsp    = modeliam.AccountStatusRsp
+	AccountStatusModule struct{}
 )
 
 func (*AccountStatusModule) Service() types.Service[*AccountStatus, *AccountStatusReq, *AccountStatusRsp] {
-	return &AccountStatusService{}
+	return &serviceiam.AccountStatusService{}
 }
 
 func (*AccountStatusModule) Route() string { return "/iam/account-status" }

@@ -9,14 +9,13 @@ import (
 var _ types.Module[*Logout, *Logout, *LogoutRsp] = (*LogoutModule)(nil)
 
 type (
-	Logout        = modeliam.Logout
-	LogoutRsp     = modeliam.LogoutRsp
-	LogoutService = serviceiam.LogoutService
-	LogoutModule  struct{}
+	Logout       = modeliam.Logout
+	LogoutRsp    = modeliam.LogoutRsp
+	LogoutModule struct{}
 )
 
 func (*LogoutModule) Service() types.Service[*Logout, *Logout, *LogoutRsp] {
-	return &LogoutService{}
+	return &serviceiam.LogoutService{}
 }
 func (*LogoutModule) Route() string { return "/logout" }
 func (*LogoutModule) Pub() bool     { return false }

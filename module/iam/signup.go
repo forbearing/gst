@@ -9,15 +9,14 @@ import (
 var _ types.Module[*Signup, *SignupReq, *SignupRsp] = (*SignupModule)(nil)
 
 type (
-	Signup        = modeliam.Signup
-	SignupReq     = modeliam.SignupReq
-	SignupRsp     = modeliam.SignupRsp
-	SignupService = serviceiam.SignupService
-	SignupModule  struct{}
+	Signup       = modeliam.Signup
+	SignupReq    = modeliam.SignupReq
+	SignupRsp    = modeliam.SignupRsp
+	SignupModule struct{}
 )
 
 func (*SignupModule) Service() types.Service[*Signup, *SignupReq, *SignupRsp] {
-	return &SignupService{}
+	return &serviceiam.SignupService{}
 }
 
 func (*SignupModule) Route() string { return "/signup" }

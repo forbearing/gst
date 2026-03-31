@@ -9,13 +9,12 @@ import (
 var _ types.Module[*OnlineUser, *OnlineUser, *OnlineUser] = (*OnlineUserModule)(nil)
 
 type (
-	OnlineUser        = modeliam.OnlineUser
-	OnlineUserService = serviceiam.OnlineUserService
-	OnlineUserModule  struct{}
+	OnlineUser       = modeliam.OnlineUser
+	OnlineUserModule struct{}
 )
 
 func (*OnlineUserModule) Service() types.Service[*OnlineUser, *OnlineUser, *OnlineUser] {
-	return &OnlineUserService{}
+	return &serviceiam.OnlineUserService{}
 }
 func (*OnlineUserModule) Route() string { return "/online-users" }
 func (*OnlineUserModule) Pub() bool     { return false }

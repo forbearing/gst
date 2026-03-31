@@ -9,13 +9,12 @@ import (
 var _ types.Module[*User, *User, *User] = (*UserModule)(nil)
 
 type (
-	User        = modeliam.User
-	UserService = serviceiam.UserService
-	UserModule  struct{}
+	User       = modeliam.User
+	UserModule struct{}
 )
 
 func (*UserModule) Service() types.Service[*User, *User, *User] {
-	return &UserService{}
+	return &serviceiam.UserService{}
 }
 func (*UserModule) Route() string { return "/iam/users" }
 func (*UserModule) Pub() bool     { return false }

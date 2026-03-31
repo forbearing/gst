@@ -9,14 +9,13 @@ import (
 var _ types.Module[*TOTPStatus, *TOTPStatus, *TOTPStatusRsp] = (*TOTPStatusModule)(nil)
 
 type (
-	TOTPStatus        = modeltwofa.TOTPStatus
-	TOTPStatusRsp     = modeltwofa.TOTPStatusRsp
-	TOTPStatusService = servicetwofa.TOTPStatusService
-	TOTPStatusModule  struct{}
+	TOTPStatus       = modeltwofa.TOTPStatus
+	TOTPStatusRsp    = modeltwofa.TOTPStatusRsp
+	TOTPStatusModule struct{}
 )
 
 func (*TOTPStatusModule) Service() types.Service[*TOTPStatus, *TOTPStatus, *TOTPStatusRsp] {
-	return &TOTPStatusService{}
+	return &servicetwofa.TOTPStatusService{}
 }
 func (*TOTPStatusModule) Route() string { return "2fa/totp/status" }
 func (*TOTPStatusModule) Pub() bool     { return false }

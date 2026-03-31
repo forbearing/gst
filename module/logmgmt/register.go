@@ -35,8 +35,7 @@ func Register() {
 
 	module.Use[*LoginLog,
 		*LoginLog,
-		*LoginLog,
-		*LoginLogService](
+		*LoginLog](
 		&LoginLogModule{},
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
@@ -45,8 +44,7 @@ func Register() {
 	module.Use[
 		*OperationLog,
 		*OperationLog,
-		*OperationLog,
-		*OperationLogService](
+		*OperationLog](
 		&OperationLogModule{},
 		consts.PHASE_LIST,
 		consts.PHASE_GET,

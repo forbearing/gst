@@ -9,14 +9,13 @@ import (
 var _ types.Module[*Offline, *OfflineReq, *Offline] = (*OfflineModule)(nil)
 
 type (
-	Offline        = modeliam.Offline
-	OfflineReq     = modeliam.OfflineReq
-	OfflineService = serviceiam.OfflineService
-	OfflineModule  struct{}
+	Offline       = modeliam.Offline
+	OfflineReq    = modeliam.OfflineReq
+	OfflineModule struct{}
 )
 
 func (*OfflineModule) Service() types.Service[*Offline, *OfflineReq, *Offline] {
-	return &OfflineService{}
+	return &serviceiam.OfflineService{}
 }
 func (*OfflineModule) Route() string { return "/offline" }
 func (*OfflineModule) Pub() bool     { return false }

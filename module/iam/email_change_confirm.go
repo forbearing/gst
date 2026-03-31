@@ -9,15 +9,14 @@ import (
 var _ types.Module[*EmailChangeConfirm, *EmailChangeConfirmReq, *EmailChangeConfirmRsp] = (*EmailChangeConfirmModule)(nil)
 
 type (
-	EmailChangeConfirm        = modeliamemail.ChangeConfirm
-	EmailChangeConfirmReq     = modeliamemail.ChangeConfirmReq
-	EmailChangeConfirmRsp     = modeliamemail.ChangeConfirmRsp
-	EmailChangeConfirmService = serviceiamemail.ChangeConfirmService
-	EmailChangeConfirmModule  struct{}
+	EmailChangeConfirm       = modeliamemail.ChangeConfirm
+	EmailChangeConfirmReq    = modeliamemail.ChangeConfirmReq
+	EmailChangeConfirmRsp    = modeliamemail.ChangeConfirmRsp
+	EmailChangeConfirmModule struct{}
 )
 
 func (*EmailChangeConfirmModule) Service() types.Service[*EmailChangeConfirm, *EmailChangeConfirmReq, *EmailChangeConfirmRsp] {
-	return &EmailChangeConfirmService{}
+	return &serviceiamemail.ChangeConfirmService{}
 }
 
 func (*EmailChangeConfirmModule) Route() string { return "/iam/email/change-confirm" }

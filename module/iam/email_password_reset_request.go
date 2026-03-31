@@ -9,15 +9,14 @@ import (
 var _ types.Module[*EmailPasswordResetRequest, *EmailPasswordResetRequestReq, *EmailPasswordResetRequestRsp] = (*EmailPasswordResetRequestModule)(nil)
 
 type (
-	EmailPasswordResetRequest        = modeliamemail.PasswordResetRequest
-	EmailPasswordResetRequestReq     = modeliamemail.PasswordResetRequestReq
-	EmailPasswordResetRequestRsp     = modeliamemail.PasswordResetRequestRsp
-	EmailPasswordResetRequestService = serviceiamemail.PasswordResetRequestService
-	EmailPasswordResetRequestModule  struct{}
+	EmailPasswordResetRequest       = modeliamemail.PasswordResetRequest
+	EmailPasswordResetRequestReq    = modeliamemail.PasswordResetRequestReq
+	EmailPasswordResetRequestRsp    = modeliamemail.PasswordResetRequestRsp
+	EmailPasswordResetRequestModule struct{}
 )
 
 func (*EmailPasswordResetRequestModule) Service() types.Service[*EmailPasswordResetRequest, *EmailPasswordResetRequestReq, *EmailPasswordResetRequestRsp] {
-	return &EmailPasswordResetRequestService{}
+	return &serviceiamemail.PasswordResetRequestService{}
 }
 
 func (*EmailPasswordResetRequestModule) Route() string { return "/iam/email/password-reset-request" }

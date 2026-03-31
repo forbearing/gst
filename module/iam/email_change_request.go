@@ -9,15 +9,14 @@ import (
 var _ types.Module[*EmailChangeRequest, *EmailChangeRequestReq, *EmailChangeRequestRsp] = (*EmailChangeRequestModule)(nil)
 
 type (
-	EmailChangeRequest        = modeliamemail.ChangeRequest
-	EmailChangeRequestReq     = modeliamemail.ChangeRequestReq
-	EmailChangeRequestRsp     = modeliamemail.ChangeRequestRsp
-	EmailChangeRequestService = serviceiamemail.ChangeRequestService
-	EmailChangeRequestModule  struct{}
+	EmailChangeRequest       = modeliamemail.ChangeRequest
+	EmailChangeRequestReq    = modeliamemail.ChangeRequestReq
+	EmailChangeRequestRsp    = modeliamemail.ChangeRequestRsp
+	EmailChangeRequestModule struct{}
 )
 
 func (*EmailChangeRequestModule) Service() types.Service[*EmailChangeRequest, *EmailChangeRequestReq, *EmailChangeRequestRsp] {
-	return &EmailChangeRequestService{}
+	return &serviceiamemail.ChangeRequestService{}
 }
 
 func (*EmailChangeRequestModule) Route() string { return "/iam/email/change-request" }

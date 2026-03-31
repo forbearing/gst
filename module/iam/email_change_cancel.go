@@ -9,15 +9,14 @@ import (
 var _ types.Module[*EmailChangeCancel, *EmailChangeCancelReq, *EmailChangeCancelRsp] = (*EmailChangeCancelModule)(nil)
 
 type (
-	EmailChangeCancel        = modeliamemail.ChangeCancel
-	EmailChangeCancelReq     = modeliamemail.ChangeCancelReq
-	EmailChangeCancelRsp     = modeliamemail.ChangeCancelRsp
-	EmailChangeCancelService = serviceiamemail.ChangeCancelService
-	EmailChangeCancelModule  struct{}
+	EmailChangeCancel       = modeliamemail.ChangeCancel
+	EmailChangeCancelReq    = modeliamemail.ChangeCancelReq
+	EmailChangeCancelRsp    = modeliamemail.ChangeCancelRsp
+	EmailChangeCancelModule struct{}
 )
 
 func (*EmailChangeCancelModule) Service() types.Service[*EmailChangeCancel, *EmailChangeCancelReq, *EmailChangeCancelRsp] {
-	return &EmailChangeCancelService{}
+	return &serviceiamemail.ChangeCancelService{}
 }
 
 func (*EmailChangeCancelModule) Route() string { return "/iam/email/change-cancel" }

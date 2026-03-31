@@ -12,7 +12,6 @@ import (
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/router"
-	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"go.uber.org/zap"
@@ -77,8 +76,7 @@ func Register() {
 	module.Use[
 		*Permission,
 		*Permission,
-		*Permission,
-		*service.Base[*Permission, *Permission, *Permission]](
+		*Permission](
 		&PermissionModule{},
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
@@ -87,8 +85,7 @@ func Register() {
 	module.Use[
 		*Role,
 		*Role,
-		*Role,
-		*RoleService](
+		*Role](
 		&RoleModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -101,8 +98,7 @@ func Register() {
 	module.Use[
 		*UserRole,
 		*UserRole,
-		*UserRole,
-		*UserRoleService](
+		*UserRole](
 		&UserRoleModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -115,8 +111,7 @@ func Register() {
 	module.Use[
 		*Menu,
 		*Menu,
-		*Menu,
-		*MenuService](
+		*Menu](
 		&MenuModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -129,8 +124,7 @@ func Register() {
 	module.Use[
 		*API,
 		*API,
-		APIRsp,
-		*APIService](
+		APIRsp](
 		&APIModule{},
 		consts.PHASE_LIST,
 	)
@@ -138,8 +132,7 @@ func Register() {
 	module.Use[
 		*Button,
 		*Button,
-		*Button,
-		*ButtonService](
+		*Button](
 		&ButtonModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,

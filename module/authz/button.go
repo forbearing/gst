@@ -9,13 +9,12 @@ import (
 var _ types.Module[*Button, *Button, *Button] = (*ButtonModule)(nil)
 
 type (
-	Button        = modelauthz.Button
-	ButtonService = serviceauthz.ButtonService
-	ButtonModule  struct{}
+	Button       = modelauthz.Button
+	ButtonModule struct{}
 )
 
 func (*ButtonModule) Service() types.Service[*Button, *Button, *Button] {
-	return &ButtonService{}
+	return &serviceauthz.ButtonService{}
 }
 func (*ButtonModule) Route() string { return "buttons" }
 func (*ButtonModule) Pub() bool     { return false }

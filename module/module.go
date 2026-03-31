@@ -13,7 +13,7 @@
 //
 // Example:
 //
-//	module.Use[*User, *UserReq, *UserRsp, *UserService](
+//	module.Use[*User, *UserReq, *UserRsp](
 //	    &UserModule{},
 //	    consts.PHASE_CREATE,
 //	    consts.PHASE_LIST,
@@ -54,7 +54,6 @@ func Init() error {
 //   - M: Model type implementing types.Model
 //   - REQ: Request type for API operations
 //   - RSP: Response type for API operations
-//   - S: Service type implementing types.Service[M, REQ, RSP]
 //
 // Parameters:
 //   - mod: Module instance implementing types.Module[M, REQ, RSP]
@@ -67,30 +66,21 @@ func Init() error {
 // Authentication is determined by mod.Pub().
 //
 // Must be called during application initialization, typically in a Register() function.
-func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M, REQ, RSP]](mod types.Module[M, REQ, RSP], phases ...consts.Phase) {
+func Use[M types.Model, REQ types.Request, RSP types.Response](mod types.Module[M, REQ, RSP], phases ...consts.Phase) {
 	go func() {
 		<-notify
 
-		// Register model with the ORM layer for database operations
 		model.Register[M]()
 
-		// Register service for each specified phase to handle business logic
 		for _, p := range phases {
-			service.Register[S](p)
+			service.RegisterService[M, REQ, RSP](p, mod.Service())
 		}
 
-		// Process and normalize the route path
-		// Ensure consistent routing by trimming leading "/" and optional "api/" prefix.
-		// Note: Use TrimPrefix instead of TrimLeft("api") to avoid removing
-		//       any leading characters that happen to be in the set {'a','p','i'}.
-		//       For example, "permissions" would incorrectly become "ermissions"
-		//       with TrimLeft("api").
 		route := mod.Route()
-		route = strings.TrimPrefix(route, "/")    // trim leading slash
-		route = strings.TrimPrefix(route, "api/") // trim optional "api/" prefix
-		route = strings.TrimPrefix(route, "/")    // trim leading slash again if present
+		route = strings.TrimPrefix(route, "/")
+		route = strings.TrimPrefix(route, "api/")
+		route = strings.TrimPrefix(route, "/")
 
-		// Get URL parameter name, default to "id" if not specified
 		param := mod.Param()
 		param = strings.TrimFunc(param, func(r rune) bool {
 			return r == ' ' || r == '{' || r == '}' || r == '[' || r == ']' || r == ':'
@@ -99,38 +89,27 @@ func Use[M types.Model, REQ types.Request, RSP types.Response, S types.Service[M
 			param = "id"
 		}
 
-		// Register HTTP routes for each specified CRUD phase
 		for _, p := range phases {
 			switch p {
 			case consts.PHASE_CREATE:
-				// POST /route - Create single resource
 				registerRouter(mod, route, nil, consts.Create)
 			case consts.PHASE_DELETE:
-				// DELETE /route/:param - Delete single resource by ID
 				registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Delete)
 			case consts.PHASE_UPDATE:
-				// PUT /route/:param - Update single resource by ID
 				registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Update)
 			case consts.PHASE_PATCH:
-				// PATCH /route/:param - Patch single resource by ID
 				registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Patch)
 			case consts.PHASE_LIST:
-				// GET /route - List resources with pagination
 				registerRouter(mod, route, nil, consts.List)
 			case consts.PHASE_GET:
-				// GET /route/:param - Get single resource by ID
 				registerRouter(mod, fmt.Sprintf("%s/:%s", route, param), &types.ControllerConfig[M]{ParamName: param}, consts.Get)
 			case consts.PHASE_CREATE_MANY:
-				// POST /route/batch - Create multiple resources
 				registerRouter(mod, route+"/batch", nil, consts.CreateMany)
 			case consts.PHASE_DELETE_MANY:
-				// DELETE /route/batch - Delete multiple resources
 				registerRouter(mod, route+"/batch", nil, consts.DeleteMany)
 			case consts.PHASE_UPDATE_MANY:
-				// PUT /route/batch - Update multiple resources
 				registerRouter(mod, route+"/batch", nil, consts.UpdateMany)
 			case consts.PHASE_PATCH_MANY:
-				// PATCH /route/batch - Patch multiple resources
 				registerRouter(mod, route+"/batch", nil, consts.PatchMany)
 			}
 		}

@@ -9,15 +9,14 @@ import (
 var _ types.Module[*EmailVerificationRequest, *EmailVerificationRequestReq, *EmailVerificationRequestRsp] = (*EmailVerificationRequestModule)(nil)
 
 type (
-	EmailVerificationRequest        = modeliamemail.VerificationRequest
-	EmailVerificationRequestReq     = modeliamemail.VerificationRequestReq
-	EmailVerificationRequestRsp     = modeliamemail.VerificationRequestRsp
-	EmailVerificationRequestService = serviceiamemail.VerificationRequestService
-	EmailVerificationRequestModule  struct{}
+	EmailVerificationRequest       = modeliamemail.VerificationRequest
+	EmailVerificationRequestReq    = modeliamemail.VerificationRequestReq
+	EmailVerificationRequestRsp    = modeliamemail.VerificationRequestRsp
+	EmailVerificationRequestModule struct{}
 )
 
 func (*EmailVerificationRequestModule) Service() types.Service[*EmailVerificationRequest, *EmailVerificationRequestReq, *EmailVerificationRequestRsp] {
-	return &EmailVerificationRequestService{}
+	return &serviceiamemail.VerificationRequestService{}
 }
 
 func (*EmailVerificationRequestModule) Route() string { return "/iam/email/verification-request" }

@@ -9,15 +9,14 @@ import (
 var _ types.Module[*TOTPVerify, *TOTPVerifyReq, *TOTPVerifyRsp] = (*TOTPVerifyModule)(nil)
 
 type (
-	TOTPVerify        = modeltwofa.TOTPVerify
-	TOTPVerifyReq     = modeltwofa.TOTPVerifyReq
-	TOTPVerifyRsp     = modeltwofa.TOTPVerifyRsp
-	TOTPVerifyService = servicetwofa.TOTPVerifyService
-	TOTPVerifyModule  struct{}
+	TOTPVerify       = modeltwofa.TOTPVerify
+	TOTPVerifyReq    = modeltwofa.TOTPVerifyReq
+	TOTPVerifyRsp    = modeltwofa.TOTPVerifyRsp
+	TOTPVerifyModule struct{}
 )
 
 func (*TOTPVerifyModule) Service() types.Service[*TOTPVerify, *TOTPVerifyReq, *TOTPVerifyRsp] {
-	return &TOTPVerifyService{}
+	return &servicetwofa.TOTPVerifyService{}
 }
 func (*TOTPVerifyModule) Route() string { return "2fa/totp/verify" }
 func (*TOTPVerifyModule) Pub() bool     { return false }

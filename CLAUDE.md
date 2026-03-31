@@ -13,9 +13,8 @@
 - 代码风格、测试用例风格、程序输出风格等必须和当前包中保持一致.
 - 修改完代码后, 需要同时检查下相关的文档/注释是否需要更新.
 - 代码新增功能、bug修复完后, 需要更新其对应的函数、结构体、接口、类的代码注释和文档、代码注释请使用英文
-- module, internal/model 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq
-- module, internal/model 中使用自定义 Response 时, 命名偏向于 XXXRsp, 例如 SignupRsp
-- 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释。
+- module, internal/model 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq，Response 命名偏向于 XXXRsp, 例如 SignupRsp
+- 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释；如果发现现有注释有问题或不符合代码逻辑也需要优化注释。
 
 ### Sandbox
 

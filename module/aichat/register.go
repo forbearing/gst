@@ -7,7 +7,6 @@ import (
 	"github.com/forbearing/gst/module"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/router"
-	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
@@ -225,8 +224,7 @@ func Register() {
 	module.Use[
 		*Model,
 		*Model,
-		*Model,
-		*service.Base[*Model, *Model, *Model]](
+		*Model](
 		module.NewWrapper[*Model, *Model, *Model]("/ai/models", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -244,8 +242,7 @@ func Register() {
 	module.Use[
 		*Provider,
 		*Provider,
-		*Provider,
-		*service.Base[*Provider, *Provider, *Provider]](
+		*Provider](
 		module.NewWrapper[*Provider, *Provider, *Provider]("/ai/providers", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -265,8 +262,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.Provider,
-		*modelaichat.ProviderSyncModelsRsp,
-		*serviceaichat.ProviderSyncModels](
+		*modelaichat.ProviderSyncModelsRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.Provider,
@@ -284,8 +280,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.Provider,
-		*modelaichat.ProviderTestConnRsp,
-		*serviceaichat.ProviderTestConn](
+		*modelaichat.ProviderTestConnRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.Provider,
@@ -301,8 +296,7 @@ func Register() {
 	module.Use[
 		*Conversation,
 		*Conversation,
-		*Conversation,
-		*serviceaichat.Conversation](
+		*Conversation](
 		module.NewWrapper[*Conversation, *Conversation, *Conversation]("/ai/conversations", "conv_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -320,8 +314,7 @@ func Register() {
 	module.Use[
 		*Message,
 		*Message,
-		*Message,
-		*service.Base[*Message, *Message, *Message]](
+		*Message](
 		module.NewWrapper[*Message, *Message, *Message]("/ai/conversations/:conv_id/messages", "msg_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -339,8 +332,7 @@ func Register() {
 	module.Use[
 		*Attachment,
 		*Attachment,
-		*Attachment,
-		*serviceaichat.Attachment](
+		*Attachment](
 		module.NewWrapper[*Attachment, *Attachment, *Attachment]("/ai/messages/attachments", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -368,8 +360,7 @@ func Register() {
 	module.Use[
 		*KnowledgeBase,
 		*KnowledgeBase,
-		*KnowledgeBase,
-		*service.Base[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]](
+		*KnowledgeBase](
 		module.NewWrapper[*KnowledgeBase, *KnowledgeBase, *KnowledgeBase]("/ai/knowledge-bases", "kb_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -383,8 +374,7 @@ func Register() {
 	module.Use[
 		*Document,
 		*Document,
-		*Document,
-		*serviceaichat.Document](
+		*Document](
 		module.NewWrapper[*Document, *Document, *Document]("/ai/knowledge-bases/:kb_id/documents", "doc_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -398,8 +388,7 @@ func Register() {
 	module.Use[
 		*Chunk,
 		*Chunk,
-		*Chunk,
-		*service.Base[*Chunk, *Chunk, *Chunk]](
+		*Chunk](
 		module.NewWrapper[*Chunk, *Chunk, *Chunk]("/ai/knowledge-bases/:kb_id/documents/:doc_id/chunks", "chunk_id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -413,8 +402,7 @@ func Register() {
 	module.Use[
 		*Prompt,
 		*Prompt,
-		*Prompt,
-		*service.Base[*Prompt, *Prompt, *Prompt]](
+		*Prompt](
 		module.NewWrapper[*Prompt, *Prompt, *Prompt]("/ai/prompts", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -432,8 +420,7 @@ func Register() {
 	module.Use[
 		*Agent,
 		*Agent,
-		*Agent,
-		*service.Base[*Agent, *Agent, *Agent]](
+		*Agent](
 		module.NewWrapper[*Agent, *Agent, *Agent]("/ai/agents", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -451,8 +438,7 @@ func Register() {
 	module.Use[
 		*Favorite,
 		*Favorite,
-		*Favorite,
-		*service.Base[*Favorite, *Favorite, *Favorite]](
+		*Favorite](
 		module.NewWrapper[*Favorite, *Favorite, *Favorite]("/ai/favorites", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -470,8 +456,7 @@ func Register() {
 	module.Use[
 		*AgentTool,
 		*AgentTool,
-		*AgentTool,
-		*service.Base[*AgentTool, *AgentTool, *AgentTool]](
+		*AgentTool](
 		module.NewWrapper[*AgentTool, *AgentTool, *AgentTool]("/ai/tools", "id", false),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -514,8 +499,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.ChatCompletionReq,
-		*modelaichat.ChatCompletionRsp,
-		*serviceaichat.ChatCompletion](
+		*modelaichat.ChatCompletionRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.ChatCompletionReq,
@@ -539,8 +523,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.StopMessageReq,
-		*modelaichat.StopMessageRsp,
-		*serviceaichat.StopMessage](
+		*modelaichat.StopMessageRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.StopMessageReq,
@@ -565,8 +548,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.RegenerateMessageReq,
-		*modelaichat.RegenerateMessageRsp,
-		*serviceaichat.RegenerateMessage](
+		*modelaichat.RegenerateMessageRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.RegenerateMessageReq,
@@ -594,8 +576,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.SubmitMessageFeedbackReq,
-		*modelaichat.SubmitMessageFeedbackRsp,
-		*serviceaichat.SubmitMessageFeedback](
+		*modelaichat.SubmitMessageFeedbackRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.SubmitMessageFeedbackReq,
@@ -619,8 +600,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.ClearConversationMessagesReq,
-		*modelaichat.ClearConversationMessagesRsp,
-		*serviceaichat.ClearConversationMessages](
+		*modelaichat.ClearConversationMessagesRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.ClearConversationMessagesReq,
@@ -647,8 +627,7 @@ func Register() {
 	module.Use[
 		*model.Empty,
 		*modelaichat.ImageGenerationReq,
-		*modelaichat.ImageGenerationRsp,
-		*serviceaichat.ImageGeneration](
+		*modelaichat.ImageGenerationRsp](
 		module.NewWrapper[
 			*model.Empty,
 			*modelaichat.ImageGenerationReq,

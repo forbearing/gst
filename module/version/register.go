@@ -18,8 +18,7 @@ func Register() {
 	module.Use[
 		*Version,
 		*Version,
-		*VersionRsp,
-		*VersionService](
+		*VersionRsp](
 		&VersionModule{},
 		consts.PHASE_LIST,
 	)

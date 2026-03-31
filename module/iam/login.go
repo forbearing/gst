@@ -9,15 +9,14 @@ import (
 var _ types.Module[*Login, *LoginReq, *LoginRsp] = (*LoginModule)(nil)
 
 type (
-	Login        = modeliam.Login
-	LoginReq     = modeliam.LoginReq
-	LoginRsp     = modeliam.LoginRsp
-	LoginService = serviceiam.LoginService
-	LoginModule  struct{}
+	Login       = modeliam.Login
+	LoginReq    = modeliam.LoginReq
+	LoginRsp    = modeliam.LoginRsp
+	LoginModule struct{}
 )
 
 func (*LoginModule) Service() types.Service[*Login, *LoginReq, *LoginRsp] {
-	return &LoginService{}
+	return &serviceiam.LoginService{}
 }
 func (*LoginModule) Route() string { return "/login" }
 func (*LoginModule) Pub() bool     { return true }
