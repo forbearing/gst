@@ -32,30 +32,6 @@ type Config struct {
 
 // Register registers IAM models, API routes, middleware, and scheduled jobs.
 //
-// Models:
-//   - ChangePassword
-//   - ResetPassword
-//   - AccountStatus
-//   - EmailVerificationConfirm
-//   - EmailVerificationRequest
-//   - EmailVerificationResend
-//   - EmailPasswordResetConfirm
-//   - EmailPasswordResetRequest
-//   - EmailChangeConfirm
-//   - EmailChangeCancel
-//   - EmailChangeRequest
-//   - EmailChangeResend
-//   - Group
-//   - Heartbeat
-//   - Login
-//   - Logout
-//   - Offline
-//   - Me
-//   - OnlineUser
-//   - Signup
-//   - Tenant
-//   - User
-//
 // API Routes:
 //
 // Public auth routes:
@@ -95,15 +71,15 @@ type Config struct {
 //   - GET    /api/iam/tenants/:id
 //
 // Email workflow routes:
-//   - POST   /api/iam/email/change-confirm
-//   - POST   /api/iam/email/change-cancel
-//   - POST   /api/iam/email/change-request
-//   - POST   /api/iam/email/change-resend
-//   - POST   /api/iam/email/password-reset-confirm
-//   - POST   /api/iam/email/password-reset-request
 //   - POST   /api/iam/email/verification-confirm
 //   - POST   /api/iam/email/verification-request
 //   - POST   /api/iam/email/verification-resend
+//   - POST   /api/iam/email/password-reset-confirm
+//   - POST   /api/iam/email/password-reset-request
+//   - POST   /api/iam/email/change-request
+//   - POST   /api/iam/email/change-resend
+//   - POST   /api/iam/email/change-cancel
+//   - POST   /api/iam/email/change-confirm
 //
 // Middleware:
 //   - IAMSession for protected IAM routes and session-aware APIs
@@ -177,63 +153,15 @@ func Register(config ...Config) {
 		consts.PHASE_LIST,
 	)
 
-	// Use module "EmailChangeConfirmModule"
-	module.Use[
-		*EmailChangeConfirm,
-		*EmailChangeConfirmReq,
-		*EmailChangeConfirmRsp](
-		&EmailChangeConfirmModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeCancelModule"
-	module.Use[
-		*EmailChangeCancel,
-		*EmailChangeCancelReq,
-		*EmailChangeCancelRsp](
-		&EmailChangeCancelModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeRequestModule"
-	module.Use[
-		*EmailChangeRequest,
-		*EmailChangeRequestReq,
-		*EmailChangeRequestRsp](
-		&EmailChangeRequestModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeResendModule"
-	module.Use[
-		*EmailChangeResend,
-		*EmailChangeResendReq,
-		*EmailChangeResendRsp](
-		&EmailChangeResendModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailPasswordResetConfirmModule"
-	module.Use[
-		*EmailPasswordResetConfirm,
-		*EmailPasswordResetConfirmReq,
-		*EmailPasswordResetConfirmRsp](
-		&EmailPasswordResetConfirmModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailPasswordResetRequestModule"
-	module.Use[
-		*EmailPasswordResetRequest,
-		*EmailPasswordResetRequestReq,
-		*EmailPasswordResetRequestRsp](
-		&EmailPasswordResetRequestModule{},
-		consts.PHASE_CREATE,
-	)
-
 	module.Use(module.NewWrapper("/iam/email/verification-request", "id", true, &serviceiamemail.VerificationRequestService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/email/verification-resend", "id", true, &serviceiamemail.VerificationResendService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/email/verification-confirm", "id", true, &serviceiamemail.VerificationConfirmService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/password-reset-confirm", "id", true, &serviceiamemail.PasswordResetConfirmService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/password-reset-request", "id", true, &serviceiamemail.PasswordResetRequestService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-request", "id", false, &serviceiamemail.ChangeRequestService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-resend", "id", false, &serviceiamemail.ChangeResendService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-cancel", "id", true, &serviceiamemail.ChangeCancelService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-confirm", "id", false, &serviceiamemail.ChangeConfirmService{}), consts.PHASE_CREATE)
 
 	// create default users
 	if len(cfg.DefaultUsers) > 0 {

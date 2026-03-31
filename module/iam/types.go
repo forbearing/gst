@@ -32,6 +32,20 @@ type (
 	OnlineUser = modeliam.OnlineUser
 	OfflineReq = modeliam.OfflineReq
 
+	EmailChangeConfirmReq = modeliamemail.ChangeConfirmReq
+	EmailChangeConfirmRsp = modeliamemail.ChangeConfirmRsp
+	EmailChangeCancelReq  = modeliamemail.ChangeCancelReq
+	EmailChangeCancelRsp  = modeliamemail.ChangeCancelRsp
+	EmailChangeRequestReq = modeliamemail.ChangeRequestReq
+	EmailChangeRequestRsp = modeliamemail.ChangeRequestRsp
+	EmailChangeResendReq  = modeliamemail.ChangeResendReq
+	EmailChangeResendRsp  = modeliamemail.ChangeResendRsp
+
+	EmailPasswordResetConfirmReq = modeliamemail.PasswordResetConfirmReq
+	EmailPasswordResetConfirmRsp = modeliamemail.PasswordResetConfirmRsp
+	EmailPasswordResetRequestReq = modeliamemail.PasswordResetRequestReq
+	EmailPasswordResetRequestRsp = modeliamemail.PasswordResetRequestRsp
+
 	EmailVerificationConfirmReq = modeliamemail.VerificationConfirmReq
 	EmailVerificationConfirmRsp = modeliamemail.VerificationConfirmRsp
 	EmailVerificationResendReq  = modeliamemail.VerificationResendReq
