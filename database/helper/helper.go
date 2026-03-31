@@ -19,7 +19,7 @@ import (
 )
 
 // startedTable is an atomic flag to ensure table processing goroutine starts only once
-var startedTable int32
+var startedTable atomic.Int32
 
 // initedTable is a concurrent map that tracks initialized tables by their unique key (table_name:db_name)
 // It is used by the record processing goroutine to wait for table creation before inserting records
@@ -50,7 +50,7 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 		}
 	}
 
-	if atomic.CompareAndSwapInt32(&startedTable, 0, 1) {
+	if startedTable.CompareAndSwap(0, 1) {
 		go func() {
 			for {
 				select {
@@ -166,7 +166,7 @@ func Exec(db *gorm.DB, sql string, values any) error { return db.Exec(sql, value
 // Calling Wait() before InitDatabase() will return immediately with a warning.
 func Wait() {
 	// Check if InitDatabase has been called and the processing goroutine has started
-	if atomic.LoadInt32(&startedTable) == 0 {
+	if startedTable.Load() == 0 {
 		zap.S().Warnw("Wait() called before InitDatabase(), returning immediately",
 			"reason", "processing goroutine not started")
 		return

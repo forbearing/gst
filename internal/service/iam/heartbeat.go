@@ -34,5 +34,6 @@ func (s *HeartbeatService) Create(ctx *types.ServiceContext, req *modeliam.Heart
 		return rsp, err
 	}
 
-	return rsp, nil
+	// Return a non-nil response so response logging (zap.ObjectMarshaler) does not panic on nil receiver.
+	return &modeliam.Heartbeat{}, nil
 }

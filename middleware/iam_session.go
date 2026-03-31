@@ -10,6 +10,31 @@ import (
 	"github.com/mssola/useragent"
 )
 
+// sessionRequiresPasswordChange reads the flag from session user info (set at login / updated on password change).
+func sessionRequiresPasswordChange(session modeliam.Session) bool {
+	if session.UserInfo == nil {
+		return false
+	}
+	v, ok := session.UserInfo["must_change_password"].(bool)
+	return ok && v
+}
+
+// mustChangePasswordExemptRoutes are allowed while MustChangePassword is true on the session.
+func mustChangePasswordExempt(method, path string) bool {
+	switch {
+	case method == http.MethodPost && path == "/api/iam/change-password":
+		return true
+	case method == http.MethodPost && path == "/api/logout":
+		return true
+	case method == http.MethodGet && path == "/api/me":
+		return true
+	case method == http.MethodPost && path == "/api/heartbeat":
+		return true
+	default:
+		return false
+	}
+}
+
 func IAMSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// fmt.Println("----- identifySession middleware", c.Request.RequestURI)
@@ -43,6 +68,13 @@ func IAMSession() gin.HandlerFunc {
 		}
 		if browserName != session.BrowserName {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "browser mismatch"})
+			return
+		}
+
+		if sessionRequiresPasswordChange(session) && !mustChangePasswordExempt(c.Request.Method, c.Request.URL.Path) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "password change required before using this resource",
+			})
 			return
 		}
 

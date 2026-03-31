@@ -9,13 +9,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// UserStatus 用户状态枚举
+// UserStatus is the account lifecycle / access state for IAM users.
+// Use UserStatusInactive for administrative disable (no login; revoke existing sessions via service hooks).
+// Use UserStatusLocked for security lockout (same login denial; semantics are policy-specific).
+// UserStatusActive is the normal operating state.
 type UserStatus string
 
 const (
-	UserStatusActive   UserStatus = "active"   // 激活
-	UserStatusInactive UserStatus = "inactive" // 未激活
-	UserStatusLocked   UserStatus = "locked"   // 锁定
+	UserStatusActive   UserStatus = "active"
+	UserStatusInactive UserStatus = "inactive"
+	UserStatusLocked   UserStatus = "locked"
 )
 
 // UserType 用户类型枚举
@@ -43,11 +46,12 @@ type UserReq struct {
 }
 
 type User struct {
-	Username string     `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
-	Status   UserStatus `json:"status" gorm:"type:varchar(20);default:'active';index"`
-	Type     UserType   `json:"type" gorm:"type:varchar(20);default:'regular';index"`
-	GroupID  string     `json:"group_id" gorm:"type:varchar(100);index"`
-	Group    *Group     `json:"group,omitempty" gorm:"-"`
+	Username string `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
+	// Status: "active" (default) allows login; "inactive" disables login (administrative); "locked" denies login (lockout).
+	Status  UserStatus `json:"status" gorm:"type:varchar(20);default:'active';index"`
+	Type    UserType   `json:"type" gorm:"type:varchar(20);default:'regular';index"`
+	GroupID string     `json:"group_id" gorm:"type:varchar(100);index"`
+	Group   *Group     `json:"group,omitempty" gorm:"-"`
 
 	// 个人信息
 	Email       *string    `json:"email" gorm:"type:varchar(100);uniqueIndex"`
@@ -71,6 +75,8 @@ type User struct {
 	// 状态管理
 	IsStaff     *bool `json:"is_staff" gorm:"default:false"`
 	IsSuperuser *bool `json:"is_superuser" gorm:"default:false"`
+	// MustChangePassword is set when an administrator resets the password; the user must change it before other protected APIs are allowed.
+	MustChangePassword bool `json:"must_change_password" gorm:"default:false;not null"`
 
 	// 多租户支持
 	TenantID *string `json:"tenant_id" gorm:"index"`

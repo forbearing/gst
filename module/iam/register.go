@@ -32,6 +32,14 @@ type Config struct {
 //
 // Models:
 //   - ChangePassword
+//   - ResetPassword
+//   - AccountStatus
+//   - EmailChangeConfirm
+//   - EmailChangeRequest
+//   - EmailChangeResend
+//   - EmailVerificationConfirm
+//   - EmailVerificationRequest
+//   - EmailVerificationResend
 //   - Group
 //   - Heartbeat
 //   - Login
@@ -45,6 +53,14 @@ type Config struct {
 //
 // Routes:
 //   - POST   /api/iam/change-password
+//   - POST   /api/iam/reset-password
+//   - POST   /api/iam/account-status
+//   - POST   /api/iam/email-change-confirm
+//   - POST   /api/iam/email-change-request
+//   - POST   /api/iam/email-change-resend
+//   - POST   /api/iam/email-verification-confirm
+//   - POST   /api/iam/email-verification-request
+//   - POST   /api/iam/email-verification-resend
 //   - POST   /api/iam/groups
 //   - DELETE /api/iam/groups/:id
 //   - PUT    /api/iam/groups/:id
@@ -104,6 +120,86 @@ func Register(config ...Config) {
 		*ChangePasswordRsp,
 		*ChangePasswordService](
 		&ChangePasswordModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "ResetPasswordModule" (superuser password reset for another user)
+	module.Use[
+		*ResetPassword,
+		*ResetPasswordReq,
+		*ResetPasswordRsp,
+		*ResetPasswordService](
+		&ResetPasswordModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "AccountStatusModule" (privileged: set another user's active / inactive / locked)
+	module.Use[
+		*AccountStatus,
+		*AccountStatusReq,
+		*AccountStatusRsp,
+		*AccountStatusService](
+		&AccountStatusModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailChangeConfirmModule"
+	module.Use[
+		*EmailChangeConfirm,
+		*EmailChangeConfirmReq,
+		*EmailChangeConfirmRsp,
+		*EmailChangeConfirmService](
+		&EmailChangeConfirmModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailChangeRequestModule"
+	module.Use[
+		*EmailChangeRequest,
+		*EmailChangeRequestReq,
+		*EmailChangeRequestRsp,
+		*EmailChangeRequestService](
+		&EmailChangeRequestModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailChangeResendModule"
+	module.Use[
+		*EmailChangeResend,
+		*EmailChangeResendReq,
+		*EmailChangeResendRsp,
+		*EmailChangeResendService](
+		&EmailChangeResendModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailVerificationConfirmModule"
+	module.Use[
+		*EmailVerificationConfirm,
+		*EmailVerificationConfirmReq,
+		*EmailVerificationConfirmRsp,
+		*EmailVerificationConfirmService](
+		&EmailVerificationConfirmModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailVerificationRequestModule"
+	module.Use[
+		*EmailVerificationRequest,
+		*EmailVerificationRequestReq,
+		*EmailVerificationRequestRsp,
+		*EmailVerificationRequestService](
+		&EmailVerificationRequestModule{},
+		consts.PHASE_CREATE,
+	)
+
+	// Use module "EmailVerificationResendModule"
+	module.Use[
+		*EmailVerificationResend,
+		*EmailVerificationResendReq,
+		*EmailVerificationResendRsp,
+		*EmailVerificationResendService](
+		&EmailVerificationResendModule{},
 		consts.PHASE_CREATE,
 	)
 

@@ -87,6 +87,11 @@ type Logger interface {
 //   - Optional caching support for improved performance
 //
 // The interface embeds DatabaseOption[M] to provide chainable query building.
+//
+// Implementations share an underlying GORM session. You must call database.Database[M](ctx)
+// again for each separate operation chain. Keeping the returned value in a variable and running
+// another independent operation on it (e.g. List then Get/Update) is incorrect usage; see
+// database.Database.
 type Database[M Model] interface {
 	// Create inserts one or multiple records into the database.
 	Create(objs ...M) error
@@ -384,6 +389,14 @@ type Module[M Model, REQ Request, RSP Response] interface {
 
 	// Param returns the URL parameter name used for resource identification.
 	Param() string
+}
+
+// Coder is implemented by API response code types (e.g. response.Code) so service errors
+// can attach a stable client-facing numeric code and default message.
+type Coder interface {
+	Code() int
+	Status() int
+	Msg() string
 }
 
 // ESDocumenter represents a document that can be indexed into Elasticsearch.

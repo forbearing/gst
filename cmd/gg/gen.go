@@ -305,8 +305,7 @@ func genRun() {
 				// pretty.Println(file)
 				checkErr(err)
 				// code = gen.MethodAddComments(code, m.ModelName)
-				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
-				dir = strings.TrimSuffix(dir, ".go")
+				dir := filepath.Join(serviceDir, gen.ServiceOutputRel(m.ModelFilePath, modelDir))
 				filename := filepath.Join(dir, act.ServiceFilename())
 				// Use lowercase ModelName as service package name to ensure consistency
 				// with service registration logic and maintain original naming style
@@ -331,8 +330,9 @@ func genRun() {
 	fmt.Printf("\n%s Code generation completed successfully!\n", green("🎉"))
 }
 
-// scanExistingServiceFiles scans existing service files in the service directory
-// Only includes files that match phase names (e.g., create.go, update.go, etc.)
+// scanExistingServiceFiles scans existing service files in the service directory.
+// It includes standard phase filenames (e.g., create.go, list.go) and any other .go file
+// that embeds service.Base[...] (per-action handlers), such as DSL Filename("x") outputs.
 func scanExistingServiceFiles(serviceDir string) []string {
 	var files []string
 
@@ -364,8 +364,14 @@ func scanExistingServiceFiles(serviceDir string) []string {
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".go") {
 			fileName := filepath.Base(path)
-			// Only include files that match phase names
+			if strings.HasSuffix(fileName, "_test.go") {
+				return nil
+			}
 			if validPhases[fileName] {
+				files = append(files, path)
+				return nil
+			}
+			if gen.IsActionServiceSource(path) {
 				files = append(files, path)
 			}
 		}
@@ -418,8 +424,7 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 	for _, m := range allModels {
 		m.Design.Range(func(route string, act *dsl.Action) {
 			if act.Enabled && act.Service {
-				dir := strings.Replace(m.ModelFilePath, modelDir, serviceDir, 1)
-				dir = strings.TrimSuffix(dir, ".go")
+				dir := filepath.Join(serviceDir, gen.ServiceOutputRel(m.ModelFilePath, modelDir))
 				filename := filepath.Join(dir, act.ServiceFilename())
 				currentServiceFiles[filename] = true
 			}

@@ -33,14 +33,14 @@ var (
 
 	server *http.Server
 
-	started uint32
+	started atomic.Uint32
 	mu      sync.Mutex
 	done    = make(chan struct{}, 1)
 )
 
 var globalErrors = make([]error, 0)
 
-func Started() bool { return atomic.LoadUint32(&started) > 0 }
+func Started() bool { return started.Load() > 0 }
 
 func Init() error {
 	gin.SetMode(gin.ReleaseMode)
@@ -73,12 +73,12 @@ func Init() error {
 			select {
 			case mid := <-middleware.CommonMiddlewaresChan:
 				// Only use middlewares before the server start.
-				if atomic.LoadUint32(&started) == 0 {
+				if started.Load() == 0 {
 					auth.Use(mid)
 					pub.Use(mid)
 				}
 			case mid := <-middleware.AuthMiddlewaresChan:
-				if atomic.LoadUint32(&started) == 0 {
+				if started.Load() == 0 {
 					// Only use middleware before the server start.
 					auth.Use(mid)
 				}
@@ -115,7 +115,7 @@ func Run() error {
 	}
 
 	// mark the server as started.
-	atomic.StoreUint32(&started, 1)
+	started.Store(1)
 	done <- struct{}{}
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

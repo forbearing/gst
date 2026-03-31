@@ -207,6 +207,8 @@ func Service(bool) {}
 // Filename specifies a custom filename (without extension) for the generated service file.
 // When used inside an action configuration function (e.g., Create, Update), it overrides the
 // default filename derived from the operation phase (e.g., "create", "list").
+// Generated service log.Info messages use "{model}: {label}" where label is derived from this
+// value: path base, underscores and hyphens replaced by spaces, whitespace collapsed.
 //
 // Background:
 // By default, the generated service filename is derived from the operation phase name
