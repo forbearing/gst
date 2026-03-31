@@ -15,7 +15,7 @@
 - 代码新增功能、bug修复完后, 需要更新其对应的函数、结构体、接口、类的代码注释和文档、代码注释请使用英文
 - module, internal/model 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq
 - module, internal/model 中使用自定义 Response 时, 命名偏向于 XXXRsp, 例如 SignupRsp
-- 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范
+- 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释。
 
 ### Sandbox
 
