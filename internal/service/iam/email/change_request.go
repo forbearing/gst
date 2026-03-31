@@ -137,6 +137,9 @@ func verifyEmailChangePassword(user *modeliam.User, password string) error {
 // change notifications for the target flow.
 func startEmailChangeFlow(ctx *types.ServiceContext, user *modeliam.User, newEmail string, includeCancel bool) error {
 	currentEmail := normalizePasswordResetEmail(user.Email)
+	if err := clearEmailChangeCancellation(ctx.Context(), user.ID, currentEmail, newEmail); err != nil {
+		return errors.Wrap(err, "failed to clear previous email change cancellation")
+	}
 	if _, err := reserveEmailThrottle(ctx.Context(), iamEmailFlowKindChangeConfirm, emailThrottleRequest, newEmail, 0); err != nil {
 		if errors.Is(err, errEmailFlowThrottled) {
 			return errors.Wrap(err, "email change confirmation throttled")
