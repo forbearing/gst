@@ -1,19 +1,22 @@
-package serviceiam
+package serviceiamaccount
 
 import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
 
 type AccountStatusService struct {
-	service.Base[*modeliam.AccountStatus, *modeliam.AccountStatusReq, *modeliam.AccountStatusRsp]
+	service.Base[*model.Empty, *modeliamaccount.AccountStatusReq, *modeliamaccount.AccountStatusRsp]
 }
 
-func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliam.AccountStatusReq) (rsp *modeliam.AccountStatusRsp, err error) {
+func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamaccount.AccountStatusReq) (rsp *modeliamaccount.AccountStatusRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("account status create")
 
@@ -68,9 +71,9 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliam.A
 	if target.Status == req.Status {
 		// Still revoke sessions when the target state is inactive or locked so Redis cannot drift.
 		if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
-			invalidateUserSessionsByUserID(req.UserID)
+			serviceiam.InvalidateUserSessionsByUserID(req.UserID)
 		}
-		return &modeliam.AccountStatusRsp{Msg: "account status unchanged"}, nil
+		return &modeliamaccount.AccountStatusRsp{Msg: "account status unchanged"}, nil
 	}
 
 	target.Status = req.Status
@@ -83,9 +86,9 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliam.A
 	}
 
 	if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
-		invalidateUserSessionsByUserID(req.UserID)
+		serviceiam.InvalidateUserSessionsByUserID(req.UserID)
 	}
 
 	log.Info("account status updated", "target_user_id", req.UserID, "status", req.Status, "actor", actorUsername)
-	return &modeliam.AccountStatusRsp{Msg: "account status updated successfully"}, nil
+	return &modeliamaccount.AccountStatusRsp{Msg: "account status updated successfully"}, nil
 }

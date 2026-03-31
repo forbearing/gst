@@ -1,11 +1,13 @@
-package serviceiam
+package serviceiamaccount
 
 import (
 	"fmt"
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -14,22 +16,22 @@ import (
 )
 
 type LogoutService struct {
-	service.Base[*modeliam.Logout, *modeliam.Logout, *modeliam.LogoutRsp]
+	service.Base[*model.Empty, *model.Empty, *modeliamaccount.LogoutRsp]
 }
 
-func (s *LogoutService) Create(ctx *types.ServiceContext, req *modeliam.Logout) (rsp *modeliam.LogoutRsp, err error) {
+func (s *LogoutService) Create(ctx *types.ServiceContext, req *model.Empty) (rsp *modeliamaccount.LogoutRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	// return keycloakLogout(ctx, log, req)
 	return localLogout(ctx, log, req)
 }
 
-func localLogout(ctx *types.ServiceContext, log types.Logger, req *modeliam.Logout) (rsp *modeliam.LogoutRsp, err error) {
+func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) (rsp *modeliamaccount.LogoutRsp, err error) {
 	// Get session_id from cookie
 	sessionID, err := ctx.Cookie("session_id")
 	if err != nil {
 		log.Error("failed to get session_id from cookie", err)
-		return &modeliam.LogoutRsp{Msg: "logout successful"}, nil // Return success even if no session
+		return &modeliamaccount.LogoutRsp{Msg: "logout successful"}, nil // Return success even if no session
 	}
 
 	// Get session from Redis to extract user info for logging
@@ -75,7 +77,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *modeliam.Logo
 	ctx.SetCookie("session_id", "", -1, "/", "", false, true)
 
 	log.Info("user logged out successfully", "session_id", sessionID)
-	return &modeliam.LogoutRsp{Msg: "logout successful"}, nil
+	return &modeliamaccount.LogoutRsp{Msg: "logout successful"}, nil
 }
 
 // func keycloakLogout(ctx *types.ServiceContext, log types.Logger, req *iam.Logout) (rsp *iam.LogoutRsp, err error) {

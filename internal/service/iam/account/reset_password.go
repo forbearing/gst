@@ -1,9 +1,12 @@
-package serviceiam
+package serviceiamaccount
 
 import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -12,7 +15,7 @@ import (
 )
 
 type ResetPasswordService struct {
-	service.Base[*modeliam.ResetPassword, *modeliam.ResetPasswordReq, *modeliam.ResetPasswordRsp]
+	service.Base[*model.Empty, *modeliamaccount.ResetPasswordReq, *modeliamaccount.ResetPasswordRsp]
 }
 
 func privilegedActor(actor *modeliam.User, username string) bool {
@@ -39,7 +42,7 @@ func mayResetUserPassword(actorUsername string, actor, target *modeliam.User) er
 	return mayManageProtectedUser(actorUsername, actor, target)
 }
 
-func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliam.ResetPasswordReq) (rsp *modeliam.ResetPasswordRsp, err error) {
+func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliamaccount.ResetPasswordReq) (rsp *modeliamaccount.ResetPasswordRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("resetpassword create")
 
@@ -98,8 +101,8 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliam.R
 		return nil, errors.Wrap(err, "failed to update password")
 	}
 
-	invalidateUserSessionsByUserID(req.UserID)
+	serviceiam.InvalidateUserSessionsByUserID(req.UserID)
 
 	log.Info("password reset successfully", "target_user_id", req.UserID, "actor", actorUsername)
-	return &modeliam.ResetPasswordRsp{Msg: "password reset successfully"}, nil
+	return &modeliamaccount.ResetPasswordRsp{Msg: "password reset successfully"}, nil
 }

@@ -1,15 +1,23 @@
 package serviceiam
 
 import (
+	"sync"
+	"time"
+
 	"github.com/cockroachdb/errors"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types"
 )
 
-// invalidateUserSessionsByUserID removes the Redis session mapping for a user and deletes the session value.
+var (
+	sessionExpiration   time.Duration
+	sessionExpirationMu sync.RWMutex
+)
+
+// InvalidateUserSessionsByUserID removes the Redis session mapping for a user and deletes the session value.
 // It is best-effort: failures to talk to Redis do not block password updates.
-func invalidateUserSessionsByUserID(userID string) {
+func InvalidateUserSessionsByUserID(userID string) {
 	if userID == "" {
 		return
 	}
@@ -21,8 +29,8 @@ func invalidateUserSessionsByUserID(userID string) {
 	_ = redis.Cache[string]().Delete(prefixedUserID)
 }
 
-// syncSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
-func syncSessionMustChangePassword(sessionID string, mustChange bool) error {
+// SyncSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
+func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 	if sessionID == "" {
 		return nil
 	}
@@ -38,5 +46,24 @@ func syncSessionMustChangePassword(sessionID string, mustChange bool) error {
 		session.UserInfo = map[string]any{}
 	}
 	session.UserInfo["must_change_password"] = mustChange
-	return redis.Cache[modeliam.Session]().Set(sessionKey, session, getSessionExpiration())
+	return redis.Cache[modeliam.Session]().Set(sessionKey, session, GetSessionExpiration())
+}
+
+// GetSessionExpiration returns the configured session expiration time.
+// If not configured, it returns the default value of 8 hours.
+func GetSessionExpiration() time.Duration {
+	sessionExpirationMu.RLock()
+	defer sessionExpirationMu.RUnlock()
+	if sessionExpiration == 0 {
+		return 8 * time.Hour
+	}
+	return sessionExpiration
+}
+
+// SetSessionExpiration sets the session expiration time for iam module.
+// This function should be called during module registration.
+func SetSessionExpiration(expiration time.Duration) {
+	sessionExpirationMu.Lock()
+	defer sessionExpirationMu.Unlock()
+	sessionExpiration = expiration
 }

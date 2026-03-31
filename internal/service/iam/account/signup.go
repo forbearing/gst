@@ -1,10 +1,12 @@
-package serviceiam
+package serviceiamaccount
 
 import (
 	"fmt"
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"go.uber.org/zap"
@@ -12,10 +14,10 @@ import (
 )
 
 type SignupService struct {
-	service.Base[*modeliam.Signup, *modeliam.SignupReq, *modeliam.SignupRsp]
+	service.Base[*model.Empty, *modeliamaccount.SignupReq, *modeliamaccount.SignupRsp]
 }
 
-func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliam.SignupReq) (rsp *modeliam.SignupRsp, err error) {
+func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliamaccount.SignupReq) (rsp *modeliamaccount.SignupRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	// Validate input
@@ -74,7 +76,7 @@ func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliam.SignupRe
 
 	log.Info("user created successfully", zap.String("username", req.Username), zap.String("user_id", newUser.ID))
 
-	return &modeliam.SignupRsp{
+	return &modeliamaccount.SignupRsp{
 		UserID:   newUser.ID,
 		Username: newUser.Username,
 		Message:  "User created successfully",

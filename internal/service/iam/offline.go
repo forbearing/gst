@@ -2,16 +2,17 @@ package serviceiam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
 
 type OfflineService struct {
-	service.Base[*modeliam.Offline, *modeliam.OfflineReq, *modeliam.Offline]
+	service.Base[*model.Empty, *modeliam.OfflineReq, *model.Empty]
 }
 
-func (s *OfflineService) Create(ctx *types.ServiceContext, req *modeliam.OfflineReq) (rsp *modeliam.Offline, err error) {
+func (s *OfflineService) Create(ctx *types.ServiceContext, req *modeliam.OfflineReq) (rsp *model.Empty, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, req.UserID)

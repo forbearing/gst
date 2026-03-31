@@ -1,17 +1,19 @@
-package serviceiam
+package serviceiamaccount
 
 import (
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	servicelogmgmt "github.com/forbearing/gst/internal/service/logmgmt"
 	servicetwofa "github.com/forbearing/gst/internal/service/twofa"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
@@ -23,41 +25,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	sessionExpiration   time.Duration
-	sessionExpirationMu sync.RWMutex
-)
-
-// SetSessionExpiration sets the session expiration time for iam module.
-// This function should be called during module registration.
-func SetSessionExpiration(expiration time.Duration) {
-	sessionExpirationMu.Lock()
-	defer sessionExpirationMu.Unlock()
-	sessionExpiration = expiration
-}
-
-// getSessionExpiration returns the configured session expiration time.
-// If not configured, it returns the default value of 8 hours.
-func getSessionExpiration() time.Duration {
-	sessionExpirationMu.RLock()
-	defer sessionExpirationMu.RUnlock()
-	if sessionExpiration == 0 {
-		return 8 * time.Hour
-	}
-	return sessionExpiration
-}
-
 type LoginService struct {
-	service.Base[*modeliam.Login, *modeliam.LoginReq, *modeliam.LoginRsp]
+	service.Base[*model.Empty, *modeliamaccount.LoginReq, *modeliamaccount.LoginRsp]
 }
 
-func (s *LoginService) Create(ctx *types.ServiceContext, req *modeliam.LoginReq) (rsp *modeliam.LoginRsp, err error) {
+func (s *LoginService) Create(ctx *types.ServiceContext, req *modeliamaccount.LoginReq) (rsp *modeliamaccount.LoginRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	// return keycloakLogin(ctx, log, req)
 	return localLogin(ctx, log, req)
 }
 
-func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.LoginReq) (rsp *modeliam.LoginRsp, err error) {
+func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccount.LoginReq) (rsp *modeliamaccount.LoginRsp, err error) {
 	// Validate input
 	if req.Username == "" {
 		return nil, fmt.Errorf("username is required")
@@ -185,7 +163,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 		},
 	}
 
-	expire := getSessionExpiration()
+	expire := serviceiam.GetSessionExpiration()
 	// Store session in Redis
 	if err = redis.Cache[modeliam.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
 		log.Errorz("failed to set session in redis", zap.Error(err))
@@ -228,7 +206,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliam.Login
 		}
 	}
 
-	return &modeliam.LoginRsp{
+	return &modeliamaccount.LoginRsp{
 		SessionID: sessionID,
 	}, nil
 }

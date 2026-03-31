@@ -6,6 +6,7 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
@@ -13,10 +14,10 @@ import (
 )
 
 type MeService struct {
-	service.Base[*modeliam.Me, *modeliam.Me, modeliam.MeRsp]
+	service.Base[*model.Empty, *model.Empty, modeliam.MeRsp]
 }
 
-func (s *MeService) List(ctx *types.ServiceContext, req *modeliam.Me) (rsp modeliam.MeRsp, err error) {
+func (s *MeService) List(ctx *types.ServiceContext, req *model.Empty) (rsp modeliam.MeRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	sessionID, err := ctx.Cookie("session_id")

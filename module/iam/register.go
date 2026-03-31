@@ -7,6 +7,7 @@ import (
 	cronjobiam "github.com/forbearing/gst/internal/cronjob/iam"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	serviceiamaccount "github.com/forbearing/gst/internal/service/iam/account"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
@@ -28,7 +29,7 @@ type Config struct {
 	SessionExpiration time.Duration // SessionExpiration is the session expiration time, default is 8 hours
 }
 
-// Register registers iam modules,
+// Register registers IAM models, API routes, middleware, and scheduled jobs.
 //
 // Models:
 //   - ChangePassword
@@ -54,10 +55,45 @@ type Config struct {
 //   - Tenant
 //   - User
 //
-// Routes:
+// API Routes:
+//
+// Public auth routes:
+//   - POST   /api/login
+//   - POST   /api/signup
+//
+// Session routes:
+//   - POST   /api/logout
+//   - POST   /api/heartbeat
+//   - GET    /api/me
+//   - POST   /api/offline
+//   - GET    /api/online-users
+//
+// Account management routes:
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
 //   - POST   /api/iam/account-status
+//
+// IAM resource routes:
+//   - POST   /api/iam/users
+//   - DELETE /api/iam/users/:id
+//   - PUT    /api/iam/users/:id
+//   - PATCH  /api/iam/users/:id
+//   - GET    /api/iam/users
+//   - GET    /api/iam/users/:id
+//   - POST   /api/iam/groups
+//   - DELETE /api/iam/groups/:id
+//   - PUT    /api/iam/groups/:id
+//   - PATCH  /api/iam/groups/:id
+//   - GET    /api/iam/groups
+//   - GET    /api/iam/groups/:id
+//   - POST   /api/iam/tenants
+//   - DELETE /api/iam/tenants/:id
+//   - PUT    /api/iam/tenants/:id
+//   - PATCH  /api/iam/tenants/:id
+//   - GET    /api/iam/tenants
+//   - GET    /api/iam/tenants/:id
+//
+// Email workflow routes:
 //   - POST   /api/iam/email/change-confirm
 //   - POST   /api/iam/email/change-cancel
 //   - POST   /api/iam/email/change-request
@@ -67,40 +103,18 @@ type Config struct {
 //   - POST   /api/iam/email/verification-confirm
 //   - POST   /api/iam/email/verification-request
 //   - POST   /api/iam/email/verification-resend
-//   - POST   /api/iam/groups
-//   - DELETE /api/iam/groups/:id
-//   - PUT    /api/iam/groups/:id
-//   - PATCH  /api/iam/groups/:id
-//   - GET    /api/iam/groups
-//   - GET    /api/iam/groups/:id
-//   - POST   /api/heartbeat
-//   - POST   /api/login
-//   - POST   /api/logout
-//   - POST   /api/offline
-//   - GET    /api/me
-//   - GET    /api/online-users
-//   - POST   /api/signup
-//   - POST   /api/iam/tenants
-//   - DELETE /api/iam/tenants/:id
-//   - PUT    /api/iam/tenants/:id
-//   - PATCH  /api/iam/tenants/:id
-//   - GET    /api/iam/tenants
-//   - GET    /api/iam/tenants/:id
-//   - POST   /api/iam/users
-//   - DELETE /api/iam/users/:id
-//   - PUT    /api/iam/users/:id
-//   - PATCH  /api/iam/users/:id
-//   - GET    /api/iam/users
-//   - GET    /api/iam/users/:id
 //
 // Middleware:
-//   - IAMSession
+//   - IAMSession for protected IAM routes and session-aware APIs
 //
-// Default disable Tenant module, use `EnableTenant` to enable it.
-// Default session expiration time is 8 hours, use `SessionExpiration` to customize it.
+// Scheduled jobs:
+//   - CleanupOnlineUser runs every 30 seconds and starts immediately after bootstrap
 //
-// NOTE: iam modules register must before "authz" modules register.
-// because "authz" registered middleware "Authz" depend on iam modules registered middleware "IAMSession".
+// Configuration:
+//   - Tenant routes are registered only when EnableTenant is true
+//   - SessionExpiration defaults to 8 hours when not configured
+//
+// NOTE: Register IAM modules before authz modules because authz middleware depends on IAMSession.
 func Register(config ...Config) {
 	cfg := Config{
 		SessionExpiration: 8 * time.Hour, // default session expiration time
@@ -119,31 +133,47 @@ func Register(config ...Config) {
 	// Set session expiration in service layer
 	serviceiam.SetSessionExpiration(cfg.SessionExpiration)
 
-	// Use module "ChangePasswordModule"
-	module.Use[
-		*ChangePassword,
-		*ChangePasswordReq,
-		*ChangePasswordRsp](
-		&ChangePasswordModule{},
+	module.Use(module.NewWrapper("/login", "id", true, &serviceiamaccount.LoginService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/logout", "id", false, &serviceiamaccount.LogoutService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/signup", "id", true, &serviceiamaccount.SignupService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/change-password", "id", false, &serviceiamaccount.ChangePasswordService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/reset-password", "id", false, &serviceiamaccount.ResetPasswordService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/account-status", "id", false, &serviceiamaccount.AccountStatusService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/heartbeat", "id", false, &serviceiam.HeartbeatService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/me", "id", false, &serviceiam.MeService{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/offline", "id", false, &serviceiam.OfflineService{}), consts.PHASE_CREATE)
+	module.Use(
+		module.NewWrapper[*User, *User, *User]("/iam/users", "id", false, &serviceiam.UserService{}),
 		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
 	)
-
-	// Use module "ResetPasswordModule" (superuser password reset for another user)
-	module.Use[
-		*ResetPassword,
-		*ResetPasswordReq,
-		*ResetPasswordRsp](
-		&ResetPasswordModule{},
+	module.Use(
+		module.NewWrapper[*Group, *Group, *Group]("/iam/groups", "id", false),
 		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_UPDATE,
+		consts.PHASE_PATCH,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
 	)
-
-	// Use module "AccountStatusModule" (privileged: set another user's active / inactive / locked)
-	module.Use[
-		*AccountStatus,
-		*AccountStatusReq,
-		*AccountStatusRsp](
-		&AccountStatusModule{},
-		consts.PHASE_CREATE,
+	if cfg.EnableTenant {
+		module.Use(
+			module.NewWrapper[*Tenant, *Tenant, *Tenant]("/iam/tenants", "id", false),
+			consts.PHASE_CREATE,
+			consts.PHASE_DELETE,
+			consts.PHASE_UPDATE,
+			consts.PHASE_PATCH,
+			consts.PHASE_LIST,
+			consts.PHASE_GET,
+		)
+	}
+	module.Use(
+		module.NewWrapper[*OnlineUser, *OnlineUser, *OnlineUser]("/online-users", "id", false),
+		consts.PHASE_LIST,
 	)
 
 	// Use module "EmailChangeConfirmModule"
@@ -227,112 +257,6 @@ func Register(config ...Config) {
 		consts.PHASE_CREATE,
 	)
 
-	// Use module "GroupModule"
-	module.Use[
-		*Group,
-		*Group,
-		*Group](
-		&GroupModule{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-	)
-
-	// Use module "HeartbeatModule"
-	module.Use[
-		*Heartbeat,
-		*Heartbeat,
-		*Heartbeat](
-		&HeartbeatModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "LoginModule"
-	module.Use[
-		*Login,
-		*LoginReq,
-		*LoginRsp](
-		&LoginModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "LogoutModule"
-	module.Use[
-		*Logout,
-		*Logout,
-		*LogoutRsp](
-		&LogoutModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "MeModule"
-	module.Use[
-		*Me,
-		*Me,
-		MeRsp](
-		&MeModule{},
-		consts.PHASE_LIST,
-	)
-
-	// Use module "OfflineModule"
-	module.Use[
-		*Offline,
-		*OfflineReq,
-		*Offline](
-		&OfflineModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "OnlineUserModule"
-	module.Use[
-		*OnlineUser,
-		*OnlineUser,
-		*OnlineUser](
-		&OnlineUserModule{},
-		consts.PHASE_LIST,
-	)
-
-	// Use module "SignupModule"
-	module.Use[
-		*Signup,
-		*SignupReq,
-		*SignupRsp](
-		&SignupModule{},
-		consts.PHASE_CREATE,
-	)
-
-	if cfg.EnableTenant {
-		// Use module "TenantModule"
-		module.Use[
-			*Tenant,
-			*Tenant,
-			*Tenant](
-			&TenantModule{},
-			consts.PHASE_CREATE,
-			consts.PHASE_DELETE,
-			consts.PHASE_UPDATE,
-			consts.PHASE_PATCH,
-			consts.PHASE_LIST,
-			consts.PHASE_GET,
-		)
-	}
-
-	// Use module "UserModule"
-	module.Use[
-		*User,
-		*User,
-		*User](
-		&UserModule{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-	)
 	// create default users
 	if len(cfg.DefaultUsers) > 0 {
 		for _, u := range cfg.DefaultUsers {

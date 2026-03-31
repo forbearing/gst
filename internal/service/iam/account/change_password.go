@@ -1,4 +1,4 @@
-package serviceiam
+package serviceiamaccount
 
 import (
 	"fmt"
@@ -6,6 +6,9 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -13,10 +16,10 @@ import (
 )
 
 type ChangePasswordService struct {
-	service.Base[*modeliam.ChangePassword, *modeliam.ChangePasswordReq, *modeliam.ChangePasswordRsp]
+	service.Base[*model.Empty, *modeliamaccount.ChangePasswordReq, *modeliamaccount.ChangePasswordRsp]
 }
 
-func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliam.ChangePasswordReq) (rsp *modeliam.ChangePasswordRsp, err error) {
+func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliamaccount.ChangePasswordReq) (rsp *modeliamaccount.ChangePasswordRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("changepassword create")
 
@@ -68,11 +71,11 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliam.
 		return nil, fmt.Errorf("failed to update password")
 	}
 
-	if syncErr := syncSessionMustChangePassword(sessionID, false); syncErr != nil {
+	if syncErr := serviceiam.SyncSessionMustChangePassword(sessionID, false); syncErr != nil {
 		log.Error("failed to sync session after password change", syncErr)
 		return nil, errors.Wrap(syncErr, "failed to refresh session")
 	}
 
 	log.Info("password changed successfully", "username", user.Username)
-	return &modeliam.ChangePasswordRsp{Msg: "password changed successfully"}, nil
+	return &modeliamaccount.ChangePasswordRsp{Msg: "password changed successfully"}, nil
 }
