@@ -43,11 +43,6 @@ func (s *HeartbeatService) Create(ctx *types.ServiceContext, req *modeliamsessio
 			session.LastSeenAt = now
 			session.ClientIP = ctx.ClientIP
 			session.UserAgent = ctx.Request.UserAgent()
-			if session.UpdatedAt != nil {
-				*session.UpdatedAt = now
-			} else {
-				session.UpdatedAt = &now
-			}
 			if setErr := redis.Cache[modeliamsession.Session]().Set(sessionKey, session, GetSessionExpiration()); setErr != nil {
 				log.Error(setErr)
 			}

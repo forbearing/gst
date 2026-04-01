@@ -148,6 +148,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 
 	// Create session data for local user
 	sessionData := modeliamsession.Session{
+		ID:                 sessionID,
 		UserID:             user.ID,
 		Username:           user.Username,
 		Email:              util.Deref(user.Email),
@@ -167,11 +168,6 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 		IssuedAt:           now,
 		LastSeenAt:         now,
 		ExpiresAt:          expiresAt,
-		Base: model.Base{
-			ID:        sessionID,
-			CreatedAt: &now,
-			UpdatedAt: &now,
-		},
 	}
 	// Store session in Redis
 	if err = redis.Cache[modeliamsession.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {

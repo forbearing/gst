@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/forbearing/gst/model"
 )
 
 const SessionNamespace = "iam:session"
@@ -20,6 +18,8 @@ const (
 
 // Session stores the authenticated session snapshot used by IAM middleware and session APIs.
 type Session struct {
+	ID string `json:"id"`
+
 	UserID   string `json:"user_id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -46,9 +46,8 @@ type Session struct {
 	ExpiresAt  time.Time     `json:"expires_at"`
 
 	Token Token `json:"token"`
-
-	model.Base
 }
+
 type Token struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`

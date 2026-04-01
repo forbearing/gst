@@ -52,7 +52,7 @@ func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.Cu
 		}
 	}
 
-	currentSessionID := session.GetID()
+	currentSessionID := session.ID
 	if currentSessionID == "" {
 		currentSessionID = sessionID
 	}
