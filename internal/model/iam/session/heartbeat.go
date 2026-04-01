@@ -1,4 +1,4 @@
-package modeliam
+package modeliamsession
 
 import "github.com/forbearing/gst/model"
 

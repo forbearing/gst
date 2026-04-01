@@ -1,4 +1,4 @@
-package serviceiam
+package serviceiamsession
 
 import (
 	"maps"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
@@ -14,10 +15,10 @@ import (
 )
 
 type MeService struct {
-	service.Base[*model.Empty, *model.Empty, modeliam.MeRsp]
+	service.Base[*model.Empty, *model.Empty, modeliamsession.MeRsp]
 }
 
-func (s *MeService) List(ctx *types.ServiceContext, req *model.Empty) (rsp modeliam.MeRsp, err error) {
+func (s *MeService) List(ctx *types.ServiceContext, req *model.Empty) (rsp modeliamsession.MeRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	sessionID, err := ctx.Cookie("session_id")
@@ -26,7 +27,7 @@ func (s *MeService) List(ctx *types.ServiceContext, req *model.Empty) (rsp model
 		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
 	}
 
-	session, e := redis.Cache[modeliam.Session]().Get(modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID))
+	session, e := redis.Cache[modeliamsession.Session]().Get(modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID))
 	if e != nil {
 		log.Error("session not exists")
 		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", e)

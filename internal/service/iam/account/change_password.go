@@ -7,7 +7,8 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
@@ -32,7 +33,7 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 
 	// Get session from Redis
 	redisKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	session, err := redis.Cache[modeliam.Session]().Get(redisKey)
+	session, err := redis.Cache[modeliamsession.Session]().Get(redisKey)
 	if err != nil {
 		log.Error("failed to get session from redis", err)
 		return nil, fmt.Errorf("invalid session")
@@ -71,7 +72,7 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 		return nil, fmt.Errorf("failed to update password")
 	}
 
-	if syncErr := serviceiam.SyncSessionMustChangePassword(sessionID, false); syncErr != nil {
+	if syncErr := serviceiamsession.SyncSessionMustChangePassword(sessionID, false); syncErr != nil {
 		log.Error("failed to sync session after password change", syncErr)
 		return nil, errors.Wrap(syncErr, "failed to refresh session")
 	}

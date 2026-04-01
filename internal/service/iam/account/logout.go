@@ -6,6 +6,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
@@ -36,7 +37,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) 
 
 	// Get session from Redis to extract user info for logging
 	prefixedSessionID := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	session, err := redis.Cache[modeliam.Session]().Get(prefixedSessionID)
+	session, err := redis.Cache[modeliamsession.Session]().Get(prefixedSessionID)
 
 	// Parse user agent for logging
 	ua := useragent.New(ctx.UserAgent)
@@ -64,7 +65,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) 
 	}
 
 	// Delete session from Redis
-	if delErr := redis.Cache[modeliam.Session]().Delete(prefixedSessionID); delErr != nil {
+	if delErr := redis.Cache[modeliamsession.Session]().Delete(prefixedSessionID); delErr != nil {
 		log.Warnz("failed to delete session from redis", zap.Error(delErr))
 	}
 	// Delete session id from redis

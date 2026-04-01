@@ -8,9 +8,10 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	servicelogmgmt "github.com/forbearing/gst/internal/service/logmgmt"
 	servicetwofa "github.com/forbearing/gst/internal/service/twofa"
 	"github.com/forbearing/gst/model"
@@ -144,7 +145,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, user.ID)
 
 	// Create session data for local user
-	sessionData := modeliam.Session{
+	sessionData := modeliamsession.Session{
 		UserID:      user.ID,
 		Username:    user.Username,
 		Email:       util.Deref(user.Email),
@@ -163,9 +164,9 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 		},
 	}
 
-	expire := serviceiam.GetSessionExpiration()
+	expire := serviceiamsession.GetSessionExpiration()
 	// Store session in Redis
-	if err = redis.Cache[modeliam.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
+	if err = redis.Cache[modeliamsession.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
 		log.Errorz("failed to set session in redis", zap.Error(err))
 		return nil, fmt.Errorf("failed to set session in redis")
 	}

@@ -2,6 +2,7 @@ package serviceiam
 
 import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -16,7 +17,7 @@ func (UserService) DeleteAfter(_ *types.ServiceContext, u *modeliam.User) error 
 	if u == nil {
 		return nil
 	}
-	InvalidateUserSessionsByUserID(u.GetID())
+	serviceiamsession.InvalidateUserSessionsByUserID(u.GetID())
 	return nil
 }
 
@@ -26,7 +27,7 @@ func (UserService) DeleteManyAfter(_ *types.ServiceContext, users ...*modeliam.U
 		if u == nil {
 			continue
 		}
-		InvalidateUserSessionsByUserID(u.GetID())
+		serviceiamsession.InvalidateUserSessionsByUserID(u.GetID())
 	}
 	return nil
 }

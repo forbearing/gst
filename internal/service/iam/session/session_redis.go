@@ -1,4 +1,4 @@
-package serviceiam
+package serviceiamsession
 
 import (
 	"sync"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types"
 )
@@ -24,7 +25,7 @@ func InvalidateUserSessionsByUserID(userID string) {
 	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, userID)
 	sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
 	if err == nil && sessionKey != "" {
-		_ = redis.Cache[modeliam.Session]().Delete(sessionKey)
+		_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
 	}
 	_ = redis.Cache[string]().Delete(prefixedUserID)
 }
@@ -35,7 +36,7 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 		return nil
 	}
 	sessionKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	session, err := redis.Cache[modeliam.Session]().Get(sessionKey)
+	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		if errors.Is(err, types.ErrEntryNotFound) {
 			return nil
@@ -46,7 +47,7 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 		session.UserInfo = map[string]any{}
 	}
 	session.UserInfo["must_change_password"] = mustChange
-	return redis.Cache[modeliam.Session]().Set(sessionKey, session, GetSessionExpiration())
+	return redis.Cache[modeliamsession.Session]().Set(sessionKey, session, GetSessionExpiration())
 }
 
 // GetSessionExpiration returns the configured session expiration time.

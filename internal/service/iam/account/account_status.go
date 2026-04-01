@@ -5,7 +5,8 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
@@ -35,7 +36,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 	}
 
 	sessionKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	session, err := redis.Cache[modeliam.Session]().Get(sessionKey)
+	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid session")
 	}
@@ -71,7 +72,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 	if target.Status == req.Status {
 		// Still revoke sessions when the target state is inactive or locked so Redis cannot drift.
 		if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
-			serviceiam.InvalidateUserSessionsByUserID(req.UserID)
+			serviceiamsession.InvalidateUserSessionsByUserID(req.UserID)
 		}
 		return &modeliamaccount.AccountStatusRsp{Msg: "account status unchanged"}, nil
 	}
@@ -86,7 +87,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 	}
 
 	if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
-		serviceiam.InvalidateUserSessionsByUserID(req.UserID)
+		serviceiamsession.InvalidateUserSessionsByUserID(req.UserID)
 	}
 
 	log.Info("account status updated", "target_user_id", req.UserID, "status", req.Status, "actor", actorUsername)

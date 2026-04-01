@@ -4,6 +4,7 @@ import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 )
 
 // account
@@ -27,10 +28,12 @@ type (
 	Group  = modeliam.Group
 	Tenant = modeliam.Tenant
 
-	Heartbeat  = modeliam.Heartbeat
-	MeRsp      = modeliam.MeRsp
-	OnlineUser = modeliam.OnlineUser
-	OfflineReq = modeliam.OfflineReq
+	Session    = modeliamsession.Session
+	Token      = modeliamsession.Token
+	Heartbeat  = modeliamsession.Heartbeat
+	MeRsp      = modeliamsession.MeRsp
+	OnlineUser = modeliamsession.OnlineUser
+	OfflineReq = modeliamsession.OfflineReq
 
 	EmailChangeConfirmReq = modeliamemail.ChangeConfirmReq
 	EmailChangeConfirmRsp = modeliamemail.ChangeConfirmRsp

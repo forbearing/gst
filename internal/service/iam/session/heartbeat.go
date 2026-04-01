@@ -1,27 +1,27 @@
-package serviceiam
+package serviceiamsession
 
 import (
 	"fmt"
 
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/mssola/useragent"
 )
 
 type HeartbeatService struct {
-	service.Base[*modeliam.Heartbeat, *modeliam.Heartbeat, *modeliam.Heartbeat]
+	service.Base[*modeliamsession.Heartbeat, *modeliamsession.Heartbeat, *modeliamsession.Heartbeat]
 }
 
-func (s *HeartbeatService) Create(ctx *types.ServiceContext, req *modeliam.Heartbeat) (rsp *modeliam.Heartbeat, err error) {
+func (s *HeartbeatService) Create(ctx *types.ServiceContext, req *modeliamsession.Heartbeat) (rsp *modeliamsession.Heartbeat, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	ua := useragent.New(ctx.Request.UserAgent())
 	engineName, engineVersion := ua.Engine()
 	browserName, browserVersion := ua.Browser()
 
-	if err = database.Database[*modeliam.OnlineUser](ctx.DatabaseContext()).Update(&modeliam.OnlineUser{
+	if err = database.Database[*modeliamsession.OnlineUser](ctx.DatabaseContext()).Update(&modeliamsession.OnlineUser{
 		UserID:   ctx.UserID,
 		ClientIP: ctx.ClientIP,
 		Username: ctx.Username,
@@ -35,5 +35,5 @@ func (s *HeartbeatService) Create(ctx *types.ServiceContext, req *modeliam.Heart
 	}
 
 	// Return a non-nil response so response logging (zap.ObjectMarshaler) does not panic on nil receiver.
-	return &modeliam.Heartbeat{}, nil
+	return &modeliamsession.Heartbeat{}, nil
 }

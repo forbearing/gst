@@ -5,7 +5,8 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
@@ -52,7 +53,7 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliamac
 	}
 
 	sessionKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	session, err := redis.Cache[modeliam.Session]().Get(sessionKey)
+	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid session")
 	}
@@ -101,7 +102,7 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliamac
 		return nil, errors.Wrap(err, "failed to update password")
 	}
 
-	serviceiam.InvalidateUserSessionsByUserID(req.UserID)
+	serviceiamsession.InvalidateUserSessionsByUserID(req.UserID)
 
 	log.Info("password reset successfully", "target_user_id", req.UserID, "actor", actorUsername)
 	return &modeliamaccount.ResetPasswordRsp{Msg: "password reset successfully"}, nil

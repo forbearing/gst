@@ -9,15 +9,12 @@ import (
 	serviceiam "github.com/forbearing/gst/internal/service/iam"
 	serviceiamaccount "github.com/forbearing/gst/internal/service/iam/account"
 	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
+	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types/consts"
-)
-
-type (
-	Session = modeliam.Session
-	Token   = modeliam.Token
 )
 
 // iamConfig stores the configuration for iam module
@@ -34,18 +31,16 @@ type Config struct {
 //
 // API Routes:
 //
-// Public auth routes:
-//   - POST   /api/login
-//   - POST   /api/signup
-//
 // Session routes:
-//   - POST   /api/logout
 //   - POST   /api/heartbeat
 //   - GET    /api/me
 //   - POST   /api/offline
 //   - GET    /api/online-users
 //
 // Account management routes:
+//   - POST   /api/login
+//   - POST   /api/logout
+//   - POST   /api/signup
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
 //   - POST   /api/iam/account-status
@@ -108,7 +103,7 @@ func Register(config ...Config) {
 	iamConfig = cfg
 
 	// Set session expiration in service layer
-	serviceiam.SetSessionExpiration(cfg.SessionExpiration)
+	serviceiamsession.SetSessionExpiration(cfg.SessionExpiration)
 
 	module.Use(module.NewWrapper("/login", "id", true, &serviceiamaccount.LoginService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/logout", "id", false, &serviceiamaccount.LogoutService{}), consts.PHASE_CREATE)
@@ -116,11 +111,11 @@ func Register(config ...Config) {
 	module.Use(module.NewWrapper("/iam/change-password", "id", false, &serviceiamaccount.ChangePasswordService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/reset-password", "id", false, &serviceiamaccount.ResetPasswordService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/account-status", "id", false, &serviceiamaccount.AccountStatusService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/heartbeat", "id", false, &serviceiam.HeartbeatService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/me", "id", false, &serviceiam.MeService{}), consts.PHASE_LIST)
-	module.Use(module.NewWrapper("/offline", "id", false, &serviceiam.OfflineService{}), consts.PHASE_CREATE)
-	module.Use(
-		module.NewWrapper[*User, *User, *User]("/iam/users", "id", false, &serviceiam.UserService{}),
+	module.Use(module.NewWrapper("/heartbeat", "id", false, &serviceiamsession.HeartbeatService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/me", "id", false, &serviceiamsession.MeService{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/offline", "id", false, &serviceiamsession.OfflineService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/online-users", "id", false, &service.Base[*OnlineUser, *OnlineUser, *OnlineUser]{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/iam/users", "id", false, &serviceiam.UserService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -128,8 +123,7 @@ func Register(config ...Config) {
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
-	module.Use(
-		module.NewWrapper[*Group, *Group, *Group]("/iam/groups", "id", false),
+	module.Use(module.NewWrapper("/iam/groups", "id", false, &service.Base[*Group, *Group, *Group]{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -138,8 +132,7 @@ func Register(config ...Config) {
 		consts.PHASE_GET,
 	)
 	if cfg.EnableTenant {
-		module.Use(
-			module.NewWrapper[*Tenant, *Tenant, *Tenant]("/iam/tenants", "id", false),
+		module.Use(module.NewWrapper("/iam/tenants", "id", false, &service.Base[*Tenant, *Tenant, *Tenant]{}),
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,
@@ -148,10 +141,6 @@ func Register(config ...Config) {
 			consts.PHASE_GET,
 		)
 	}
-	module.Use(
-		module.NewWrapper[*OnlineUser, *OnlineUser, *OnlineUser]("/online-users", "id", false),
-		consts.PHASE_LIST,
-	)
 
 	module.Use(module.NewWrapper("/iam/email/verification-request", "id", true, &serviceiamemail.VerificationRequestService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/email/verification-resend", "id", true, &serviceiamemail.VerificationResendService{}), consts.PHASE_CREATE)

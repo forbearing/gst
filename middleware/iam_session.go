@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
@@ -11,7 +12,7 @@ import (
 )
 
 // sessionRequiresPasswordChange reads the flag from session user info (set at login / updated on password change).
-func sessionRequiresPasswordChange(session modeliam.Session) bool {
+func sessionRequiresPasswordChange(session modeliamsession.Session) bool {
 	if session.UserInfo == nil {
 		return false
 	}
@@ -44,7 +45,7 @@ func IAMSession() gin.HandlerFunc {
 			return
 		}
 		// fmt.Println("----- SessionRedisKey", helper.SessionRedisKey(identity.SessionNamespace, sessionID))
-		session, e := redis.Cache[modeliam.Session]().WithContext(c.Request.Context()).Get(modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID))
+		session, e := redis.Cache[modeliamsession.Session]().WithContext(c.Request.Context()).Get(modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID))
 		if e != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": e.Error()})
 			return

@@ -1,4 +1,4 @@
-package modeliam
+package modeliamsession
 
 import (
 	"crypto/sha256"

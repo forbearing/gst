@@ -7,6 +7,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -45,7 +46,7 @@ var (
 		prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, userID)
 		sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
 		if err == nil && sessionKey != "" {
-			_ = redis.Cache[modeliam.Session]().Delete(sessionKey)
+			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
 		}
 		_ = redis.Cache[string]().Delete(prefixedUserID)
 	}
