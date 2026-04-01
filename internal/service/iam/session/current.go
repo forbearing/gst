@@ -13,10 +13,12 @@ import (
 	"github.com/forbearing/gst/util"
 )
 
+// CurrentService handles retrieval and invalidation of the current authenticated session.
 type CurrentService struct {
 	service.Base[*modeliamsession.Current, *modeliamsession.CurrentReq, *modeliamsession.CurrentRsp]
 }
 
+// List returns the current authenticated session together with the latest user snapshot.
 func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.CurrentReq) (rsp *modeliamsession.CurrentRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
@@ -52,13 +54,63 @@ func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.Cu
 		}
 	}
 
+	return buildCurrentRsp(session, sessionID, &modeliamsession.CurrentPrincipal{
+		UserID:             user.ID,
+		Username:           user.Username,
+		Email:              util.Deref(user.Email),
+		FirstName:          user.FirstName,
+		LastName:           user.LastName,
+		GroupID:            user.GroupID,
+		GroupName:          groupName,
+		Status:             string(user.Status),
+		MustChangePassword: user.MustChangePassword,
+	}), nil
+}
+
+// Delete invalidates the current authenticated session and clears the session cookie.
+func (s *CurrentService) Delete(ctx *types.ServiceContext, req *modeliamsession.CurrentReq) (rsp *modeliamsession.CurrentRsp, err error) {
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
+
+	sessionID, err := ctx.Cookie("session_id")
+	if err != nil {
+		log.Error(err)
+		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
+	}
+
+	session, err := DeleteSessionBySessionID(sessionID)
+	if err != nil {
+		log.Error("failed to delete current session", err)
+		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", err)
+	}
+
+	ctx.SetCookie("session_id", "", -1, "/", "", false, true)
+
+	return buildCurrentRsp(session, sessionID, &modeliamsession.CurrentPrincipal{
+		UserID:             session.UserID,
+		Username:           session.Username,
+		Email:              session.Email,
+		FirstName:          session.FirstName,
+		LastName:           session.LastName,
+		GroupID:            session.GroupID,
+		GroupName:          session.GroupName,
+		Status:             session.Status,
+		MustChangePassword: session.MustChangePassword,
+	}), nil
+}
+
+// buildCurrentRsp builds the API response for current session endpoints from the stored session snapshot.
+func buildCurrentRsp(session modeliamsession.Session, fallbackSessionID string, principal *modeliamsession.CurrentPrincipal) *modeliamsession.CurrentRsp {
 	currentSessionID := session.ID
 	if currentSessionID == "" {
-		currentSessionID = sessionID
+		currentSessionID = fallbackSessionID
 	}
 	state := session.State
 	if state == "" {
 		state = modeliamsession.SessionStatusActive
+	}
+
+	if principal == nil {
+		principal = &modeliamsession.CurrentPrincipal{}
 	}
 
 	return &modeliamsession.CurrentRsp{
@@ -76,16 +128,6 @@ func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.Cu
 			BrowserName: session.BrowserName,
 			IsCurrent:   true,
 		},
-		Principal: modeliamsession.CurrentPrincipal{
-			UserID:             user.ID,
-			Username:           user.Username,
-			Email:              util.Deref(user.Email),
-			FirstName:          user.FirstName,
-			LastName:           user.LastName,
-			GroupID:            user.GroupID,
-			GroupName:          groupName,
-			Status:             string(user.Status),
-			MustChangePassword: user.MustChangePassword,
-		},
-	}, nil
+		Principal: *principal,
+	}
 }

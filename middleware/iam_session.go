@@ -24,6 +24,8 @@ func mustChangePasswordExempt(method, path string) bool {
 		return true
 	case method == http.MethodGet && path == "/api/iam/session/current":
 		return true
+	case method == http.MethodDelete && path == "/api/iam/session/current":
+		return true
 	case method == http.MethodPost && path == "/api/iam/session/heartbeat":
 		return true
 	default:

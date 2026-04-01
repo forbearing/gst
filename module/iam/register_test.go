@@ -956,16 +956,108 @@ func TestSession(t *testing.T) {
 		})
 	})
 
-	t.Run("offline", func(t *testing.T) {
-		cli, err := client.New(offlineAPI, client.WithCookie(&http.Cookie{
+	t.Run("logout_preserves_latest_session_mapping", func(t *testing.T) {
+		var staleSessionID string
+		var latestSessionID string
+
+		t.Run("login_stale_session", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.LoginReq{
+				Username: username,
+				Password: password,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				staleSessionID = rsp.SessionID
+			})
+		})
+
+		t.Run("login_latest_session", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.LoginReq{
+				Username: username,
+				Password: password,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				latestSessionID = rsp.SessionID
+			})
+		})
+
+		t.Run("logout_stale_session", func(t *testing.T) {
+			cli, err := client.New(logoutAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: staleSessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Create(nil)
+			require.NoError(t, err)
+			helper.TestResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
+				require.NotEmpty(t, rsp.Msg)
+			})
+		})
+
+		t.Run("offline_latest_session", func(t *testing.T) {
+			cli, err := client.New(offlineAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: latestSessionID,
+			}))
+			require.NoError(t, err)
+
+			_, err = cli.Create(iam.OfflineReq{
+				UserID: userID,
+			})
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("relogin_for_delete_current", func(t *testing.T) {
+		cli, err := client.New(loginAPI)
+		require.NoError(t, err)
+
+		resp, err := cli.Create(iam.LoginReq{
+			Username: username,
+			Password: password,
+		})
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			require.NotEmpty(t, rsp.SessionID)
+			sessionID = rsp.SessionID
+		})
+	})
+
+	t.Run("delete_current", func(t *testing.T) {
+		cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
 			Value: sessionID,
 		}))
 		require.NoError(t, err)
 
-		_, err = cli.Create(iam.OfflineReq{
-			UserID: userID,
-		})
+		resp, err := cli.Request(http.MethodDelete, new(struct{}))
 		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentRsp) {
+			require.NotEmpty(t, rsp.Session.ID)
+			require.Equal(t, username, rsp.Principal.Username)
+			require.True(t, rsp.Session.IsCurrent)
+		})
+	})
+
+	t.Run("current_unauthorized_after_delete_current", func(t *testing.T) {
+		cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Request(http.MethodGet, new(struct{}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "401")
 	})
 }

@@ -5,20 +5,21 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
-	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/mssola/useragent"
 	"go.uber.org/zap"
 )
 
+// LogoutService handles logout requests for the current authenticated session.
 type LogoutService struct {
 	service.Base[*model.Empty, *model.Empty, *modeliamaccount.LogoutRsp]
 }
 
+// Create logs out the current session and always clears the session cookie on success.
 func (s *LogoutService) Create(ctx *types.ServiceContext, req *model.Empty) (rsp *modeliamaccount.LogoutRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
@@ -26,6 +27,7 @@ func (s *LogoutService) Create(ctx *types.ServiceContext, req *model.Empty) (rsp
 	return localLogout(ctx, log, req)
 }
 
+// localLogout removes the current session from storage, records a logout log, and clears the cookie.
 func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) (rsp *modeliamaccount.LogoutRsp, err error) {
 	// Get session_id from cookie
 	sessionID, err := ctx.Cookie("session_id")
@@ -34,9 +36,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) 
 		return &modeliamaccount.LogoutRsp{Msg: "logout successful"}, nil // Return success even if no session
 	}
 
-	// Get session from Redis to extract user info for logging
-	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
-	session, err := redis.Cache[modeliamsession.Session]().Get(prefixedSessionID)
+	session, err := serviceiamsession.DeleteSessionBySessionID(sessionID)
 
 	// Parse user agent for logging
 	ua := useragent.New(ctx.UserAgent)
@@ -63,14 +63,8 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) 
 		log.Warnz("failed to write logout log", zap.Error(logErr))
 	}
 
-	// Delete session from Redis
-	if delErr := redis.Cache[modeliamsession.Session]().Delete(prefixedSessionID); delErr != nil {
-		log.Warnz("failed to delete session from redis", zap.Error(delErr))
-	}
-	// Delete session id from redis
-	prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, userID)
-	if delErr := redis.Cache[string]().Delete(prefixedUserID); delErr != nil {
-		log.Warnz("failed to delete session id from redis", zap.Error(delErr))
+	if err != nil {
+		log.Warnz("failed to delete session from redis", zap.Error(err))
 	}
 
 	// Clear the session cookie

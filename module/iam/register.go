@@ -34,6 +34,7 @@ type Config struct {
 // Session routes:
 //   - POST   /api/iam/session/heartbeat
 //   - GET    /api/iam/session/current
+//   - DELETE /api/iam/session/current
 //   - POST   /api/offline
 //   - GET    /api/online-users
 //
@@ -140,6 +141,7 @@ func Register(config ...Config) {
 
 	module.Use(module.NewWrapper("/iam/session/heartbeat", "id", false, &serviceiamsession.HeartbeatService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentService{}), consts.PHASE_LIST)
+	module.UseCustom(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentService{}), consts.PHASE_DELETE)
 	module.Use(module.NewWrapper("/offline", "id", false, &serviceiamsession.OfflineService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/online-users", "id", false, &service.Base[*OnlineUser, *OnlineUser, *OnlineUser]{}), consts.PHASE_LIST)
 

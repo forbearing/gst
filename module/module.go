@@ -116,6 +116,25 @@ func Use[M types.Model, REQ types.Request, RSP types.Response](mod types.Module[
 	}()
 }
 
+// UseCustom registers a service phase using the module route and the HTTP verb
+// derived from the specified phase.
+// It is intended for endpoints that reuse the module route but do not follow the
+// default CRUD route registration pattern.
+func UseCustom[M types.Model, REQ types.Request, RSP types.Response](mod types.Module[M, REQ, RSP], phase consts.Phase) {
+	go func() {
+		<-notify
+
+		service.RegisterService[M, REQ, RSP](phase, mod.Service())
+
+		route := mod.Route()
+		route = strings.TrimPrefix(route, "/")
+		route = strings.TrimPrefix(route, "api/")
+		route = strings.TrimPrefix(route, "/")
+
+		registerRouter(mod, route, nil, phase.ToHTTPVerb())
+	}()
+}
+
 // registerRouter registers an HTTP route with the appropriate router based on mod.Pub().
 // If mod.Pub() returns true, registers with public router; otherwise with authenticated router.
 func registerRouter[M types.Model, REQ types.Request, RSP types.Response](mod types.Module[M, REQ, RSP], route string, cfg *types.ControllerConfig[M], verb consts.HTTPVerb) {

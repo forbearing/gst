@@ -46,6 +46,40 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 	return redis.Cache[modeliamsession.Session]().Set(sessionKey, session, GetSessionExpiration())
 }
 
+// DeleteSessionBySessionID deletes the stored session and removes the user-to-session mapping
+// only when it still points to the same session key.
+func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error) {
+	if sessionID == "" {
+		return modeliamsession.Session{}, nil
+	}
+
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+	if err != nil {
+		return modeliamsession.Session{}, err
+	}
+	if err = redis.Cache[modeliamsession.Session]().Delete(sessionKey); err != nil && !errors.Is(err, types.ErrEntryNotFound) {
+		return session, err
+	}
+
+	if session.UserID != "" {
+		userKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, session.UserID)
+		mappedSessionKey, getErr := redis.Cache[string]().Get(userKey)
+		switch {
+		case getErr == nil && mappedSessionKey == sessionKey:
+			if delErr := redis.Cache[string]().Delete(userKey); delErr != nil && !errors.Is(delErr, types.ErrEntryNotFound) {
+				return session, delErr
+			}
+		case getErr == nil:
+		case errors.Is(getErr, types.ErrEntryNotFound):
+		default:
+			return session, getErr
+		}
+	}
+
+	return session, nil
+}
+
 // GetSessionExpiration returns the configured session expiration time.
 // If not configured, it returns the default value of 8 hours.
 func GetSessionExpiration() time.Duration {
