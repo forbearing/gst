@@ -16,7 +16,9 @@ import (
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/helper"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/module/iam"
+	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
 	"github.com/stretchr/testify/require"
 )
@@ -903,14 +905,27 @@ func TestSession(t *testing.T) {
 	})
 
 	t.Run("heartbeat", func(t *testing.T) {
+		sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+		before, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+		require.NoError(t, err)
+
+		time.Sleep(10 * time.Millisecond)
+
 		cli, err := client.New(heartbeatAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
 			Value: sessionID,
 		}))
 		require.NoError(t, err)
 
-		_, err = cli.Create(nil)
+		resp, err := cli.Create(nil)
 		require.NoError(t, err)
+
+		helper.TestResp[*iam.Heartbeat](t, resp, func(t *testing.T, rsp *iam.Heartbeat) {})
+
+		after, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+		require.NoError(t, err)
+		require.Equal(t, before.ExpiresAt, after.ExpiresAt)
+		require.Equal(t, before.LastSeenAt, after.LastSeenAt)
 	})
 
 	t.Run("current", func(t *testing.T) {
