@@ -79,11 +79,12 @@ func init() {
 	}
 }
 
-func TestIAM(t *testing.T) {
+func TestAccount(t *testing.T) {
 	username := "user01"
 	oldPassword := "12345678"
 	newPassword := "123456789"
 	userID := ""
+	_ = userID
 
 	t.Run("signup", func(t *testing.T) {
 		cli, err := client.New(signupAPI)
@@ -286,60 +287,6 @@ func TestIAM(t *testing.T) {
 
 		helper.TestResp[ListResponse[*iam.Group]](t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
 			require.Len(t, rsp.Items, 0)
-		})
-	})
-
-	t.Run("heartbeat", func(t *testing.T) {
-		cli, err := client.New(heartbeatAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: sessionID,
-		}))
-		require.NoError(t, err)
-
-		_, err = cli.Create(nil)
-		require.NoError(t, err)
-	})
-
-	t.Run("current", func(t *testing.T) {
-		cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: sessionID,
-		}))
-		require.NoError(t, err)
-
-		empty := new(struct{})
-		resp, err := cli.Request(http.MethodGet, empty)
-		require.NoError(t, err)
-
-		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentRsp) {
-			require.NotEmpty(t, rsp.Principal.UserID)
-			require.Equal(t, username, rsp.Principal.Username)
-			require.Equal(t, string(modeliam.UserStatusActive), rsp.Principal.Status)
-			require.False(t, rsp.Principal.MustChangePassword)
-			require.True(t, rsp.Session.IsCurrent)
-			require.NotEmpty(t, rsp.Session.ID)
-		})
-	})
-
-	t.Run("onlineuser", func(t *testing.T) {
-		cli, err := client.New(onlineuserAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: sessionID,
-		}))
-		require.NoError(t, err)
-
-		items := make([]*iam.OnlineUser, 0)
-		total := new(int64)
-		resp, err := cli.List(&items, total)
-		require.NoError(t, err)
-
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.OnlineUser]) {
-			// godump.Dump(rsp)
-			require.Len(t, rsp.Items, 1)
-			// ou := rsp.Items[0]
-			// require.NotEmpty(t, ou)
-			// require.Equal(t, ou.UserID, userID)
-			// require.Equal(t, ou.Username, username)
 		})
 	})
 
@@ -903,6 +850,109 @@ func TestIAM(t *testing.T) {
 			fal := false
 			actors[0].IsSuperuser = &fal
 			require.NoError(t, database.Database[*iam.User](nil).Update(actors[0]))
+		})
+	})
+}
+
+func TestSession(t *testing.T) {
+	username := "session01"
+	password := "12345678"
+	userID := ""
+
+	t.Run("signup", func(t *testing.T) {
+		cli, err := client.New(signupAPI)
+		require.NoError(t, err)
+
+		resp, err := cli.Create(iam.SignupReq{
+			Username:   username,
+			Password:   password,
+			RePassword: password,
+		})
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+			// #modeliam.SignupRsp {
+			//   +UserID   => "019cbca0-19d4-7971-8be5-65b148027a27" #string
+			//   +Username => "user01" #string
+			//   +Message  => "User created successfully" #string
+			// }
+			require.Equal(t, rsp.Username, username)
+			require.NotEmpty(t, rsp.UserID)
+			require.NotEmpty(t, rsp.Message)
+			userID = rsp.UserID
+		})
+	})
+
+	var sessionID string
+	t.Run("login", func(t *testing.T) {
+		cli, err := client.New(loginAPI)
+		require.NoError(t, err)
+
+		resp, err := cli.Create(iam.LoginReq{
+			Username: username,
+			Password: password,
+		})
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			// #*modeliam.LoginRsp {
+			//   +SessionID => "019cbca0-1a0b-7a12-8264-4c0525076cd6" #string
+			// }
+			require.NotEmpty(t, rsp.SessionID)
+			sessionID = rsp.SessionID
+		})
+	})
+
+	t.Run("heartbeat", func(t *testing.T) {
+		cli, err := client.New(heartbeatAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Create(nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("current", func(t *testing.T) {
+		cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		empty := new(struct{})
+		resp, err := cli.Request(http.MethodGet, empty)
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentRsp) {
+			require.NotEmpty(t, rsp.Principal.UserID)
+			require.Equal(t, username, rsp.Principal.Username)
+			require.Equal(t, string(modeliam.UserStatusActive), rsp.Principal.Status)
+			require.False(t, rsp.Principal.MustChangePassword)
+			require.True(t, rsp.Session.IsCurrent)
+			require.NotEmpty(t, rsp.Session.ID)
+		})
+	})
+
+	t.Run("onlineuser", func(t *testing.T) {
+		cli, err := client.New(onlineuserAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		items := make([]*iam.OnlineUser, 0)
+		total := new(int64)
+		resp, err := cli.List(&items, total)
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.OnlineUser]) {
+			// godump.Dump(rsp)
+			require.Len(t, rsp.Items, 1)
+			// ou := rsp.Items[0]
+			// require.NotEmpty(t, ou)
+			// require.Equal(t, ou.UserID, userID)
+			// require.Equal(t, ou.Username, username)
 		})
 	})
 
