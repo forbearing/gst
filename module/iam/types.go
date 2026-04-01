@@ -31,7 +31,8 @@ type (
 	Session    = modeliamsession.Session
 	Token      = modeliamsession.Token
 	Heartbeat  = modeliamsession.Heartbeat
-	MeRsp      = modeliamsession.MeRsp
+	CurrentReq = modeliamsession.CurrentReq
+	CurrentRsp = modeliamsession.CurrentRsp
 	OnlineUser = modeliamsession.OnlineUser
 	OfflineReq = modeliamsession.OfflineReq
 

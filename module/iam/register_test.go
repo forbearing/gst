@@ -33,8 +33,8 @@ var (
 	accountstatusAPI  = fmt.Sprintf("http://localhost:%d/api/iam/account-status", port)
 	userAPI           = fmt.Sprintf("http://localhost:%d/api/iam/users", port)
 	groupAPI          = fmt.Sprintf("http://localhost:%d/api/iam/groups", port)
-	meAPI             = fmt.Sprintf("http://localhost:%d/api/me", port)
-	heartbeatAPI      = fmt.Sprintf("http://localhost:%d/api/heartbeat", port)
+	currentAPI        = fmt.Sprintf("http://localhost:%d/api/iam/session/current", port)
+	heartbeatAPI      = fmt.Sprintf("http://localhost:%d/api/iam/session/heartbeat", port)
 	onlineuserAPI     = fmt.Sprintf("http://localhost:%d/api/online-users", port)
 	offlineAPI        = fmt.Sprintf("http://localhost:%d/api/offline", port)
 )
@@ -300,8 +300,8 @@ func TestIAM(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("me", func(t *testing.T) {
-		cli, err := client.New(meAPI, client.WithCookie(&http.Cookie{
+	t.Run("current", func(t *testing.T) {
+		cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
 			Value: sessionID,
 		}))
@@ -311,37 +311,13 @@ func TestIAM(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, empty)
 		require.NoError(t, err)
 
-		helper.TestResp(t, resp, func(t *testing.T, rsp iam.MeRsp) {
-			// #map[string]interface {} {
-			//    user_id => "019cbca3-c442-72f5-bfd5-110077bed415" #string
-			//    username => "user01" #string
-			//    email => interface {}(nil)
-			//    first_name => interface {}(nil)
-			//    group => #map[string]interface {} {
-			//      path => "" #string
-			//      status => "" #string
-			//      tenant_id => interface {}(nil)
-			//      type => "" #string
-			//      id => "" #string
-			//      level => 0.000000 #float64
-			//      name => "" #string
-			//      parent_id => interface {}(nil)
-			//   }
-			//    last_name => interface {}(nil)
-			//    status => "active" #string
-			// }
-			require.NotEmpty(t, rsp)
-			statusVal, hasStatus := rsp["status"]
-			require.True(t, hasStatus, "me response must include status from database")
-			require.Equal(t, string(modeliam.UserStatusActive), statusVal)
-			for k, v := range rsp {
-				switch k {
-				case "user_id":
-					require.NotEmpty(t, v)
-				case "username":
-					require.NotEmpty(t, v)
-				}
-			}
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentRsp) {
+			require.NotEmpty(t, rsp.Principal.UserID)
+			require.Equal(t, username, rsp.Principal.Username)
+			require.Equal(t, string(modeliam.UserStatusActive), rsp.Principal.Status)
+			require.False(t, rsp.Principal.MustChangePassword)
+			require.True(t, rsp.Session.IsCurrent)
+			require.NotEmpty(t, rsp.Session.ID)
 		})
 	})
 
@@ -695,7 +671,7 @@ func TestIAM(t *testing.T) {
 			})
 		})
 
-		t.Run("me_forbidden_when_db_inactive_but_redis_session_valid", func(t *testing.T) {
+		t.Run("current_forbidden_when_db_inactive_but_redis_session_valid", func(t *testing.T) {
 			victims := make([]*iam.User, 0)
 			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: acctVictimName}).List(&victims))
 			require.Len(t, victims, 1)
@@ -708,7 +684,7 @@ func TestIAM(t *testing.T) {
 				require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victim))
 			})
 
-			cli, err := client.New(meAPI, client.WithCookie(&http.Cookie{
+			cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: acctVictimSessionAfterEnable,
 			}))
@@ -719,7 +695,7 @@ func TestIAM(t *testing.T) {
 			require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeAccountInactive.Code()))
 		})
 
-		t.Run("me_forbidden_when_db_locked_but_redis_session_valid", func(t *testing.T) {
+		t.Run("current_forbidden_when_db_locked_but_redis_session_valid", func(t *testing.T) {
 			victims := make([]*iam.User, 0)
 			require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: acctVictimName}).List(&victims))
 			require.Len(t, victims, 1)
@@ -732,7 +708,7 @@ func TestIAM(t *testing.T) {
 				require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victim))
 			})
 
-			cli, err := client.New(meAPI, client.WithCookie(&http.Cookie{
+			cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: acctVictimSessionAfterEnable,
 			}))

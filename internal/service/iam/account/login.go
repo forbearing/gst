@@ -143,28 +143,36 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	sessionID := util.UUID()
 	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
 	prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, user.ID)
+	expire := serviceiamsession.GetSessionExpiration()
+	expiresAt := now.Add(expire)
 
 	// Create session data for local user
 	sessionData := modeliamsession.Session{
-		UserID:      user.ID,
-		Username:    user.Username,
-		Email:       util.Deref(user.Email),
-		OS:          ua.OS(),
-		Platform:    ua.Platform(),
-		EngineName:  engineName,
-		BrowserName: browserName,
-		UserInfo: map[string]any{
-			"user_id":              user.ID,
-			"username":             user.Username,
-			"email":                user.Email,
-			"first_name":           user.FirstName,
-			"last_name":            user.LastName,
-			"group":                group,
-			"must_change_password": user.MustChangePassword,
+		UserID:             user.ID,
+		Username:           user.Username,
+		Email:              util.Deref(user.Email),
+		Status:             string(user.Status),
+		FirstName:          user.FirstName,
+		LastName:           user.LastName,
+		GroupID:            user.GroupID,
+		GroupName:          group.Name,
+		MustChangePassword: user.MustChangePassword,
+		ClientIP:           ctx.ClientIP,
+		UserAgent:          ctx.Request.UserAgent(),
+		OS:                 ua.OS(),
+		Platform:           ua.Platform(),
+		EngineName:         engineName,
+		BrowserName:        browserName,
+		State:              modeliamsession.SessionStatusActive,
+		IssuedAt:           now,
+		LastSeenAt:         now,
+		ExpiresAt:          expiresAt,
+		Base: model.Base{
+			ID:        sessionID,
+			CreatedAt: &now,
+			UpdatedAt: &now,
 		},
 	}
-
-	expire := serviceiamsession.GetSessionExpiration()
 	// Store session in Redis
 	if err = redis.Cache[modeliamsession.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
 		log.Errorz("failed to set session in redis", zap.Error(err))

@@ -32,8 +32,8 @@ type Config struct {
 // API Routes:
 //
 // Session routes:
-//   - POST   /api/heartbeat
-//   - GET    /api/me
+//   - POST   /api/iam/session/heartbeat
+//   - GET    /api/iam/session/current
 //   - POST   /api/offline
 //   - GET    /api/online-users
 //
@@ -111,10 +111,6 @@ func Register(config ...Config) {
 	module.Use(module.NewWrapper("/iam/change-password", "id", false, &serviceiamaccount.ChangePasswordService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/reset-password", "id", false, &serviceiamaccount.ResetPasswordService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/account-status", "id", false, &serviceiamaccount.AccountStatusService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/heartbeat", "id", false, &serviceiamsession.HeartbeatService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/me", "id", false, &serviceiamsession.MeService{}), consts.PHASE_LIST)
-	module.Use(module.NewWrapper("/offline", "id", false, &serviceiamsession.OfflineService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/online-users", "id", false, &service.Base[*OnlineUser, *OnlineUser, *OnlineUser]{}), consts.PHASE_LIST)
 	module.Use(module.NewWrapper("/iam/users", "id", false, &serviceiam.UserService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -141,6 +137,11 @@ func Register(config ...Config) {
 			consts.PHASE_GET,
 		)
 	}
+
+	module.Use(module.NewWrapper("/iam/session/heartbeat", "id", false, &serviceiamsession.HeartbeatService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentService{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/offline", "id", false, &serviceiamsession.OfflineService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/online-users", "id", false, &service.Base[*OnlineUser, *OnlineUser, *OnlineUser]{}), consts.PHASE_LIST)
 
 	module.Use(module.NewWrapper("/iam/email/verification-request", "id", true, &serviceiamemail.VerificationRequestService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/email/verification-resend", "id", true, &serviceiamemail.VerificationResendService{}), consts.PHASE_CREATE)

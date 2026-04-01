@@ -10,13 +10,9 @@ import (
 	"github.com/mssola/useragent"
 )
 
-// sessionRequiresPasswordChange reads the flag from session user info (set at login / updated on password change).
+// sessionRequiresPasswordChange reads the flag stored on the session snapshot.
 func sessionRequiresPasswordChange(session modeliamsession.Session) bool {
-	if session.UserInfo == nil {
-		return false
-	}
-	v, ok := session.UserInfo["must_change_password"].(bool)
-	return ok && v
+	return session.MustChangePassword
 }
 
 // mustChangePasswordExemptRoutes are allowed while MustChangePassword is true on the session.
@@ -26,9 +22,9 @@ func mustChangePasswordExempt(method, path string) bool {
 		return true
 	case method == http.MethodPost && path == "/api/logout":
 		return true
-	case method == http.MethodGet && path == "/api/me":
+	case method == http.MethodGet && path == "/api/iam/session/current":
 		return true
-	case method == http.MethodPost && path == "/api/heartbeat":
+	case method == http.MethodPost && path == "/api/iam/session/heartbeat":
 		return true
 	default:
 		return false

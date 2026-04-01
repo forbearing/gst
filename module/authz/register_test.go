@@ -136,14 +136,14 @@ func TestAuthz(t *testing.T) {
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp []string) {
 			// #[]string [
-			//   0 => "/api/heartbeat" #string
+			//   0 => "/api/iam/session/heartbeat" #string
 			//   1 => "/api/signup" #string
 			//   2 => "/api/iam/groups" #string
 			//   3 => "/api/menus/{id}" #string
 			//   4 => "/api/authz/user-roles" #string
 			//   5 => "/api/authz/user-roles/{id}" #string
 			//   6 => "/api/login" #string
-			//   7 => "/api/me" #string
+			//   7 => "/api/iam/session/current" #string
 			//   8 => "/api/iam/groups/{id}" #string
 			//   9 => "/api/iam/users/{id}" #string
 			//   10 => "/api/online-users" #string

@@ -42,10 +42,7 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 		}
 		return err
 	}
-	if session.UserInfo == nil {
-		session.UserInfo = map[string]any{}
-	}
-	session.UserInfo["must_change_password"] = mustChange
+	session.MustChangePassword = mustChange
 	return redis.Cache[modeliamsession.Session]().Set(sessionKey, session, GetSessionExpiration())
 }
 
