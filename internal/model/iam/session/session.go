@@ -6,7 +6,11 @@ import (
 	"time"
 )
 
+// SessionNamespace stores session snapshots by session ID.
 const SessionNamespace = "iam:session"
+
+// SessionUserNamespace stores the latest session mapping by user ID.
+const SessionUserNamespace = "iam:session:user"
 
 type SessionStatus string
 
@@ -62,12 +66,17 @@ type Token struct {
 	SessionState    string `json:"session_state"`
 }
 
-// SessionRedisKey 构造一个 redis key
+// SessionRedisKey builds a Redis key for the specified namespace and identifier.
 func SessionRedisKey(namespace, id string) string {
 	return fmt.Sprintf("%s:%s", namespace, id)
 }
 
-// SessionID 从 redis key 中获取 session id
+// SessionUserRedisKey builds the Redis key for the latest session mapping of a user.
+func SessionUserRedisKey(userID string) string {
+	return SessionRedisKey(SessionUserNamespace, userID)
+}
+
+// SessionID extracts the identifier from a namespaced Redis key.
 func SessionID(redisKey string, namespace string) string {
 	return strings.TrimPrefix(redisKey, fmt.Sprintf("%s:", namespace))
 }

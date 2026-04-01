@@ -15,18 +15,30 @@ var (
 	sessionExpirationMu sync.RWMutex
 )
 
+// getUserSessionMapping loads the latest mapped session key for a user.
+func getUserSessionMapping(userID string) (string, error) {
+	userKey := modeliamsession.SessionUserRedisKey(userID)
+	sessionKey, err := redis.Cache[string]().Get(userKey)
+	if err != nil {
+		if errors.Is(err, types.ErrEntryNotFound) {
+			return "", types.ErrEntryNotFound
+		}
+		return "", err
+	}
+	return sessionKey, nil
+}
+
 // InvalidateUserSessionsByUserID removes the Redis session mapping for a user and deletes the session value.
 // It is best-effort: failures to talk to Redis do not block password updates.
 func InvalidateUserSessionsByUserID(userID string) {
 	if userID == "" {
 		return
 	}
-	prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, userID)
-	sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
+	sessionKey, err := getUserSessionMapping(userID)
 	if err == nil && sessionKey != "" {
 		_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
 	}
-	_ = redis.Cache[string]().Delete(prefixedUserID)
+	_ = redis.Cache[string]().Delete(modeliamsession.SessionUserRedisKey(userID))
 }
 
 // SyncSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
@@ -63,7 +75,7 @@ func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error)
 	}
 
 	if session.UserID != "" {
-		userKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, session.UserID)
+		userKey := modeliamsession.SessionUserRedisKey(session.UserID)
 		mappedSessionKey, getErr := redis.Cache[string]().Get(userKey)
 		switch {
 		case getErr == nil && mappedSessionKey == sessionKey:

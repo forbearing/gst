@@ -7,8 +7,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
-	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
-	"github.com/forbearing/gst/provider/redis"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"golang.org/x/crypto/bcrypt"
@@ -39,17 +38,7 @@ var (
 	}
 	// passwordResetInvalidateSessions clears the cached session mapping so a password
 	// reset immediately revokes access granted by previously issued sessions.
-	passwordResetInvalidateSessions = func(userID string) {
-		if userID == "" {
-			return
-		}
-		prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, userID)
-		sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
-		if err == nil && sessionKey != "" {
-			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
-		}
-		_ = redis.Cache[string]().Delete(prefixedUserID)
-	}
+	passwordResetInvalidateSessions = serviceiamsession.InvalidateUserSessionsByUserID
 )
 
 // Create completes the password reset flow by consuming the one-time token,

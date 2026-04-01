@@ -1,10 +1,8 @@
 package serviceiamsession
 
 import (
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -14,20 +12,11 @@ type OfflineService struct {
 }
 
 func (s *OfflineService) Create(ctx *types.ServiceContext, req *modeliamsession.OfflineReq) (rsp *model.Empty, err error) {
-	log := s.WithServiceContext(ctx, ctx.GetPhase())
-
-	prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, req.UserID)
-
-	prefixedSessionID, err := redis.Cache[string]().Get(prefixedUserID)
-	if err != nil {
-		log.Error(err)
-		return nil, err
+	if req.UserID == "" {
+		return &model.Empty{}, nil
 	}
 
-	if err = redis.Cache[modeliam.User]().Delete(prefixedSessionID); err != nil {
-		log.Error(err)
-		return nil, err
-	}
+	InvalidateUserSessionsByUserID(req.UserID)
 
-	return rsp, nil
+	return &model.Empty{}, nil
 }
