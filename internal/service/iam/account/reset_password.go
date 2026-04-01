@@ -52,7 +52,7 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliamac
 		return nil, errors.New("authentication required")
 	}
 
-	sessionKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid session")

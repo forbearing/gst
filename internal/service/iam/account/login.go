@@ -141,8 +141,8 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 
 	// Create session
 	sessionID := util.UUID()
-	prefixedSessionID := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
-	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, user.ID)
+	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, user.ID)
 
 	// Create session data for local user
 	sessionData := modeliamsession.Session{

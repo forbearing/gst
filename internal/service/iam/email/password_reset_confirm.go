@@ -43,7 +43,7 @@ var (
 		if userID == "" {
 			return
 		}
-		prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, userID)
+		prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, userID)
 		sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
 		if err == nil && sessionKey != "" {
 			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)

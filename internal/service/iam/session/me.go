@@ -27,7 +27,7 @@ func (s *MeService) List(ctx *types.ServiceContext, req *model.Empty) (rsp model
 		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
 	}
 
-	session, e := redis.Cache[modeliamsession.Session]().Get(modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID))
+	session, e := redis.Cache[modeliamsession.Session]().Get(modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID))
 	if e != nil {
 		log.Error("session not exists")
 		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", e)

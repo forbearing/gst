@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types"
@@ -22,7 +21,7 @@ func InvalidateUserSessionsByUserID(userID string) {
 	if userID == "" {
 		return
 	}
-	prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, userID)
+	prefixedUserID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, userID)
 	sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
 	if err == nil && sessionKey != "" {
 		_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
@@ -35,7 +34,7 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 	if sessionID == "" {
 		return nil
 	}
-	sessionKey := modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		if errors.Is(err, types.ErrEntryNotFound) {

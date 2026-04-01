@@ -1,6 +1,13 @@
 package modeliamsession
 
-import "github.com/forbearing/gst/model"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/forbearing/gst/model"
+)
+
+const SessionNamespace = "iam:session"
 
 // Session 删除缓存中的 session 切调用 Keycloak logout，退出登录
 type Session struct {
@@ -30,4 +37,14 @@ type Token struct {
 
 	NotBeforePolicy int    `json:"not-before-policy"`
 	SessionState    string `json:"session_state"`
+}
+
+// SessionRedisKey 构造一个 redis key
+func SessionRedisKey(namespace, id string) string {
+	return fmt.Sprintf("%s:%s", namespace, id)
+}
+
+// SessionID 从 redis key 中获取 session id
+func SessionID(redisKey string, namespace string) string {
+	return strings.TrimPrefix(redisKey, fmt.Sprintf("%s:", namespace))
 }
