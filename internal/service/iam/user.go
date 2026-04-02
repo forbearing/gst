@@ -17,7 +17,7 @@ func (UserService) DeleteAfter(_ *types.ServiceContext, u *modeliam.User) error 
 	if u == nil {
 		return nil
 	}
-	serviceiamsession.InvalidateUserSessionsByUserID(u.GetID())
+	serviceiamsession.InvalidateUserSessions(u.GetID())
 	return nil
 }
 
@@ -27,7 +27,7 @@ func (UserService) DeleteManyAfter(_ *types.ServiceContext, users ...*modeliam.U
 		if u == nil {
 			continue
 		}
-		serviceiamsession.InvalidateUserSessionsByUserID(u.GetID())
+		serviceiamsession.InvalidateUserSessions(u.GetID())
 	}
 	return nil
 }

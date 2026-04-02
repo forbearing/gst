@@ -38,7 +38,7 @@ var (
 	}
 	// passwordResetInvalidateSessions clears the cached user-session index so a
 	// password reset immediately revokes access granted by previously issued sessions.
-	passwordResetInvalidateSessions = serviceiamsession.InvalidateUserSessionsByUserID
+	passwordResetInvalidateSessions = serviceiamsession.InvalidateUserSessions
 )
 
 // Create completes the password reset flow by consuming the one-time token,

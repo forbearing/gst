@@ -37,7 +37,7 @@ func (s *SessionsService) List(ctx *types.ServiceContext, req *modeliamsession.S
 		return nil, types.NewServiceError(http.StatusUnauthorized, "user not authenticated")
 	}
 
-	sessionIDs, err := listUserSessionIDsByUserID(currentSession.UserID)
+	sessionIDs, err := listUserSessionIDs(currentSession.UserID)
 	if err != nil {
 		log.Error("failed to list user sessions", err)
 		return nil, err

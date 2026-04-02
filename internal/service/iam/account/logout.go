@@ -36,7 +36,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) 
 		return &modeliamaccount.LogoutRsp{Msg: "logout successful"}, nil // Return success even if no session
 	}
 
-	session, err := serviceiamsession.DeleteSessionBySessionID(sessionID)
+	session, err := serviceiamsession.DeleteSession(sessionID)
 
 	// Parse user agent for logging
 	ua := useragent.New(ctx.UserAgent)

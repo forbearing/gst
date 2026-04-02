@@ -16,7 +16,7 @@ func (s *OfflineService) Create(ctx *types.ServiceContext, req *modeliamsession.
 		return &model.Empty{}, nil
 	}
 
-	InvalidateUserSessionsByUserID(req.UserID)
+	InvalidateUserSessions(req.UserID)
 
 	return &model.Empty{}, nil
 }

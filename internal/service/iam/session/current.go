@@ -78,7 +78,7 @@ func (s *CurrentService) Delete(ctx *types.ServiceContext, req *modeliamsession.
 		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
 	}
 
-	session, err := DeleteSessionBySessionID(sessionID)
+	session, err := DeleteSession(sessionID)
 	if err != nil {
 		log.Error("failed to delete current session", err)
 		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", err)

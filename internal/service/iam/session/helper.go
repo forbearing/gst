@@ -15,8 +15,8 @@ var (
 	sessionExpirationMu sync.RWMutex
 )
 
-// listUserSessionIDsByUserID loads all indexed session ids for a user.
-func listUserSessionIDsByUserID(userID string) ([]string, error) {
+// listUserSessionIDs loads all indexed session ids for a user.
+func listUserSessionIDs(userID string) ([]string, error) {
 	if userID == "" {
 		return make([]string, 0), nil
 	}
@@ -37,24 +37,8 @@ func TrackUserSession(session modeliamsession.Session) error {
 	return redis.Expire(userKey, GetSessionExpiration())
 }
 
-// InvalidateUserSessionsByUserID removes all indexed sessions for a user.
-// It is best-effort: failures to talk to Redis do not block password updates.
-func InvalidateUserSessionsByUserID(userID string) {
-	if userID == "" {
-		return
-	}
-	sessionIDs, err := listUserSessionIDsByUserID(userID)
-	if err == nil {
-		for i := range sessionIDs {
-			sessionKey := modeliamsession.SessionIDKey(sessionIDs[i])
-			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
-		}
-	}
-	_ = redis.Del(modeliamsession.SessionUserKey(userID))
-}
-
-// SyncSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
-func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
+// UpdateSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
+func UpdateSessionMustChangePassword(sessionID string, mustChange bool) error {
 	if sessionID == "" {
 		return nil
 	}
@@ -70,8 +54,8 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 	return redis.Cache[modeliamsession.Session]().Set(sessionKey, session, GetSessionExpiration())
 }
 
-// DeleteSessionBySessionID deletes the stored session and removes the indexed user-session relation.
-func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error) {
+// DeleteSession deletes the stored session and removes the indexed user-session relation.
+func DeleteSession(sessionID string) (modeliamsession.Session, error) {
 	if sessionID == "" {
 		return modeliamsession.Session{}, nil
 	}
@@ -93,6 +77,22 @@ func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error)
 	}
 
 	return session, nil
+}
+
+// InvalidateUserSessions removes all indexed sessions for a user.
+// It is best-effort: failures to talk to Redis do not block password updates.
+func InvalidateUserSessions(userID string) {
+	if userID == "" {
+		return
+	}
+	sessionIDs, err := listUserSessionIDs(userID)
+	if err == nil {
+		for i := range sessionIDs {
+			sessionKey := modeliamsession.SessionIDKey(sessionIDs[i])
+			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
+		}
+	}
+	_ = redis.Del(modeliamsession.SessionUserKey(userID))
 }
 
 // GetSessionExpiration returns the configured session expiration time.
