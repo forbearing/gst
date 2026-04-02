@@ -40,7 +40,8 @@ go install ./cmd/gg
   - commit 必须符合 conventional commit 规范
   - 只查看暂存区的代码变更。
   - commit 内容必须是英文。
-  
+  - 给出的 commit 内容的 title 和 body 需要放在一起，方便我直接复制
+
   
   
   
