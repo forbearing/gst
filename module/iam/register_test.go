@@ -51,7 +51,7 @@ type ListResponse[T any] struct {
 func requireSessionNotFound(t *testing.T, sessionID string) {
 	t.Helper()
 
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
+	sessionKey := modeliamsession.SessionIDKey(sessionID)
 	_, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	require.ErrorIs(t, err, types.ErrEntryNotFound)
 }
@@ -59,7 +59,7 @@ func requireSessionNotFound(t *testing.T, sessionID string) {
 func requireUserSessionContains(t *testing.T, userID, sessionID string) {
 	t.Helper()
 
-	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
 	require.NoError(t, err)
 	require.Contains(t, userSessionIDs, sessionID)
 }
@@ -67,7 +67,7 @@ func requireUserSessionContains(t *testing.T, userID, sessionID string) {
 func requireUserSessionNotContains(t *testing.T, userID, sessionID string) {
 	t.Helper()
 
-	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
 	require.NoError(t, err)
 	require.NotContains(t, userSessionIDs, sessionID)
 }
@@ -962,7 +962,7 @@ func TestSession(t *testing.T) {
 	})
 
 	t.Run("heartbeat", func(t *testing.T) {
-		sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
+		sessionKey := modeliamsession.SessionIDKey(sessionID)
 		before, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 		require.NoError(t, err)
 
@@ -1095,11 +1095,11 @@ func TestSession(t *testing.T) {
 				require.NotEmpty(t, rsp.Msg)
 			})
 
-			staleSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, staleSessionID)
+			staleSessionKey := modeliamsession.SessionIDKey(staleSessionID)
 			_, err = redis.Cache[modeliamsession.Session]().Get(staleSessionKey)
 			require.ErrorIs(t, err, types.ErrEntryNotFound)
 
-			userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+			userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
 			require.NoError(t, err)
 			require.NotContains(t, userSessionIDs, staleSessionID)
 			require.Contains(t, userSessionIDs, latestSessionID)
@@ -1117,11 +1117,11 @@ func TestSession(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			latestSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, latestSessionID)
+			latestSessionKey := modeliamsession.SessionIDKey(latestSessionID)
 			_, err = redis.Cache[modeliamsession.Session]().Get(latestSessionKey)
 			require.ErrorIs(t, err, types.ErrEntryNotFound)
 
-			userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+			userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
 			require.NoError(t, err)
 			require.NotContains(t, userSessionIDs, latestSessionID)
 		})

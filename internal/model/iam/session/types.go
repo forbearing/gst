@@ -68,12 +68,17 @@ type Token struct {
 	SessionState    string `json:"session_state"`
 }
 
-// SessionRedisKey builds a Redis key for the specified namespace and identifier.
-func SessionRedisKey(namespace, id string) string {
+// sessionRedisKey builds a Redis key for the specified namespace and identifier.
+func sessionRedisKey(namespace, id string) string {
 	return fmt.Sprintf("%s:%s", namespace, id)
 }
 
-// SessionUserRedisKey builds the Redis key for the indexed session set of a user.
-func SessionUserRedisKey(userID string) string {
-	return SessionRedisKey(SessionUserNamespace, userID)
+// SessionIDKey builds the Redis key for a session snapshot identified by session ID.
+func SessionIDKey(sessionID string) string {
+	return sessionRedisKey(SessionIDNamespace, sessionID)
+}
+
+// SessionUserKey builds the Redis key for the indexed session set of a user.
+func SessionUserKey(userID string) string {
+	return sessionRedisKey(SessionUserNamespace, userID)
 }

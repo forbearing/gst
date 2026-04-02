@@ -141,7 +141,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 
 	// Create session
 	sessionID := util.UUID()
-	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
+	prefixedSessionID := modeliamsession.SessionIDKey(sessionID)
 	expire := serviceiamsession.GetSessionExpiration()
 	expiresAt := now.Add(expire)
 
@@ -339,7 +339,7 @@ func validateBackupCode(ctx *types.ServiceContext, userID, code string) error {
 //
 // 	// 存入 redis
 // 	sessionID := util.UUID()
-// 	redisKey := helper.SessionRedisKey(iam.SessionNamespace, sessionID)
+// 	redisKey := modeliamsession.SessionIDKey(sessionID)
 // 	if err := redis.Cache[iam.Session]().Set(redisKey, iam.Session{
 // 		UserID:      claims.Sub,
 // 		Username:    claims.PreferredUsername,

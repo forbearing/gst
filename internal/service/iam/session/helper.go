@@ -20,7 +20,7 @@ func listUserSessionIDsByUserID(userID string) ([]string, error) {
 	if userID == "" {
 		return make([]string, 0), nil
 	}
-	userKey := modeliamsession.SessionUserRedisKey(userID)
+	userKey := modeliamsession.SessionUserKey(userID)
 	return redis.ZRange(userKey, 0, -1)
 }
 
@@ -29,7 +29,7 @@ func TrackUserSession(session modeliamsession.Session) error {
 	if session.UserID == "" || session.ID == "" {
 		return nil
 	}
-	userKey := modeliamsession.SessionUserRedisKey(session.UserID)
+	userKey := modeliamsession.SessionUserKey(session.UserID)
 	score := float64(session.IssuedAt.UnixMilli())
 	if err := redis.ZAdd(userKey, score, session.ID); err != nil {
 		return err
@@ -46,11 +46,11 @@ func InvalidateUserSessionsByUserID(userID string) {
 	sessionIDs, err := listUserSessionIDsByUserID(userID)
 	if err == nil {
 		for i := range sessionIDs {
-			sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionIDs[i])
+			sessionKey := modeliamsession.SessionIDKey(sessionIDs[i])
 			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
 		}
 	}
-	_ = redis.Del(modeliamsession.SessionUserRedisKey(userID))
+	_ = redis.Del(modeliamsession.SessionUserKey(userID))
 }
 
 // SyncSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
@@ -58,7 +58,7 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 	if sessionID == "" {
 		return nil
 	}
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
+	sessionKey := modeliamsession.SessionIDKey(sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		if errors.Is(err, types.ErrEntryNotFound) {
@@ -76,7 +76,7 @@ func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error)
 		return modeliamsession.Session{}, nil
 	}
 
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
+	sessionKey := modeliamsession.SessionIDKey(sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		return modeliamsession.Session{}, err
@@ -86,7 +86,7 @@ func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error)
 	}
 
 	if session.UserID != "" {
-		userKey := modeliamsession.SessionUserRedisKey(session.UserID)
+		userKey := modeliamsession.SessionUserKey(session.UserID)
 		if err = redis.ZRem(userKey, sessionID); err != nil {
 			return session, err
 		}

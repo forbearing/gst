@@ -82,7 +82,7 @@ func localLogout(ctx *types.ServiceContext, log types.Logger, req *model.Empty) 
 // 		return rsp, err
 // 	}
 //
-// 	redisKey := helper.SessionRedisKey(iam.SessionNamespace, sessionID)
+// 	redisKey := modeliamsession.SessionIDKey(sessionID)
 // 	// 获取 redis 中的 session
 // 	session, e := redis.Cache[iam.Session]().Get(redisKey)
 // 	if e != nil {

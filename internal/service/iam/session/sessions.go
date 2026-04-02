@@ -27,7 +27,7 @@ func (s *SessionsService) List(ctx *types.ServiceContext, req *modeliamsession.S
 		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
 	}
 
-	currentSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
+	currentSessionKey := modeliamsession.SessionIDKey(sessionID)
 	currentSession, err := redis.Cache[modeliamsession.Session]().Get(currentSessionKey)
 	if err != nil {
 		log.Error("session not exists")
@@ -45,11 +45,11 @@ func (s *SessionsService) List(ctx *types.ServiceContext, req *modeliamsession.S
 
 	items := make([]modeliamsession.CurrentSession, 0, len(sessionIDs))
 	for i := range sessionIDs {
-		sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionIDs[i])
+		sessionKey := modeliamsession.SessionIDKey(sessionIDs[i])
 		session, getErr := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 		if getErr != nil {
 			if errors.Is(getErr, types.ErrEntryNotFound) {
-				_ = redis.ZRem(modeliamsession.SessionUserRedisKey(currentSession.UserID), sessionIDs[i])
+				_ = redis.ZRem(modeliamsession.SessionUserKey(currentSession.UserID), sessionIDs[i])
 				continue
 			}
 			log.Error("failed to load session from redis", getErr)
