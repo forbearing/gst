@@ -20,6 +20,7 @@ import (
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
+	"github.com/forbearing/gst/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,6 +45,36 @@ var (
 type ListResponse[T any] struct {
 	Items []T   `json:"items"`
 	Total int64 `json:"total"`
+}
+
+func requireSessionNotFound(t *testing.T, sessionID string) {
+	t.Helper()
+
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	_, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+	require.ErrorIs(t, err, types.ErrEntryNotFound)
+}
+
+func requireUserSessionContains(t *testing.T, userID, sessionID string) {
+	t.Helper()
+
+	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+	require.NoError(t, err)
+	require.Contains(t, userSessionIDs, sessionID)
+}
+
+func requireUserSessionNotContains(t *testing.T, userID, sessionID string) {
+	t.Helper()
+
+	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+	require.NoError(t, err)
+	require.NotContains(t, userSessionIDs, sessionID)
+}
+
+func cleanupSessionRedis(t *testing.T) {
+	t.Helper()
+
+	require.NoError(t, redis.RemovePrefix(modeliamsession.SessionNamespace))
 }
 
 func init() {
@@ -129,6 +160,8 @@ func TestAccount(t *testing.T) {
 			require.NotEmpty(t, rsp.SessionID)
 			sessionID = rsp.SessionID
 		})
+
+		requireUserSessionContains(t, userID, sessionID)
 	})
 
 	t.Run("logout", func(t *testing.T) {
@@ -148,6 +181,9 @@ func TestAccount(t *testing.T) {
 				// }
 				require.NotEmpty(t, rsp.Msg)
 			})
+
+			requireSessionNotFound(t, sessionID)
+			requireUserSessionNotContains(t, userID, sessionID)
 		})
 
 		// query user api will failed
@@ -345,6 +381,8 @@ func TestAccount(t *testing.T) {
 				require.NotEmpty(t, rsp.SessionID)
 				victimSessionBeforeReset = rsp.SessionID
 			})
+
+			requireUserSessionContains(t, victimID, victimSessionBeforeReset)
 		})
 
 		t.Run("promote_actor_superuser", func(t *testing.T) {
@@ -377,6 +415,9 @@ func TestAccount(t *testing.T) {
 		})
 
 		t.Run("victim_session_invalid_after_reset", func(t *testing.T) {
+			requireSessionNotFound(t, victimSessionBeforeReset)
+			requireUserSessionNotContains(t, victimID, victimSessionBeforeReset)
+
 			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: victimSessionBeforeReset,
@@ -499,6 +540,8 @@ func TestAccount(t *testing.T) {
 				require.NotEmpty(t, rsp.SessionID)
 				acctVictimSessionID = rsp.SessionID
 			})
+
+			requireUserSessionContains(t, acctVictimID, acctVictimSessionID)
 		})
 
 		t.Run("forbidden_when_not_superuser", func(t *testing.T) {
@@ -543,6 +586,9 @@ func TestAccount(t *testing.T) {
 		})
 
 		t.Run("session_invalid_after_disable", func(t *testing.T) {
+			requireSessionNotFound(t, acctVictimSessionID)
+			requireUserSessionNotContains(t, acctVictimID, acctVictimSessionID)
+
 			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: acctVictimSessionID,
@@ -618,6 +664,8 @@ func TestAccount(t *testing.T) {
 				require.NotEmpty(t, rsp.SessionID)
 				acctVictimSessionAfterEnable = rsp.SessionID
 			})
+
+			requireUserSessionContains(t, acctVictimID, acctVictimSessionAfterEnable)
 		})
 
 		t.Run("current_forbidden_when_db_inactive_but_redis_session_valid", func(t *testing.T) {
@@ -701,6 +749,9 @@ func TestAccount(t *testing.T) {
 		})
 
 		t.Run("session_invalid_after_lock", func(t *testing.T) {
+			requireSessionNotFound(t, acctVictimSessionAfterEnable)
+			requireUserSessionNotContains(t, acctVictimID, acctVictimSessionAfterEnable)
+
 			cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: acctVictimSessionAfterEnable,
@@ -857,6 +908,11 @@ func TestAccount(t *testing.T) {
 }
 
 func TestSession(t *testing.T) {
+	cleanupSessionRedis(t)
+	t.Cleanup(func() {
+		cleanupSessionRedis(t)
+	})
+
 	username := "session01"
 	password := "12345678"
 	userID := ""
@@ -971,7 +1027,7 @@ func TestSession(t *testing.T) {
 		})
 	})
 
-	t.Run("logout_preserves_latest_session_mapping", func(t *testing.T) {
+	t.Run("logout_and_offline_manage_all_user_sessions", func(t *testing.T) {
 		var staleSessionID string
 		var latestSessionID string
 
@@ -1017,6 +1073,15 @@ func TestSession(t *testing.T) {
 			helper.TestResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
 				require.NotEmpty(t, rsp.Msg)
 			})
+
+			staleSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, staleSessionID)
+			_, err = redis.Cache[modeliamsession.Session]().Get(staleSessionKey)
+			require.ErrorIs(t, err, types.ErrEntryNotFound)
+
+			userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+			require.NoError(t, err)
+			require.NotContains(t, userSessionIDs, staleSessionID)
+			require.Contains(t, userSessionIDs, latestSessionID)
 		})
 
 		t.Run("offline_latest_session", func(t *testing.T) {
@@ -1030,6 +1095,14 @@ func TestSession(t *testing.T) {
 				UserID: userID,
 			})
 			require.NoError(t, err)
+
+			latestSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, latestSessionID)
+			_, err = redis.Cache[modeliamsession.Session]().Get(latestSessionKey)
+			require.ErrorIs(t, err, types.ErrEntryNotFound)
+
+			userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserRedisKey(userID), 0, -1)
+			require.NoError(t, err)
+			require.NotContains(t, userSessionIDs, latestSessionID)
 		})
 	})
 
@@ -1046,6 +1119,8 @@ func TestSession(t *testing.T) {
 			require.NotEmpty(t, rsp.SessionID)
 			sessionID = rsp.SessionID
 		})
+
+		requireUserSessionContains(t, userID, sessionID)
 	})
 
 	t.Run("delete_current", func(t *testing.T) {
@@ -1062,6 +1137,9 @@ func TestSession(t *testing.T) {
 			require.Equal(t, username, rsp.Principal.Username)
 			require.True(t, rsp.Session.IsCurrent)
 		})
+
+		requireSessionNotFound(t, sessionID)
+		requireUserSessionNotContains(t, userID, sessionID)
 	})
 
 	t.Run("current_unauthorized_after_delete_current", func(t *testing.T) {
