@@ -1,7 +1,6 @@
 package serviceiamsession
 
 import (
-	"net/http"
 	"sort"
 
 	"github.com/cockroachdb/errors"
@@ -21,20 +20,12 @@ type SessionsService struct {
 func (s *SessionsService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsReq) (rsp *modeliamsession.SessionsRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
-	sessionID, err := ctx.Cookie("session_id")
+	// GetCurrentSession already guarantees that the resolved session is bound to
+	// an authenticated user, so the service can directly use currentSession.UserID.
+	sessionID, currentSession, err := GetCurrentSession(ctx)
 	if err != nil {
-		log.Error(err)
-		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
-	}
-
-	currentSessionKey := modeliamsession.SessionIDKey(sessionID)
-	currentSession, err := redis.Cache[modeliamsession.Session]().Get(currentSessionKey)
-	if err != nil {
-		log.Error("session not exists")
-		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", err)
-	}
-	if currentSession.UserID == "" {
-		return nil, types.NewServiceError(http.StatusUnauthorized, "user not authenticated")
+		log.Error("failed to get current session", err)
+		return nil, err
 	}
 
 	sessionIDs, err := listUserSessionIDs(currentSession.UserID)

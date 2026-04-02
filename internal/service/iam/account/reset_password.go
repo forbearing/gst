@@ -5,10 +5,8 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
-	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
@@ -47,13 +45,7 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliamac
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("resetpassword create")
 
-	sessionID, err := ctx.Cookie("session_id")
-	if err != nil {
-		return nil, errors.New("authentication required")
-	}
-
-	sessionKey := modeliamsession.SessionIDKey(sessionID)
-	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+	_, session, err := serviceiamsession.GetCurrentSession(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid session")
 	}

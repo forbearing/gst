@@ -7,7 +7,6 @@ import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -23,16 +22,10 @@ type CurrentService struct {
 func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.CurrentReq) (rsp *modeliamsession.CurrentRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
-	sessionID, err := ctx.Cookie("session_id")
+	sessionID, session, err := GetCurrentSession(ctx)
 	if err != nil {
-		log.Error(err)
-		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
-	}
-
-	session, e := redis.Cache[modeliamsession.Session]().Get(modeliamsession.SessionIDKey(sessionID))
-	if e != nil {
-		log.Error("session not exists")
-		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", e)
+		log.Error("failed to get current session", err)
+		return nil, err
 	}
 
 	user := new(modeliam.User)

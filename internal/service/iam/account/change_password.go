@@ -7,10 +7,8 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
-	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"golang.org/x/crypto/bcrypt"
@@ -24,18 +22,10 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 	log.Info("changepassword create")
 
-	// Get session_id from cookie
-	sessionID, err := ctx.Cookie("session_id")
+	// Get current session
+	sessionID, session, err := serviceiamsession.GetCurrentSession(ctx)
 	if err != nil {
-		log.Error("failed to get session_id from cookie", err)
-		return nil, fmt.Errorf("authentication required")
-	}
-
-	// Get session from Redis
-	redisKey := modeliamsession.SessionIDKey(sessionID)
-	session, err := redis.Cache[modeliamsession.Session]().Get(redisKey)
-	if err != nil {
-		log.Error("failed to get session from redis", err)
+		log.Error("failed to get current session", err)
 		return nil, fmt.Errorf("invalid session")
 	}
 

@@ -1,6 +1,7 @@
 package serviceiamsession
 
 import (
+	"net/http"
 	"sync"
 	"time"
 
@@ -22,6 +23,31 @@ func listUserSessionIDs(userID string) ([]string, error) {
 	}
 	userKey := modeliamsession.SessionUserKey(userID)
 	return redis.ZRange(userKey, 0, -1)
+}
+
+// GetCurrentSession loads the current authenticated user session from the
+// request cookie and Redis storage. It only enforces the minimal integrity
+// required by IAM services: the session must exist and be bound to a user.
+// Database-level checks such as user status, permission, or account existence
+// remain the responsibility of the caller.
+func GetCurrentSession(ctx *types.ServiceContext) (string, modeliamsession.Session, error) {
+	sessionID, err := ctx.Cookie("session_id")
+	if err != nil {
+		return "", modeliamsession.Session{}, types.NewServiceError(http.StatusUnauthorized, err.Error())
+	}
+
+	sessionKey := modeliamsession.SessionIDKey(sessionID)
+	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+	if err != nil {
+		return "", modeliamsession.Session{}, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", err)
+	}
+	// An IAM current-session lookup must resolve to an authenticated user
+	// session. An empty UserID indicates incomplete or stale session data.
+	if session.UserID == "" {
+		return "", modeliamsession.Session{}, types.NewServiceError(http.StatusUnauthorized, "user not authenticated")
+	}
+
+	return sessionID, session, nil
 }
 
 // TrackUserSession adds the session id into the user's indexed session set.
