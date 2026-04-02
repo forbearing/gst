@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"reflect"
-	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/types"
@@ -14,11 +13,6 @@ import (
 )
 
 var pluralizeCli = pluralize.NewClient()
-
-func (gs GormStrings) Value() (driver.Value, error) {
-	// It will return "", if gs is nil or empty string.
-	return strings.Trim(strings.Join(gs, ","), ","), nil
-}
 
 // GormScannerWrapper converts object to GormScanner that can be used in GORM.
 // WARN: you must pass pointer to object.

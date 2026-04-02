@@ -19,7 +19,7 @@ var (
 	serviceMap = make(map[string]any)
 	mu         sync.Mutex
 
-	_ types.Service[*model.User, any, any] = (*Base[*model.User, any, any])(nil)
+	_ types.Service[*model.Empty, any, any] = (*Base[*model.Empty, any, any])(nil)
 )
 
 var (
