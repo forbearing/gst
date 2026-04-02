@@ -107,6 +107,9 @@ func Register(config ...Config) {
 	// Set session expiration in service layer
 	serviceiamsession.SetSessionExpiration(cfg.SessionExpiration)
 
+	// Register auth middleware before protected routes so auth handlers are attached deterministically.
+	middleware.RegisterAuth(middleware.IAMSession())
+
 	module.Use(module.NewWrapper("/login", "id", true, &serviceiamaccount.LoginService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/logout", "id", false, &serviceiamaccount.LogoutService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/signup", "id", true, &serviceiamaccount.SignupService{}), consts.PHASE_CREATE)
@@ -166,8 +169,6 @@ func Register(config ...Config) {
 		}
 		model.Register(cfg.DefaultUsers...)
 	}
-
-	middleware.RegisterAuth(middleware.IAMSession())
 
 	// cleanup the oneline user that not active every 30 seconds, will run immediately after application bootstrap.
 	cronjob.Register(cronjobiam.CleanupOnlineUser, "*/30 * * * * *", "cleanup online user", cronjob.Config{RunImmediately: true})

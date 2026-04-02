@@ -73,6 +73,9 @@ func Register() {
 		&Menu{Base: model.Base{ID: model.UnknownID}, ParentID: model.RootID},
 	)
 
+	// Register auth middleware before protected routes so auth handlers are attached deterministically.
+	middleware.RegisterAuth(middleware.Authz())
+
 	module.Use[
 		*Permission,
 		*Permission,
@@ -141,8 +144,6 @@ func Register() {
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 	)
-
-	middleware.RegisterAuth(middleware.Authz())
 
 	log := zap.S()
 	go func() {

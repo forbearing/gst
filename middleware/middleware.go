@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
@@ -18,14 +19,20 @@ var (
 	cb           *gobreaker.CircuitBreaker
 	RouteManager *RouteParamsManager
 
-	CommonMiddlewaresChan = make(chan gin.HandlerFunc, 1024)
-	AuthMiddlewaresChan   = make(chan gin.HandlerFunc, 1024)
+	middlewareMu       sync.Mutex
+	commonMiddlewares  []gin.HandlerFunc
+	authMiddlewares    []gin.HandlerFunc
+	applyCommonHandler func(gin.HandlerFunc)
+	applyAuthHandler   func(gin.HandlerFunc)
 )
 
 // Register adds global middlewares that apply to all routes.
 // Must be called before router.Init.
 // Middlewares are auto-wrapped for tracing; name is inferred via reflection.
 func Register(middlewares ...gin.HandlerFunc) {
+	middlewareMu.Lock()
+	defer middlewareMu.Unlock()
+
 	for _, middleware := range middlewares {
 		if middleware == nil {
 			continue
@@ -35,7 +42,10 @@ func Register(middlewares ...gin.HandlerFunc) {
 		// Automatically wrap middleware with tracing for performance monitoring
 		wrapped := middlewareWrapper(name, middleware)
 		zap.S().Infow("register common middleware", "name", name)
-		CommonMiddlewaresChan <- wrapped
+		commonMiddlewares = append(commonMiddlewares, wrapped)
+		if applyCommonHandler != nil {
+			applyCommonHandler(wrapped)
+		}
 	}
 }
 
@@ -43,6 +53,9 @@ func Register(middlewares ...gin.HandlerFunc) {
 // Must be called before router.Init.
 // Middlewares are auto-wrapped for tracing; name is inferred via reflection.
 func RegisterAuth(middlewares ...gin.HandlerFunc) {
+	middlewareMu.Lock()
+	defer middlewareMu.Unlock()
+
 	for _, middleware := range middlewares {
 		if middleware == nil {
 			continue
@@ -52,7 +65,31 @@ func RegisterAuth(middlewares ...gin.HandlerFunc) {
 		// Automatically wrap middleware with tracing for performance monitoring
 		wrapped := middlewareWrapper(name, middleware)
 		zap.S().Infow("register auth middleware", "name", name)
-		AuthMiddlewaresChan <- wrapped
+		authMiddlewares = append(authMiddlewares, wrapped)
+		if applyAuthHandler != nil {
+			applyAuthHandler(wrapped)
+		}
+	}
+}
+
+// SetApplyHandlers installs the handlers used to attach registered middlewares to router groups.
+// Existing registered middlewares are applied immediately in registration order.
+func SetApplyHandlers(commonHandler, authHandler func(gin.HandlerFunc)) {
+	middlewareMu.Lock()
+	defer middlewareMu.Unlock()
+
+	applyCommonHandler = commonHandler
+	applyAuthHandler = authHandler
+
+	if applyCommonHandler != nil {
+		for _, middleware := range commonMiddlewares {
+			applyCommonHandler(middleware)
+		}
+	}
+	if applyAuthHandler != nil {
+		for _, middleware := range authMiddlewares {
+			applyAuthHandler(middleware)
+		}
 	}
 }
 
