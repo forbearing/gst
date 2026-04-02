@@ -36,8 +36,8 @@ var (
 			WithSelect("username", "password_hash", "must_change_password").
 			Update(user)
 	}
-	// passwordResetInvalidateSessions clears the cached session mapping so a password
-	// reset immediately revokes access granted by previously issued sessions.
+	// passwordResetInvalidateSessions clears the cached user-session index so a
+	// password reset immediately revokes access granted by previously issued sessions.
 	passwordResetInvalidateSessions = serviceiamsession.InvalidateUserSessionsByUserID
 )
 

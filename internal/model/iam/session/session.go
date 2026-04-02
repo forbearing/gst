@@ -9,7 +9,7 @@ import (
 // SessionNamespace stores session snapshots by session ID.
 const SessionNamespace = "iam:session"
 
-// SessionUserNamespace stores the latest session mapping by user ID.
+// SessionUserNamespace stores the session index set by user ID.
 const SessionUserNamespace = "iam:session:user"
 
 type SessionStatus string
@@ -71,7 +71,7 @@ func SessionRedisKey(namespace, id string) string {
 	return fmt.Sprintf("%s:%s", namespace, id)
 }
 
-// SessionUserRedisKey builds the Redis key for the latest session mapping of a user.
+// SessionUserRedisKey builds the Redis key for the indexed session set of a user.
 func SessionUserRedisKey(userID string) string {
 	return SessionRedisKey(SessionUserNamespace, userID)
 }

@@ -142,7 +142,6 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	// Create session
 	sessionID := util.UUID()
 	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
-	prefixedUserID := modeliamsession.SessionUserRedisKey(user.ID)
 	expire := serviceiamsession.GetSessionExpiration()
 	expiresAt := now.Add(expire)
 
@@ -174,10 +173,9 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 		log.Errorz("failed to set session in redis", zap.Error(err))
 		return nil, fmt.Errorf("failed to set session in redis")
 	}
-	// Store the latest user-to-session mapping in Redis.
-	if err = redis.Cache[string]().Set(prefixedUserID, prefixedSessionID, expire); err != nil {
-		log.Errorz("failed to set session id in redis", zap.Error(err))
-		return nil, fmt.Errorf("failed to set session id in redis")
+	if err = serviceiamsession.TrackUserSession(sessionData); err != nil {
+		log.Errorz("failed to track user session in redis", zap.Error(err))
+		return nil, fmt.Errorf("failed to track user session in redis")
 	}
 
 	// Set cookie
