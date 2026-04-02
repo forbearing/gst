@@ -37,6 +37,7 @@ var (
 	userAPI           = fmt.Sprintf("http://localhost:%d/api/iam/users", port)
 	groupAPI          = fmt.Sprintf("http://localhost:%d/api/iam/groups", port)
 	currentAPI        = fmt.Sprintf("http://localhost:%d/api/iam/session/current", port)
+	sessionsAPI       = fmt.Sprintf("http://localhost:%d/api/iam/sessions", port)
 	heartbeatAPI      = fmt.Sprintf("http://localhost:%d/api/iam/session/heartbeat", port)
 	onlineuserAPI     = fmt.Sprintf("http://localhost:%d/api/online-users", port)
 	offlineAPI        = fmt.Sprintf("http://localhost:%d/api/offline", port)
@@ -1002,6 +1003,26 @@ func TestSession(t *testing.T) {
 			require.False(t, rsp.Principal.MustChangePassword)
 			require.True(t, rsp.Session.IsCurrent)
 			require.NotEmpty(t, rsp.Session.ID)
+		})
+	})
+
+	t.Run("sessions", func(t *testing.T) {
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		items := make([]iam.CurrentSession, 0)
+		total := new(int64)
+		resp, err := cli.List(&items, total)
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+			require.Len(t, rsp.Items, 1)
+			require.EqualValues(t, 1, rsp.Total)
+			require.Equal(t, sessionID, rsp.Items[0].ID)
+			require.True(t, rsp.Items[0].IsCurrent)
 		})
 	})
 

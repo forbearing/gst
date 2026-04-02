@@ -6,6 +6,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
@@ -15,7 +16,7 @@ import (
 
 // CurrentService handles retrieval and invalidation of the current authenticated session.
 type CurrentService struct {
-	service.Base[*modeliamsession.Current, *modeliamsession.CurrentReq, *modeliamsession.CurrentRsp]
+	service.Base[*model.Empty, *modeliamsession.CurrentReq, *modeliamsession.CurrentRsp]
 }
 
 // List returns the current authenticated session together with the latest user snapshot.
@@ -100,34 +101,39 @@ func (s *CurrentService) Delete(ctx *types.ServiceContext, req *modeliamsession.
 
 // buildCurrentRsp builds the API response for current session endpoints from the stored session snapshot.
 func buildCurrentRsp(session modeliamsession.Session, fallbackSessionID string, principal *modeliamsession.CurrentPrincipal) *modeliamsession.CurrentRsp {
-	currentSessionID := session.ID
-	if currentSessionID == "" {
-		currentSessionID = fallbackSessionID
+	if principal == nil {
+		principal = &modeliamsession.CurrentPrincipal{}
+	}
+
+	return &modeliamsession.CurrentRsp{
+		Session:   buildCurrentSession(session, fallbackSessionID),
+		Principal: *principal,
+	}
+}
+
+// buildCurrentSession builds the response snapshot for a session summary endpoint.
+func buildCurrentSession(session modeliamsession.Session, currentSessionID string) modeliamsession.CurrentSession {
+	sessionID := session.ID
+	if sessionID == "" {
+		sessionID = currentSessionID
 	}
 	state := session.State
 	if state == "" {
 		state = modeliamsession.SessionStatusActive
 	}
 
-	if principal == nil {
-		principal = &modeliamsession.CurrentPrincipal{}
-	}
-
-	return &modeliamsession.CurrentRsp{
-		Session: modeliamsession.CurrentSession{
-			ID:          currentSessionID,
-			State:       state,
-			IssuedAt:    session.IssuedAt,
-			LastSeenAt:  session.LastSeenAt,
-			ExpiresAt:   session.ExpiresAt,
-			ClientIP:    session.ClientIP,
-			UserAgent:   session.UserAgent,
-			Platform:    session.Platform,
-			OS:          session.OS,
-			EngineName:  session.EngineName,
-			BrowserName: session.BrowserName,
-			IsCurrent:   true,
-		},
-		Principal: *principal,
+	return modeliamsession.CurrentSession{
+		ID:          sessionID,
+		State:       state,
+		IssuedAt:    session.IssuedAt,
+		LastSeenAt:  session.LastSeenAt,
+		ExpiresAt:   session.ExpiresAt,
+		ClientIP:    session.ClientIP,
+		UserAgent:   session.UserAgent,
+		Platform:    session.Platform,
+		OS:          session.OS,
+		EngineName:  session.EngineName,
+		BrowserName: session.BrowserName,
+		IsCurrent:   sessionID == currentSessionID,
 	}
 }

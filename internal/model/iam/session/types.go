@@ -2,7 +2,6 @@ package modeliamsession
 
 import (
 	"fmt"
-	"strings"
 	"time"
 )
 
@@ -77,9 +76,4 @@ func SessionRedisKey(namespace, id string) string {
 // SessionUserRedisKey builds the Redis key for the indexed session set of a user.
 func SessionUserRedisKey(userID string) string {
 	return SessionRedisKey(SessionUserNamespace, userID)
-}
-
-// SessionID extracts the identifier from a namespaced Redis key.
-func SessionID(redisKey string, namespace string) string {
-	return strings.TrimPrefix(redisKey, fmt.Sprintf("%s:", namespace))
 }

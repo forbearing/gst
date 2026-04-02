@@ -28,13 +28,16 @@ type (
 	Group  = modeliam.Group
 	Tenant = modeliam.Tenant
 
-	Session    = modeliamsession.Session
-	Token      = modeliamsession.Token
-	Heartbeat  = modeliamsession.Heartbeat
-	CurrentReq = modeliamsession.CurrentReq
-	CurrentRsp = modeliamsession.CurrentRsp
-	OnlineUser = modeliamsession.OnlineUser
-	OfflineReq = modeliamsession.OfflineReq
+	Session        = modeliamsession.Session
+	Token          = modeliamsession.Token
+	Heartbeat      = modeliamsession.Heartbeat
+	CurrentReq     = modeliamsession.CurrentReq
+	CurrentRsp     = modeliamsession.CurrentRsp
+	SessionsReq    = modeliamsession.SessionsReq
+	SessionsRsp    = modeliamsession.SessionsRsp
+	CurrentSession = modeliamsession.CurrentSession
+	OnlineUser     = modeliamsession.OnlineUser
+	OfflineReq     = modeliamsession.OfflineReq
 
 	EmailChangeConfirmReq = modeliamemail.ChangeConfirmReq
 	EmailChangeConfirmRsp = modeliamemail.ChangeConfirmRsp

@@ -2,21 +2,18 @@ package modeliamsession
 
 import (
 	"time"
-
-	"github.com/forbearing/gst/model"
 )
 
-type Current struct {
-	model.Empty
-}
-
+// CurrentReq is the request payload for current-session endpoints.
 type CurrentReq struct{}
 
+// CurrentRsp returns the current session together with the latest principal snapshot.
 type CurrentRsp struct {
 	Session   CurrentSession   `json:"session"`
 	Principal CurrentPrincipal `json:"principal"`
 }
 
+// CurrentSession describes a session snapshot returned by session query endpoints.
 type CurrentSession struct {
 	ID          string        `json:"id"`
 	State       SessionStatus `json:"state"`
@@ -32,6 +29,7 @@ type CurrentSession struct {
 	IsCurrent   bool          `json:"is_current"`
 }
 
+// CurrentPrincipal describes the authenticated principal bound to the current session.
 type CurrentPrincipal struct {
 	UserID             string  `json:"user_id"`
 	Username           string  `json:"username"`
