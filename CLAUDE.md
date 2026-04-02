@@ -43,8 +43,6 @@ go install ./cmd/gg
   - 给出的 commit 内容的 title 和 body 需要放在一起，方便我直接复制
 
   
-  
-  
 
 ### 开发完后
 
