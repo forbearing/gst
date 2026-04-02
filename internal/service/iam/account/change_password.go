@@ -32,7 +32,7 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 	}
 
 	// Get session from Redis
-	redisKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	redisKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(redisKey)
 	if err != nil {
 		log.Error("failed to get session from redis", err)

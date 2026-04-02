@@ -50,7 +50,7 @@ type ListResponse[T any] struct {
 func requireSessionNotFound(t *testing.T, sessionID string) {
 	t.Helper()
 
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	_, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	require.ErrorIs(t, err, types.ErrEntryNotFound)
 }
@@ -961,7 +961,7 @@ func TestSession(t *testing.T) {
 	})
 
 	t.Run("heartbeat", func(t *testing.T) {
-		sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+		sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 		before, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 		require.NoError(t, err)
 
@@ -1074,7 +1074,7 @@ func TestSession(t *testing.T) {
 				require.NotEmpty(t, rsp.Msg)
 			})
 
-			staleSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, staleSessionID)
+			staleSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, staleSessionID)
 			_, err = redis.Cache[modeliamsession.Session]().Get(staleSessionKey)
 			require.ErrorIs(t, err, types.ErrEntryNotFound)
 
@@ -1096,7 +1096,7 @@ func TestSession(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			latestSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, latestSessionID)
+			latestSessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, latestSessionID)
 			_, err = redis.Cache[modeliamsession.Session]().Get(latestSessionKey)
 			require.ErrorIs(t, err, types.ErrEntryNotFound)
 

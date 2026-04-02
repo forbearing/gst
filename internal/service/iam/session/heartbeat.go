@@ -28,7 +28,7 @@ func (s *HeartbeatService) Create(ctx *types.ServiceContext, req *modeliamsessio
 		log.Error(err)
 		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
 	}
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	if _, err = redis.Cache[modeliamsession.Session]().Get(sessionKey); err != nil {
 		log.Error("session not exists")
 		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", errors.Wrap(err, "invalid session"))

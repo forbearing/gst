@@ -35,7 +35,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 		return nil, errors.New("authentication required")
 	}
 
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid session")

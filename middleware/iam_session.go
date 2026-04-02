@@ -42,7 +42,7 @@ func IAMSession() gin.HandlerFunc {
 			return
 		}
 		// fmt.Println("----- SessionRedisKey", helper.SessionRedisKey(identity.SessionNamespace, sessionID))
-		session, e := redis.Cache[modeliamsession.Session]().WithContext(c.Request.Context()).Get(modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID))
+		session, e := redis.Cache[modeliamsession.Session]().WithContext(c.Request.Context()).Get(modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID))
 		if e != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": e.Error()})
 			return

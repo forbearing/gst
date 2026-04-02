@@ -46,7 +46,7 @@ func InvalidateUserSessionsByUserID(userID string) {
 	sessionIDs, err := listUserSessionIDsByUserID(userID)
 	if err == nil {
 		for i := range sessionIDs {
-			sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionIDs[i])
+			sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionIDs[i])
 			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
 		}
 	}
@@ -58,7 +58,7 @@ func SyncSessionMustChangePassword(sessionID string, mustChange bool) error {
 	if sessionID == "" {
 		return nil
 	}
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		if errors.Is(err, types.ErrEntryNotFound) {
@@ -76,7 +76,7 @@ func DeleteSessionBySessionID(sessionID string) (modeliamsession.Session, error)
 		return modeliamsession.Session{}, nil
 	}
 
-	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	sessionKey := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	session, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
 	if err != nil {
 		return modeliamsession.Session{}, err

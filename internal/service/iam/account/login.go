@@ -141,7 +141,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 
 	// Create session
 	sessionID := util.UUID()
-	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionNamespace, sessionID)
+	prefixedSessionID := modeliamsession.SessionRedisKey(modeliamsession.SessionIDNamespace, sessionID)
 	expire := serviceiamsession.GetSessionExpiration()
 	expiresAt := now.Add(expire)
 
