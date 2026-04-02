@@ -74,7 +74,7 @@ func requireUserSessionNotContains(t *testing.T, userID, sessionID string) {
 func cleanupSessionRedis(t *testing.T) {
 	t.Helper()
 
-	require.NoError(t, redis.RemovePrefix(modeliamsession.SessionNamespace))
+	require.NoError(t, redis.RemovePrefix(modeliamsession.SessionNamespacePrefix))
 }
 
 func init() {

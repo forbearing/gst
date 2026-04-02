@@ -6,11 +6,14 @@ import (
 	"time"
 )
 
+// SessionNamespacePrefix is the shared Redis key prefix for IAM session storage.
+const SessionNamespacePrefix = "iam:session"
+
 // SessionNamespace stores session snapshots by session ID.
-const SessionNamespace = "iam:session"
+const SessionNamespace = SessionNamespacePrefix + ":id"
 
 // SessionUserNamespace stores the session index set by user ID.
-const SessionUserNamespace = "iam:session:user"
+const SessionUserNamespace = SessionNamespacePrefix + ":user"
 
 type SessionStatus string
 
