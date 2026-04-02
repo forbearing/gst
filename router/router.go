@@ -57,7 +57,6 @@ func Init() error {
 	root.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	root.GET("/-/healthz", controller.Probe.Healthz)
 	root.GET("/-/readyz", controller.Probe.Readyz)
-	root.GET("/-/pageid", controller.PageID)
 	root.GET("/openapi.json", middleware.BaseAuth(), gin.WrapH(openapigen.DocumentHandler()))
 	root.GET("/docs/*any", middleware.BaseAuth(), ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/openapi.json")))
 	root.GET("/redoc", middleware.BaseAuth(), controller.Redoc)
