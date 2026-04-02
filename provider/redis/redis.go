@@ -6,7 +6,6 @@ package redis
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -19,17 +18,17 @@ import (
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/redis/go-redis/extra/redisotel/v9"
-	"github.com/redis/go-redis/v9"
+	redisotel "github.com/redis/go-redis/extra/redisotel/v9"
+	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 var (
-	client      *redis.Client
-	cluster     *redis.ClusterClient
-	cli         redis.UniversalClient
+	client      *goredis.Client
+	cluster     *goredis.ClusterClient
+	cli         goredis.UniversalClient
 	mu          sync.Mutex
 	initialized bool
 
@@ -86,8 +85,8 @@ func Init() (err error) {
 	return nil
 }
 
-func New(cfg config.Redis) (*redis.Client, error) {
-	opts := &redis.Options{
+func New(cfg config.Redis) (*goredis.Client, error) {
+	opts := &goredis.Options{
 		Addr:     cfg.Addr,
 		Password: cfg.Password,
 		DB:       cfg.DB,
@@ -125,11 +124,11 @@ func New(cfg config.Redis) (*redis.Client, error) {
 		opts.TLSConfig = tlsConfig
 	}
 
-	return redis.NewClient(opts), nil
+	return goredis.NewClient(opts), nil
 }
 
-func NewCluster(cfg config.Redis) (*redis.ClusterClient, error) {
-	opts := &redis.ClusterOptions{
+func NewCluster(cfg config.Redis) (*goredis.ClusterClient, error) {
+	opts := &goredis.ClusterOptions{
 		Addrs:    cfg.Addrs,
 		Password: cfg.Password,
 	}
@@ -166,7 +165,7 @@ func NewCluster(cfg config.Redis) (*redis.ClusterClient, error) {
 		opts.TLSConfig = tlsConfig
 	}
 
-	return redis.NewClusterClient(opts), nil
+	return goredis.NewClusterClient(opts), nil
 }
 
 func Close() {
@@ -244,11 +243,6 @@ func SetML[M types.Model](key string, ml []M, expiration ...time.Duration) error
 	return client.Set(ctx, key, modelMarshalerList[M](bl), _expiration).Err()
 }
 
-// SetSession wrapped Set function to set session data to redis, only for session.
-func SetSession(sessionID string, data []byte) error {
-	return Set(fmt.Sprintf("%s:session:%s", config.App.Redis.Namespace, sessionID), data, config.App.Auth.AccessTokenExpireDuration)
-}
-
 // Get will get raw cache([]byte) from redis.
 func Get(key string) (cache []byte, err error) {
 	if !config.App.Redis.Enable {
@@ -260,7 +254,7 @@ func Get(key string) (cache []byte, err error) {
 	} else {
 		cache, err = client.Get(ctx, key).Bytes()
 	}
-	if errors.Is(err, redis.Nil) {
+	if errors.Is(err, goredis.Nil) {
 		return nil, ErrKeyNotExists
 	}
 	return cache, nil
@@ -279,7 +273,7 @@ func GetInt(key string) (int64, error) {
 	} else {
 		cache, err = client.Get(ctx, key).Result()
 	}
-	if errors.Is(err, redis.Nil) {
+	if errors.Is(err, goredis.Nil) {
 		return 0, ErrKeyNotExists
 	}
 	val, err := strconv.Atoi(cache)
@@ -303,7 +297,7 @@ func GetM[M types.Model](key string) (M, error) {
 		data, err = client.Get(ctx, key).Bytes()
 	}
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
+		if errors.Is(err, goredis.Nil) {
 			return *new(M), ErrKeyNotExists
 		}
 		zap.S().Error(err)
@@ -332,7 +326,7 @@ func GetML[M types.Model](key string) ([]M, error) {
 		data, err = client.Get(ctx, key).Bytes()
 	}
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
+		if errors.Is(err, goredis.Nil) {
 			return nil, ErrKeyNotExists
 		}
 		zap.S().Error(err)
@@ -352,13 +346,7 @@ func GetML[M types.Model](key string) ([]M, error) {
 	return ml, nil
 }
 
-// GetSession wrapped Get function to get session data from cache
-func GetSession[M types.Model](sessionID string) ([]byte, error) {
-	key := fmt.Sprintf("%s:session:%s", config.App.Redis.Namespace, sessionID)
-	return Get(key)
-}
-
-func Remove(keys ...string) error {
+func Del(keys ...string) error {
 	if !config.App.Redis.Enable {
 		zap.S().Warn(ErrRedisIsDisabled.Error())
 		return nil
@@ -367,6 +355,68 @@ func Remove(keys ...string) error {
 		return cluster.Del(ctx, keys...).Err()
 	}
 	return client.Del(ctx, keys...).Err()
+}
+
+// Expire updates the ttl for an existing key.
+func Expire(key string, expiration time.Duration) error {
+	if !config.App.Redis.Enable {
+		zap.S().Warn(ErrRedisIsDisabled.Error())
+		return nil
+	}
+	if config.App.Redis.ClusterMode {
+		return cluster.Expire(ctx, key, expiration).Err()
+	}
+	return client.Expire(ctx, key, expiration).Err()
+}
+
+// ZAdd adds one or multiple string members with the same score into a sorted set.
+func ZAdd(key string, score float64, members ...string) error {
+	if !config.App.Redis.Enable {
+		zap.S().Warn(ErrRedisIsDisabled.Error())
+		return nil
+	}
+	if len(members) == 0 {
+		return nil
+	}
+	entries := make([]goredis.Z, 0, len(members))
+	for i := range members {
+		entries = append(entries, goredis.Z{Score: score, Member: members[i]})
+	}
+	if config.App.Redis.ClusterMode {
+		return cluster.ZAdd(ctx, key, entries...).Err()
+	}
+	return client.ZAdd(ctx, key, entries...).Err()
+}
+
+// ZRange returns sorted set members in ascending score order.
+func ZRange(key string, start, stop int64) ([]string, error) {
+	if !config.App.Redis.Enable {
+		zap.S().Warn(ErrRedisIsDisabled.Error())
+		return make([]string, 0), nil
+	}
+	if config.App.Redis.ClusterMode {
+		return cluster.ZRange(ctx, key, start, stop).Result()
+	}
+	return client.ZRange(ctx, key, start, stop).Result()
+}
+
+// ZRem removes one or multiple members from a sorted set.
+func ZRem(key string, members ...string) error {
+	if !config.App.Redis.Enable {
+		zap.S().Warn(ErrRedisIsDisabled.Error())
+		return nil
+	}
+	if len(members) == 0 {
+		return nil
+	}
+	memberArgs := make([]any, 0, len(members))
+	for i := range members {
+		memberArgs = append(memberArgs, members[i])
+	}
+	if config.App.Redis.ClusterMode {
+		return cluster.ZRem(ctx, key, memberArgs...).Err()
+	}
+	return client.ZRem(ctx, key, memberArgs...).Err()
 }
 
 // RemovePrefix will scan and delete all redis key that matchs the `prefix`.
