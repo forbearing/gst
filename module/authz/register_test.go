@@ -117,6 +117,9 @@ func TestAuthz(t *testing.T) {
 		})
 	})
 
+	// Authz management endpoints require the built-in admin role. The user created
+	// in signup only covers the authentication flow, so the tests keep a dedicated
+	// root session for listing and mutating authz resources.
 	var adminSessionID string
 	t.Run("login", func(t *testing.T) {
 		cli, err := client.New(loginAPI)

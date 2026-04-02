@@ -2,7 +2,7 @@
 package logger
 
 import (
-	"github.com/casbin/casbin/v2/log"
+	"github.com/casbin/casbin/v3/log"
 	"github.com/forbearing/gst/types"
 	"go.uber.org/zap"
 	gorml "gorm.io/gorm/logger"

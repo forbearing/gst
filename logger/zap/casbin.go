@@ -1,58 +1,78 @@
 package zap
 
 import (
-	casbinl "github.com/casbin/casbin/v2/log"
+	casbinl "github.com/casbin/casbin/v3/log"
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/types"
 	"go.uber.org/zap"
 )
 
 type CasbinLogger struct {
-	l       types.Logger
-	enabled bool
+	l          types.Logger
+	eventTypes map[casbinl.EventType]bool
+	callback   func(entry *casbinl.LogEntry) error
 }
 
 var _ casbinl.Logger = (*CasbinLogger)(nil)
 
-func (c *CasbinLogger) EnableLog(enabled bool) {
-	c.enabled = enabled
-}
-
-func (c *CasbinLogger) IsEnabled() bool {
-	return c.enabled
-}
-
-func (c *CasbinLogger) LogModel(mode [][]string) {
-	if !c.enabled {
-		return
+func (c *CasbinLogger) SetEventTypes(eventTypes []casbinl.EventType) error {
+	c.eventTypes = make(map[casbinl.EventType]bool, len(eventTypes))
+	for _, eventType := range eventTypes {
+		c.eventTypes[eventType] = true
 	}
-	c.l.Infow("", zap.Any("mode", mode))
+	return nil
 }
 
-func (c *CasbinLogger) LogEnforce(matcher string, request []any, result bool, explains [][]string) {
-	if !c.enabled {
-		return
+func (c *CasbinLogger) OnBeforeEvent(entry *casbinl.LogEntry) error {
+	if entry == nil {
+		return errors.New("casbin log entry is nil")
 	}
-	c.l.Infow("", zap.Bool("result", result), zap.Any("request", request), zap.Any("explains", explains), zap.String("matcher", matcher))
+	entry.IsActive = len(c.eventTypes) == 0 || c.eventTypes[entry.EventType]
+	return nil
 }
 
-func (c *CasbinLogger) LogPolicy(policy map[string][][]string) {
-	if !c.enabled {
-		return
+func (c *CasbinLogger) OnAfterEvent(entry *casbinl.LogEntry) error {
+	if entry == nil {
+		return errors.New("casbin log entry is nil")
 	}
-	for k, vl := range policy {
-		for _, v := range vl {
-			c.l.Infow("policy", k, v)
+	if entry.IsActive {
+		fields := []any{
+			zap.String("event", string(entry.EventType)),
+			zap.Duration("duration", entry.Duration),
 		}
+		if entry.Subject != "" {
+			fields = append(fields, zap.String("subject", entry.Subject))
+		}
+		if entry.Object != "" {
+			fields = append(fields, zap.String("object", entry.Object))
+		}
+		if entry.Action != "" {
+			fields = append(fields, zap.String("action", entry.Action))
+		}
+		if entry.Domain != "" {
+			fields = append(fields, zap.String("domain", entry.Domain))
+		}
+		if entry.EventType == casbinl.EventEnforce {
+			fields = append(fields, zap.Bool("allowed", entry.Allowed))
+		}
+		if len(entry.Rules) > 0 {
+			fields = append(fields, zap.Any("rules", entry.Rules))
+		}
+		if entry.RuleCount > 0 {
+			fields = append(fields, zap.Int("rule_count", entry.RuleCount))
+		}
+		if entry.Error != nil {
+			fields = append(fields, zap.Error(entry.Error))
+		}
+		c.l.Infow("", fields...)
 	}
+	if c.callback != nil {
+		return c.callback(entry)
+	}
+	return nil
 }
 
-func (c *CasbinLogger) LogRole(roles []string) {
-	if !c.enabled {
-		return
-	}
-	c.l.Infow("", zap.Any("roles", roles))
-}
-
-func (c *CasbinLogger) LogError(err error, msg ...string) {
-	c.l.Error(err, msg)
+func (c *CasbinLogger) SetLogCallback(callback func(entry *casbinl.LogEntry) error) error {
+	c.callback = callback
+	return nil
 }

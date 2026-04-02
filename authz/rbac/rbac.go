@@ -1,7 +1,7 @@
 package rbac
 
 import (
-	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v3"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
@@ -50,14 +50,14 @@ func (r *rbac) RemoveRole(name string) error {
 	if _, err := r.enforcer.DeleteRole(name); err != nil {
 		return err
 	}
-	return r.enforcer.SavePolicy()
+	return nil
 }
 
 func (r *rbac) GrantPermission(role string, resource string, action string) error {
 	if _, err := r.enforcer.AddPermissionForUser(role, resource, action, "allow"); err != nil {
 		return err
 	}
-	return r.enforcer.SavePolicy()
+	return nil
 }
 
 // RevokePermission removes policies for the given role with flexible behaviors:
@@ -70,38 +70,38 @@ func (r *rbac) RevokePermission(role string, resource string, action string) err
 		if _, err := r.enforcer.RemoveFilteredPolicy(0, role); err != nil {
 			return err
 		}
-		return r.enforcer.SavePolicy()
+		return nil
 	}
 	if len(resource) == 0 && len(action) > 0 {
 		if _, err := r.enforcer.RemoveFilteredPolicy(0, role, "", action); err != nil {
 			return err
 		}
-		return r.enforcer.SavePolicy()
+		return nil
 	}
 	if len(action) == 0 && len(resource) > 0 {
 		if _, err := r.enforcer.RemoveFilteredPolicy(0, role, resource); err != nil {
 			return err
 		}
-		return r.enforcer.SavePolicy()
+		return nil
 	}
 	if _, err := r.enforcer.DeletePermissionForUser(role, resource, action, string(consts.EffectAllow)); err != nil {
 		return err
 	}
-	return r.enforcer.SavePolicy()
+	return nil
 }
 
 func (r *rbac) AssignRole(subject string, role string) error {
 	if _, err := r.enforcer.AddRoleForUser(subject, role); err != nil {
 		return err
 	}
-	return r.enforcer.SavePolicy()
+	return nil
 }
 
 func (r *rbac) UnassignRole(subject string, role string) error {
 	if _, err := r.enforcer.DeleteRoleForUser(subject, role); err != nil {
 		return err
 	}
-	return r.enforcer.SavePolicy()
+	return nil
 }
 
 // | 操作             | 函数                                  |

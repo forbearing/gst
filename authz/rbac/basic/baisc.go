@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/casbin/casbin/v2"
+	"github.com/casbin/casbin/v3"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/authz/rbac"
@@ -19,7 +19,19 @@ var defaultAdmins = []string{
 	consts.AUTHZ_USER_ROOT,
 	consts.AUTHZ_USER_ADMIN,
 }
+
 var defaultAdminRole = consts.AUTHZ_ROLE_ADMIN
+
+// addGroupingPolicy adds a user-role relationship while skipping self-referential
+// entries such as admin -> admin. Casbin v3.10 rejects these self loops as role
+// hierarchy cycles, and they do not provide any additional authorization value.
+func addGroupingPolicy(enforcer *casbin.Enforcer, subject string, role string) error {
+	if subject == role {
+		return nil
+	}
+	_, err := enforcer.AddGroupingPolicy(subject, role)
+	return err
+}
 
 var modelData = []byte(`
 [request_definition]
@@ -78,16 +90,19 @@ func Init() (err error) {
 	}
 
 	rbac.Enforcer.SetLogger(logger.Casbin)
-	rbac.Enforcer.EnableLog(true)
 	rbac.Enforcer.EnableAutoSave(true)
 	rbac.Enforcer.EnableAutoNotifyDispatcher(true)
 	rbac.Enforcer.EnableAutoNotifyWatcher(true)
 	rbac.Enforcer.EnableEnforce(true)
 
 	for _, user := range defaultAdmins {
-		_, _ = rbac.Enforcer.AddGroupingPolicy(user, defaultAdminRole)
+		if err := addGroupingPolicy(rbac.Enforcer, user, defaultAdminRole); err != nil {
+			return errors.Wrapf(err, "failed to add default admin grouping policy for %s", user)
+		}
 	}
-	_, _ = rbac.Enforcer.AddGroupingPolicy(consts.AUTHZ_USER_BLOCKED, consts.AUTHZ_ROLE_BLOCKED)
+	if err := addGroupingPolicy(rbac.Enforcer, consts.AUTHZ_USER_BLOCKED, consts.AUTHZ_ROLE_BLOCKED); err != nil {
+		return errors.Wrap(err, "failed to add blocked grouping policy")
+	}
 
 	return rbac.Enforcer.LoadPolicy()
 }
