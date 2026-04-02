@@ -33,6 +33,17 @@ go install ./cmd/gg
 - 禁止在 golib 项目根目录执行 `cmd/gg` 的任何命令\*\* - 很容易破坏当前项目代码。测试 `cmd/gg` 命令请到 `examples/demo` 项目目录下执行。
 - 修改了代码，当前代码如果有测试用例，必须确保测试用例通过
 - internal/model 不需要使用 dsl 来定义接口行为
+- 如果我让你给出 git commit 建议，你给出的 git commit 建议必须符合如下规则：
+
+  - 需要根据代码变更内容给出一个或多个 git commit，当修改的代码内容涉及多个主题时则需要多个 git commit。
+  - 如果给出多个 git commit，则需要提供每个 commit 对应的代码文件。
+  - commit 必须符合 conventional commit 规范
+  - 只查看暂存区的代码变更。
+  - commit 内容必须是英文。
+  
+  
+  
+  
 
 ### 开发完后
 
