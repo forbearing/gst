@@ -1,6 +1,7 @@
 package serviceiamsession
 
 import (
+	"net/http"
 	"sort"
 
 	"github.com/cockroachdb/errors"
@@ -11,13 +12,18 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-// SessionsService handles retrieval of all active sessions for the current authenticated user.
-type SessionsService struct {
-	service.Base[*model.Empty, *modeliamsession.SessionsReq, *modeliamsession.SessionsRsp]
+// SessionsListService handles retrieval of all active sessions for the current authenticated user.
+type SessionsListService struct {
+	service.Base[*model.Empty, *modeliamsession.SessionsListReq, *modeliamsession.SessionsListRsp]
+}
+
+// SessionsDeleteService handles invalidation of a specified session for the current authenticated user.
+type SessionsDeleteService struct {
+	service.Base[*model.Empty, *modeliamsession.SessionsDeleteReq, *modeliamsession.SessionsDeleteRsp]
 }
 
 // List returns all active sessions for the current authenticated user.
-func (s *SessionsService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsReq) (rsp *modeliamsession.SessionsRsp, err error) {
+func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsListReq) (rsp *modeliamsession.SessionsListRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	// GetCurrentSession already guarantees that the resolved session is bound to
@@ -64,8 +70,56 @@ func (s *SessionsService) List(ctx *types.ServiceContext, req *modeliamsession.S
 		return left.After(right)
 	})
 
-	return &modeliamsession.SessionsRsp{
+	return &modeliamsession.SessionsListRsp{
 		Items: items,
 		Total: int64(len(items)),
 	}, nil
+}
+
+// Delete invalidates a specified session for the current authenticated user.
+// The endpoint is idempotent: deleting a missing session still returns success.
+func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteReq) (rsp *modeliamsession.SessionsDeleteRsp, err error) {
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
+
+	currentSessionID, currentSession, err := GetCurrentSession(ctx)
+	if err != nil {
+		log.Error("failed to get current session", err)
+		return nil, err
+	}
+
+	targetSessionID := ctx.Params["id"]
+	if targetSessionID == "" {
+		return nil, types.NewServiceError(http.StatusBadRequest, "session id is required")
+	}
+
+	targetSession, err := redis.Cache[modeliamsession.Session]().Get(modeliamsession.SessionIDKey(targetSessionID))
+	if err != nil {
+		if errors.Is(err, types.ErrEntryNotFound) {
+			if targetSessionID == currentSessionID {
+				ctx.SetCookie("session_id", "", -1, "/", "", false, true)
+			}
+			return &modeliamsession.SessionsDeleteRsp{}, nil
+		}
+		log.Error("failed to load target session", err)
+		return nil, err
+	}
+	if targetSession.UserID != currentSession.UserID {
+		return nil, types.NewServiceError(http.StatusForbidden, "forbidden")
+	}
+
+	if _, err = DeleteSession(targetSessionID); err != nil {
+		if errors.Is(err, types.ErrEntryNotFound) {
+			if targetSessionID == currentSessionID {
+				ctx.SetCookie("session_id", "", -1, "/", "", false, true)
+			}
+			return &modeliamsession.SessionsDeleteRsp{}, nil
+		}
+		log.Error("failed to delete target session", err)
+		return nil, err
+	}
+	if targetSessionID == currentSessionID {
+		ctx.SetCookie("session_id", "", -1, "/", "", false, true)
+	}
+
+	return &modeliamsession.SessionsDeleteRsp{}, nil
 }

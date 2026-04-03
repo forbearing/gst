@@ -1047,6 +1047,129 @@ func TestSession(t *testing.T) {
 		})
 	})
 
+	t.Run("delete_specified_session", func(t *testing.T) {
+		var otherSessionID string
+
+		t.Run("login_additional_session", func(t *testing.T) {
+			cli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			resp, err := cli.Create(iam.LoginReq{
+				Username: username,
+				Password: password,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				otherSessionID = rsp.SessionID
+			})
+
+			requireUserSessionContains(t, userID, otherSessionID)
+		})
+
+		t.Run("delete_non_current_session", func(t *testing.T) {
+			cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Delete(otherSessionID)
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteRsp) {
+				require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
+			})
+
+			items := make([]iam.CurrentSession, 0)
+			total := new(int64)
+			resp, err = cli.List(&items, total)
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+				require.Len(t, rsp.Items, 1)
+				require.EqualValues(t, 1, rsp.Total)
+				require.Equal(t, sessionID, rsp.Items[0].ID)
+				require.True(t, rsp.Items[0].IsCurrent)
+			})
+
+			requireSessionNotFound(t, otherSessionID)
+			requireUserSessionNotContains(t, userID, otherSessionID)
+			requireUserSessionContains(t, userID, sessionID)
+		})
+
+		t.Run("delete_missing_session_is_idempotent", func(t *testing.T) {
+			cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			resp, err := cli.Delete(otherSessionID)
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteRsp) {
+				require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
+			})
+
+			items := make([]iam.CurrentSession, 0)
+			total := new(int64)
+			resp, err = cli.List(&items, total)
+			require.NoError(t, err)
+			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+				require.Len(t, rsp.Items, 1)
+				require.EqualValues(t, 1, rsp.Total)
+				require.Equal(t, sessionID, rsp.Items[0].ID)
+				require.True(t, rsp.Items[0].IsCurrent)
+			})
+		})
+
+		t.Run("forbidden_when_deleting_other_user_session", func(t *testing.T) {
+			otherUsername := "session02"
+			otherPassword := "12345678"
+			otherUserID := ""
+
+			signupCli, err := client.New(signupAPI)
+			require.NoError(t, err)
+
+			signupResp, err := signupCli.Create(iam.SignupReq{
+				Username:   otherUsername,
+				Password:   otherPassword,
+				RePassword: otherPassword,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, signupResp, func(t *testing.T, rsp iam.SignupRsp) {
+				require.Equal(t, otherUsername, rsp.Username)
+				require.NotEmpty(t, rsp.UserID)
+				otherUserID = rsp.UserID
+			})
+
+			loginCli, err := client.New(loginAPI)
+			require.NoError(t, err)
+
+			loginResp, err := loginCli.Create(iam.LoginReq{
+				Username: otherUsername,
+				Password: otherPassword,
+			})
+			require.NoError(t, err)
+			helper.TestResp(t, loginResp, func(t *testing.T, rsp *iam.LoginRsp) {
+				require.NotEmpty(t, rsp.SessionID)
+				otherSessionID = rsp.SessionID
+			})
+
+			requireUserSessionContains(t, otherUserID, otherSessionID)
+
+			cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+				Name:  "session_id",
+				Value: sessionID,
+			}))
+			require.NoError(t, err)
+
+			_, err = cli.Delete(otherSessionID)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "403")
+
+			requireUserSessionContains(t, otherUserID, otherSessionID)
+		})
+	})
+
 	t.Run("logout_and_offline_manage_all_user_sessions", func(t *testing.T) {
 		var staleSessionID string
 		var latestSessionID string
@@ -1124,6 +1247,52 @@ func TestSession(t *testing.T) {
 			require.NoError(t, err)
 			require.NotContains(t, userSessionIDs, latestSessionID)
 		})
+	})
+
+	t.Run("relogin_for_delete_specified_current", func(t *testing.T) {
+		cli, err := client.New(loginAPI)
+		require.NoError(t, err)
+
+		resp, err := cli.Create(iam.LoginReq{
+			Username: username,
+			Password: password,
+		})
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			require.NotEmpty(t, rsp.SessionID)
+			sessionID = rsp.SessionID
+		})
+
+		requireUserSessionContains(t, userID, sessionID)
+	})
+
+	t.Run("delete_specified_current_session", func(t *testing.T) {
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Delete(sessionID)
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteRsp) {
+			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
+		})
+
+		requireSessionNotFound(t, sessionID)
+		requireUserSessionNotContains(t, userID, sessionID)
+	})
+
+	t.Run("current_unauthorized_after_delete_specified_current", func(t *testing.T) {
+		cli, err := client.New(currentAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Request(http.MethodGet, new(struct{}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "401")
 	})
 
 	t.Run("relogin_for_delete_current", func(t *testing.T) {
