@@ -93,13 +93,13 @@ func buildCurrentListRsp(session modeliamsession.Session, fallbackSessionID stri
 	}
 
 	return &modeliamsession.CurrentListRsp{
-		Session:   buildCurrentSession(session, fallbackSessionID),
+		Session:   buildCurrentSessionView(session, fallbackSessionID),
 		Principal: *principal,
 	}
 }
 
-// buildCurrentSession builds the response snapshot for a session summary endpoint.
-func buildCurrentSession(session modeliamsession.Session, currentSessionID string) modeliamsession.CurrentSession {
+// buildCurrentSessionView builds the response snapshot for a session query endpoint.
+func buildCurrentSessionView(session modeliamsession.Session, currentSessionID string) modeliamsession.SessionView {
 	sessionID := session.ID
 	if sessionID == "" {
 		sessionID = currentSessionID
@@ -109,7 +109,7 @@ func buildCurrentSession(session modeliamsession.Session, currentSessionID strin
 		state = modeliamsession.SessionStatusActive
 	}
 
-	return modeliamsession.CurrentSession{
+	return modeliamsession.SessionView{
 		ID:          sessionID,
 		State:       state,
 		IssuedAt:    session.IssuedAt,

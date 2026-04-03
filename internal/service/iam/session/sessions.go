@@ -45,7 +45,7 @@ func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsessi
 		return nil, err
 	}
 
-	items := make([]modeliamsession.CurrentSession, 0, len(sessionIDs))
+	items := make([]modeliamsession.SessionView, 0, len(sessionIDs))
 	for i := range sessionIDs {
 		sessionKey := modeliamsession.SessionIDKey(sessionIDs[i])
 		session, getErr := redis.Cache[modeliamsession.Session]().Get(sessionKey)
@@ -57,7 +57,7 @@ func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsessi
 			log.Error("failed to load session from redis", getErr)
 			return nil, getErr
 		}
-		items = append(items, buildCurrentSession(session, sessionID))
+		items = append(items, buildCurrentSessionView(session, sessionID))
 	}
 
 	sort.Slice(items, func(i, j int) bool {
@@ -109,7 +109,7 @@ func (s *SessionsGetService) Get(ctx *types.ServiceContext, req *modeliamsession
 	}
 
 	return &modeliamsession.SessionsGetRsp{
-		Session: buildCurrentSession(targetSession, currentSessionID),
+		Session: buildCurrentSessionView(targetSession, currentSessionID),
 	}, nil
 }
 

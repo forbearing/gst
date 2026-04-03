@@ -242,16 +242,16 @@ func TestSessionList(t *testing.T) {
 		}))
 		require.NoError(t, err)
 
-		items := make([]iam.CurrentSession, 0)
+		items := make([]iam.SessionView, 0)
 		total := new(int64)
 		resp, err := cli.List(&items, total)
 		require.NoError(t, err)
 
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.SessionView]) {
 			require.Len(t, rsp.Items, 2)
 			require.EqualValues(t, 2, rsp.Total)
 
-			sessionMap := make(map[string]iam.CurrentSession, len(rsp.Items))
+			sessionMap := make(map[string]iam.SessionView, len(rsp.Items))
 			for i := range rsp.Items {
 				sessionMap[rsp.Items[i].ID] = rsp.Items[i]
 			}
@@ -307,11 +307,11 @@ func TestSessionDelete(t *testing.T) {
 			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
 		})
 
-		items := make([]iam.CurrentSession, 0)
+		items := make([]iam.SessionView, 0)
 		total := new(int64)
 		resp, err = cli.List(&items, total)
 		require.NoError(t, err)
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.SessionView]) {
 			require.Len(t, rsp.Items, 1)
 			require.EqualValues(t, 1, rsp.Total)
 			require.Equal(t, currentSessionID, rsp.Items[0].ID)
@@ -343,11 +343,11 @@ func TestSessionDelete(t *testing.T) {
 			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
 		})
 
-		items := make([]iam.CurrentSession, 0)
+		items := make([]iam.SessionView, 0)
 		total := new(int64)
 		resp, err = cli.List(&items, total)
 		require.NoError(t, err)
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.SessionView]) {
 			require.Len(t, rsp.Items, 1)
 			require.EqualValues(t, 1, rsp.Total)
 			require.Equal(t, currentSessionID, rsp.Items[0].ID)
@@ -431,11 +431,11 @@ func TestSessionDeleteOthers(t *testing.T) {
 			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
 		})
 
-		items := make([]iam.CurrentSession, 0)
+		items := make([]iam.SessionView, 0)
 		total := new(int64)
 		resp, err = cli.List(&items, total)
 		require.NoError(t, err)
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.SessionView]) {
 			require.Len(t, rsp.Items, 1)
 			require.EqualValues(t, 1, rsp.Total)
 			require.Equal(t, currentSessionID, rsp.Items[0].ID)
@@ -465,11 +465,11 @@ func TestSessionDeleteOthers(t *testing.T) {
 			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
 		})
 
-		items := make([]iam.CurrentSession, 0)
+		items := make([]iam.SessionView, 0)
 		total := new(int64)
 		resp, err = cli.List(&items, total)
 		require.NoError(t, err)
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.SessionView]) {
 			require.Len(t, rsp.Items, 1)
 			require.EqualValues(t, 1, rsp.Total)
 			require.Equal(t, currentSessionID, rsp.Items[0].ID)

@@ -9,7 +9,7 @@ type CurrentListReq struct{}
 
 // CurrentListRsp returns the current session together with the latest principal snapshot.
 type CurrentListRsp struct {
-	Session   CurrentSession   `json:"session"`
+	Session   SessionView      `json:"session"`
 	Principal CurrentPrincipal `json:"principal"`
 }
 
@@ -19,8 +19,8 @@ type CurrentDeleteReq struct{}
 // CurrentDeleteRsp is the response payload for deleting the current session.
 type CurrentDeleteRsp struct{}
 
-// CurrentSession describes a session snapshot returned by session query endpoints.
-type CurrentSession struct {
+// SessionView describes a session snapshot returned by session query endpoints.
+type SessionView struct {
 	ID          string        `json:"id"`
 	State       SessionStatus `json:"state"`
 	IssuedAt    time.Time     `json:"issued_at"`

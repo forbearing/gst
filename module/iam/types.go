@@ -41,7 +41,7 @@ type (
 	SessionsListRsp   = modeliamsession.SessionsListRsp
 	SessionsDeleteReq = modeliamsession.SessionsDeleteReq
 	SessionsDeleteRsp = modeliamsession.SessionsDeleteRsp
-	CurrentSession    = modeliamsession.CurrentSession
+	SessionView       = modeliamsession.SessionView
 	OnlineUser        = modeliamsession.OnlineUser
 	OfflineReq        = modeliamsession.OfflineReq
 
