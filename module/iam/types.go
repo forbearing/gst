@@ -35,6 +35,8 @@ type (
 	CurrentListRsp    = modeliamsession.CurrentListRsp
 	CurrentDeleteReq  = modeliamsession.CurrentDeleteReq
 	CurrentDeleteRsp  = modeliamsession.CurrentDeleteRsp
+	SessionsGetReq    = modeliamsession.SessionsGetReq
+	SessionsGetRsp    = modeliamsession.SessionsGetRsp
 	SessionsListReq   = modeliamsession.SessionsListReq
 	SessionsListRsp   = modeliamsession.SessionsListRsp
 	SessionsDeleteReq = modeliamsession.SessionsDeleteReq

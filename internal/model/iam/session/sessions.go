@@ -9,6 +9,14 @@ type SessionsListRsp struct {
 	Total int64            `json:"total"`
 }
 
+// SessionsGetReq is the request payload for loading a specified session of the current user.
+type SessionsGetReq struct{}
+
+// SessionsGetRsp returns the detail of a specified session of the current authenticated user.
+type SessionsGetRsp struct {
+	Session CurrentSession `json:"session"`
+}
+
 // SessionsDeleteReq is the request payload for deleting a specified session of the current user.
 type SessionsDeleteReq struct{}
 

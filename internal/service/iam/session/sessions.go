@@ -17,6 +17,11 @@ type SessionsListService struct {
 	service.Base[*model.Empty, *modeliamsession.SessionsListReq, *modeliamsession.SessionsListRsp]
 }
 
+// SessionsGetService handles retrieval of a specified session for the current authenticated user.
+type SessionsGetService struct {
+	service.Base[*model.Empty, *modeliamsession.SessionsGetReq, *modeliamsession.SessionsGetRsp]
+}
+
 // SessionsDeleteService handles invalidation of a specified session for the current authenticated user.
 type SessionsDeleteService struct {
 	service.Base[*model.Empty, *modeliamsession.SessionsDeleteReq, *modeliamsession.SessionsDeleteRsp]
@@ -73,6 +78,38 @@ func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsessi
 	return &modeliamsession.SessionsListRsp{
 		Items: items,
 		Total: int64(len(items)),
+	}, nil
+}
+
+// Get returns the detail of a specified session for the current authenticated user.
+func (s *SessionsGetService) Get(ctx *types.ServiceContext, req *modeliamsession.SessionsGetReq) (rsp *modeliamsession.SessionsGetRsp, err error) {
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
+
+	currentSessionID, currentSession, err := GetCurrentSession(ctx)
+	if err != nil {
+		log.Error("failed to get current session", err)
+		return nil, err
+	}
+
+	targetSessionID := ctx.Params["id"]
+	if targetSessionID == "" {
+		return nil, types.NewServiceError(http.StatusBadRequest, "session id is required")
+	}
+
+	targetSession, err := redis.Cache[modeliamsession.Session]().Get(modeliamsession.SessionIDKey(targetSessionID))
+	if err != nil {
+		if errors.Is(err, types.ErrEntryNotFound) {
+			return nil, types.NewServiceError(http.StatusNotFound, "session not found")
+		}
+		log.Error("failed to load target session", err)
+		return nil, err
+	}
+	if targetSession.UserID != currentSession.UserID {
+		return nil, types.NewServiceError(http.StatusForbidden, "forbidden")
+	}
+
+	return &modeliamsession.SessionsGetRsp{
+		Session: buildCurrentSession(targetSession, currentSessionID),
 	}, nil
 }
 

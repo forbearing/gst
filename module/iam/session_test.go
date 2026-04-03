@@ -156,6 +156,80 @@ func TestSessionCurrent(t *testing.T) {
 	})
 }
 
+func TestSessionGet(t *testing.T) {
+	t.Run("get_current_user_session_detail", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+		otherSessionID := loginSession(t, account.Username, account.Password)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		got := new(iam.SessionsGetRsp)
+		resp, err := cli.Get(otherSessionID, got)
+		require.NoError(t, err)
+		helper.TestResp[*iam.SessionsGetRsp](t, resp, func(t *testing.T, rsp *iam.SessionsGetRsp) {
+			require.Equal(t, otherSessionID, rsp.Session.ID)
+			require.False(t, rsp.Session.IsCurrent)
+		})
+	})
+
+	t.Run("get_current_session_detail", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		got := new(iam.SessionsGetRsp)
+		resp, err := cli.Get(currentSessionID, got)
+		require.NoError(t, err)
+		helper.TestResp[*iam.SessionsGetRsp](t, resp, func(t *testing.T, rsp *iam.SessionsGetRsp) {
+			require.Equal(t, currentSessionID, rsp.Session.ID)
+			require.True(t, rsp.Session.IsCurrent)
+		})
+	})
+
+	t.Run("forbidden_when_getting_other_user_session", func(t *testing.T) {
+		attacker := newSessionTestAccount(t)
+		attackerSessionID := loginSession(t, attacker.Username, attacker.Password)
+
+		victim := newSessionTestAccount(t)
+		victimSessionID := loginSession(t, victim.Username, victim.Password)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: attackerSessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Get(victimSessionID, new(iam.SessionsGetRsp))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+	})
+
+	t.Run("not_found_when_session_missing", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Get("missing-session-id", new(iam.SessionsGetRsp))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "404")
+	})
+}
+
 func TestSessionList(t *testing.T) {
 	t.Run("list_current_user_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)
