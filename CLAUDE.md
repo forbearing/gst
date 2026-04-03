@@ -14,9 +14,14 @@
 - 修改完代码后, 需要同时检查下相关的文档/注释是否需要更新.
 - 代码新增功能、bug修复完后, 需要更新其对应的函数、结构体、接口、类的代码注释和文档、代码注释请使用英文
 - module, internal/model 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq，Response 命名偏向于 XXXRsp, 例如 SignupRsp
-- 开发 module 时，每个接口对应的【model/REQ/RSP】、【业务逻辑】必须写在自己对应的单独代码文件中，禁止将多个接口的【model/REQ/RSP】写在同一个 model 代码文件中，禁止将多个不同接口的【业务逻辑】写在同一个 service 代码文件中。举例如下：
-  - 假设有接口 /api/users，/api/groups，那么需要两个 model 文件和 service 文件
-  - 假设有接口 POST /api/configs、DELETE /api/configs/:id、 DELETE /api/configs、PUT /api/configs/:id、PATCH /api/configs/:id、GET /api/configs、GET /api/configs/:id，依然是一个 model 文件和一个 service 文件，因为这是同一个资源对象，只需要在一个 service 结构体的不同方法中实现业务逻辑。
+- 开发 module 时，每个接口对应的【model/REQ/RSP】、【业务逻辑】必须写在自己对应的单独代码文件中，禁止将多个接口的【model/REQ/RSP】写在同一个 model 代码文件中，禁止将多个不同接口的【业务逻辑】写在同一个 service 代码文件中。三种场景如下：
+  - 完全不同的业务逻辑和接口：/api/users，/api/groups，那么需要两个 model 文件和两个 service 文件
+  - 同一资源对象则走框架提供的 curd：POST /api/configs、DELETE /api/configs/:id、 DELETE /api/configs、PUT /api/configs/:id、PATCH /api/configs/:id、GET /api/configs、GET /api/configs/:id，只需要一个 model 文件且 model 文件中没有自定义 REQ 和 RSP，service 文件中只有一个结构体，在结构体上加上不同的 hooks。
+  - 同一资源对象走自定义业务逻辑：GET /api/iam/sessions、DELETE /api/iam/sessions/:id。还是只需要一个 model 文件和一个 service 文件，但是都有自己的 REQ、RSP service结构体：
+    - model 代码文件中的结构体：`SessionsListReq`、`SessionsListRsp`、`SessionsDeleteReq`、`SessionsDeleteRsp`
+    - service 结构体方法：
+      `func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsListReq) (rsp *modeliamsession.SessionsListRsp, err error)`、
+      `func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteReq) (rsp *modeliamsession.SessionsDeleteRsp, err error)`
 
 - 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释；如果发现现有注释有问题或不符合代码逻辑也需要优化注释。
 
