@@ -105,6 +105,35 @@ func DeleteSession(sessionID string) (modeliamsession.Session, error) {
 	return session, nil
 }
 
+// DeleteOtherSessions deletes all indexed sessions of a user except the current session.
+func DeleteOtherSessions(userID, currentSessionID string) error {
+	if userID == "" {
+		return nil
+	}
+
+	sessionIDs, err := listUserSessionIDs(userID)
+	if err != nil {
+		return err
+	}
+
+	for i := range sessionIDs {
+		sessionID := sessionIDs[i]
+		if sessionID == "" || sessionID == currentSessionID {
+			continue
+		}
+
+		if _, err = DeleteSession(sessionID); err != nil {
+			if errors.Is(err, types.ErrEntryNotFound) {
+				_ = redis.ZRem(modeliamsession.SessionUserKey(userID), sessionID)
+				continue
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
 // InvalidateUserSessions removes all indexed sessions for a user.
 // It is best-effort: failures to talk to Redis do not block password updates.
 func InvalidateUserSessions(userID string) {

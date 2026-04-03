@@ -91,6 +91,13 @@ func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliams
 	if targetSessionID == "" {
 		return nil, types.NewServiceError(http.StatusBadRequest, "session id is required")
 	}
+	if targetSessionID == "others" {
+		if err = DeleteOtherSessions(currentSession.UserID, currentSessionID); err != nil {
+			log.Error("failed to delete other sessions", err)
+			return nil, err
+		}
+		return &modeliamsession.SessionsDeleteRsp{}, nil
+	}
 
 	targetSession, err := redis.Cache[modeliamsession.Session]().Get(modeliamsession.SessionIDKey(targetSessionID))
 	if err != nil {

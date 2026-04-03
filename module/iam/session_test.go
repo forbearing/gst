@@ -334,6 +334,76 @@ func TestSessionDelete(t *testing.T) {
 	})
 }
 
+func TestSessionDeleteOthers(t *testing.T) {
+	t.Run("delete_all_other_sessions", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+		otherSessionID1 := loginSession(t, account.Username, account.Password)
+		otherSessionID2 := loginSession(t, account.Username, account.Password)
+
+		requireUserSessionContains(t, account.UserID, currentSessionID)
+		requireUserSessionContains(t, account.UserID, otherSessionID1)
+		requireUserSessionContains(t, account.UserID, otherSessionID2)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Delete("others")
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteRsp) {
+			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
+		})
+
+		items := make([]iam.CurrentSession, 0)
+		total := new(int64)
+		resp, err = cli.List(&items, total)
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+			require.Len(t, rsp.Items, 1)
+			require.EqualValues(t, 1, rsp.Total)
+			require.Equal(t, currentSessionID, rsp.Items[0].ID)
+			require.True(t, rsp.Items[0].IsCurrent)
+		})
+
+		requireUserSessionContains(t, account.UserID, currentSessionID)
+		requireUserSessionNotContains(t, account.UserID, otherSessionID1)
+		requireUserSessionNotContains(t, account.UserID, otherSessionID2)
+		requireSessionNotFound(t, otherSessionID1)
+		requireSessionNotFound(t, otherSessionID2)
+	})
+
+	t.Run("idempotent_when_no_other_sessions", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Delete("others")
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteRsp) {
+			require.Equal(t, iam.SessionsDeleteRsp{}, rsp)
+		})
+
+		items := make([]iam.CurrentSession, 0)
+		total := new(int64)
+		resp, err = cli.List(&items, total)
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[iam.CurrentSession]) {
+			require.Len(t, rsp.Items, 1)
+			require.EqualValues(t, 1, rsp.Total)
+			require.Equal(t, currentSessionID, rsp.Items[0].ID)
+			require.True(t, rsp.Items[0].IsCurrent)
+		})
+	})
+}
+
 func TestSessionOffline(t *testing.T) {
 	t.Run("offline_removes_remaining_user_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)
