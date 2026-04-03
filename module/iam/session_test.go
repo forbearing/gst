@@ -478,6 +478,71 @@ func TestSessionDeleteOthers(t *testing.T) {
 	})
 }
 
+func TestSessionDeleteAll(t *testing.T) {
+	t.Run("delete_all_sessions", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+		otherSessionID := loginSession(t, account.Username, account.Password)
+
+		requireUserSessionContains(t, account.UserID, currentSessionID)
+		requireUserSessionContains(t, account.UserID, otherSessionID)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Request(http.MethodDelete, new(struct{}))
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteAllRsp) {
+			require.Equal(t, iam.SessionsDeleteAllRsp{}, rsp)
+		})
+
+		requireSessionNotFound(t, currentSessionID)
+		requireSessionNotFound(t, otherSessionID)
+		requireUserSessionNotContains(t, account.UserID, currentSessionID)
+		requireUserSessionNotContains(t, account.UserID, otherSessionID)
+
+		_, err = cli.Request(http.MethodGet, new(struct{}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "401")
+	})
+
+	t.Run("idempotent_when_stale_session_index_exists", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		currentSessionID := loginSession(t, account.Username, account.Password)
+		staleSessionID := loginSession(t, account.Username, account.Password)
+
+		requireUserSessionContains(t, account.UserID, currentSessionID)
+		requireUserSessionContains(t, account.UserID, staleSessionID)
+
+		require.NoError(t, redis.Cache[modeliamsession.Session]().Delete(modeliamsession.SessionIDKey(staleSessionID)))
+		requireUserSessionContains(t, account.UserID, staleSessionID)
+
+		cli, err := client.New(sessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: currentSessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Request(http.MethodDelete, new(struct{}))
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SessionsDeleteAllRsp) {
+			require.Equal(t, iam.SessionsDeleteAllRsp{}, rsp)
+		})
+
+		requireSessionNotFound(t, currentSessionID)
+		requireSessionNotFound(t, staleSessionID)
+		requireUserSessionNotContains(t, account.UserID, currentSessionID)
+		requireUserSessionNotContains(t, account.UserID, staleSessionID)
+
+		_, err = cli.Request(http.MethodGet, new(struct{}))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "401")
+	})
+}
+
 func TestSessionOffline(t *testing.T) {
 	t.Run("offline_removes_remaining_user_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)

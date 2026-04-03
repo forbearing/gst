@@ -22,3 +22,9 @@ type SessionsDeleteReq struct{}
 
 // SessionsDeleteRsp returns the delete result for a specified session of the current user.
 type SessionsDeleteRsp struct{}
+
+// SessionsDeleteAllReq is the request payload for deleting all sessions of the current user.
+type SessionsDeleteAllReq struct{}
+
+// SessionsDeleteAllRsp returns the delete result for all sessions of the current user.
+type SessionsDeleteAllRsp struct{}

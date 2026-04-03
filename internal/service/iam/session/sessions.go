@@ -27,6 +27,11 @@ type SessionsDeleteService struct {
 	service.Base[*model.Empty, *modeliamsession.SessionsDeleteReq, *modeliamsession.SessionsDeleteRsp]
 }
 
+// SessionsDeleteAllService handles invalidation of all sessions for the current authenticated user.
+type SessionsDeleteAllService struct {
+	service.Base[*model.Empty, *modeliamsession.SessionsDeleteAllReq, *modeliamsession.SessionsDeleteAllRsp]
+}
+
 // List returns all active sessions for the current authenticated user.
 func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsListReq) (rsp *modeliamsession.SessionsListRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
@@ -171,4 +176,24 @@ func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliams
 	}
 
 	return &modeliamsession.SessionsDeleteRsp{}, nil
+}
+
+// Delete invalidates all sessions for the current authenticated user.
+func (s *SessionsDeleteAllService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteAllReq) (rsp *modeliamsession.SessionsDeleteAllRsp, err error) {
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
+
+	_, currentSession, err := GetCurrentSession(ctx)
+	if err != nil {
+		log.Error("failed to get current session", err)
+		return nil, err
+	}
+
+	if err = DeleteAllSessions(currentSession.UserID); err != nil {
+		log.Error("failed to delete all sessions", err)
+		return nil, err
+	}
+
+	ctx.SetCookie("session_id", "", -1, "/", "", false, true)
+
+	return &modeliamsession.SessionsDeleteAllRsp{}, nil
 }

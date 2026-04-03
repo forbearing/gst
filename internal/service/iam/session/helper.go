@@ -139,6 +139,37 @@ func DeleteOtherSessions(userID, currentSessionID string) error {
 	return nil
 }
 
+// DeleteAllSessions deletes all indexed sessions of a user.
+// Missing session records are treated as stale index entries and cleaned up
+// from the user's ZSET so the operation remains idempotent.
+func DeleteAllSessions(userID string) error {
+	if userID == "" {
+		return nil
+	}
+
+	sessionIDs, err := listUserSessionIDs(userID)
+	if err != nil {
+		return err
+	}
+
+	for i := range sessionIDs {
+		sessionID := sessionIDs[i]
+		if sessionID == "" {
+			continue
+		}
+
+		if _, err = DeleteSession(sessionID); err != nil {
+			if errors.Is(err, types.ErrEntryNotFound) {
+				_ = redis.ZRem(modeliamsession.SessionUserKey(userID), sessionID)
+				continue
+			}
+			return err
+		}
+	}
+
+	return redis.Del(modeliamsession.SessionUserKey(userID))
+}
+
 // InvalidateUserSessions removes all indexed sessions for a user.
 // It is best-effort: failures to talk to Redis do not block password updates.
 func InvalidateUserSessions(userID string) {
