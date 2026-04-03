@@ -8,7 +8,7 @@
 6. 每次我纠正你时，反思你做错了什么，并制定永不再犯的计划
 7. 如果需求没有完全理解，请继续向我提问，直到完全清楚需求了才开始写代码！
 
-### 代码风格
+### 代码规范
 
 - 代码风格、测试用例风格、程序输出风格等必须和当前包中保持一致.
 - 修改完代码后, 需要同时检查下相关的文档/注释是否需要更新.
@@ -24,6 +24,16 @@
       `func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteReq) (rsp *modeliamsession.SessionsDeleteRsp, err error)`
 
 - 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释；如果发现现有注释有问题或不符合代码逻辑也需要优化注释。
+
+- module 包中的接口测试用例规范：
+  - 测试文件名名要符合子 moudle 名，例如 module/iam/session_test.go 就是专门用来存放 session 相关接口的测试用例，其对应的接口实现放在 internal/{model,service}/session 目录中。
+
+  - 测试组织方式要改成一个接口对应一个顶层测试函数，各个顶层测试函数应该尽量避免相互影响。
+
+  - 如果同一个接口有多种场景，则在这个接口对应的测试函数里 用 t.Run(...) 做子测试，如果只有一个场景，则不需要额外使用 t.Run(...) 来运行子测试。
+
+  - 测试用到的辅助函数应该放在其对应的测试文件中，例如 session 子模块相关的测试辅助函数应该放在 session_test.go 中，account 子模块相关的测试辅助函数应该放在 account_test.go 中。
+
 
 ### Sandbox
 
