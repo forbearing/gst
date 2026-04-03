@@ -13,13 +13,13 @@ import (
 	"github.com/forbearing/gst/util"
 )
 
-// CurrentService handles retrieval and invalidation of the current authenticated session.
-type CurrentService struct {
-	service.Base[*model.Empty, *modeliamsession.CurrentReq, *modeliamsession.CurrentRsp]
+// CurrentListService handles retrieval of the current authenticated session.
+type CurrentListService struct {
+	service.Base[*model.Empty, *modeliamsession.CurrentListReq, *modeliamsession.CurrentListRsp]
 }
 
 // List returns the current authenticated session together with the latest user snapshot.
-func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.CurrentReq) (rsp *modeliamsession.CurrentRsp, err error) {
+func (s *CurrentListService) List(ctx *types.ServiceContext, req *modeliamsession.CurrentListReq) (rsp *modeliamsession.CurrentListRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	sessionID, session, err := GetCurrentSession(ctx)
@@ -48,7 +48,7 @@ func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.Cu
 		}
 	}
 
-	return buildCurrentRsp(session, sessionID, &modeliamsession.CurrentPrincipal{
+	return buildCurrentListRsp(session, sessionID, &modeliamsession.CurrentPrincipal{
 		UserID:             user.ID,
 		Username:           user.Username,
 		Email:              util.Deref(user.Email),
@@ -61,8 +61,13 @@ func (s *CurrentService) List(ctx *types.ServiceContext, req *modeliamsession.Cu
 	}), nil
 }
 
+// CurrentDeleteService handles invalidation of the current authenticated session.
+type CurrentDeleteService struct {
+	service.Base[*model.Empty, *modeliamsession.CurrentDeleteReq, *modeliamsession.CurrentDeleteRsp]
+}
+
 // Delete invalidates the current authenticated session and clears the session cookie.
-func (s *CurrentService) Delete(ctx *types.ServiceContext, req *modeliamsession.CurrentReq) (rsp *modeliamsession.CurrentRsp, err error) {
+func (s *CurrentDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.CurrentDeleteReq) (rsp *modeliamsession.CurrentDeleteRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
 	sessionID, err := ctx.Cookie("session_id")
@@ -71,34 +76,23 @@ func (s *CurrentService) Delete(ctx *types.ServiceContext, req *modeliamsession.
 		return nil, types.NewServiceError(http.StatusUnauthorized, err.Error())
 	}
 
-	session, err := DeleteSession(sessionID)
-	if err != nil {
+	if _, err = DeleteSession(sessionID); err != nil {
 		log.Error("failed to delete current session", err)
 		return nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "session not exists", err)
 	}
 
 	ctx.SetCookie("session_id", "", -1, "/", "", false, true)
 
-	return buildCurrentRsp(session, sessionID, &modeliamsession.CurrentPrincipal{
-		UserID:             session.UserID,
-		Username:           session.Username,
-		Email:              session.Email,
-		FirstName:          session.FirstName,
-		LastName:           session.LastName,
-		GroupID:            session.GroupID,
-		GroupName:          session.GroupName,
-		Status:             session.Status,
-		MustChangePassword: session.MustChangePassword,
-	}), nil
+	return &modeliamsession.CurrentDeleteRsp{}, nil
 }
 
-// buildCurrentRsp builds the API response for current session endpoints from the stored session snapshot.
-func buildCurrentRsp(session modeliamsession.Session, fallbackSessionID string, principal *modeliamsession.CurrentPrincipal) *modeliamsession.CurrentRsp {
+// buildCurrentListRsp builds the API response for getting the current session from the stored session snapshot.
+func buildCurrentListRsp(session modeliamsession.Session, fallbackSessionID string, principal *modeliamsession.CurrentPrincipal) *modeliamsession.CurrentListRsp {
 	if principal == nil {
 		principal = &modeliamsession.CurrentPrincipal{}
 	}
 
-	return &modeliamsession.CurrentRsp{
+	return &modeliamsession.CurrentListRsp{
 		Session:   buildCurrentSession(session, fallbackSessionID),
 		Principal: *principal,
 	}

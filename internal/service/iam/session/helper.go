@@ -106,6 +106,8 @@ func DeleteSession(sessionID string) (modeliamsession.Session, error) {
 }
 
 // DeleteOtherSessions deletes all indexed sessions of a user except the current session.
+// Missing session records are treated as stale index entries and cleaned up
+// from the user's ZSET so the operation remains idempotent.
 func DeleteOtherSessions(userID, currentSessionID string) error {
 	if userID == "" {
 		return nil
@@ -124,6 +126,9 @@ func DeleteOtherSessions(userID, currentSessionID string) error {
 
 		if _, err = DeleteSession(sessionID); err != nil {
 			if errors.Is(err, types.ErrEntryNotFound) {
+				// The session payload may already be gone while the user-session
+				// index still references it. Remove the stale index entry and
+				// continue deleting the remaining sessions.
 				_ = redis.ZRem(modeliamsession.SessionUserKey(userID), sessionID)
 				continue
 			}

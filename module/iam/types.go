@@ -31,8 +31,10 @@ type (
 	Session           = modeliamsession.Session
 	Token             = modeliamsession.Token
 	Heartbeat         = modeliamsession.Heartbeat
-	CurrentReq        = modeliamsession.CurrentReq
-	CurrentRsp        = modeliamsession.CurrentRsp
+	CurrentListReq    = modeliamsession.CurrentListReq
+	CurrentListRsp    = modeliamsession.CurrentListRsp
+	CurrentDeleteReq  = modeliamsession.CurrentDeleteReq
+	CurrentDeleteRsp  = modeliamsession.CurrentDeleteRsp
 	SessionsListReq   = modeliamsession.SessionsListReq
 	SessionsListRsp   = modeliamsession.SessionsListRsp
 	SessionsDeleteReq = modeliamsession.SessionsDeleteReq

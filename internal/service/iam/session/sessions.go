@@ -77,7 +77,9 @@ func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsessi
 }
 
 // Delete invalidates a specified session for the current authenticated user.
-// The endpoint is idempotent: deleting a missing session still returns success.
+// When the route id is "others", it keeps the current session active and
+// revokes every other indexed session of the same user. The endpoint remains
+// idempotent: deleting a missing session still returns success.
 func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteReq) (rsp *modeliamsession.SessionsDeleteRsp, err error) {
 	log := s.WithServiceContext(ctx, ctx.GetPhase())
 
@@ -92,6 +94,9 @@ func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliams
 		return nil, types.NewServiceError(http.StatusBadRequest, "session id is required")
 	}
 	if targetSessionID == "others" {
+		// DELETE /api/iam/sessions/others is a bulk self-service logout for
+		// secondary sessions. The current cookie-backed session must survive so
+		// the caller can continue using the API after the request completes.
 		if err = DeleteOtherSessions(currentSession.UserID, currentSessionID); err != nil {
 			log.Error("failed to delete other sessions", err)
 			return nil, err

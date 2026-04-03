@@ -145,7 +145,7 @@ func TestSessionCurrent(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, new(struct{}))
 		require.NoError(t, err)
 
-		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentRsp) {
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentListRsp) {
 			require.NotEmpty(t, rsp.Principal.UserID)
 			require.Equal(t, account.Username, rsp.Principal.Username)
 			require.Equal(t, string(modeliam.UserStatusActive), rsp.Principal.Status)
@@ -456,10 +456,8 @@ func TestSessionCurrentDelete(t *testing.T) {
 
 		resp, err := cli.Request(http.MethodDelete, new(struct{}))
 		require.NoError(t, err)
-		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentRsp) {
-			require.NotEmpty(t, rsp.Session.ID)
-			require.Equal(t, account.Username, rsp.Principal.Username)
-			require.True(t, rsp.Session.IsCurrent)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentDeleteRsp) {
+			require.Equal(t, iam.CurrentDeleteRsp{}, rsp)
 		})
 
 		requireSessionNotFound(t, sessionID)

@@ -4,14 +4,20 @@ import (
 	"time"
 )
 
-// CurrentReq is the request payload for current-session endpoints.
-type CurrentReq struct{}
+// CurrentListReq is the request payload for getting the current session.
+type CurrentListReq struct{}
 
-// CurrentRsp returns the current session together with the latest principal snapshot.
-type CurrentRsp struct {
+// CurrentListRsp returns the current session together with the latest principal snapshot.
+type CurrentListRsp struct {
 	Session   CurrentSession   `json:"session"`
 	Principal CurrentPrincipal `json:"principal"`
 }
+
+// CurrentDeleteReq is the request payload for deleting the current session.
+type CurrentDeleteReq struct{}
+
+// CurrentDeleteRsp is the response payload for deleting the current session.
+type CurrentDeleteRsp struct{}
 
 // CurrentSession describes a session snapshot returned by session query endpoints.
 type CurrentSession struct {

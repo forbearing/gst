@@ -145,8 +145,8 @@ func Register(config ...Config) {
 	}
 
 	module.Use(module.NewWrapper("/iam/session/heartbeat", "id", false, &serviceiamsession.HeartbeatService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentService{}), consts.PHASE_LIST)
-	module.UseCustom(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentService{}), consts.PHASE_DELETE)
+	module.Use(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentListService{}), consts.PHASE_LIST)
+	module.UseCustom(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentDeleteService{}), consts.PHASE_DELETE)
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsListService{}), consts.PHASE_LIST)
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteService{}), consts.PHASE_DELETE)
 	module.Use(module.NewWrapper("/offline", "id", false, &serviceiamsession.OfflineService{}), consts.PHASE_CREATE)
