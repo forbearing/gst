@@ -28,32 +28,10 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 		return nil, errors.New("invalid status: must be active, inactive, or locked")
 	}
 
-	_, session, err := serviceiamsession.GetCurrentSession(ctx)
+	actorUsername, actor, target, err := loadPrivilegedActorAndTarget(ctx, req.UserID)
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid session")
-	}
-	actorUsername := session.Username
-	if actorUsername == "" {
-		actorUsername = ctx.Username
-	}
-	if actorUsername == "" {
-		return nil, errors.New("actor username not found")
-	}
-
-	actors := make([]*modeliam.User, 0)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: actorUsername}).List(&actors); err != nil {
-		log.Error("failed to query actor user", err)
-		return nil, errors.Wrap(err, "database error")
-	}
-	if len(actors) == 0 {
-		return nil, errors.New("actor user not found")
-	}
-	actor := actors[0]
-
-	target := new(modeliam.User)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Get(target, req.UserID); err != nil {
-		log.Error("failed to load target user", err)
-		return nil, errors.Wrap(err, "user not found")
+		log.Error("failed to resolve actor or target user", err)
+		return nil, err
 	}
 
 	if err = mayManageProtectedUser(actorUsername, actor, target); err != nil {
@@ -63,7 +41,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 
 	if target.Status == req.Status {
 		// Still revoke sessions when the target state is inactive or locked so Redis cannot drift.
-		if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
+		if shouldInvalidateUserSessions(req.Status) {
 			serviceiamsession.InvalidateUserSessions(req.UserID)
 		}
 		return &modeliamaccount.AccountStatusRsp{Msg: "account status unchanged"}, nil
@@ -78,7 +56,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 		return nil, errors.Wrap(err, "failed to update account status")
 	}
 
-	if req.Status == modeliam.UserStatusInactive || req.Status == modeliam.UserStatusLocked {
+	if shouldInvalidateUserSessions(req.Status) {
 		serviceiamsession.InvalidateUserSessions(req.UserID)
 	}
 
