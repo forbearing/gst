@@ -11,6 +11,7 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/module/iam"
+	"github.com/goforj/godump"
 )
 
 var (
@@ -34,6 +35,8 @@ type ListResponse[T any] struct {
 }
 
 func init() {
+	// NOTE: do not remove me
+	godump.Dump()
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
 	os.Setenv(config.SQLITE_IS_MEMORY, "true")
 	os.Setenv(config.SERVER_PORT, fmt.Sprintf("%d", port))

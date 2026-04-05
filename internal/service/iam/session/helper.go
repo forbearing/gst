@@ -25,6 +25,11 @@ func listUserSessionIDs(userID string) ([]string, error) {
 	return redis.ZRange(userKey, 0, -1)
 }
 
+// listAllSessionIDs loads all indexed session ids across users.
+func listAllSessionIDs() ([]string, error) {
+	return redis.ZRange(modeliamsession.SessionAllKey(), 0, -1)
+}
+
 // GetCurrentSession loads the current authenticated user session from the
 // request cookie and Redis storage. It only enforces the minimal integrity
 // required by IAM services: the session must exist and be bound to a user.
@@ -55,12 +60,19 @@ func TrackUserSession(session modeliamsession.Session) error {
 	if session.UserID == "" || session.ID == "" {
 		return nil
 	}
-	userKey := modeliamsession.SessionUserKey(session.UserID)
 	score := float64(session.IssuedAt.UnixMilli())
+	userKey := modeliamsession.SessionUserKey(session.UserID)
 	if err := redis.ZAdd(userKey, score, session.ID); err != nil {
 		return err
 	}
-	return redis.Expire(userKey, GetSessionExpiration())
+	if err := redis.ZAdd(modeliamsession.SessionAllKey(), score, session.ID); err != nil {
+		return err
+	}
+	expiration := GetSessionExpiration()
+	if err := redis.Expire(userKey, expiration); err != nil {
+		return err
+	}
+	return redis.Expire(modeliamsession.SessionAllKey(), expiration)
 }
 
 // UpdateSessionMustChangePassword updates the stored session after the user clears MustChangePassword in the database.
@@ -101,6 +113,9 @@ func DeleteSession(sessionID string) (modeliamsession.Session, error) {
 			return session, err
 		}
 	}
+	if err = redis.ZRem(modeliamsession.SessionAllKey(), sessionID); err != nil {
+		return session, err
+	}
 
 	return session, nil
 }
@@ -130,6 +145,7 @@ func DeleteOtherSessions(userID, currentSessionID string) error {
 				// index still references it. Remove the stale index entry and
 				// continue deleting the remaining sessions.
 				_ = redis.ZRem(modeliamsession.SessionUserKey(userID), sessionID)
+				_ = redis.ZRem(modeliamsession.SessionAllKey(), sessionID)
 				continue
 			}
 			return err
@@ -161,6 +177,7 @@ func DeleteAllSessions(userID string) error {
 		if _, err = DeleteSession(sessionID); err != nil {
 			if errors.Is(err, types.ErrEntryNotFound) {
 				_ = redis.ZRem(modeliamsession.SessionUserKey(userID), sessionID)
+				_ = redis.ZRem(modeliamsession.SessionAllKey(), sessionID)
 				continue
 			}
 			return err
@@ -181,6 +198,7 @@ func InvalidateUserSessions(userID string) {
 		for i := range sessionIDs {
 			sessionKey := modeliamsession.SessionIDKey(sessionIDs[i])
 			_ = redis.Cache[modeliamsession.Session]().Delete(sessionKey)
+			_ = redis.ZRem(modeliamsession.SessionAllKey(), sessionIDs[i])
 		}
 	}
 	_ = redis.Del(modeliamsession.SessionUserKey(userID))

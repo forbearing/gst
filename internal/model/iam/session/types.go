@@ -14,6 +14,9 @@ const SessionIDNamespace = SessionNamespacePrefix + ":id"
 // SessionUserNamespace stores the session index set by user ID.
 const SessionUserNamespace = SessionNamespacePrefix + ":user"
 
+// SessionAllNamespace stores the global session index set by session ID.
+const SessionAllNamespace = SessionNamespacePrefix + ":all"
+
 type SessionStatus string
 
 const (
@@ -81,4 +84,9 @@ func SessionIDKey(sessionID string) string {
 // SessionUserKey builds the Redis key for the indexed session set of a user.
 func SessionUserKey(userID string) string {
 	return sessionRedisKey(SessionUserNamespace, userID)
+}
+
+// SessionAllKey builds the Redis key for the indexed session set of all sessions.
+func SessionAllKey() string {
+	return SessionAllNamespace
 }

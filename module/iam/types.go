@@ -39,6 +39,9 @@ type (
 	SessionsGetRsp       = modeliamsession.SessionsGetRsp
 	SessionsListReq      = modeliamsession.SessionsListReq
 	SessionsListRsp      = modeliamsession.SessionsListRsp
+	AdminSessionsListReq = modeliamsession.AdminSessionsListReq
+	AdminSessionsListRsp = modeliamsession.AdminSessionsListRsp
+	AdminSessionUserView = modeliamsession.AdminSessionUserView
 	SessionsDeleteAllReq = modeliamsession.SessionsDeleteAllReq
 	SessionsDeleteAllRsp = modeliamsession.SessionsDeleteAllRsp
 	SessionsDeleteReq    = modeliamsession.SessionsDeleteReq

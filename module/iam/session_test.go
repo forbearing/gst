@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/client"
+	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/helper"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
@@ -17,10 +18,11 @@ import (
 )
 
 var (
-	sessionsAPI   = fmt.Sprintf("http://localhost:%d/api/iam/sessions", port)
-	heartbeatAPI  = fmt.Sprintf("http://localhost:%d/api/iam/session/heartbeat", port)
-	onlineuserAPI = fmt.Sprintf("http://localhost:%d/api/online-users", port)
-	offlineAPI    = fmt.Sprintf("http://localhost:%d/api/offline", port)
+	sessionsAPI      = fmt.Sprintf("http://localhost:%d/api/iam/sessions", port)
+	adminSessionsAPI = fmt.Sprintf("http://localhost:%d/api/iam/admin/sessions", port)
+	heartbeatAPI     = fmt.Sprintf("http://localhost:%d/api/iam/session/heartbeat", port)
+	onlineuserAPI    = fmt.Sprintf("http://localhost:%d/api/online-users", port)
+	offlineAPI       = fmt.Sprintf("http://localhost:%d/api/offline", port)
 )
 
 type sessionTestAccount struct {
@@ -29,82 +31,9 @@ type sessionTestAccount struct {
 	Password string
 }
 
-func requireSessionNotFound(t *testing.T, sessionID string) {
-	t.Helper()
-
-	sessionKey := modeliamsession.SessionIDKey(sessionID)
-	_, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
-	require.ErrorIs(t, err, types.ErrEntryNotFound)
-}
-
-func requireUserSessionContains(t *testing.T, userID, sessionID string) {
-	t.Helper()
-
-	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
-	require.NoError(t, err)
-	require.Contains(t, userSessionIDs, sessionID)
-}
-
-func requireUserSessionNotContains(t *testing.T, userID, sessionID string) {
-	t.Helper()
-
-	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
-	require.NoError(t, err)
-	require.NotContains(t, userSessionIDs, sessionID)
-}
-
-func newSessionTestAccount(t *testing.T) sessionTestAccount {
-	t.Helper()
-
-	username := fmt.Sprintf("session_%d", time.Now().UnixNano())
-	password := "12345678"
-
-	cli, err := client.New(signupAPI)
-	require.NoError(t, err)
-
-	resp, err := cli.Create(iam.SignupReq{
-		Username:   username,
-		Password:   password,
-		RePassword: password,
-	})
-	require.NoError(t, err)
-
-	account := sessionTestAccount{
-		Username: username,
-		Password: password,
-	}
-	helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
-		require.Equal(t, username, rsp.Username)
-		require.NotEmpty(t, rsp.UserID)
-		require.NotEmpty(t, rsp.Message)
-		account.UserID = rsp.UserID
-	})
-
-	return account
-}
-
-func loginSession(t *testing.T, username, password string) string {
-	t.Helper()
-
-	cli, err := client.New(loginAPI)
-	require.NoError(t, err)
-
-	resp, err := cli.Create(iam.LoginReq{
-		Username: username,
-		Password: password,
-	})
-	require.NoError(t, err)
-
-	sessionID := ""
-	helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
-		require.NotEmpty(t, rsp.SessionID)
-		sessionID = rsp.SessionID
-	})
-
-	return sessionID
-}
-
 func TestSessionHeartbeat(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	account := newSessionTestAccount(t)
 	sessionID := loginSession(t, account.Username, account.Password)
 
@@ -132,6 +61,8 @@ func TestSessionHeartbeat(t *testing.T) {
 }
 
 func TestSessionCurrent(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("get_current_session", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		sessionID := loginSession(t, account.Username, account.Password)
@@ -157,6 +88,8 @@ func TestSessionCurrent(t *testing.T) {
 }
 
 func TestSessionGet(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("get_current_user_session_detail", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		currentSessionID := loginSession(t, account.Username, account.Password)
@@ -231,6 +164,8 @@ func TestSessionGet(t *testing.T) {
 }
 
 func TestSessionList(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("list_current_user_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		otherSessionID := loginSession(t, account.Username, account.Password)
@@ -264,7 +199,93 @@ func TestSessionList(t *testing.T) {
 	})
 }
 
+func TestAdminSessionList(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
+	t.Run("list_all_sessions_grouped_by_user", func(t *testing.T) {
+		adminAccount := newSessionTestAccount(t)
+		sessionSetSuperuser(t, adminAccount.Username, true)
+		adminSessionID := loginSession(t, adminAccount.Username, adminAccount.Password)
+
+		firstUser := newSessionTestAccount(t)
+		firstUserSessionID1 := loginSession(t, firstUser.Username, firstUser.Password)
+		firstUserSessionID2 := loginSession(t, firstUser.Username, firstUser.Password)
+
+		secondUser := newSessionTestAccount(t)
+		secondUserSessionID := loginSession(t, secondUser.Username, secondUser.Password)
+
+		requireAllSessionContains(t, adminSessionID)
+		requireAllSessionContains(t, firstUserSessionID1)
+		requireAllSessionContains(t, firstUserSessionID2)
+		requireAllSessionContains(t, secondUserSessionID)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: adminSessionID,
+		}))
+		require.NoError(t, err)
+
+		items := make([]iam.AdminSessionUserView, 0)
+		total := new(int64)
+		resp, err := cli.List(&items, total)
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AdminSessionsListRsp) {
+			require.GreaterOrEqual(t, rsp.Total, int64(3))
+			require.GreaterOrEqual(t, rsp.SessionTotal, int64(4))
+
+			userMap := make(map[string]iam.AdminSessionUserView, len(rsp.Items))
+			for i := range rsp.Items {
+				userMap[rsp.Items[i].Username] = rsp.Items[i]
+			}
+
+			require.Contains(t, userMap, adminAccount.Username)
+			require.Contains(t, userMap, firstUser.Username)
+			require.Contains(t, userMap, secondUser.Username)
+
+			require.EqualValues(t, 1, userMap[adminAccount.Username].SessionTotal)
+			require.Len(t, userMap[adminAccount.Username].Sessions, 1)
+			require.Equal(t, adminSessionID, userMap[adminAccount.Username].Sessions[0].ID)
+			require.False(t, userMap[adminAccount.Username].Sessions[0].IsCurrent)
+
+			firstUserSessionIDs := make(map[string]struct{}, len(userMap[firstUser.Username].Sessions))
+			for i := range userMap[firstUser.Username].Sessions {
+				firstUserSessionIDs[userMap[firstUser.Username].Sessions[i].ID] = struct{}{}
+				require.False(t, userMap[firstUser.Username].Sessions[i].IsCurrent)
+			}
+			require.EqualValues(t, 2, userMap[firstUser.Username].SessionTotal)
+			require.Len(t, userMap[firstUser.Username].Sessions, 2)
+			_, ok := firstUserSessionIDs[firstUserSessionID1]
+			require.True(t, ok)
+			_, ok = firstUserSessionIDs[firstUserSessionID2]
+			require.True(t, ok)
+
+			require.EqualValues(t, 1, userMap[secondUser.Username].SessionTotal)
+			require.Len(t, userMap[secondUser.Username].Sessions, 1)
+			require.Equal(t, secondUserSessionID, userMap[secondUser.Username].Sessions[0].ID)
+			require.False(t, userMap[secondUser.Username].Sessions[0].IsCurrent)
+		})
+	})
+
+	t.Run("forbidden_for_regular_user", func(t *testing.T) {
+		account := newSessionTestAccount(t)
+		sessionID := loginSession(t, account.Username, account.Password)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: sessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.List(new([]iam.AdminSessionUserView), new(int64))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+	})
+}
+
 func TestSessionOnlineUsers(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("list_online_users", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		sessionID := loginSession(t, account.Username, account.Password)
@@ -287,6 +308,8 @@ func TestSessionOnlineUsers(t *testing.T) {
 }
 
 func TestSessionDelete(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("delete_non_current_session", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		currentSessionID := loginSession(t, account.Username, account.Password)
@@ -409,6 +432,8 @@ func TestSessionDelete(t *testing.T) {
 }
 
 func TestSessionDeleteOthers(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("delete_all_other_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		currentSessionID := loginSession(t, account.Username, account.Password)
@@ -479,6 +504,8 @@ func TestSessionDeleteOthers(t *testing.T) {
 }
 
 func TestSessionDeleteAll(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("delete_all_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		currentSessionID := loginSession(t, account.Username, account.Password)
@@ -544,6 +571,8 @@ func TestSessionDeleteAll(t *testing.T) {
 }
 
 func TestSessionOffline(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("offline_removes_remaining_user_sessions", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		staleSessionID := loginSession(t, account.Username, account.Password)
@@ -582,6 +611,8 @@ func TestSessionOffline(t *testing.T) {
 }
 
 func TestSessionCurrentDelete(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
 	t.Run("delete_current_session", func(t *testing.T) {
 		account := newSessionTestAccount(t)
 		sessionID := loginSession(t, account.Username, account.Password)
@@ -606,4 +637,106 @@ func TestSessionCurrentDelete(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "401")
 	})
+}
+
+func setupSessionRedisCleanup(t *testing.T) {
+	t.Helper()
+
+	t.Cleanup(func() {
+		require.NoError(t, redis.RemovePrefix(modeliamsession.SessionNamespacePrefix))
+	})
+}
+
+func requireSessionNotFound(t *testing.T, sessionID string) {
+	t.Helper()
+
+	sessionKey := modeliamsession.SessionIDKey(sessionID)
+	_, err := redis.Cache[modeliamsession.Session]().Get(sessionKey)
+	require.ErrorIs(t, err, types.ErrEntryNotFound)
+}
+
+func requireUserSessionContains(t *testing.T, userID, sessionID string) {
+	t.Helper()
+
+	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
+	require.NoError(t, err)
+	require.Contains(t, userSessionIDs, sessionID)
+}
+
+func requireUserSessionNotContains(t *testing.T, userID, sessionID string) {
+	t.Helper()
+
+	userSessionIDs, err := redis.ZRange(modeliamsession.SessionUserKey(userID), 0, -1)
+	require.NoError(t, err)
+	require.NotContains(t, userSessionIDs, sessionID)
+}
+
+func requireAllSessionContains(t *testing.T, sessionID string) {
+	t.Helper()
+
+	sessionIDs, err := redis.ZRange(modeliamsession.SessionAllKey(), 0, -1)
+	require.NoError(t, err)
+	require.Contains(t, sessionIDs, sessionID)
+}
+
+func sessionSetSuperuser(t *testing.T, username string, enabled bool) {
+	t.Helper()
+
+	users := make([]*iam.User, 0)
+	require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&users))
+	require.Len(t, users, 1)
+
+	users[0].IsSuperuser = &enabled
+	require.NoError(t, database.Database[*iam.User](nil).Update(users[0]))
+}
+
+func newSessionTestAccount(t *testing.T) sessionTestAccount {
+	t.Helper()
+
+	username := fmt.Sprintf("session_%d", time.Now().UnixNano())
+	password := "12345678"
+
+	cli, err := client.New(signupAPI)
+	require.NoError(t, err)
+
+	resp, err := cli.Create(iam.SignupReq{
+		Username:   username,
+		Password:   password,
+		RePassword: password,
+	})
+	require.NoError(t, err)
+
+	account := sessionTestAccount{
+		Username: username,
+		Password: password,
+	}
+	helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+		require.Equal(t, username, rsp.Username)
+		require.NotEmpty(t, rsp.UserID)
+		require.NotEmpty(t, rsp.Message)
+		account.UserID = rsp.UserID
+	})
+
+	return account
+}
+
+func loginSession(t *testing.T, username, password string) string {
+	t.Helper()
+
+	cli, err := client.New(loginAPI)
+	require.NoError(t, err)
+
+	resp, err := cli.Create(iam.LoginReq{
+		Username: username,
+		Password: password,
+	})
+	require.NoError(t, err)
+
+	sessionID := ""
+	helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+		require.NotEmpty(t, rsp.SessionID)
+		sessionID = rsp.SessionID
+	})
+
+	return sessionID
 }

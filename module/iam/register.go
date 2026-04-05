@@ -36,6 +36,7 @@ type Config struct {
 //   - GET    /api/iam/session/current
 //   - DELETE /api/iam/session/current
 //   - GET    /api/iam/sessions
+//   - GET    /api/iam/admin/sessions
 //   - DELETE /api/iam/sessions
 //   - DELETE /api/iam/sessions/:id
 //   - POST   /api/offline
@@ -149,6 +150,7 @@ func Register(config ...Config) {
 	module.Use(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentListService{}), consts.PHASE_LIST)
 	module.UseCustom(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentDeleteService{}), consts.PHASE_DELETE)
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsListService{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/iam/admin/sessions", "id", false, &serviceiamsession.AdminSessionsListService{}), consts.PHASE_LIST)
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsGetService{}), consts.PHASE_GET)
 	module.UseCustom(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteAllService{}), consts.PHASE_DELETE)
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteService{}), consts.PHASE_DELETE)
