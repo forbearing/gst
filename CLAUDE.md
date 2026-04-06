@@ -14,20 +14,30 @@
 - 修改完代码后, 需要同时检查下相关的文档/注释是否需要更新.
 - 代码新增功能、bug修复完后, 需要更新其对应的函数、结构体、接口、类的代码注释和文档、代码注释请使用英文
 - module, internal/model 中使用自定义 Request 时, 命名偏向于 XXXReq, 例如 SignupReq，Response 命名偏向于 XXXRsp, 例如 SignupRsp
-- 开发 module 时，每个接口对应的【model/REQ/RSP】、【业务逻辑】必须写在自己对应的单独代码文件中，禁止将多个接口的【model/REQ/RSP】写在同一个 model 代码文件中，禁止将多个不同接口的【业务逻辑】写在同一个 service 代码文件中。三种场景如下：
-  - 完全不同的业务逻辑和接口：/api/users，/api/groups，那么需要两个 model 文件和两个 service 文件
-  - 同一资源对象则走框架提供的 curd：POST /api/configs、DELETE /api/configs/:id、 DELETE /api/configs、PUT /api/configs/:id、PATCH /api/configs/:id、GET /api/configs、GET /api/configs/:id，只需要一个 model 文件且 model 文件中没有自定义 REQ 和 RSP，service 文件中只有一个结构体，在结构体上加上不同的 hooks。
-  - 同一资源对象走自定义业务逻辑：GET /api/iam/sessions、DELETE /api/iam/sessions/:id。还是只需要一个 model 文件和一个 service 文件，但是都有自己的 REQ、RSP service结构体：
-    - model 代码文件中的结构体：`SessionsListReq`、`SessionsListRsp`、`SessionsDeleteReq`、`SessionsDeleteRsp`
-    - service 结构体方法：
-      `func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsListReq) (rsp *modeliamsession.SessionsListRsp, err error)`、
-      `func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteReq) (rsp *modeliamsession.SessionsDeleteRsp, err error)`
 - 总是按照最佳实践方式来实现代码、代码注释需要符合 golang 规范；新需求代码需要有足够的注释；如果发现现有注释有问题或不符合代码逻辑也需要优化注释。
-- module 包中的接口测试用例规范：
-  - 测试文件名名要符合子 moudle 名，例如 module/iam/session_test.go 就是专门用来存放 session 相关接口的测试用例，其对应的接口实现放在 internal/{model,service}/session 目录中。
-  - 测试组织方式要改成一个接口对应一个顶层测试函数，各个顶层测试函数应该尽量避免相互影响。
-  - 如果同一个接口有多种场景，则在这个接口对应的测试函数里 用 t.Run(...) 做子测试，如果只有一个场景，则不需要额外使用 t.Run(...) 来运行子测试。
-  - 测试用到的辅助函数应该放在其对应的测试文件中，例如 session 子模块相关的测试辅助函数应该放在 session_test.go 中，account 子模块相关的测试辅助函数应该放在 account_test.go 中。并且测试用例使用到的辅助函数尽量放在顶层测试函数之后。
+- 对于不直接走框架默认 CRUD 资源模型的自定义接口，service 的 model 优先使用空模型；不同接口之间禁止复用 REQ、RSP，即使字段完全相同，也必须为当前接口单独定义自己的 REQ、RSP。
+
+
+
+### moudle 开发规范
+
+开发 module 时，每个接口对应的【model/REQ/RSP】、【业务逻辑】必须写在自己对应的单独代码文件中，禁止将多个接口的【model/REQ/RSP】写在同一个 model 代码文件中，禁止将多个不同接口的【业务逻辑】写在同一个 service 代码文件中。三种场景如下：
+
+- 完全不同的业务逻辑和接口：/api/users，/api/groups，那么需要两个 model 文件和两个 service 文件
+- 同一资源对象则走框架提供的 curd：POST /api/configs、DELETE /api/configs/:id、 DELETE /api/configs、PUT /api/configs/:id、PATCH /api/configs/:id、GET /api/configs、GET /api/configs/:id，只需要一个 model 文件且 model 文件中没有自定义 REQ 和 RSP，service 文件中只有一个结构体，在结构体上加上不同的 hooks。
+- 同一资源对象走自定义业务逻辑：GET /api/iam/sessions、DELETE /api/iam/sessions/:id。还是只需要一个 model 文件和一个 service 文件，但是都有自己的 REQ、RSP service结构体：
+  - model 代码文件中的结构体：`SessionsListReq`、`SessionsListRsp`、`SessionsDeleteReq`、`SessionsDeleteRsp`。
+  - service 结构体方法：
+    `func (s *SessionsListService) List(ctx *types.ServiceContext, req *modeliamsession.SessionsListReq) (rsp *modeliamsession.SessionsListRsp, err error)`、
+    `func (s *SessionsDeleteService) Delete(ctx *types.ServiceContext, req *modeliamsession.SessionsDeleteReq) (rsp *modeliamsession.SessionsDeleteRsp, err error)`
+
+module 包中的接口测试用例规范：
+
+- 测试文件名名要符合子 moudle 名，例如 module/iam/session_test.go 就是专门用来存放 session 相关接口的测试用例，其对应的接口实现放在 internal/{model,service}/session 目录中。
+- 测试组织方式要改成一个接口对应一个顶层测试函数，各个顶层测试函数应该尽量避免相互影响。
+- 如果同一个接口有多种场景，则在这个接口对应的测试函数里 用 t.Run(...) 做子测试，如果只有一个场景，则不需要额外使用 t.Run(...) 来运行子测试。
+- 测试用到的辅助函数应该放在其对应的测试文件中，例如 session 子模块相关的测试辅助函数应该放在 session_test.go 中，account 子模块相关的测试辅助函数应该放在 account_test.go 中。并且测试用例使用到的辅助函数尽量放在顶层测试函数之后。
+
 
 
 ### Sandbox
