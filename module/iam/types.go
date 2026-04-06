@@ -57,6 +57,11 @@ type (
 	AdminSessionsDeleteReq = modeliamsession.AdminSessionsDeleteReq
 	AdminSessionsDeleteRsp = modeliamsession.AdminSessionsDeleteRsp
 
+	AdminUserSessionsListReq   = modeliamsession.AdminUserSessionsListReq
+	AdminUserSessionsListRsp   = modeliamsession.AdminUserSessionsListRsp
+	AdminUserSessionsDeleteReq = modeliamsession.AdminUserSessionsDeleteReq
+	AdminUserSessionsDeleteRsp = modeliamsession.AdminUserSessionsDeleteRsp
+
 	EmailChangeConfirmReq = modeliamemail.ChangeConfirmReq
 	EmailChangeConfirmRsp = modeliamemail.ChangeConfirmRsp
 	EmailChangeCancelReq  = modeliamemail.ChangeCancelReq
