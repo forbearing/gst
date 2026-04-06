@@ -345,6 +345,74 @@ func TestAdminSessionGet(t *testing.T) {
 	})
 }
 
+func TestAdminSessionDelete(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
+	t.Run("delete_other_user_session", func(t *testing.T) {
+		adminAccount := newSessionTestAccount(t)
+		sessionSetSuperuser(t, adminAccount.Username, true)
+		adminSessionID := loginSession(t, adminAccount.Username, adminAccount.Password)
+
+		targetAccount := newSessionTestAccount(t)
+		targetSessionID := loginSession(t, targetAccount.Username, targetAccount.Password)
+
+		requireUserSessionContains(t, targetAccount.UserID, targetSessionID)
+		requireAllSessionContains(t, targetSessionID)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: adminSessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Delete(targetSessionID)
+		require.NoError(t, err)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AdminSessionsDeleteRsp) {
+			require.Equal(t, iam.AdminSessionsDeleteRsp{}, rsp)
+		})
+
+		requireSessionNotFound(t, targetSessionID)
+		requireUserSessionNotContains(t, targetAccount.UserID, targetSessionID)
+	})
+
+	t.Run("forbidden_for_regular_user", func(t *testing.T) {
+		attacker := newSessionTestAccount(t)
+		attackerSessionID := loginSession(t, attacker.Username, attacker.Password)
+
+		victim := newSessionTestAccount(t)
+		victimSessionID := loginSession(t, victim.Username, victim.Password)
+		requireUserSessionContains(t, victim.UserID, victimSessionID)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: attackerSessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Delete(victimSessionID)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+
+		requireUserSessionContains(t, victim.UserID, victimSessionID)
+	})
+
+	t.Run("not_found_when_session_missing", func(t *testing.T) {
+		adminAccount := newSessionTestAccount(t)
+		sessionSetSuperuser(t, adminAccount.Username, true)
+		adminSessionID := loginSession(t, adminAccount.Username, adminAccount.Password)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: adminSessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Delete("missing-session-id")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "404")
+	})
+}
+
 func TestSessionOnlineUsers(t *testing.T) {
 	setupSessionRedisCleanup(t)
 

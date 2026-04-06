@@ -18,6 +18,12 @@ type AdminSessionsGetRsp struct {
 	Session SessionView `json:"session"`
 }
 
+// AdminSessionsDeleteReq is the request payload for deleting a specified session as a privileged administrator.
+type AdminSessionsDeleteReq struct{}
+
+// AdminSessionsDeleteRsp returns the result of deleting a specified session for a privileged administrator.
+type AdminSessionsDeleteRsp struct{}
+
 // AdminSessionUserView describes a user together with all indexed sessions owned by the user.
 type AdminSessionUserView struct {
 	UserID             string        `json:"user_id"`

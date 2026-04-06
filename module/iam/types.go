@@ -28,27 +28,34 @@ type (
 	Group  = modeliam.Group
 	Tenant = modeliam.Tenant
 
-	Session              = modeliamsession.Session
-	Token                = modeliamsession.Token
-	Heartbeat            = modeliamsession.Heartbeat
-	CurrentListReq       = modeliamsession.CurrentListReq
-	CurrentListRsp       = modeliamsession.CurrentListRsp
-	CurrentDeleteReq     = modeliamsession.CurrentDeleteReq
-	CurrentDeleteRsp     = modeliamsession.CurrentDeleteRsp
-	SessionsGetReq       = modeliamsession.SessionsGetReq
-	SessionsGetRsp       = modeliamsession.SessionsGetRsp
+	Session     = modeliamsession.Session
+	SessionView = modeliamsession.SessionView
+	Token       = modeliamsession.Token
+	Heartbeat   = modeliamsession.Heartbeat
+	OnlineUser  = modeliamsession.OnlineUser
+	OfflineReq  = modeliamsession.OfflineReq
+
+	CurrentListReq   = modeliamsession.CurrentListReq
+	CurrentListRsp   = modeliamsession.CurrentListRsp
+	CurrentDeleteReq = modeliamsession.CurrentDeleteReq
+	CurrentDeleteRsp = modeliamsession.CurrentDeleteRsp
+
 	SessionsListReq      = modeliamsession.SessionsListReq
 	SessionsListRsp      = modeliamsession.SessionsListRsp
-	AdminSessionsListReq = modeliamsession.AdminSessionsListReq
-	AdminSessionsListRsp = modeliamsession.AdminSessionsListRsp
-	AdminSessionUserView = modeliamsession.AdminSessionUserView
-	SessionsDeleteAllReq = modeliamsession.SessionsDeleteAllReq
-	SessionsDeleteAllRsp = modeliamsession.SessionsDeleteAllRsp
+	SessionsGetReq       = modeliamsession.SessionsGetReq
+	SessionsGetRsp       = modeliamsession.SessionsGetRsp
 	SessionsDeleteReq    = modeliamsession.SessionsDeleteReq
 	SessionsDeleteRsp    = modeliamsession.SessionsDeleteRsp
-	SessionView          = modeliamsession.SessionView
-	OnlineUser           = modeliamsession.OnlineUser
-	OfflineReq           = modeliamsession.OfflineReq
+	SessionsDeleteAllReq = modeliamsession.SessionsDeleteAllReq
+	SessionsDeleteAllRsp = modeliamsession.SessionsDeleteAllRsp
+
+	AdminSessionUserView   = modeliamsession.AdminSessionUserView
+	AdminSessionsListReq   = modeliamsession.AdminSessionsListReq
+	AdminSessionsListRsp   = modeliamsession.AdminSessionsListRsp
+	AdminSessionsGetReq    = modeliamsession.AdminSessionsGetReq
+	AdminSessionsGetRsp    = modeliamsession.AdminSessionsGetRsp
+	AdminSessionsDeleteReq = modeliamsession.AdminSessionsDeleteReq
+	AdminSessionsDeleteRsp = modeliamsession.AdminSessionsDeleteRsp
 
 	EmailChangeConfirmReq = modeliamemail.ChangeConfirmReq
 	EmailChangeConfirmRsp = modeliamemail.ChangeConfirmRsp
