@@ -283,6 +283,68 @@ func TestAdminSessionList(t *testing.T) {
 	})
 }
 
+func TestAdminSessionGet(t *testing.T) {
+	setupSessionRedisCleanup(t)
+
+	t.Run("get_other_user_session_detail", func(t *testing.T) {
+		adminAccount := newSessionTestAccount(t)
+		sessionSetSuperuser(t, adminAccount.Username, true)
+		adminSessionID := loginSession(t, adminAccount.Username, adminAccount.Password)
+
+		targetAccount := newSessionTestAccount(t)
+		targetSessionID := loginSession(t, targetAccount.Username, targetAccount.Password)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: adminSessionID,
+		}))
+		require.NoError(t, err)
+
+		resp, err := cli.Get(targetSessionID, new(modeliamsession.AdminSessionsGetRsp))
+		require.NoError(t, err)
+		helper.TestResp[*modeliamsession.AdminSessionsGetRsp](t, resp, func(t *testing.T, rsp *modeliamsession.AdminSessionsGetRsp) {
+			require.Equal(t, targetSessionID, rsp.Session.ID)
+			require.False(t, rsp.Session.IsCurrent)
+			require.NotEmpty(t, rsp.Session.ClientIP)
+			require.NotEmpty(t, rsp.Session.UserAgent)
+		})
+	})
+
+	t.Run("forbidden_for_regular_user", func(t *testing.T) {
+		attacker := newSessionTestAccount(t)
+		attackerSessionID := loginSession(t, attacker.Username, attacker.Password)
+
+		victim := newSessionTestAccount(t)
+		victimSessionID := loginSession(t, victim.Username, victim.Password)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: attackerSessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Get(victimSessionID, new(modeliamsession.AdminSessionsGetRsp))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+	})
+
+	t.Run("not_found_when_session_missing", func(t *testing.T) {
+		adminAccount := newSessionTestAccount(t)
+		sessionSetSuperuser(t, adminAccount.Username, true)
+		adminSessionID := loginSession(t, adminAccount.Username, adminAccount.Password)
+
+		cli, err := client.New(adminSessionsAPI, client.WithCookie(&http.Cookie{
+			Name:  "session_id",
+			Value: adminSessionID,
+		}))
+		require.NoError(t, err)
+
+		_, err = cli.Get("missing-session-id", new(modeliamsession.AdminSessionsGetRsp))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "404")
+	})
+}
+
 func TestSessionOnlineUsers(t *testing.T) {
 	setupSessionRedisCleanup(t)
 

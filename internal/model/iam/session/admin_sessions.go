@@ -10,6 +10,14 @@ type AdminSessionsListRsp struct {
 	SessionTotal int64                  `json:"session_total"`
 }
 
+// AdminSessionsGetReq is the request payload for loading a specified session as a privileged administrator.
+type AdminSessionsGetReq struct{}
+
+// AdminSessionsGetRsp returns the detail of a specified session for a privileged administrator.
+type AdminSessionsGetRsp struct {
+	Session SessionView `json:"session"`
+}
+
 // AdminSessionUserView describes a user together with all indexed sessions owned by the user.
 type AdminSessionUserView struct {
 	UserID             string        `json:"user_id"`

@@ -22,6 +22,11 @@ type AdminSessionsListService struct {
 	service.Base[*model.Empty, *modeliamsession.AdminSessionsListReq, *modeliamsession.AdminSessionsListRsp]
 }
 
+// AdminSessionsGetService handles retrieval of a specified session for privileged administrators.
+type AdminSessionsGetService struct {
+	service.Base[*model.Empty, *modeliamsession.AdminSessionsGetReq, *modeliamsession.AdminSessionsGetRsp]
+}
+
 type adminSessionUserItem struct {
 	view       modeliamsession.AdminSessionUserView
 	lastActive time.Time
@@ -123,6 +128,39 @@ func (s *AdminSessionsListService) List(ctx *types.ServiceContext, req *modeliam
 		Items:        rspItems,
 		Total:        int64(len(rspItems)),
 		SessionTotal: sessionTotal,
+	}, nil
+}
+
+// Get returns the detail of a specified session for a privileged administrator.
+func (s *AdminSessionsGetService) Get(ctx *types.ServiceContext, req *modeliamsession.AdminSessionsGetReq) (rsp *modeliamsession.AdminSessionsGetRsp, err error) {
+	log := s.WithServiceContext(ctx, ctx.GetPhase())
+
+	currentSessionID, _, err := GetCurrentSession(ctx)
+	if err != nil {
+		log.Error("failed to get current session", err)
+		return nil, err
+	}
+	if err = ensureAdminSessionActor(ctx); err != nil {
+		log.Error("failed to verify admin session actor", err)
+		return nil, err
+	}
+
+	targetSessionID := ctx.Params["id"]
+	if targetSessionID == "" {
+		return nil, types.NewServiceError(http.StatusBadRequest, "session id is required")
+	}
+
+	targetSession, err := redis.Cache[modeliamsession.Session]().Get(modeliamsession.SessionIDKey(targetSessionID))
+	if err != nil {
+		if errors.Is(err, types.ErrEntryNotFound) {
+			return nil, types.NewServiceError(http.StatusNotFound, "session not found")
+		}
+		log.Error("failed to load target session", err)
+		return nil, err
+	}
+
+	return &modeliamsession.AdminSessionsGetRsp{
+		Session: buildCurrentSessionView(targetSession, currentSessionID),
 	}, nil
 }
 
