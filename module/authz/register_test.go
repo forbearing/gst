@@ -177,16 +177,15 @@ func TestAuthz(t *testing.T) {
 			//   10 => "/api/online-users" #string
 			//   11 => "/api/authz/roles/{id}" #string
 			//   12 => "/api/apis" #string
-			//   13 => "/api/offline" #string
-			//   14 => "/api/iam/change-password" #string
-			//   15 => "/api/logout" #string
-			//   16 => "/api/authz/permissions" #string
-			//   17 => "/api/iam/users" #string
-			//   18 => "/api/buttons" #string
-			//   19 => "/api/buttons/{id}" #string
-			//   20 => "/api/authz/permissions/{id}" #string
-			//   21 => "/api/menus" #string
-			//   22 => "/api/authz/roles" #string
+			//   13 => "/api/iam/change-password" #string
+			//   14 => "/api/logout" #string
+			//   15 => "/api/authz/permissions" #string
+			//   16 => "/api/iam/users" #string
+			//   17 => "/api/buttons" #string
+			//   18 => "/api/buttons/{id}" #string
+			//   19 => "/api/authz/permissions/{id}" #string
+			//   20 => "/api/menus" #string
+			//   21 => "/api/authz/roles" #string
 			// ]
 			require.NotEmpty(t, rsp, "apis list should not be empty")
 		})

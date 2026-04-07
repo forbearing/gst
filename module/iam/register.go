@@ -40,7 +40,6 @@ type Config struct {
 //   - GET    /api/iam/admin/sessions/:id
 //   - DELETE /api/iam/sessions
 //   - DELETE /api/iam/sessions/:id
-//   - POST   /api/offline
 //   - GET    /api/online-users
 //
 // Account management routes:
@@ -159,7 +158,6 @@ func Register(config ...Config) {
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsGetService{}), consts.PHASE_GET)
 	module.UseCustom(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteAllService{}), consts.PHASE_DELETE)
 	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteService{}), consts.PHASE_DELETE)
-	module.Use(module.NewWrapper("/offline", "id", false, &serviceiamsession.OfflineService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/online-users", "id", false, &service.Base[*OnlineUser, *OnlineUser, *OnlineUser]{}), consts.PHASE_LIST)
 
 	module.Use(module.NewWrapper("/iam/email/verification-request", "id", true, &serviceiamemail.VerificationRequestService{}), consts.PHASE_CREATE)

@@ -22,7 +22,6 @@ var (
 	adminSessionsAPI = fmt.Sprintf("http://localhost:%d/api/iam/admin/sessions", port)
 	heartbeatAPI     = fmt.Sprintf("http://localhost:%d/api/iam/session/heartbeat", port)
 	onlineuserAPI    = fmt.Sprintf("http://localhost:%d/api/online-users", port)
-	offlineAPI       = fmt.Sprintf("http://localhost:%d/api/offline", port)
 )
 
 type sessionTestAccount struct {
@@ -984,46 +983,6 @@ func TestSessionDeleteAll(t *testing.T) {
 		_, err = cli.Request(http.MethodGet, new(struct{}))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "401")
-	})
-}
-
-func TestSessionOffline(t *testing.T) {
-	setupSessionRedisCleanup(t)
-
-	t.Run("offline_removes_remaining_user_sessions", func(t *testing.T) {
-		account := newSessionTestAccount(t)
-		staleSessionID := loginSession(t, account.Username, account.Password)
-		latestSessionID := loginSession(t, account.Username, account.Password)
-
-		logoutCli, err := client.New(logoutAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: staleSessionID,
-		}))
-		require.NoError(t, err)
-
-		resp, err := logoutCli.Create(nil)
-		require.NoError(t, err)
-		helper.TestResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
-			require.NotEmpty(t, rsp.Msg)
-		})
-
-		requireSessionNotFound(t, staleSessionID)
-		requireUserSessionNotContains(t, account.UserID, staleSessionID)
-		requireUserSessionContains(t, account.UserID, latestSessionID)
-
-		cli, err := client.New(offlineAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: latestSessionID,
-		}))
-		require.NoError(t, err)
-
-		_, err = cli.Create(iam.OfflineReq{
-			UserID: account.UserID,
-		})
-		require.NoError(t, err)
-
-		requireSessionNotFound(t, latestSessionID)
-		requireUserSessionNotContains(t, account.UserID, latestSessionID)
 	})
 }
 

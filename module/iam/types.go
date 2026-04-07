@@ -33,7 +33,6 @@ type (
 	Token       = modeliamsession.Token
 	Heartbeat   = modeliamsession.Heartbeat
 	OnlineUser  = modeliamsession.OnlineUser
-	OfflineReq  = modeliamsession.OfflineReq
 
 	CurrentListReq   = modeliamsession.CurrentListReq
 	CurrentListRsp   = modeliamsession.CurrentListRsp
