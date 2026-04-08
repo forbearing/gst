@@ -126,6 +126,7 @@ func Register(config ...Config) {
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
+		consts.PHASE_DELETE_MANY,
 	)
 	module.Use(module.NewWrapper("/iam/groups", "id", false, &service.Base[*Group, *Group, *Group]{}),
 		consts.PHASE_CREATE,

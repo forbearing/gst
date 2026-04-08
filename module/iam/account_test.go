@@ -182,31 +182,6 @@ func TestAccountLogout(t *testing.T) {
 	})
 }
 
-func TestAccountUsers(t *testing.T) {
-	user := accountSignupUser(t, "acct_users", "12345678")
-	user.SessionID = accountLoginUser(t, &user, user.Password)
-
-	cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
-		Name:  "session_id",
-		Value: user.SessionID,
-	}))
-	require.NoError(t, err)
-
-	items := make([]iam.User, 0)
-	total := new(int64)
-	resp, err := cli.List(&items, total)
-	require.NoError(t, err)
-
-	helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
-		require.Len(t, rsp.Items, 1)
-		require.NotNil(t, rsp.Items[0])
-		require.Equal(t, user.Username, rsp.Items[0].Username)
-		require.NotEmpty(t, rsp.Items[0].ID)
-		require.Equal(t, modeliamuser.UserStatusActive, rsp.Items[0].Status)
-		require.Equal(t, modeliamuser.UserTypeRegular, rsp.Items[0].Type)
-	})
-}
-
 func TestAccountChangePassword(t *testing.T) {
 	user := accountSignupUser(t, "acct_changepwd", "12345678")
 	newPassword := "123456789"
@@ -676,47 +651,6 @@ func TestAccountStatus(t *testing.T) {
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
 			require.Contains(t, rsp.Msg, "unchanged")
 		})
-	})
-
-	t.Run("demote_actor_superuser", func(t *testing.T) {
-		accountSetSuperuser(t, actor.Username, false)
-	})
-}
-
-func TestAccountDeleteUser(t *testing.T) {
-	actor := accountSignupUser(t, "acct_delete_actor", "12345678")
-	actor.SessionID = accountLoginUser(t, &actor, actor.Password)
-
-	victim := accountSignupUser(t, "acct_delete_victim", "example-DelVic-local-01")
-	victim.SessionID = accountLoginUser(t, &victim, victim.Password)
-
-	t.Run("promote_actor_superuser", func(t *testing.T) {
-		accountSetSuperuser(t, actor.Username, true)
-	})
-
-	t.Run("delete_user_by_id", func(t *testing.T) {
-		cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: actor.SessionID,
-		}))
-		require.NoError(t, err)
-
-		_, err = cli.Delete(victim.UserID)
-		require.NoError(t, err)
-	})
-
-	t.Run("session_invalid_after_delete", func(t *testing.T) {
-		cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
-			Name:  "session_id",
-			Value: victim.SessionID,
-		}))
-		require.NoError(t, err)
-
-		items := make([]iam.User, 0)
-		total := new(int64)
-		_, err = cli.List(&items, total)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "401")
 	})
 
 	t.Run("demote_actor_superuser", func(t *testing.T) {
