@@ -210,7 +210,7 @@ func TestAccountChangePassword(t *testing.T) {
 		require.NotEmpty(t, user.SessionID)
 	})
 
-	t.Run("list_users_with_new_session", func(t *testing.T) {
+	t.Run("user_module_forbidden_with_new_session", func(t *testing.T) {
 		cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
 			Value: user.SessionID,
@@ -219,16 +219,9 @@ func TestAccountChangePassword(t *testing.T) {
 
 		items := make([]iam.User, 0)
 		total := new(int64)
-		resp, err := cli.List(&items, total)
-		require.NoError(t, err)
-
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
-			require.Len(t, rsp.Items, 1)
-			require.NotNil(t, rsp.Items[0])
-			require.Equal(t, user.Username, rsp.Items[0].Username)
-			require.Equal(t, modeliamuser.UserStatusActive, rsp.Items[0].Status)
-			require.Equal(t, modeliamuser.UserTypeRegular, rsp.Items[0].Type)
-		})
+		_, err = cli.List(&items, total)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
 	})
 }
 
@@ -359,7 +352,7 @@ func TestAccountResetPassword(t *testing.T) {
 		})
 	})
 
-	t.Run("victim_list_after_change_password", func(t *testing.T) {
+	t.Run("victim_user_module_forbidden_after_change_password", func(t *testing.T) {
 		cli, err := client.New(userAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
 			Value: victimSessionAfterReset,
@@ -368,12 +361,9 @@ func TestAccountResetPassword(t *testing.T) {
 
 		items := make([]iam.User, 0)
 		total := new(int64)
-		resp, err := cli.List(&items, total)
-		require.NoError(t, err)
-
-		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
-			require.GreaterOrEqual(t, len(rsp.Items), 2)
-		})
+		_, err = cli.List(&items, total)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
 	})
 
 	t.Run("demote_actor_superuser", func(t *testing.T) {
