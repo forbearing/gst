@@ -15,6 +15,7 @@ import (
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/types"
+	"github.com/forbearing/gst/types/consts"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,6 +24,15 @@ type userTestAccount struct {
 	Username  string
 	Password  string
 	SessionID string
+}
+
+type userBatchRsp struct {
+	Items   []*iam.User `json:"items"`
+	Summary struct {
+		Total     int `json:"total"`
+		Succeeded int `json:"succeeded"`
+		Failed    int `json:"failed"`
+	} `json:"summary"`
 }
 
 func TestUserList(t *testing.T) {
@@ -55,11 +65,17 @@ func TestUserList(t *testing.T) {
 			require.NotNil(t, actorItem)
 			require.Equal(t, actor.Username, actorItem.Username)
 			require.True(t, actorItem.IsSuperuser != nil && *actorItem.IsSuperuser)
+			require.Empty(t, actorItem.Password)
+			require.Empty(t, actorItem.PasswordHash)
+			require.Empty(t, actorItem.Salt)
 
 			viewerItem := userFindByUsername(rsp.Items, viewer.Username)
 			require.NotNil(t, viewerItem)
 			require.Equal(t, modeliamuser.UserStatusActive, viewerItem.Status)
 			require.Equal(t, modeliamuser.UserTypeRegular, viewerItem.Type)
+			require.Empty(t, viewerItem.Password)
+			require.Empty(t, viewerItem.PasswordHash)
+			require.Empty(t, viewerItem.Salt)
 		})
 	})
 }
@@ -117,6 +133,96 @@ func TestUserCreate(t *testing.T) {
 	})
 }
 
+func TestUserCreateMany(t *testing.T) {
+	actor := userSignupUser(t, "user_create_many_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+
+	cli := userNewClient(t, actor.SessionID)
+	username1 := fmt.Sprintf("user_create_many_target1_%d", time.Now().UnixNano())
+	username2 := fmt.Sprintf("user_create_many_target2_%d", time.Now().UnixNano())
+	displayName1 := "Create Many User 1"
+	displayName2 := "Create Many User 2"
+	email1 := fmt.Sprintf("%s@example.com", username1)
+	email2 := fmt.Sprintf("%s@example.com", username2)
+	superuserEnabled := true
+	superUsername := fmt.Sprintf("user_create_many_super_%d", time.Now().UnixNano())
+
+	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
+		_, err := cli.CreateMany([]iam.User{
+			{
+				Username: username1,
+				Password: "example-UserCreateMany-local-01",
+			},
+		})
+		userRequireForbidden(t, err)
+	})
+
+	t.Run("promote_actor_superuser", func(t *testing.T) {
+		userSetSuperuser(t, actor.Username, true)
+	})
+
+	t.Run("create_many_users", func(t *testing.T) {
+		resp, err := cli.CreateMany([]iam.User{
+			{
+				Username:    username1,
+				Password:    "example-UserCreateMany-local-01",
+				DisplayName: &displayName1,
+				Email:       &email1,
+			},
+			{
+				Username:    username2,
+				Password:    "example-UserCreateMany-local-02",
+				DisplayName: &displayName2,
+				Email:       &email2,
+			},
+		})
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			userCleanupUser(t, username1)
+			userCleanupUser(t, username2)
+		})
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
+			require.Len(t, rsp.Items, 2)
+			require.Equal(t, 2, rsp.Summary.Total)
+			require.Equal(t, 2, rsp.Summary.Succeeded)
+			require.Equal(t, 0, rsp.Summary.Failed)
+			for _, item := range rsp.Items {
+				require.NotNil(t, item)
+				require.NotEmpty(t, item.ID)
+				require.Empty(t, item.Password)
+				require.Empty(t, item.PasswordHash)
+				require.Empty(t, item.Salt)
+			}
+		})
+
+		user1 := userLoadByUsername(t, username1)
+		require.NotNil(t, user1.DisplayName)
+		require.Equal(t, displayName1, *user1.DisplayName)
+		require.NotNil(t, user1.Email)
+		require.Equal(t, email1, *user1.Email)
+
+		user2 := userLoadByUsername(t, username2)
+		require.NotNil(t, user2.DisplayName)
+		require.Equal(t, displayName2, *user2.DisplayName)
+		require.NotNil(t, user2.Email)
+		require.Equal(t, email2, *user2.Email)
+	})
+
+	t.Run("create_many_superuser_forbidden", func(t *testing.T) {
+		_, err := cli.CreateMany([]iam.User{
+			{
+				Username:    superUsername,
+				Password:    "example-UserCreateMany-local-03",
+				IsSuperuser: &superuserEnabled,
+			},
+		})
+		userRequireForbidden(t, err)
+		userRequireMissingByUsername(t, superUsername)
+	})
+}
+
 func TestUserGet(t *testing.T) {
 	actor := userSignupUser(t, "user_get_actor", "12345678")
 	actor.SessionID = userLoginUser(t, &actor, actor.Password)
@@ -146,6 +252,12 @@ func TestUserGet(t *testing.T) {
 		require.Equal(t, modeliamuser.UserTypeRegular, got.Type)
 		require.Empty(t, got.Password)
 		require.Empty(t, got.PasswordHash)
+		require.Empty(t, got.Salt)
+	})
+
+	t.Run("get_user_not_found", func(t *testing.T) {
+		_, err := cli.Get("missing-user-id", new(iam.User))
+		userRequireNotFound(t, err)
 	})
 }
 
@@ -184,12 +296,116 @@ func TestUserUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			require.Equal(t, victim.UserID, rsp.ID)
+			require.Equal(t, victim.Username, rsp.Username)
+			require.Empty(t, rsp.Password)
+			require.Empty(t, rsp.PasswordHash)
+			require.Empty(t, rsp.Salt)
+		})
 
 		stored := userLoadByID(t, victim.UserID)
 		require.NotNil(t, stored.DisplayName)
 		require.Equal(t, updatedDisplayName, *stored.DisplayName)
 		require.NotNil(t, stored.Email)
 		require.Equal(t, updatedEmail, *stored.Email)
+	})
+
+	t.Run("update_user_not_found", func(t *testing.T) {
+		_, err := cli.Update("missing-user-id", iam.User{
+			Username: victim.Username,
+			Status:   modeliamuser.UserStatusActive,
+			Type:     modeliamuser.UserTypeRegular,
+		})
+		userRequireNotFound(t, err)
+	})
+}
+
+func TestUserUpdateMany(t *testing.T) {
+	actor := userSignupUser(t, "user_update_many_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+
+	victim1 := userSignupUser(t, "user_update_many_target1", "example-UserUpdateMany-local-01")
+	victim2 := userSignupUser(t, "user_update_many_target2", "example-UserUpdateMany-local-02")
+	cli := userNewClient(t, actor.SessionID)
+
+	displayName1 := "Updated Many User 1"
+	displayName2 := "Updated Many User 2"
+	email1 := fmt.Sprintf("updated_many_1_%d@example.com", time.Now().UnixNano())
+	email2 := fmt.Sprintf("updated_many_2_%d@example.com", time.Now().UnixNano())
+	blockedDisplayName := "Blocked Update Many"
+
+	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
+		user1 := userLoadByID(t, victim1.UserID)
+		user1.DisplayName = &displayName1
+		_, err := cli.UpdateMany([]*iam.User{user1})
+		userRequireForbidden(t, err)
+	})
+
+	t.Run("promote_actor_superuser", func(t *testing.T) {
+		userSetSuperuser(t, actor.Username, true)
+	})
+
+	t.Run("update_many_users", func(t *testing.T) {
+		user1 := userLoadByID(t, victim1.UserID)
+		user1.DisplayName = &displayName1
+		user1.Email = &email1
+
+		user2 := userLoadByID(t, victim2.UserID)
+		user2.DisplayName = &displayName2
+		user2.Email = &email2
+
+		resp, err := cli.UpdateMany([]*iam.User{user1, user2})
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
+			require.Len(t, rsp.Items, 2)
+			require.Equal(t, 2, rsp.Summary.Total)
+			require.Equal(t, 2, rsp.Summary.Succeeded)
+			require.Equal(t, 0, rsp.Summary.Failed)
+		})
+
+		got1 := userLoadByID(t, victim1.UserID)
+		require.NotNil(t, got1.DisplayName)
+		require.Equal(t, displayName1, *got1.DisplayName)
+		require.NotNil(t, got1.Email)
+		require.Equal(t, email1, *got1.Email)
+
+		got2 := userLoadByID(t, victim2.UserID)
+		require.NotNil(t, got2.DisplayName)
+		require.Equal(t, displayName2, *got2.DisplayName)
+		require.NotNil(t, got2.Email)
+		require.Equal(t, email2, *got2.Email)
+	})
+
+	t.Run("update_many_user_not_found", func(t *testing.T) {
+		missing := new(iam.User)
+		missing.SetID("missing-user-id")
+		missing.Username = "missing-user"
+		missing.Status = modeliamuser.UserStatusActive
+		missing.Type = modeliamuser.UserTypeRegular
+		_, err := cli.UpdateMany([]*iam.User{missing})
+		userRequireNotFound(t, err)
+	})
+
+	t.Run("update_many_mixed_targets_forbidden", func(t *testing.T) {
+		regularVictim := userSignupUser(t, "user_update_many_mix_regular", "example-UserUpdateMany-local-03")
+		superVictim := userSignupUser(t, "user_update_many_mix_super", "example-UserUpdateMany-local-04")
+		userSetSuperuser(t, superVictim.Username, true)
+
+		regularModel := userLoadByID(t, regularVictim.UserID)
+		regularModel.DisplayName = &blockedDisplayName
+
+		superModel := userLoadByID(t, superVictim.UserID)
+		superModel.DisplayName = &blockedDisplayName
+
+		_, err := cli.UpdateMany([]*iam.User{regularModel, superModel})
+		userRequireForbidden(t, err)
+
+		gotRegular := userLoadByID(t, regularVictim.UserID)
+		if gotRegular.DisplayName != nil {
+			require.NotEqual(t, blockedDisplayName, *gotRegular.DisplayName)
+		}
 	})
 }
 
@@ -219,10 +435,98 @@ func TestUserPatch(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			require.Equal(t, victim.UserID, rsp.ID)
+			require.Empty(t, rsp.Password)
+			require.Empty(t, rsp.PasswordHash)
+			require.Empty(t, rsp.Salt)
+		})
 
 		stored := userLoadByID(t, victim.UserID)
 		require.NotNil(t, stored.DisplayName)
 		require.Equal(t, patchedDisplayName, *stored.DisplayName)
+	})
+
+	t.Run("patch_user_not_found", func(t *testing.T) {
+		_, err := cli.Patch("missing-user-id", iam.User{
+			DisplayName: &patchedDisplayName,
+		})
+		userRequireNotFound(t, err)
+	})
+}
+
+func TestUserPatchMany(t *testing.T) {
+	actor := userSignupUser(t, "user_patch_many_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+
+	victim1 := userSignupUser(t, "user_patch_many_target1", "example-UserPatchMany-local-01")
+	victim2 := userSignupUser(t, "user_patch_many_target2", "example-UserPatchMany-local-02")
+	cli := userNewClient(t, actor.SessionID)
+
+	displayName1 := "Patched Many User 1"
+	displayName2 := "Patched Many User 2"
+	blockedDisplayName := "Blocked Patch Many"
+
+	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
+		user1 := new(iam.User)
+		user1.SetID(victim1.UserID)
+		user1.DisplayName = &displayName1
+		_, err := cli.PatchMany([]*iam.User{user1})
+		userRequireForbidden(t, err)
+	})
+
+	t.Run("promote_actor_superuser", func(t *testing.T) {
+		userSetSuperuser(t, actor.Username, true)
+	})
+
+	t.Run("patch_many_users", func(t *testing.T) {
+		user1 := new(iam.User)
+		user1.SetID(victim1.UserID)
+		user1.DisplayName = &displayName1
+
+		user2 := new(iam.User)
+		user2.SetID(victim2.UserID)
+		user2.DisplayName = &displayName2
+
+		resp, err := cli.PatchMany([]*iam.User{user1, user2})
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
+			require.Len(t, rsp.Items, 2)
+			require.Equal(t, 2, rsp.Summary.Total)
+			require.Equal(t, 2, rsp.Summary.Succeeded)
+			require.Equal(t, 0, rsp.Summary.Failed)
+		})
+
+		got1 := userLoadByID(t, victim1.UserID)
+		require.NotNil(t, got1.DisplayName)
+		require.Equal(t, displayName1, *got1.DisplayName)
+
+		got2 := userLoadByID(t, victim2.UserID)
+		require.NotNil(t, got2.DisplayName)
+		require.Equal(t, displayName2, *got2.DisplayName)
+	})
+
+	t.Run("patch_many_mixed_targets_forbidden", func(t *testing.T) {
+		regularVictim := userSignupUser(t, "user_patch_many_mix_regular", "example-UserPatchMany-local-03")
+		superVictim := userSignupUser(t, "user_patch_many_mix_super", "example-UserPatchMany-local-04")
+		userSetSuperuser(t, superVictim.Username, true)
+
+		regularModel := new(iam.User)
+		regularModel.SetID(regularVictim.UserID)
+		regularModel.DisplayName = &blockedDisplayName
+
+		superModel := new(iam.User)
+		superModel.SetID(superVictim.UserID)
+		superModel.DisplayName = &blockedDisplayName
+
+		_, err := cli.PatchMany([]*iam.User{regularModel, superModel})
+		userRequireForbidden(t, err)
+
+		gotRegular := userLoadByID(t, regularVictim.UserID)
+		if gotRegular.DisplayName != nil {
+			require.NotEqual(t, blockedDisplayName, *gotRegular.DisplayName)
+		}
 	})
 }
 
@@ -241,6 +545,12 @@ func TestUserDelete(t *testing.T) {
 
 	t.Run("promote_actor_superuser", func(t *testing.T) {
 		userSetSuperuser(t, actor.Username, true)
+	})
+
+	t.Run("delete_user_not_found", func(t *testing.T) {
+		cli := userNewClient(t, actor.SessionID)
+		_, err := cli.Delete("missing-user-id")
+		userRequireNotFound(t, err)
 	})
 
 	t.Run("delete_user_by_id", func(t *testing.T) {
@@ -281,6 +591,25 @@ func TestUserDeleteMany(t *testing.T) {
 		userSetSuperuser(t, actor.Username, true)
 	})
 
+	t.Run("delete_many_user_not_found", func(t *testing.T) {
+		cli := userNewClient(t, actor.SessionID)
+		_, err := cli.DeleteMany([]string{victim1.UserID, "missing-user-id"})
+		userRequireNotFound(t, err)
+	})
+
+	t.Run("delete_many_mixed_targets_forbidden", func(t *testing.T) {
+		cli := userNewClient(t, actor.SessionID)
+		regularVictim := userSignupUser(t, "user_delete_many_mix_regular", "example-DelMany-local-03")
+		superVictim := userSignupUser(t, "user_delete_many_mix_super", "example-DelMany-local-04")
+		userSetSuperuser(t, superVictim.Username, true)
+
+		_, err := cli.DeleteMany([]string{regularVictim.UserID, superVictim.UserID})
+		userRequireForbidden(t, err)
+
+		require.NotNil(t, userLoadByUsername(t, regularVictim.Username))
+		require.NotNil(t, userLoadByUsername(t, superVictim.Username))
+	})
+
 	t.Run("delete_many_users", func(t *testing.T) {
 		cli := userNewClient(t, actor.SessionID)
 		resp, err := cli.DeleteMany([]string{victim1.UserID, victim2.UserID})
@@ -319,6 +648,14 @@ func TestUserSuperuserTargetProtection(t *testing.T) {
 	blockedDisplayName := "blocked-superuser-update"
 	blockedUsername := fmt.Sprintf("user_super_target_create_%d", time.Now().UnixNano())
 	superuserEnabled := true
+	adminActor := userSignupUser(t, "user_super_target_admin", "12345678")
+	adminActor.SessionID = userLoginUser(t, &adminActor, adminActor.Password)
+	adminOriginalUsername := adminActor.Username
+	userSetUsername(t, adminActor.UserID, consts.AUTHZ_USER_ADMIN)
+	t.Cleanup(func() {
+		userSetUsername(t, adminActor.UserID, adminOriginalUsername)
+	})
+	adminCli := userNewClient(t, adminActor.SessionID)
 
 	t.Run("create_superuser_forbidden", func(t *testing.T) {
 		_, err := cli.Create(iam.User{
@@ -359,6 +696,58 @@ func TestUserSuperuserTargetProtection(t *testing.T) {
 	t.Run("delete_many_superuser_forbidden", func(t *testing.T) {
 		_, err := cli.DeleteMany([]string{victim.UserID})
 		userRequireForbidden(t, err)
+	})
+
+	t.Run("admin_can_create_superuser", func(t *testing.T) {
+		adminCreatedUsername := fmt.Sprintf("user_super_target_admin_created_%d", time.Now().UnixNano())
+		resp, err := adminCli.Create(iam.User{
+			Username:    adminCreatedUsername,
+			Password:    "example-UserSuperCreate-local-02",
+			IsSuperuser: &superuserEnabled,
+		})
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			userCleanupUser(t, adminCreatedUsername)
+		})
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			require.Equal(t, adminCreatedUsername, rsp.Username)
+			require.True(t, rsp.IsSuperuser != nil && *rsp.IsSuperuser)
+		})
+	})
+
+	t.Run("admin_can_get_superuser", func(t *testing.T) {
+		got := new(iam.User)
+		resp, err := adminCli.Get(victim.UserID, got)
+		require.NoError(t, err)
+		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+		require.Equal(t, victim.UserID, got.ID)
+		require.True(t, got.IsSuperuser != nil && *got.IsSuperuser)
+	})
+
+	t.Run("admin_can_patch_superuser", func(t *testing.T) {
+		adminPatchedDisplayName := "admin-updated-superuser"
+		resp, err := adminCli.Patch(victim.UserID, iam.User{
+			DisplayName: &adminPatchedDisplayName,
+		})
+		require.NoError(t, err)
+		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+
+		got := userLoadByID(t, victim.UserID)
+		require.NotNil(t, got.DisplayName)
+		require.Equal(t, adminPatchedDisplayName, *got.DisplayName)
+	})
+
+	t.Run("admin_can_delete_many_superuser", func(t *testing.T) {
+		adminDeleteVictim := userSignupUser(t, "user_super_target_delete_many", "example-UserSuper-local-02")
+		adminDeleteVictim.SessionID = userLoginUser(t, &adminDeleteVictim, adminDeleteVictim.Password)
+		userSetSuperuser(t, adminDeleteVictim.Username, true)
+
+		resp, err := adminCli.DeleteMany([]string{adminDeleteVictim.UserID})
+		require.NoError(t, err)
+		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+		userRequireDeleted(t, adminDeleteVictim.Username)
+		userRequireSessionNotFound(t, adminDeleteVictim.SessionID)
 	})
 }
 
@@ -469,6 +858,14 @@ func userSetSuperuser(t *testing.T, username string, enabled bool) {
 	require.NoError(t, database.Database[*iam.User](nil).Update(users[0]))
 }
 
+func userSetUsername(t *testing.T, userID, username string) {
+	t.Helper()
+
+	user := userLoadByID(t, userID)
+	user.Username = username
+	require.NoError(t, database.Database[*iam.User](nil).WithSelect("username").Update(user))
+}
+
 func userRequireDeleted(t *testing.T, username string) {
 	t.Helper()
 
@@ -510,6 +907,21 @@ func userRequireForbidden(t *testing.T, err error) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "403")
 	require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeForbidden.Code()))
+}
+
+func userRequireNotFound(t *testing.T, err error) {
+	t.Helper()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "404")
+}
+
+func userRequireMissingByUsername(t *testing.T, username string) {
+	t.Helper()
+
+	users := make([]*iam.User, 0)
+	require.NoError(t, database.Database[*iam.User](nil).WithQuery(&iam.User{Username: username}).List(&users))
+	require.Len(t, users, 0)
 }
 
 func userFindByUsername(items []*iam.User, username string) *iam.User {

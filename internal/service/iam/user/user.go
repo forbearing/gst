@@ -25,10 +25,7 @@ func (UserService) CreateBefore(ctx *types.ServiceContext, req *modeliamuser.Use
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	if req != nil && req.IsSuperuser != nil && *req.IsSuperuser && !isRootOrAdmin(actorUsername) {
-		return userSuperuserTargetForbidden()
-	}
-	return nil
+	return ensureUserCreateAllowed(actorUsername, req)
 }
 
 func (UserService) ListBefore(ctx *types.ServiceContext, _ *[]*modeliamuser.User) error {
@@ -51,13 +48,7 @@ func (UserService) UpdateBefore(ctx *types.ServiceContext, req *modeliamuser.Use
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	if err = ensureExistingUserTargetAllowed(actorUsername, req); err != nil {
-		return err
-	}
-	if req != nil && req.IsSuperuser != nil && *req.IsSuperuser && !isRootOrAdmin(actorUsername) {
-		return userSuperuserTargetForbidden()
-	}
-	return nil
+	return ensureUserMutationAllowed(actorUsername, req)
 }
 
 func (UserService) PatchBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
@@ -68,13 +59,7 @@ func (UserService) PatchBefore(ctx *types.ServiceContext, req *modeliamuser.User
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	if err = ensureExistingUserTargetAllowed(actorUsername, req); err != nil {
-		return err
-	}
-	if req != nil && req.IsSuperuser != nil && *req.IsSuperuser && !isRootOrAdmin(actorUsername) {
-		return userSuperuserTargetForbidden()
-	}
-	return nil
+	return ensureUserMutationAllowed(actorUsername, req)
 }
 
 func (UserService) DeleteBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
@@ -114,6 +99,22 @@ func (UserService) DeleteAfter(_ *types.ServiceContext, u *modeliamuser.User) er
 	return nil
 }
 
+func (UserService) CreateManyBefore(ctx *types.ServiceContext, users ...*modeliamuser.User) error {
+	actorUsername, actor, err := userResourceActor(ctx)
+	if err != nil {
+		return err
+	}
+	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
+		return err
+	}
+	for _, user := range users {
+		if err = ensureUserCreateAllowed(actorUsername, user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // DeleteManyAfter revokes sessions for each deleted user. Items contain only IDs from the batch request.
 func (UserService) DeleteManyAfter(_ *types.ServiceContext, users ...*modeliamuser.User) error {
 	for _, u := range users {
@@ -121,6 +122,38 @@ func (UserService) DeleteManyAfter(_ *types.ServiceContext, users ...*modeliamus
 			continue
 		}
 		serviceiamsession.InvalidateUserSessions(u.GetID())
+	}
+	return nil
+}
+
+func (UserService) UpdateManyBefore(ctx *types.ServiceContext, users ...*modeliamuser.User) error {
+	actorUsername, actor, err := userResourceActor(ctx)
+	if err != nil {
+		return err
+	}
+	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
+		return err
+	}
+	for _, user := range users {
+		if err = ensureUserMutationAllowed(actorUsername, user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (UserService) PatchManyBefore(ctx *types.ServiceContext, users ...*modeliamuser.User) error {
+	actorUsername, actor, err := userResourceActor(ctx)
+	if err != nil {
+		return err
+	}
+	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
+		return err
+	}
+	for _, user := range users {
+		if err = ensureUserMutationAllowed(actorUsername, user); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -160,6 +193,20 @@ func ensureUserTargetAccessible(ctx *types.ServiceContext, req *modeliamuser.Use
 		return err
 	}
 	return ensureExistingUserTargetAllowed(actorUsername, req)
+}
+
+func ensureUserCreateAllowed(actorUsername string, req *modeliamuser.User) error {
+	if req != nil && req.IsSuperuser != nil && *req.IsSuperuser && !isRootOrAdmin(actorUsername) {
+		return userSuperuserTargetForbidden()
+	}
+	return nil
+}
+
+func ensureUserMutationAllowed(actorUsername string, req *modeliamuser.User) error {
+	if err := ensureExistingUserTargetAllowed(actorUsername, req); err != nil {
+		return err
+	}
+	return ensureUserCreateAllowed(actorUsername, req)
 }
 
 func ensureExistingUserTargetAllowed(actorUsername string, req *modeliamuser.User) error {
