@@ -5,8 +5,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
@@ -30,8 +30,8 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 	}
 
 	// Get user from database
-	users := make([]*modeliam.User, 0)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: session.Username}).List(&users); err != nil {
+	users := make([]*modeliamuser.User, 0)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliamuser.User{Username: session.Username}).List(&users); err != nil {
 		log.Error("failed to query user", err)
 		return nil, fmt.Errorf("database error")
 	}
@@ -57,7 +57,7 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 	// Update password in database
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Update(user); err != nil {
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Update(user); err != nil {
 		log.Error("failed to update password", err)
 		return nil, fmt.Errorf("failed to update password")
 	}

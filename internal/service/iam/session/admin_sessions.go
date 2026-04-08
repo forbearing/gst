@@ -7,8 +7,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
@@ -216,8 +216,8 @@ func ensureAdminSessionActor(ctx *types.ServiceContext) error {
 		return err
 	}
 
-	user := new(modeliam.User)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, session.UserID); err != nil || user.GetID() == "" {
+	user := new(modeliamuser.User)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, session.UserID); err != nil || user.GetID() == "" {
 		return types.NewServiceError(http.StatusUnauthorized, "session invalid")
 	}
 
@@ -232,8 +232,8 @@ func ensureAdminSessionActor(ctx *types.ServiceContext) error {
 }
 
 func buildAdminSessionUserItem(ctx *types.ServiceContext, session modeliamsession.Session) (*adminSessionUserItem, error) {
-	user := new(modeliam.User)
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, session.UserID); err == nil && user.GetID() != "" {
+	user := new(modeliamuser.User)
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, session.UserID); err == nil && user.GetID() != "" {
 		return &adminSessionUserItem{
 			view: modeliamsession.AdminSessionUserView{
 				UserID:             user.ID,

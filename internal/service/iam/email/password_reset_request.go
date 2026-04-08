@@ -5,8 +5,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -20,12 +20,12 @@ type PasswordResetRequestService struct {
 // passwordResetLookupUserByEmail resolves the account bound to the requested email.
 // The indirection keeps the production query simple and allows focused tests to stub
 // the lookup without requiring a database fixture.
-var passwordResetLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliam.User, error) {
-	users := make([]*modeliam.User, 0, 1)
+var passwordResetLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliamuser.User, error) {
+	users := make([]*modeliamuser.User, 0, 1)
 	queryEmail := email
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 		WithLimit(1).
-		WithQuery(&modeliam.User{Email: &queryEmail}).
+		WithQuery(&modeliamuser.User{Email: &queryEmail}).
 		List(&users); err != nil {
 		return nil, err
 	}
@@ -84,14 +84,14 @@ func (s *PasswordResetRequestService) Create(ctx *types.ServiceContext, req *mod
 
 // eligiblePasswordResetUser ensures the reset flow is only issued for an active
 // account whose persisted email still matches the normalized request email.
-func eligiblePasswordResetUser(user *modeliam.User, email string) bool {
+func eligiblePasswordResetUser(user *modeliamuser.User, email string) bool {
 	if user == nil || user.ID == "" {
 		return false
 	}
 	if normalizePasswordResetEmail(user.Email) != email {
 		return false
 	}
-	return user.Status == "" || user.Status == modeliam.UserStatusActive
+	return user.Status == "" || user.Status == modeliamuser.UserStatusActive
 }
 
 // passwordResetDelivery builds the delivery payload consumed by the configured

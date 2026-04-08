@@ -1,10 +1,10 @@
 package modeliamaccount
 
-import modeliam "github.com/forbearing/gst/internal/model/iam"
+import modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 
 type AccountStatusReq struct {
-	UserID string              `json:"user_id" validate:"required"`
-	Status modeliam.UserStatus `json:"status" validate:"required"`
+	UserID string                  `json:"user_id" validate:"required"`
+	Status modeliamuser.UserStatus `json:"status" validate:"required"`
 }
 
 type AccountStatusRsp struct {

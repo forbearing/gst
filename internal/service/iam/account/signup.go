@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -35,8 +35,8 @@ func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliamaccount.S
 	}
 
 	// Check if username already exists
-	existingUsers := make([]*modeliam.User, 0)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: req.Username}).List(&existingUsers); err != nil {
+	existingUsers := make([]*modeliamuser.User, 0)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliamuser.User{Username: req.Username}).List(&existingUsers); err != nil {
 		log.Error("failed to check existing user", zap.Error(err))
 		return nil, fmt.Errorf("failed to create user")
 	}
@@ -52,7 +52,7 @@ func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliamaccount.S
 	}
 
 	// Create new user
-	newUser := &modeliam.User{
+	newUser := &modeliamuser.User{
 		Username:     req.Username,
 		PasswordHash: string(hashedPassword),
 	}
@@ -69,7 +69,7 @@ func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliamaccount.S
 	}
 
 	// Save to database
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Create(newUser); err != nil {
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Create(newUser); err != nil {
 		log.Error("failed to create user", zap.Error(err))
 		return nil, fmt.Errorf("failed to create user")
 	}

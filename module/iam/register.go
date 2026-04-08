@@ -5,11 +5,11 @@ import (
 
 	"github.com/forbearing/gst/cronjob"
 	cronjobiam "github.com/forbearing/gst/internal/cronjob/iam"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamaccount "github.com/forbearing/gst/internal/service/iam/account"
 	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
+	serviceiamuser "github.com/forbearing/gst/internal/service/iam/user"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
@@ -119,7 +119,7 @@ func Register(config ...Config) {
 	module.Use(module.NewWrapper("/iam/change-password", "id", false, &serviceiamaccount.ChangePasswordService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/reset-password", "id", false, &serviceiamaccount.ResetPasswordService{}), consts.PHASE_CREATE)
 	module.Use(module.NewWrapper("/iam/account-status", "id", false, &serviceiamaccount.AccountStatusService{}), consts.PHASE_CREATE)
-	module.Use(module.NewWrapper("/iam/users", "id", false, &serviceiam.UserService{}),
+	module.Use(module.NewWrapper("/iam/users", "id", false, &serviceiamuser.UserService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
@@ -173,7 +173,7 @@ func Register(config ...Config) {
 	// create default users
 	if len(cfg.DefaultUsers) > 0 {
 		for _, u := range cfg.DefaultUsers {
-			if err := modeliam.GenerateHashedPassword(u); err != nil {
+			if err := modeliamuser.GenerateHashedPassword(u); err != nil {
 				panic(err)
 			}
 		}

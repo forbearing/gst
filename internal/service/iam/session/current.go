@@ -6,6 +6,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
@@ -28,15 +29,15 @@ func (s *CurrentListService) List(ctx *types.ServiceContext, req *modeliamsessio
 		return nil, err
 	}
 
-	user := new(modeliam.User)
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, session.UserID); err != nil || user.GetID() == "" {
+	user := new(modeliamuser.User)
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, session.UserID); err != nil || user.GetID() == "" {
 		log.Error("failed to load user for current session")
 		return nil, types.NewServiceError(http.StatusUnauthorized, "session invalid")
 	}
 	switch user.Status {
-	case modeliam.UserStatusInactive:
+	case modeliamuser.UserStatusInactive:
 		return nil, types.NewServiceError(http.StatusForbidden, "", response.CodeAccountInactive)
-	case modeliam.UserStatusLocked:
+	case modeliamuser.UserStatusLocked:
 		return nil, types.NewServiceError(http.StatusForbidden, "", response.CodeAccountLocked)
 	}
 

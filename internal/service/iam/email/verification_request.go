@@ -3,8 +3,8 @@ package serviceiamemail
 import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -18,12 +18,12 @@ type VerificationRequestService struct {
 
 // verificationLookupUserByEmail resolves the user bound to the requested email.
 // Tests can replace this function to avoid database fixtures.
-var verificationLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliam.User, error) {
-	users := make([]*modeliam.User, 0, 1)
+var verificationLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliamuser.User, error) {
+	users := make([]*modeliamuser.User, 0, 1)
 	queryEmail := email
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 		WithLimit(1).
-		WithQuery(&modeliam.User{Email: &queryEmail}).
+		WithQuery(&modeliamuser.User{Email: &queryEmail}).
 		List(&users); err != nil {
 		return nil, err
 	}
@@ -81,14 +81,14 @@ func (s *VerificationRequestService) Create(ctx *types.ServiceContext, req *mode
 // eligibleVerificationUser ensures the verification flow is only sent to an
 // active account whose current email still matches the normalized request email
 // and has not already been verified.
-func eligibleVerificationUser(user *modeliam.User, email string) bool {
+func eligibleVerificationUser(user *modeliamuser.User, email string) bool {
 	if user == nil || user.ID == "" {
 		return false
 	}
 	if normalizePasswordResetEmail(user.Email) != email {
 		return false
 	}
-	if user.Status != "" && user.Status != modeliam.UserStatusActive {
+	if user.Status != "" && user.Status != modeliamuser.UserStatusActive {
 		return false
 	}
 	return !userEmailVerified(user)
@@ -110,6 +110,6 @@ func verificationDelivery(token string, flow iamEmailFlowState) emailDelivery {
 }
 
 // userEmailVerified safely returns the email verification flag for the user.
-func userEmailVerified(user *modeliam.User) bool {
+func userEmailVerified(user *modeliamuser.User) bool {
 	return user != nil && user.EmailVerified != nil && *user.EmailVerified
 }

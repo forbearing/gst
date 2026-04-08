@@ -3,8 +3,8 @@ package serviceiamaccount
 import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
@@ -39,7 +39,7 @@ func (s *ResetPasswordService) Create(ctx *types.ServiceContext, req *modeliamac
 
 	target.PasswordHash = string(hashedPassword)
 	target.MustChangePassword = true
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 		WithoutHook().
 		WithSelect("username", "password_hash", "must_change_password").
 		Update(target); err != nil {

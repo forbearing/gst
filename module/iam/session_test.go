@@ -9,8 +9,8 @@ import (
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/helper"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types"
@@ -78,7 +78,7 @@ func TestSessionCurrent(t *testing.T) {
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.CurrentListRsp) {
 			require.NotEmpty(t, rsp.Principal.UserID)
 			require.Equal(t, account.Username, rsp.Principal.Username)
-			require.Equal(t, string(modeliam.UserStatusActive), rsp.Principal.Status)
+			require.Equal(t, string(modeliamuser.UserStatusActive), rsp.Principal.Status)
 			require.False(t, rsp.Principal.MustChangePassword)
 			require.True(t, rsp.Session.IsCurrent)
 			require.Equal(t, sessionID, rsp.Session.ID)

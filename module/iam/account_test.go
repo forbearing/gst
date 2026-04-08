@@ -9,8 +9,8 @@ import (
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/helper"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/response"
@@ -202,8 +202,8 @@ func TestAccountUsers(t *testing.T) {
 		require.NotNil(t, rsp.Items[0])
 		require.Equal(t, user.Username, rsp.Items[0].Username)
 		require.NotEmpty(t, rsp.Items[0].ID)
-		require.Equal(t, modeliam.UserStatusActive, rsp.Items[0].Status)
-		require.Equal(t, modeliam.UserTypeRegular, rsp.Items[0].Type)
+		require.Equal(t, modeliamuser.UserStatusActive, rsp.Items[0].Status)
+		require.Equal(t, modeliamuser.UserTypeRegular, rsp.Items[0].Type)
 	})
 }
 
@@ -251,8 +251,8 @@ func TestAccountChangePassword(t *testing.T) {
 			require.Len(t, rsp.Items, 1)
 			require.NotNil(t, rsp.Items[0])
 			require.Equal(t, user.Username, rsp.Items[0].Username)
-			require.Equal(t, modeliam.UserStatusActive, rsp.Items[0].Status)
-			require.Equal(t, modeliam.UserTypeRegular, rsp.Items[0].Type)
+			require.Equal(t, modeliamuser.UserStatusActive, rsp.Items[0].Status)
+			require.Equal(t, modeliamuser.UserTypeRegular, rsp.Items[0].Type)
 		})
 	})
 }
@@ -425,7 +425,7 @@ func TestAccountStatus(t *testing.T) {
 
 		_, err = cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusInactive,
+			Status: modeliamuser.UserStatusInactive,
 		})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "code:")
@@ -444,7 +444,7 @@ func TestAccountStatus(t *testing.T) {
 
 		resp, err := cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusInactive,
+			Status: modeliamuser.UserStatusInactive,
 		})
 		require.NoError(t, err)
 
@@ -479,7 +479,7 @@ func TestAccountStatus(t *testing.T) {
 
 		resp, err := cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusInactive,
+			Status: modeliamuser.UserStatusInactive,
 		})
 		require.NoError(t, err)
 
@@ -511,7 +511,7 @@ func TestAccountStatus(t *testing.T) {
 
 		resp, err := cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusActive,
+			Status: modeliamuser.UserStatusActive,
 		})
 		require.NoError(t, err)
 
@@ -533,7 +533,7 @@ func TestAccountStatus(t *testing.T) {
 
 		victimModel := victims[0]
 		prevStatus := victimModel.Status
-		victimModel.Status = modeliam.UserStatusInactive
+		victimModel.Status = modeliamuser.UserStatusInactive
 		require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victimModel))
 		t.Cleanup(func() {
 			victimModel.Status = prevStatus
@@ -559,7 +559,7 @@ func TestAccountStatus(t *testing.T) {
 
 		victimModel := victims[0]
 		prevStatus := victimModel.Status
-		victimModel.Status = modeliam.UserStatusLocked
+		victimModel.Status = modeliamuser.UserStatusLocked
 		require.NoError(t, database.Database[*iam.User](nil).WithoutHook().WithSelect("username", "status").Update(victimModel))
 		t.Cleanup(func() {
 			victimModel.Status = prevStatus
@@ -587,7 +587,7 @@ func TestAccountStatus(t *testing.T) {
 
 		_, err = cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatus("not-a-valid-status"),
+			Status: modeliamuser.UserStatus("not-a-valid-status"),
 		})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid")
@@ -602,7 +602,7 @@ func TestAccountStatus(t *testing.T) {
 
 		resp, err := cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusLocked,
+			Status: modeliamuser.UserStatusLocked,
 		})
 		require.NoError(t, err)
 
@@ -651,7 +651,7 @@ func TestAccountStatus(t *testing.T) {
 
 		resp, err := cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusActive,
+			Status: modeliamuser.UserStatusActive,
 		})
 		require.NoError(t, err)
 
@@ -669,7 +669,7 @@ func TestAccountStatus(t *testing.T) {
 
 		resp, err := cli.Create(iam.AccountStatusReq{
 			UserID: victim.UserID,
-			Status: modeliam.UserStatusActive,
+			Status: modeliamuser.UserStatusActive,
 		})
 		require.NoError(t, err)
 

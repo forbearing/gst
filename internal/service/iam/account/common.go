@@ -3,14 +3,14 @@ package serviceiamaccount
 import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 )
 
 // privilegedActor reports whether the actor can manage privileged account operations.
-func privilegedActor(actor *modeliam.User, username string) bool {
+func privilegedActor(actor *modeliamuser.User, username string) bool {
 	if username == consts.AUTHZ_USER_ROOT || username == consts.AUTHZ_USER_ADMIN {
 		return true
 	}
@@ -18,7 +18,7 @@ func privilegedActor(actor *modeliam.User, username string) bool {
 }
 
 // mayManageProtectedUser allows privileged actors to act on another user; superuser targets require root or admin.
-func mayManageProtectedUser(actorUsername string, actor, target *modeliam.User) error {
+func mayManageProtectedUser(actorUsername string, actor, target *modeliamuser.User) error {
 	if !privilegedActor(actor, actorUsername) {
 		return errors.New("forbidden: superuser privileges required")
 	}
@@ -31,7 +31,7 @@ func mayManageProtectedUser(actorUsername string, actor, target *modeliam.User) 
 }
 
 // loadPrivilegedActorAndTarget resolves the current actor from session context and loads the requested target user.
-func loadPrivilegedActorAndTarget(ctx *types.ServiceContext, targetUserID string) (string, *modeliam.User, *modeliam.User, error) {
+func loadPrivilegedActorAndTarget(ctx *types.ServiceContext, targetUserID string) (string, *modeliamuser.User, *modeliamuser.User, error) {
 	_, session, err := serviceiamsession.GetCurrentSession(ctx)
 	if err != nil {
 		return "", nil, nil, errors.Wrap(err, "invalid session")
@@ -45,10 +45,10 @@ func loadPrivilegedActorAndTarget(ctx *types.ServiceContext, targetUserID string
 		return "", nil, nil, errors.New("actor username not found")
 	}
 
-	actors := make([]*modeliam.User, 0)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).
+	actors := make([]*modeliamuser.User, 0)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 		WithLimit(1).
-		WithQuery(&modeliam.User{Username: actorUsername}).
+		WithQuery(&modeliamuser.User{Username: actorUsername}).
 		List(&actors); err != nil {
 		return "", nil, nil, errors.Wrap(err, "database error")
 	}
@@ -56,8 +56,8 @@ func loadPrivilegedActorAndTarget(ctx *types.ServiceContext, targetUserID string
 		return "", nil, nil, errors.New("actor user not found")
 	}
 
-	target := new(modeliam.User)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Get(target, targetUserID); err != nil {
+	target := new(modeliamuser.User)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(target, targetUserID); err != nil {
 		return "", nil, nil, errors.Wrap(err, "user not found")
 	}
 
@@ -65,6 +65,6 @@ func loadPrivilegedActorAndTarget(ctx *types.ServiceContext, targetUserID string
 }
 
 // shouldInvalidateUserSessions returns whether a user status transition must revoke all active sessions.
-func shouldInvalidateUserSessions(status modeliam.UserStatus) bool {
-	return status == modeliam.UserStatusInactive || status == modeliam.UserStatusLocked
+func shouldInvalidateUserSessions(status modeliamuser.UserStatus) bool {
+	return status == modeliamuser.UserStatusInactive || status == modeliamuser.UserStatusLocked
 }

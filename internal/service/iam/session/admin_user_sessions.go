@@ -8,6 +8,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/service"
@@ -44,8 +45,8 @@ func (s *AdminUserSessionsListService) List(ctx *types.ServiceContext, req *mode
 		return nil, types.NewServiceError(http.StatusBadRequest, "user id is required")
 	}
 
-	user := new(modeliam.User)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, targetUserID); err != nil {
+	user := new(modeliamuser.User)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, targetUserID); err != nil {
 		if errors.Is(err, types.ErrEntryNotFound) {
 			return nil, types.NewServiceError(http.StatusNotFound, "user not found")
 		}
@@ -86,8 +87,8 @@ func (s *AdminUserSessionsDeleteService) Delete(ctx *types.ServiceContext, req *
 		return nil, types.NewServiceError(http.StatusBadRequest, "user id is required")
 	}
 
-	targetUser := new(modeliam.User)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Get(targetUser, targetUserID); err != nil {
+	targetUser := new(modeliamuser.User)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(targetUser, targetUserID); err != nil {
 		if errors.Is(err, types.ErrEntryNotFound) {
 			return nil, types.NewServiceError(http.StatusNotFound, "user not found")
 		}
@@ -109,7 +110,7 @@ func (s *AdminUserSessionsDeleteService) Delete(ctx *types.ServiceContext, req *
 	return &modeliamsession.AdminUserSessionsDeleteRsp{}, nil
 }
 
-func buildAdminUserSessionsView(ctx *types.ServiceContext, user *modeliam.User, currentSessionID string) (modeliamsession.AdminSessionUserView, error) {
+func buildAdminUserSessionsView(ctx *types.ServiceContext, user *modeliamuser.User, currentSessionID string) (modeliamsession.AdminSessionUserView, error) {
 	view := modeliamsession.AdminSessionUserView{
 		UserID:             user.ID,
 		Username:           user.Username,

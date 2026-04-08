@@ -3,8 +3,8 @@ package serviceiamaccount
 import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
@@ -23,7 +23,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 		return nil, errors.New("user_id is required")
 	}
 	switch req.Status {
-	case modeliam.UserStatusActive, modeliam.UserStatusInactive, modeliam.UserStatusLocked:
+	case modeliamuser.UserStatusActive, modeliamuser.UserStatusInactive, modeliamuser.UserStatusLocked:
 	default:
 		return nil, errors.New("invalid status: must be active, inactive, or locked")
 	}
@@ -48,7 +48,7 @@ func (s *AccountStatusService) Create(ctx *types.ServiceContext, req *modeliamac
 	}
 
 	target.Status = req.Status
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 		WithoutHook().
 		WithSelect("username", "status").
 		Update(target); err != nil {

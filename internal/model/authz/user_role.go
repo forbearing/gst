@@ -6,7 +6,7 @@ import (
 
 	"github.com/forbearing/gst/authz/rbac"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/util"
@@ -20,8 +20,8 @@ type UserRole struct {
 	RoleCode string `json:"rolecode,omitempty" schema:"rolecode"` // 角色Code, 用于 RBAC 角色控制和前端查询
 	Username string `json:"username,omitempty" schema:"username"` // 用户名, 用于 RBAC 用户控制和前端查询
 
-	User *modeliam.User `json:"user,omitempty" gorm:"-"`
-	Role *Role          `json:"role,omitempty" gorm:"-"`
+	User *modeliamuser.User `json:"user,omitempty" gorm:"-"`
+	Role *Role              `json:"role,omitempty" gorm:"-"`
 
 	model.Base
 }
@@ -35,8 +35,8 @@ func (r *UserRole) CreateBefore(ctx *types.ModelContext) error {
 		return errors.New("role_id is required")
 	}
 	// expands field: user and role
-	user, role := new(modeliam.User), new(Role)
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
+	user, role := new(modeliamuser.User), new(Role)
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
 		return err
 	}
 	if err := database.Database[*Role](ctx.DatabaseContext()).Get(role, r.RoleID); err != nil {
@@ -60,8 +60,8 @@ func (r *UserRole) CreateAfter(ctx *types.ModelContext) error {
 	}
 
 	// update casbin_rule field: `user`, `role`, `remark`
-	user := new(modeliam.User)
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
+	user := new(modeliamuser.User)
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, r.UserID); err != nil {
 		return err
 	}
 	casbinRules := make([]*CasbinRule, 0)

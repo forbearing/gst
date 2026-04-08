@@ -9,6 +9,7 @@ import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
@@ -68,8 +69,8 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	}()
 
 	// Find user by username
-	users := make([]*modeliam.User, 0)
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliam.User{Username: req.Username}).List(&users); err != nil {
+	users := make([]*modeliamuser.User, 0)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliamuser.User{Username: req.Username}).List(&users); err != nil {
 		log.Errorz("failed to query user", zap.Error(err))
 		return nil, fmt.Errorf("invalid username or password")
 	}
@@ -80,10 +81,10 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	user := users[0]
 
 	// Check if user is enabled
-	if user.Status == modeliam.UserStatusInactive {
+	if user.Status == modeliamuser.UserStatusInactive {
 		return nil, types.NewServiceError(http.StatusForbidden, "", response.CodeAccountInactive)
 	}
-	if user.Status == modeliam.UserStatusLocked {
+	if user.Status == modeliamuser.UserStatusLocked {
 		return nil, types.NewServiceError(http.StatusForbidden, "", response.CodeAccountLocked)
 	}
 
@@ -128,7 +129,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	// Update last login time
 	now := time.Now()
 	user.LastLoginAt = &now
-	if err = database.Database[*modeliam.User](ctx.DatabaseContext()).Update(user); err != nil {
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Update(user); err != nil {
 		log.Errorz("failed to update last login time", zap.Error(err))
 		// Don't fail the login for this
 	}

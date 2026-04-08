@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -29,9 +29,9 @@ func (c *TOTPCheckService) Create(ctx *types.ServiceContext, req *modeltwofa.TOT
 	}
 
 	// 查找用户
-	db := database.Database[*modeliam.User](ctx.DatabaseContext())
-	users := make([]*modeliam.User, 0)
-	if err = db.WithLimit(1).WithQuery(&modeliam.User{Username: req.Username}).List(&users); err != nil {
+	db := database.Database[*modeliamuser.User](ctx.DatabaseContext())
+	users := make([]*modeliamuser.User, 0)
+	if err = db.WithLimit(1).WithQuery(&modeliamuser.User{Username: req.Username}).List(&users); err != nil {
 		log.Errorw("failed to query user", "username", req.Username, "error", err)
 		return nil, fmt.Errorf("authentication failed")
 	}

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	loggerzap "github.com/forbearing/gst/logger/zap"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
@@ -250,12 +250,12 @@ func TestVerificationRequestCreate(t *testing.T) {
 
 	verified := false
 	previousLookup := verificationLookupUserByEmail
-	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "user@example.com", email)
 		emailCopy := "user@example.com"
-		return &modeliam.User{
+		return &modeliamuser.User{
 			Base:          model.Base{ID: "user-verify-1"},
-			Status:        modeliam.UserStatusActive,
+			Status:        modeliamuser.UserStatusActive,
 			Email:         &emailCopy,
 			EmailVerified: &verified,
 		}, nil
@@ -291,11 +291,11 @@ func TestVerificationRequestCreateVerifiedUser(t *testing.T) {
 
 	verified := true
 	previousLookup := verificationLookupUserByEmail
-	verificationLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		emailCopy := "user@example.com"
-		return &modeliam.User{
+		return &modeliamuser.User{
 			Base:          model.Base{ID: "user-verify-2"},
-			Status:        modeliam.UserStatusActive,
+			Status:        modeliamuser.UserStatusActive,
 			Email:         &emailCopy,
 			EmailVerified: &verified,
 		}, nil
@@ -328,12 +328,12 @@ func TestVerificationResendCreate(t *testing.T) {
 
 	verified := false
 	previousLookup := verificationLookupUserByEmail
-	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "user@example.com", email)
 		emailCopy := "user@example.com"
-		return &modeliam.User{
+		return &modeliamuser.User{
 			Base:          model.Base{ID: "user-verify-3"},
-			Status:        modeliam.UserStatusActive,
+			Status:        modeliamuser.UserStatusActive,
 			Email:         &emailCopy,
 			EmailVerified: &verified,
 		}, nil
@@ -367,11 +367,11 @@ func TestVerificationResendCreateThrottled(t *testing.T) {
 
 	verified := false
 	previousLookup := verificationLookupUserByEmail
-	verificationLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		emailCopy := "user@example.com"
-		return &modeliam.User{
+		return &modeliamuser.User{
 			Base:          model.Base{ID: "user-verify-4"},
-			Status:        modeliam.UserStatusActive,
+			Status:        modeliamuser.UserStatusActive,
 			Email:         &emailCopy,
 			EmailVerified: &verified,
 		}, nil
@@ -421,7 +421,7 @@ func TestVerificationConfirmCreate(t *testing.T) {
 
 	verified := false
 	emailCopy := "user@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:          model.Base{ID: "user-verify-5"},
 		Email:         &emailCopy,
 		EmailVerified: &verified,
@@ -429,11 +429,11 @@ func TestVerificationConfirmCreate(t *testing.T) {
 
 	previousLoad := verificationLoadUserByID
 	previousUpdate := verificationUpdateUser
-	verificationLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+	verificationLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliamuser.User, error) {
 		require.Equal(t, "user-verify-5", userID)
 		return user, nil
 	}
-	verificationUpdateUser = func(_ *types.ServiceContext, updated *modeliam.User) error {
+	verificationUpdateUser = func(_ *types.ServiceContext, updated *modeliamuser.User) error {
 		user = updated
 		return nil
 	}
@@ -497,7 +497,7 @@ func TestVerificationConfirmCreateAlreadyVerified(t *testing.T) {
 	verified := true
 	verifiedAt := now.Add(-time.Hour)
 	emailCopy := "user@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:            model.Base{ID: "user-verify-6"},
 		Email:           &emailCopy,
 		EmailVerified:   &verified,
@@ -506,10 +506,10 @@ func TestVerificationConfirmCreateAlreadyVerified(t *testing.T) {
 
 	previousLoad := verificationLoadUserByID
 	previousUpdate := verificationUpdateUser
-	verificationLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	verificationLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return user, nil
 	}
-	verificationUpdateUser = func(_ *types.ServiceContext, _ *modeliam.User) error {
+	verificationUpdateUser = func(_ *types.ServiceContext, _ *modeliamuser.User) error {
 		t.Fatalf("verificationUpdateUser should not be called for already verified user")
 		return nil
 	}
@@ -543,20 +543,20 @@ func TestChangeRequestCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	oldEmail := "old@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:         model.Base{ID: "user-change-1"},
-		Status:       modeliam.UserStatusActive,
+		Status:       modeliamuser.UserStatusActive,
 		Email:        &oldEmail,
 		PasswordHash: string(passwordHash),
 	}
 
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
-	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliamuser.User, error) {
 		require.Equal(t, "user-change-1", userID)
 		return user, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "new@example.com", email)
 		return nil, nil
 	}
@@ -600,23 +600,23 @@ func TestChangeRequestCreateEmailAlreadyUsed(t *testing.T) {
 
 	oldEmail := "old@example.com"
 	usedEmail := "new@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:         model.Base{ID: "user-change-2"},
-		Status:       modeliam.UserStatusActive,
+		Status:       modeliamuser.UserStatusActive,
 		Email:        &oldEmail,
 		PasswordHash: string(passwordHash),
 	}
-	existingUser := &modeliam.User{
+	existingUser := &modeliamuser.User{
 		Base:  model.Base{ID: "user-change-other"},
 		Email: &usedEmail,
 	}
 
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
-	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return user, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return existingUser, nil
 	}
 	t.Cleanup(func() {
@@ -650,19 +650,19 @@ func TestChangeResendCreate(t *testing.T) {
 	setEmailSender(sender)
 
 	oldEmail := "old@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:   model.Base{ID: "user-change-3"},
-		Status: modeliam.UserStatusActive,
+		Status: modeliamuser.UserStatusActive,
 		Email:  &oldEmail,
 	}
 
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
-	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliamuser.User, error) {
 		require.Equal(t, "user-change-3", userID)
 		return user, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "new@example.com", email)
 		return nil, nil
 	}
@@ -697,18 +697,18 @@ func TestChangeResendCreateThrottled(t *testing.T) {
 	setEmailSender(sender)
 
 	oldEmail := "old@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:   model.Base{ID: "user-change-4"},
-		Status: modeliam.UserStatusActive,
+		Status: modeliamuser.UserStatusActive,
 		Email:  &oldEmail,
 	}
 
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
-	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return user, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return nil, nil
 	}
 	t.Cleanup(func() {
@@ -760,9 +760,9 @@ func TestChangeConfirmCreate(t *testing.T) {
 
 	verified := false
 	oldEmail := "old@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:          model.Base{ID: "user-change-5"},
-		Status:        modeliam.UserStatusActive,
+		Status:        modeliamuser.UserStatusActive,
 		Email:         &oldEmail,
 		EmailVerified: &verified,
 	}
@@ -770,15 +770,15 @@ func TestChangeConfirmCreate(t *testing.T) {
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
 	previousUpdate := changeUpdateUser
-	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliamuser.User, error) {
 		require.Equal(t, "user-change-5", userID)
 		return user, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "new@example.com", email)
 		return nil, nil
 	}
-	changeUpdateUser = func(_ *types.ServiceContext, updated *modeliam.User) error {
+	changeUpdateUser = func(_ *types.ServiceContext, updated *modeliamuser.User) error {
 		user = updated
 		return nil
 	}
@@ -832,15 +832,15 @@ func TestChangeConfirmCreateCanceled(t *testing.T) {
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
 	previousUpdate := changeUpdateUser
-	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		t.Fatalf("changeLoadUserByID should not be called for canceled flow")
 		return nil, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		t.Fatalf("changeLookupUserByEmail should not be called for canceled flow")
 		return nil, nil
 	}
-	changeUpdateUser = func(_ *types.ServiceContext, _ *modeliam.User) error {
+	changeUpdateUser = func(_ *types.ServiceContext, _ *modeliamuser.User) error {
 		t.Fatalf("changeUpdateUser should not be called for canceled flow")
 		return nil
 	}
@@ -883,14 +883,14 @@ func TestChangeCancelCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	oldEmail := "old@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:   model.Base{ID: "user-change-7"},
-		Status: modeliam.UserStatusActive,
+		Status: modeliamuser.UserStatusActive,
 		Email:  &oldEmail,
 	}
 
 	previousLoad := changeLoadUserByID
-	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliamuser.User, error) {
 		require.Equal(t, "user-change-7", userID)
 		return user, nil
 	}
@@ -927,9 +927,9 @@ func TestChangeRequestCreateClearsCancellationMarker(t *testing.T) {
 	require.NoError(t, err)
 
 	oldEmail := "old@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:         model.Base{ID: "user-change-8"},
-		Status:       modeliam.UserStatusActive,
+		Status:       modeliamuser.UserStatusActive,
 		Email:        &oldEmail,
 		PasswordHash: string(passwordHash),
 	}
@@ -943,10 +943,10 @@ func TestChangeRequestCreateClearsCancellationMarker(t *testing.T) {
 
 	previousLoad := changeLoadUserByID
 	previousLookup := changeLookupUserByEmail
-	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return user, nil
 	}
-	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) {
+	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		return nil, nil
 	}
 	t.Cleanup(func() {
@@ -983,12 +983,12 @@ func TestPasswordResetRequestCreate(t *testing.T) {
 	setEmailSender(sender)
 
 	previousLookup := passwordResetLookupUserByEmail
-	passwordResetLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliam.User, error) {
+	passwordResetLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "user@example.com", email)
 		emailCopy := "user@example.com"
-		return &modeliam.User{
+		return &modeliamuser.User{
 			Base:   model.Base{ID: "user-1"},
-			Status: modeliam.UserStatusActive,
+			Status: modeliamuser.UserStatusActive,
 			Email:  &emailCopy,
 		}, nil
 	}
@@ -1022,7 +1022,7 @@ func TestPasswordResetRequestCreateUnknownUser(t *testing.T) {
 	setEmailSender(sender)
 
 	previousLookup := passwordResetLookupUserByEmail
-	passwordResetLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliam.User, error) { return nil, nil }
+	passwordResetLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) { return nil, nil }
 	t.Cleanup(func() {
 		passwordResetLookupUserByEmail = previousLookup
 	})
@@ -1058,7 +1058,7 @@ func TestPasswordResetConfirmCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	emailCopy := "user@example.com"
-	user := &modeliam.User{
+	user := &modeliamuser.User{
 		Base:               model.Base{ID: "user-2"},
 		Email:              &emailCopy,
 		PasswordHash:       "old-hash",
@@ -1068,11 +1068,11 @@ func TestPasswordResetConfirmCreate(t *testing.T) {
 	previousLoad := passwordResetLoadUserByID
 	previousUpdate := passwordResetUpdateUser
 	previousInvalidate := passwordResetInvalidateSessions
-	passwordResetLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliam.User, error) {
+	passwordResetLoadUserByID = func(_ *types.ServiceContext, userID string) (*modeliamuser.User, error) {
 		require.Equal(t, "user-2", userID)
 		return user, nil
 	}
-	passwordResetUpdateUser = func(_ *types.ServiceContext, updated *modeliam.User) error {
+	passwordResetUpdateUser = func(_ *types.ServiceContext, updated *modeliamuser.User) error {
 		user = updated
 		return nil
 	}
