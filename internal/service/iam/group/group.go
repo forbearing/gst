@@ -65,7 +65,7 @@ func ensureGroupModuleSuperuser(ctx *types.ServiceContext) error {
 	}
 
 	actor := new(modeliamuser.User)
-	if err = database.Database[*modeliamuser.User](nil).Get(actor, session.UserID); err != nil {
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(actor, session.UserID); err != nil {
 		return types.NewServiceErrorWithCause(http.StatusUnauthorized, "current user not found", err)
 	}
 	if actor.ID == "" {

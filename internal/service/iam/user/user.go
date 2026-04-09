@@ -48,7 +48,7 @@ func (UserService) UpdateBefore(ctx *types.ServiceContext, req *modeliamuser.Use
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	return ensureUserMutationAllowed(actorUsername, req)
+	return ensureUserMutationAllowed(ctx, actorUsername, req)
 }
 
 func (UserService) PatchBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
@@ -59,7 +59,7 @@ func (UserService) PatchBefore(ctx *types.ServiceContext, req *modeliamuser.User
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	return ensureUserMutationAllowed(actorUsername, req)
+	return ensureUserMutationAllowed(ctx, actorUsername, req)
 }
 
 func (UserService) DeleteBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
@@ -70,7 +70,7 @@ func (UserService) DeleteBefore(ctx *types.ServiceContext, req *modeliamuser.Use
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	return ensureExistingUserTargetAllowed(actorUsername, req)
+	return ensureExistingUserTargetAllowed(ctx, actorUsername, req)
 }
 
 func (UserService) DeleteManyBefore(ctx *types.ServiceContext, users ...*modeliamuser.User) error {
@@ -82,7 +82,7 @@ func (UserService) DeleteManyBefore(ctx *types.ServiceContext, users ...*modelia
 		return err
 	}
 	for _, user := range users {
-		if err = ensureExistingUserTargetAllowed(actorUsername, user); err != nil {
+		if err = ensureExistingUserTargetAllowed(ctx, actorUsername, user); err != nil {
 			return err
 		}
 	}
@@ -135,7 +135,7 @@ func (UserService) UpdateManyBefore(ctx *types.ServiceContext, users ...*modelia
 		return err
 	}
 	for _, user := range users {
-		if err = ensureUserMutationAllowed(actorUsername, user); err != nil {
+		if err = ensureUserMutationAllowed(ctx, actorUsername, user); err != nil {
 			return err
 		}
 	}
@@ -151,7 +151,7 @@ func (UserService) PatchManyBefore(ctx *types.ServiceContext, users ...*modeliam
 		return err
 	}
 	for _, user := range users {
-		if err = ensureUserMutationAllowed(actorUsername, user); err != nil {
+		if err = ensureUserMutationAllowed(ctx, actorUsername, user); err != nil {
 			return err
 		}
 	}
@@ -165,7 +165,7 @@ func userResourceActor(ctx *types.ServiceContext) (string, *modeliamuser.User, e
 	}
 
 	actor := new(modeliamuser.User)
-	if err = database.Database[*modeliamuser.User](nil).Get(actor, session.UserID); err != nil {
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(actor, session.UserID); err != nil {
 		return "", nil, types.NewServiceErrorWithCause(http.StatusUnauthorized, "current user not found", err)
 	}
 	if actor.ID == "" {
@@ -192,7 +192,7 @@ func ensureUserTargetAccessible(ctx *types.ServiceContext, req *modeliamuser.Use
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
 		return err
 	}
-	return ensureExistingUserTargetAllowed(actorUsername, req)
+	return ensureExistingUserTargetAllowed(ctx, actorUsername, req)
 }
 
 func ensureUserCreateAllowed(actorUsername string, req *modeliamuser.User) error {
@@ -202,19 +202,19 @@ func ensureUserCreateAllowed(actorUsername string, req *modeliamuser.User) error
 	return nil
 }
 
-func ensureUserMutationAllowed(actorUsername string, req *modeliamuser.User) error {
-	if err := ensureExistingUserTargetAllowed(actorUsername, req); err != nil {
+func ensureUserMutationAllowed(ctx *types.ServiceContext, actorUsername string, req *modeliamuser.User) error {
+	if err := ensureExistingUserTargetAllowed(ctx, actorUsername, req); err != nil {
 		return err
 	}
 	return ensureUserCreateAllowed(actorUsername, req)
 }
 
-func ensureExistingUserTargetAllowed(actorUsername string, req *modeliamuser.User) error {
+func ensureExistingUserTargetAllowed(ctx *types.ServiceContext, actorUsername string, req *modeliamuser.User) error {
 	if req == nil || req.GetID() == "" {
 		return types.NewServiceError(http.StatusBadRequest, "user id is required")
 	}
 	target := new(modeliamuser.User)
-	if err := database.Database[*modeliamuser.User](nil).Get(target, req.GetID()); err != nil {
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(target, req.GetID()); err != nil {
 		return types.NewServiceErrorWithCause(http.StatusInternalServerError, "failed to load target user", err)
 	}
 	if target.ID == "" {
