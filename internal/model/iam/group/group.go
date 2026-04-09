@@ -53,13 +53,25 @@ func (Group) Design() {
 	Create(func() {
 		Enabled(true)
 	})
+	CreateMany(func() {
+		Enabled(true)
+	})
 	Delete(func() {
+		Enabled(true)
+	})
+	DeleteMany(func() {
 		Enabled(true)
 	})
 	Update(func() {
 		Enabled(true)
 	})
+	UpdateMany(func() {
+		Enabled(true)
+	})
 	Patch(func() {
+		Enabled(true)
+	})
+	PatchMany(func() {
 		Enabled(true)
 	})
 	List(func() {

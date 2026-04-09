@@ -235,13 +235,25 @@ func TestAccountGroups(t *testing.T) {
 	}))
 	require.NoError(t, err)
 
-	items := make([]*iam.Group, 0)
-	total := new(int64)
-	resp, err := cli.List(&items, total)
-	require.NoError(t, err)
+	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
+		items := make([]*iam.Group, 0)
+		total := new(int64)
+		_, err = cli.List(&items, total)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+	})
 
-	helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
-		require.Len(t, rsp.Items, 0)
+	t.Run("list_groups_after_promote_superuser", func(t *testing.T) {
+		userSetSuperuser(t, user.Username, true)
+
+		items := make([]*iam.Group, 0)
+		total := new(int64)
+		resp, err := cli.List(&items, total)
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
+			require.Len(t, rsp.Items, 0)
+		})
 	})
 }
 
