@@ -1,11 +1,11 @@
 package iam
 
 import (
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
 	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
+	modeliamtenant "github.com/forbearing/gst/internal/model/iam/tenant"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 )
 
@@ -28,7 +28,7 @@ type (
 
 	User   = modeliamuser.User
 	Group  = modeliamgroup.Group
-	Tenant = modeliam.Tenant
+	Tenant = modeliamtenant.Tenant
 
 	Session     = modeliamsession.Session
 	SessionView = modeliamsession.SessionView

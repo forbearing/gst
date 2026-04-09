@@ -2,7 +2,7 @@ package modeliamgroup
 
 import (
 	. "github.com/forbearing/gst/dsl"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamtenant "github.com/forbearing/gst/internal/model/iam/tenant"
 	"github.com/forbearing/gst/model"
 )
 
@@ -40,8 +40,8 @@ type Group struct {
 	Path     string  `json:"path" gorm:"type:varchar(500);index"`
 	Level    int     `json:"level" gorm:"default:0;index"`
 
-	TenantID *string          `json:"tenant_id" gorm:"index"`
-	Tenant   *modeliam.Tenant `json:"tenant,omitempty" gorm:"-"`
+	TenantID *string                `json:"tenant_id" gorm:"index"`
+	Tenant   *modeliamtenant.Tenant `json:"tenant,omitempty" gorm:"-"`
 
 	model.Base
 }

@@ -10,6 +10,7 @@ import (
 	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
 	serviceiamgroup "github.com/forbearing/gst/internal/service/iam/group"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
+	serviceiamtenant "github.com/forbearing/gst/internal/service/iam/tenant"
 	serviceiamuser "github.com/forbearing/gst/internal/service/iam/user"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
@@ -145,13 +146,17 @@ func Register(config ...Config) {
 		consts.PHASE_DELETE_MANY,
 	)
 	if cfg.EnableTenant {
-		module.Use(module.NewWrapper("/iam/tenants", "id", false, &service.Base[*Tenant, *Tenant, *Tenant]{}),
+		module.Use(module.NewWrapper("/iam/tenants", "id", false, &serviceiamtenant.TenantService{}),
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,
 			consts.PHASE_PATCH,
 			consts.PHASE_LIST,
 			consts.PHASE_GET,
+			consts.PHASE_CREATE_MANY,
+			consts.PHASE_UPDATE_MANY,
+			consts.PHASE_PATCH_MANY,
+			consts.PHASE_DELETE_MANY,
 		)
 	}
 

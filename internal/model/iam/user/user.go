@@ -5,8 +5,8 @@ import (
 	"time"
 
 	. "github.com/forbearing/gst/dsl"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
+	modeliamtenant "github.com/forbearing/gst/internal/model/iam/tenant"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"golang.org/x/crypto/bcrypt"
@@ -76,8 +76,8 @@ type User struct {
 	IsStaff     *bool `json:"is_staff" gorm:"default:false"`
 	IsSuperuser *bool `json:"is_superuser" gorm:"default:false"`
 
-	TenantID *string          `json:"tenant_id" gorm:"index"`
-	Tenant   *modeliam.Tenant `json:"tenant,omitempty" gorm:"-"`
+	TenantID *string                `json:"tenant_id" gorm:"index"`
+	Tenant   *modeliamtenant.Tenant `json:"tenant,omitempty" gorm:"-"`
 
 	LastLoginAt      *time.Time `json:"last_login_at"`
 	LastLoginIP      *string    `json:"last_login_ip" gorm:"type:varchar(45)"`
@@ -118,8 +118,8 @@ func (u User) MarshalJSON() ([]byte, error) {
 		IsStaff     *bool `json:"is_staff"`
 		IsSuperuser *bool `json:"is_superuser"`
 
-		TenantID *string          `json:"tenant_id"`
-		Tenant   *modeliam.Tenant `json:"tenant,omitempty"`
+		TenantID *string                `json:"tenant_id"`
+		Tenant   *modeliamtenant.Tenant `json:"tenant,omitempty"`
 
 		LastLoginAt      *time.Time `json:"last_login_at"`
 		LastLoginIP      *string    `json:"last_login_ip"`

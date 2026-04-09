@@ -57,6 +57,40 @@ func TestGroupCreate(t *testing.T) {
 	})
 }
 
+func TestGroupCreateWithTenant(t *testing.T) {
+	actor := userSignupUser(t, "group_create_tenant_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+	userSetSuperuser(t, actor.Username, true)
+
+	tenantName := fmt.Sprintf("group_create_tenant_%d", time.Now().UnixNano())
+	tenantCreate(t, tenantName)
+	tenant := tenantLoadByName(t, tenantName)
+	cli := groupNewClient(t, actor.SessionID)
+
+	groupName := fmt.Sprintf("group_create_with_tenant_%d", time.Now().UnixNano())
+	t.Cleanup(func() {
+		groupCleanupByName(t, groupName)
+		tenantCleanupByName(t, tenantName)
+	})
+
+	t.Run("create_group_with_missing_tenant", func(t *testing.T) {
+		missingTenantID := "missing-tenant-id"
+		_, err := cli.Create(iam.Group{Name: groupName, TenantID: &missingTenantID})
+		userRequireNotFound(t, err)
+	})
+
+	t.Run("create_group_with_existing_tenant", func(t *testing.T) {
+		resp, err := cli.Create(iam.Group{Name: groupName, TenantID: &tenant.ID})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+
+		stored := groupLoadByName(t, groupName)
+		require.NotNil(t, stored.TenantID)
+		require.Equal(t, tenant.ID, *stored.TenantID)
+	})
+}
+
 func TestGroupGet(t *testing.T) {
 	actor := userSignupUser(t, "group_get_actor", "12345678")
 	actor.SessionID = userLoginUser(t, &actor, actor.Password)
@@ -173,6 +207,43 @@ func TestGroupUpdate(t *testing.T) {
 	})
 }
 
+func TestGroupUpdateWithTenant(t *testing.T) {
+	actor := userSignupUser(t, "group_update_tenant_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+	userSetSuperuser(t, actor.Username, true)
+
+	tenantName := fmt.Sprintf("group_update_tenant_%d", time.Now().UnixNano())
+	tenantCreate(t, tenantName)
+	tenant := tenantLoadByName(t, tenantName)
+
+	groupName := fmt.Sprintf("group_update_with_tenant_%d", time.Now().UnixNano())
+	groupCreate(t, groupName)
+	target := groupLoadByName(t, groupName)
+	cli := groupNewClient(t, actor.SessionID)
+
+	t.Cleanup(func() {
+		groupCleanupByName(t, groupName)
+		tenantCleanupByName(t, tenantName)
+	})
+
+	t.Run("update_group_with_missing_tenant", func(t *testing.T) {
+		missingTenantID := "missing-tenant-id"
+		_, err := cli.Update(target.ID, iam.Group{Name: groupName, TenantID: &missingTenantID})
+		userRequireNotFound(t, err)
+	})
+
+	t.Run("update_group_with_existing_tenant", func(t *testing.T) {
+		resp, err := cli.Update(target.ID, iam.Group{Name: groupName, TenantID: &tenant.ID})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+
+		stored := groupLoadByName(t, groupName)
+		require.NotNil(t, stored.TenantID)
+		require.Equal(t, tenant.ID, *stored.TenantID)
+	})
+}
+
 func TestGroupCreateMany(t *testing.T) {
 	actor := userSignupUser(t, "group_create_many_actor", "12345678")
 	actor.SessionID = userLoginUser(t, &actor, actor.Password)
@@ -226,6 +297,39 @@ func TestGroupCreateMany(t *testing.T) {
 	require.Equal(t, name2, group2.Name)
 }
 
+func TestGroupCreateManyWithTenant(t *testing.T) {
+	actor := userSignupUser(t, "group_create_many_tenant_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+	userSetSuperuser(t, actor.Username, true)
+
+	tenantName := fmt.Sprintf("group_create_many_tenant_%d", time.Now().UnixNano())
+	tenantCreate(t, tenantName)
+	tenant := tenantLoadByName(t, tenantName)
+	cli := groupNewClient(t, actor.SessionID)
+
+	groupName := fmt.Sprintf("group_create_many_with_tenant_%d", time.Now().UnixNano())
+	t.Cleanup(func() {
+		groupCleanupByName(t, groupName)
+		tenantCleanupByName(t, tenantName)
+	})
+
+	t.Run("create_many_groups_with_missing_tenant", func(t *testing.T) {
+		missingTenantID := "missing-tenant-id"
+		_, err := cli.CreateMany([]iam.Group{{Name: groupName, TenantID: &missingTenantID}})
+		userRequireNotFound(t, err)
+	})
+
+	t.Run("create_many_groups_with_existing_tenant", func(t *testing.T) {
+		resp, err := cli.CreateMany([]iam.Group{{Name: groupName, TenantID: &tenant.ID}})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		stored := groupLoadByName(t, groupName)
+		require.NotNil(t, stored.TenantID)
+		require.Equal(t, tenant.ID, *stored.TenantID)
+	})
+}
+
 func TestGroupUpdateMany(t *testing.T) {
 	actor := userSignupUser(t, "group_update_many_actor", "12345678")
 	actor.SessionID = userLoginUser(t, &actor, actor.Password)
@@ -271,6 +375,43 @@ func TestGroupUpdateMany(t *testing.T) {
 
 		updated2 := groupLoadByName(t, group2.Name)
 		require.Equal(t, group2.Name, updated2.Name)
+	})
+}
+
+func TestGroupPatchWithTenant(t *testing.T) {
+	actor := userSignupUser(t, "group_patch_tenant_actor", "12345678")
+	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+	userSetSuperuser(t, actor.Username, true)
+
+	tenantName := fmt.Sprintf("group_patch_tenant_%d", time.Now().UnixNano())
+	tenantCreate(t, tenantName)
+	tenant := tenantLoadByName(t, tenantName)
+
+	groupName := fmt.Sprintf("group_patch_with_tenant_%d", time.Now().UnixNano())
+	groupCreate(t, groupName)
+	target := groupLoadByName(t, groupName)
+	cli := groupNewClient(t, actor.SessionID)
+
+	t.Cleanup(func() {
+		groupCleanupByName(t, groupName)
+		tenantCleanupByName(t, tenantName)
+	})
+
+	t.Run("patch_group_with_missing_tenant", func(t *testing.T) {
+		missingTenantID := "missing-tenant-id"
+		_, err := cli.Patch(target.ID, iam.Group{TenantID: &missingTenantID})
+		userRequireNotFound(t, err)
+	})
+
+	t.Run("patch_group_with_existing_tenant", func(t *testing.T) {
+		resp, err := cli.Patch(target.ID, iam.Group{TenantID: &tenant.ID})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+
+		stored := groupLoadByName(t, groupName)
+		require.NotNil(t, stored.TenantID)
+		require.Equal(t, tenant.ID, *stored.TenantID)
 	})
 }
 

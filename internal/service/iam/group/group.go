@@ -5,6 +5,7 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
+	modeliamtenant "github.com/forbearing/gst/internal/model/iam/tenant"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/response"
@@ -18,20 +19,29 @@ type GroupService struct {
 	service.Base[*modeliamgroup.Group, *modeliamgroup.Group, *modeliamgroup.Group]
 }
 
-func (GroupService) CreateBefore(ctx *types.ServiceContext, _ *modeliamgroup.Group) error {
-	return ensureGroupModuleSuperuser(ctx)
+func (GroupService) CreateBefore(ctx *types.ServiceContext, req *modeliamgroup.Group) error {
+	if err := ensureGroupModuleSuperuser(ctx); err != nil {
+		return err
+	}
+	return ensureGroupTenantAccessible(ctx, req)
 }
 
 func (GroupService) DeleteBefore(ctx *types.ServiceContext, _ *modeliamgroup.Group) error {
 	return ensureGroupModuleSuperuser(ctx)
 }
 
-func (GroupService) UpdateBefore(ctx *types.ServiceContext, _ *modeliamgroup.Group) error {
-	return ensureGroupModuleSuperuser(ctx)
+func (GroupService) UpdateBefore(ctx *types.ServiceContext, req *modeliamgroup.Group) error {
+	if err := ensureGroupModuleSuperuser(ctx); err != nil {
+		return err
+	}
+	return ensureGroupTenantAccessible(ctx, req)
 }
 
-func (GroupService) PatchBefore(ctx *types.ServiceContext, _ *modeliamgroup.Group) error {
-	return ensureGroupModuleSuperuser(ctx)
+func (GroupService) PatchBefore(ctx *types.ServiceContext, req *modeliamgroup.Group) error {
+	if err := ensureGroupModuleSuperuser(ctx); err != nil {
+		return err
+	}
+	return ensureGroupTenantAccessible(ctx, req)
 }
 
 func (GroupService) ListBefore(ctx *types.ServiceContext, _ *[]*modeliamgroup.Group) error {
@@ -42,20 +52,29 @@ func (GroupService) GetBefore(ctx *types.ServiceContext, _ *modeliamgroup.Group)
 	return ensureGroupModuleSuperuser(ctx)
 }
 
-func (GroupService) CreateManyBefore(ctx *types.ServiceContext, _ ...*modeliamgroup.Group) error {
-	return ensureGroupModuleSuperuser(ctx)
+func (GroupService) CreateManyBefore(ctx *types.ServiceContext, groups ...*modeliamgroup.Group) error {
+	if err := ensureGroupModuleSuperuser(ctx); err != nil {
+		return err
+	}
+	return ensureGroupTenantsAccessible(ctx, groups...)
 }
 
 func (GroupService) DeleteManyBefore(ctx *types.ServiceContext, _ ...*modeliamgroup.Group) error {
 	return ensureGroupModuleSuperuser(ctx)
 }
 
-func (GroupService) UpdateManyBefore(ctx *types.ServiceContext, _ ...*modeliamgroup.Group) error {
-	return ensureGroupModuleSuperuser(ctx)
+func (GroupService) UpdateManyBefore(ctx *types.ServiceContext, groups ...*modeliamgroup.Group) error {
+	if err := ensureGroupModuleSuperuser(ctx); err != nil {
+		return err
+	}
+	return ensureGroupTenantsAccessible(ctx, groups...)
 }
 
-func (GroupService) PatchManyBefore(ctx *types.ServiceContext, _ ...*modeliamgroup.Group) error {
-	return ensureGroupModuleSuperuser(ctx)
+func (GroupService) PatchManyBefore(ctx *types.ServiceContext, groups ...*modeliamgroup.Group) error {
+	if err := ensureGroupModuleSuperuser(ctx); err != nil {
+		return err
+	}
+	return ensureGroupTenantsAccessible(ctx, groups...)
 }
 
 func ensureGroupModuleSuperuser(ctx *types.ServiceContext) error {
@@ -78,4 +97,27 @@ func ensureGroupModuleSuperuser(ctx *types.ServiceContext) error {
 		return nil
 	}
 	return types.NewServiceError(http.StatusForbidden, "forbidden: superuser privileges required", response.CodeForbidden)
+}
+
+func ensureGroupTenantsAccessible(ctx *types.ServiceContext, groups ...*modeliamgroup.Group) error {
+	for _, group := range groups {
+		if err := ensureGroupTenantAccessible(ctx, group); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureGroupTenantAccessible(ctx *types.ServiceContext, group *modeliamgroup.Group) error {
+	if group == nil || group.TenantID == nil || *group.TenantID == "" {
+		return nil
+	}
+	tenant := new(modeliamtenant.Tenant)
+	if err := database.Database[*modeliamtenant.Tenant](ctx.DatabaseContext()).Get(tenant, *group.TenantID); err != nil {
+		return types.NewServiceErrorWithCause(http.StatusInternalServerError, "failed to load target tenant", err)
+	}
+	if tenant.ID == "" {
+		return types.NewServiceError(http.StatusNotFound, "tenant not found")
+	}
+	return nil
 }
