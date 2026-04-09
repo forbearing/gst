@@ -6,7 +6,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
@@ -124,8 +124,8 @@ func buildAdminUserSessionsView(ctx *types.ServiceContext, user *modeliamuser.Us
 	}
 
 	if user.GroupID != "" {
-		group := new(modeliam.Group)
-		if err := database.Database[*modeliam.Group](ctx.DatabaseContext()).Get(group, user.GroupID); err == nil {
+		group := new(modeliamgroup.Group)
+		if err := database.Database[*modeliamgroup.Group](ctx.DatabaseContext()).Get(group, user.GroupID); err == nil {
 			view.GroupName = group.Name
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamaccount "github.com/forbearing/gst/internal/service/iam/account"
 	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
+	serviceiamgroup "github.com/forbearing/gst/internal/service/iam/group"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	serviceiamuser "github.com/forbearing/gst/internal/service/iam/user"
 	"github.com/forbearing/gst/middleware"
@@ -131,7 +132,7 @@ func Register(config ...Config) {
 		consts.PHASE_PATCH_MANY,
 		consts.PHASE_DELETE_MANY,
 	)
-	module.Use(module.NewWrapper("/iam/groups", "id", false, &service.Base[*Group, *Group, *Group]{}),
+	module.Use(module.NewWrapper("/iam/groups", "id", false, &serviceiamgroup.GroupService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,

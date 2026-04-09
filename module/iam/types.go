@@ -4,6 +4,7 @@ import (
 	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 )
@@ -26,7 +27,7 @@ type (
 	AccountStatusRsp = modeliamaccount.AccountStatusRsp
 
 	User   = modeliamuser.User
-	Group  = modeliam.Group
+	Group  = modeliamgroup.Group
 	Tenant = modeliam.Tenant
 
 	Session     = modeliamsession.Session

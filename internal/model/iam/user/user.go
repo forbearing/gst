@@ -6,6 +6,7 @@ import (
 
 	. "github.com/forbearing/gst/dsl"
 	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"golang.org/x/crypto/bcrypt"
@@ -45,11 +46,11 @@ type UserReq struct {
 }
 
 type User struct {
-	Username string          `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
-	Status   UserStatus      `json:"status" gorm:"type:varchar(20);default:'active';index"`
-	Type     UserType        `json:"type" gorm:"type:varchar(20);default:'regular';index"`
-	GroupID  string          `json:"group_id" gorm:"type:varchar(100);index"`
-	Group    *modeliam.Group `json:"group,omitempty" gorm:"-"`
+	Username string               `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
+	Status   UserStatus           `json:"status" gorm:"type:varchar(20);default:'active';index"`
+	Type     UserType             `json:"type" gorm:"type:varchar(20);default:'regular';index"`
+	GroupID  string               `json:"group_id" gorm:"type:varchar(100);index"`
+	Group    *modeliamgroup.Group `json:"group,omitempty" gorm:"-"`
 
 	Email       *string    `json:"email" gorm:"type:varchar(100);uniqueIndex"`
 	Phone       *string    `json:"phone" gorm:"type:varchar(20);index"`
@@ -90,11 +91,11 @@ type User struct {
 // MarshalJSON keeps write-only credential fields out of API responses.
 func (u User) MarshalJSON() ([]byte, error) {
 	type userResponse struct {
-		Username string          `json:"username"`
-		Status   UserStatus      `json:"status"`
-		Type     UserType        `json:"type"`
-		GroupID  string          `json:"group_id"`
-		Group    *modeliam.Group `json:"group,omitempty"`
+		Username string               `json:"username"`
+		Status   UserStatus           `json:"status"`
+		Type     UserType             `json:"type"`
+		GroupID  string               `json:"group_id"`
+		Group    *modeliamgroup.Group `json:"group,omitempty"`
 
 		Email       *string    `json:"email"`
 		Phone       *string    `json:"phone"`

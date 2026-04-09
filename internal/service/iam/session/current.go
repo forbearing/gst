@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
@@ -43,8 +43,8 @@ func (s *CurrentListService) List(ctx *types.ServiceContext, req *modeliamsessio
 
 	groupName := session.GroupName
 	if session.GroupID != "" && groupName == "" {
-		group := new(modeliam.Group)
-		if err := database.Database[*modeliam.Group](ctx.DatabaseContext()).Get(group, session.GroupID); err == nil {
+		group := new(modeliamgroup.Group)
+		if err := database.Database[*modeliamgroup.Group](ctx.DatabaseContext()).Get(group, session.GroupID); err == nil {
 			groupName = group.Name
 		}
 	}

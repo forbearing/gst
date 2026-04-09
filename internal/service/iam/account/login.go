@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
+	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
 	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
@@ -135,8 +135,8 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	}
 
 	// Query the group of the user
-	group := new(modeliam.Group)
-	_ = database.Database[*modeliam.Group](ctx.DatabaseContext()).Get(group, user.GroupID)
+	group := new(modeliamgroup.Group)
+	_ = database.Database[*modeliamgroup.Group](ctx.DatabaseContext()).Get(group, user.GroupID)
 
 	// Parse user agent for session info
 
