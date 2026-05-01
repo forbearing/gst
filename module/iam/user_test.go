@@ -261,154 +261,6 @@ func TestUserGet(t *testing.T) {
 	})
 }
 
-func TestUserUpdate(t *testing.T) {
-	actor := userSignupUser(t, "user_update_actor", "12345678")
-	actor.SessionID = userLoginUser(t, &actor, actor.Password)
-
-	victim := userSignupUser(t, "user_update_target", "example-UserUpdate-local-01")
-	cli := userNewClient(t, actor.SessionID)
-	updatedDisplayName := "Updated By PUT"
-	updatedEmail := fmt.Sprintf("updated_%d@example.com", time.Now().UnixNano())
-
-	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
-		_, err := cli.Update(victim.UserID, iam.User{
-			Username:    victim.Username,
-			Status:      modeliamuser.UserStatusActive,
-			Type:        modeliamuser.UserTypeRegular,
-			DisplayName: &updatedDisplayName,
-			Email:       &updatedEmail,
-		})
-		userRequireForbidden(t, err)
-	})
-
-	t.Run("promote_actor_superuser", func(t *testing.T) {
-		userSetSuperuser(t, actor.Username, true)
-	})
-
-	t.Run("update_user", func(t *testing.T) {
-		resp, err := cli.Update(victim.UserID, iam.User{
-			Username:    victim.Username,
-			Status:      modeliamuser.UserStatusActive,
-			Type:        modeliamuser.UserTypeRegular,
-			DisplayName: &updatedDisplayName,
-			Email:       &updatedEmail,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
-		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
-			require.Equal(t, victim.UserID, rsp.ID)
-			require.Equal(t, victim.Username, rsp.Username)
-			require.Empty(t, rsp.Password)
-			require.Empty(t, rsp.PasswordHash)
-			require.Empty(t, rsp.Salt)
-		})
-
-		stored := userLoadByID(t, victim.UserID)
-		require.NotNil(t, stored.DisplayName)
-		require.Equal(t, updatedDisplayName, *stored.DisplayName)
-		require.NotNil(t, stored.Email)
-		require.Equal(t, updatedEmail, *stored.Email)
-	})
-
-	t.Run("update_user_not_found", func(t *testing.T) {
-		_, err := cli.Update("missing-user-id", iam.User{
-			Username: victim.Username,
-			Status:   modeliamuser.UserStatusActive,
-			Type:     modeliamuser.UserTypeRegular,
-		})
-		userRequireNotFound(t, err)
-	})
-}
-
-func TestUserUpdateMany(t *testing.T) {
-	actor := userSignupUser(t, "user_update_many_actor", "12345678")
-	actor.SessionID = userLoginUser(t, &actor, actor.Password)
-
-	victim1 := userSignupUser(t, "user_update_many_target1", "example-UserUpdateMany-local-01")
-	victim2 := userSignupUser(t, "user_update_many_target2", "example-UserUpdateMany-local-02")
-	cli := userNewClient(t, actor.SessionID)
-
-	displayName1 := "Updated Many User 1"
-	displayName2 := "Updated Many User 2"
-	email1 := fmt.Sprintf("updated_many_1_%d@example.com", time.Now().UnixNano())
-	email2 := fmt.Sprintf("updated_many_2_%d@example.com", time.Now().UnixNano())
-	blockedDisplayName := "Blocked Update Many"
-
-	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
-		user1 := userLoadByID(t, victim1.UserID)
-		user1.DisplayName = &displayName1
-		_, err := cli.UpdateMany([]*iam.User{user1})
-		userRequireForbidden(t, err)
-	})
-
-	t.Run("promote_actor_superuser", func(t *testing.T) {
-		userSetSuperuser(t, actor.Username, true)
-	})
-
-	t.Run("update_many_users", func(t *testing.T) {
-		user1 := userLoadByID(t, victim1.UserID)
-		user1.DisplayName = &displayName1
-		user1.Email = &email1
-
-		user2 := userLoadByID(t, victim2.UserID)
-		user2.DisplayName = &displayName2
-		user2.Email = &email2
-
-		resp, err := cli.UpdateMany([]*iam.User{user1, user2})
-		require.NoError(t, err)
-
-		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
-			require.Len(t, rsp.Items, 2)
-			require.Equal(t, 2, rsp.Summary.Total)
-			require.Equal(t, 2, rsp.Summary.Succeeded)
-			require.Equal(t, 0, rsp.Summary.Failed)
-		})
-
-		got1 := userLoadByID(t, victim1.UserID)
-		require.NotNil(t, got1.DisplayName)
-		require.Equal(t, displayName1, *got1.DisplayName)
-		require.NotNil(t, got1.Email)
-		require.Equal(t, email1, *got1.Email)
-
-		got2 := userLoadByID(t, victim2.UserID)
-		require.NotNil(t, got2.DisplayName)
-		require.Equal(t, displayName2, *got2.DisplayName)
-		require.NotNil(t, got2.Email)
-		require.Equal(t, email2, *got2.Email)
-	})
-
-	t.Run("update_many_user_not_found", func(t *testing.T) {
-		missing := new(iam.User)
-		missing.SetID("missing-user-id")
-		missing.Username = "missing-user"
-		missing.Status = modeliamuser.UserStatusActive
-		missing.Type = modeliamuser.UserTypeRegular
-		_, err := cli.UpdateMany([]*iam.User{missing})
-		userRequireNotFound(t, err)
-	})
-
-	t.Run("update_many_mixed_targets_forbidden", func(t *testing.T) {
-		regularVictim := userSignupUser(t, "user_update_many_mix_regular", "example-UserUpdateMany-local-03")
-		superVictim := userSignupUser(t, "user_update_many_mix_super", "example-UserUpdateMany-local-04")
-		userSetSuperuser(t, superVictim.Username, true)
-
-		regularModel := userLoadByID(t, regularVictim.UserID)
-		regularModel.DisplayName = &blockedDisplayName
-
-		superModel := userLoadByID(t, superVictim.UserID)
-		superModel.DisplayName = &blockedDisplayName
-
-		_, err := cli.UpdateMany([]*iam.User{regularModel, superModel})
-		userRequireForbidden(t, err)
-
-		gotRegular := userLoadByID(t, regularVictim.UserID)
-		if gotRegular.DisplayName != nil {
-			require.NotEqual(t, blockedDisplayName, *gotRegular.DisplayName)
-		}
-	})
-}
-
 func TestUserPatch(t *testing.T) {
 	actor := userSignupUser(t, "user_patch_actor", "12345678")
 	actor.SessionID = userLoginUser(t, &actor, actor.Password)
@@ -418,7 +270,7 @@ func TestUserPatch(t *testing.T) {
 	patchedDisplayName := "Patched By PATCH"
 
 	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
-		_, err := cli.Patch(victim.UserID, iam.User{
+		_, err := cli.Patch(victim.UserID, modeliamuser.UserPatchReq{
 			DisplayName: &patchedDisplayName,
 		})
 		userRequireForbidden(t, err)
@@ -429,7 +281,7 @@ func TestUserPatch(t *testing.T) {
 	})
 
 	t.Run("patch_user", func(t *testing.T) {
-		resp, err := cli.Patch(victim.UserID, iam.User{
+		resp, err := cli.Patch(victim.UserID, modeliamuser.UserPatchReq{
 			DisplayName: &patchedDisplayName,
 		})
 		require.NoError(t, err)
@@ -448,84 +300,74 @@ func TestUserPatch(t *testing.T) {
 	})
 
 	t.Run("patch_user_not_found", func(t *testing.T) {
-		_, err := cli.Patch("missing-user-id", iam.User{
+		_, err := cli.Patch("missing-user-id", modeliamuser.UserPatchReq{
 			DisplayName: &patchedDisplayName,
 		})
 		userRequireNotFound(t, err)
 	})
-}
 
-func TestUserPatchMany(t *testing.T) {
-	actor := userSignupUser(t, "user_patch_many_actor", "12345678")
-	actor.SessionID = userLoginUser(t, &actor, actor.Password)
+	t.Run("patch_sensitive_fields_rejected", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			payload func(t *testing.T, target userTestAccount) string
+		}{
+			{
+				name: "username",
+				payload: func(t *testing.T, target userTestAccount) string {
+					t.Helper()
+					username := fmt.Sprintf("user_patch_blocked_username_%d", time.Now().UnixNano())
+					t.Cleanup(func() {
+						userCleanupUser(t, username)
+					})
+					return fmt.Sprintf(`{"username":%q}`, username)
+				},
+			},
+			{
+				name: "status",
+				payload: func(t *testing.T, target userTestAccount) string {
+					t.Helper()
+					return fmt.Sprintf(`{"status":%q}`, modeliamuser.UserStatusInactive)
+				},
+			},
+			{
+				name: "is_superuser",
+				payload: func(t *testing.T, target userTestAccount) string {
+					t.Helper()
+					return `{"is_superuser":true}`
+				},
+			},
+			{
+				name: "password",
+				payload: func(t *testing.T, target userTestAccount) string {
+					t.Helper()
+					return `{"password":"blocked-password-123"}`
+				},
+			},
+			{
+				name: "unknown_field",
+				payload: func(t *testing.T, target userTestAccount) string {
+					t.Helper()
+					return `{"unexpected_admin_field":true}`
+				},
+			},
+		}
 
-	victim1 := userSignupUser(t, "user_patch_many_target1", "example-UserPatchMany-local-01")
-	victim2 := userSignupUser(t, "user_patch_many_target2", "example-UserPatchMany-local-02")
-	cli := userNewClient(t, actor.SessionID)
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				target := userSignupUser(t, fmt.Sprintf("user_patch_sensitive_%s", tc.name), "example-UserPatchSensitive-local-01")
+				before := userLoadByID(t, target.UserID)
 
-	displayName1 := "Patched Many User 1"
-	displayName2 := "Patched Many User 2"
-	blockedDisplayName := "Blocked Patch Many"
+				_, err := cli.Patch(target.UserID, []byte(tc.payload(t, target)))
+				userRequirePatchRejected(t, err)
 
-	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
-		user1 := new(iam.User)
-		user1.SetID(victim1.UserID)
-		user1.DisplayName = &displayName1
-		_, err := cli.PatchMany([]*iam.User{user1})
-		userRequireForbidden(t, err)
-	})
-
-	t.Run("promote_actor_superuser", func(t *testing.T) {
-		userSetSuperuser(t, actor.Username, true)
-	})
-
-	t.Run("patch_many_users", func(t *testing.T) {
-		user1 := new(iam.User)
-		user1.SetID(victim1.UserID)
-		user1.DisplayName = &displayName1
-
-		user2 := new(iam.User)
-		user2.SetID(victim2.UserID)
-		user2.DisplayName = &displayName2
-
-		resp, err := cli.PatchMany([]*iam.User{user1, user2})
-		require.NoError(t, err)
-
-		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
-			require.Len(t, rsp.Items, 2)
-			require.Equal(t, 2, rsp.Summary.Total)
-			require.Equal(t, 2, rsp.Summary.Succeeded)
-			require.Equal(t, 0, rsp.Summary.Failed)
-		})
-
-		got1 := userLoadByID(t, victim1.UserID)
-		require.NotNil(t, got1.DisplayName)
-		require.Equal(t, displayName1, *got1.DisplayName)
-
-		got2 := userLoadByID(t, victim2.UserID)
-		require.NotNil(t, got2.DisplayName)
-		require.Equal(t, displayName2, *got2.DisplayName)
-	})
-
-	t.Run("patch_many_mixed_targets_forbidden", func(t *testing.T) {
-		regularVictim := userSignupUser(t, "user_patch_many_mix_regular", "example-UserPatchMany-local-03")
-		superVictim := userSignupUser(t, "user_patch_many_mix_super", "example-UserPatchMany-local-04")
-		userSetSuperuser(t, superVictim.Username, true)
-
-		regularModel := new(iam.User)
-		regularModel.SetID(regularVictim.UserID)
-		regularModel.DisplayName = &blockedDisplayName
-
-		superModel := new(iam.User)
-		superModel.SetID(superVictim.UserID)
-		superModel.DisplayName = &blockedDisplayName
-
-		_, err := cli.PatchMany([]*iam.User{regularModel, superModel})
-		userRequireForbidden(t, err)
-
-		gotRegular := userLoadByID(t, regularVictim.UserID)
-		if gotRegular.DisplayName != nil {
-			require.NotEqual(t, blockedDisplayName, *gotRegular.DisplayName)
+				stored := userLoadByID(t, target.UserID)
+				require.Equal(t, before.Username, stored.Username)
+				require.Equal(t, before.Status, stored.Status)
+				require.Equal(t, before.Type, stored.Type)
+				require.Equal(t, before.PasswordHash, stored.PasswordHash)
+				require.Equal(t, before.IsSuperuser, stored.IsSuperuser)
+				require.Equal(t, before.DisplayName, stored.DisplayName)
+			})
 		}
 	})
 }
@@ -671,18 +513,8 @@ func TestUserSuperuserTargetProtection(t *testing.T) {
 		userRequireForbidden(t, err)
 	})
 
-	t.Run("update_superuser_forbidden", func(t *testing.T) {
-		_, err := cli.Update(victim.UserID, iam.User{
-			Username:    victim.Username,
-			Status:      modeliamuser.UserStatusActive,
-			Type:        modeliamuser.UserTypeRegular,
-			DisplayName: &blockedDisplayName,
-		})
-		userRequireForbidden(t, err)
-	})
-
 	t.Run("patch_superuser_forbidden", func(t *testing.T) {
-		_, err := cli.Patch(victim.UserID, iam.User{
+		_, err := cli.Patch(victim.UserID, modeliamuser.UserPatchReq{
 			DisplayName: &blockedDisplayName,
 		})
 		userRequireForbidden(t, err)
@@ -727,7 +559,7 @@ func TestUserSuperuserTargetProtection(t *testing.T) {
 
 	t.Run("admin_can_patch_superuser", func(t *testing.T) {
 		adminPatchedDisplayName := "admin-updated-superuser"
-		resp, err := adminCli.Patch(victim.UserID, iam.User{
+		resp, err := adminCli.Patch(victim.UserID, modeliamuser.UserPatchReq{
 			DisplayName: &adminPatchedDisplayName,
 		})
 		require.NoError(t, err)
@@ -907,6 +739,12 @@ func userRequireForbidden(t *testing.T, err error) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "403")
 	require.Contains(t, err.Error(), fmt.Sprintf(`"code":%d`, response.CodeForbidden.Code()))
+}
+
+func userRequirePatchRejected(t *testing.T, err error) {
+	t.Helper()
+
+	require.Error(t, err)
 }
 
 func userRequireNotFound(t *testing.T, err error) {

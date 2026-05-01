@@ -45,6 +45,23 @@ type UserReq struct {
 	IsSuperuser      bool       `json:"is_superuser"`
 }
 
+// UserPatchReq is the allow-listed request payload for patching IAM user profile fields.
+// It intentionally excludes security-sensitive fields such as username, status, password,
+// superuser flags, verification state, and login counters.
+type UserPatchReq struct {
+	GroupID     *string    `json:"group_id,omitempty"`
+	Email       *string    `json:"email,omitempty"`
+	Phone       *string    `json:"phone,omitempty"`
+	FirstName   *string    `json:"first_name,omitempty"`
+	LastName    *string    `json:"last_name,omitempty"`
+	DisplayName *string    `json:"display_name,omitempty"`
+	Avatar      *string    `json:"avatar,omitempty"`
+	Bio         *string    `json:"bio,omitempty"`
+	Birthday    *time.Time `json:"birthday,omitempty"`
+	Gender      *string    `json:"gender,omitempty"`
+	TenantID    *string    `json:"tenant_id,omitempty"`
+}
+
 type User struct {
 	Username string               `json:"username" gorm:"type:varchar(50);uniqueIndex;not null"`
 	Status   UserStatus           `json:"status" gorm:"type:varchar(20);default:'active';index"`

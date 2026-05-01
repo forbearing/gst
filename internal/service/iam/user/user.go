@@ -6,6 +6,7 @@ import (
 	"github.com/forbearing/gst/database"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -15,6 +16,11 @@ import (
 // UserService handles CRUD operations for IAM users.
 type UserService struct {
 	service.Base[*modeliamuser.User, *modeliamuser.User, *modeliamuser.User]
+}
+
+// UserPatchService handles allow-listed profile patches for IAM users.
+type UserPatchService struct {
+	service.Base[*model.Empty, *modeliamuser.UserPatchReq, *modeliamuser.User]
 }
 
 func (UserService) CreateBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
@@ -38,28 +44,6 @@ func (UserService) ListBefore(ctx *types.ServiceContext, _ *[]*modeliamuser.User
 
 func (UserService) GetBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
 	return ensureUserTargetAccessible(ctx, req)
-}
-
-func (UserService) UpdateBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
-	actorUsername, actor, err := userResourceActor(ctx)
-	if err != nil {
-		return err
-	}
-	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
-		return err
-	}
-	return ensureUserMutationAllowed(ctx, actorUsername, req)
-}
-
-func (UserService) PatchBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
-	actorUsername, actor, err := userResourceActor(ctx)
-	if err != nil {
-		return err
-	}
-	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
-		return err
-	}
-	return ensureUserMutationAllowed(ctx, actorUsername, req)
 }
 
 func (UserService) DeleteBefore(ctx *types.ServiceContext, req *modeliamuser.User) error {
@@ -126,36 +110,90 @@ func (UserService) DeleteManyAfter(_ *types.ServiceContext, users ...*modeliamus
 	return nil
 }
 
-func (UserService) UpdateManyBefore(ctx *types.ServiceContext, users ...*modeliamuser.User) error {
+// Patch updates only allow-listed user profile fields.
+func (UserPatchService) Patch(ctx *types.ServiceContext, req *modeliamuser.UserPatchReq) (*modeliamuser.User, error) {
 	actorUsername, actor, err := userResourceActor(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
-		return err
+		return nil, err
 	}
-	for _, user := range users {
-		if err = ensureUserMutationAllowed(ctx, actorUsername, user); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
-func (UserService) PatchManyBefore(ctx *types.ServiceContext, users ...*modeliamuser.User) error {
-	actorUsername, actor, err := userResourceActor(ctx)
-	if err != nil {
-		return err
+	if req == nil {
+		return nil, types.NewServiceError(http.StatusBadRequest, "user patch request is required")
 	}
-	if err = ensureUserModuleSuperuser(actorUsername, actor); err != nil {
-		return err
+
+	targetID := ctx.Params["id"]
+	if targetID == "" {
+		return nil, types.NewServiceError(http.StatusBadRequest, "user id is required")
 	}
-	for _, user := range users {
-		if err = ensureUserMutationAllowed(ctx, actorUsername, user); err != nil {
-			return err
-		}
+
+	target := new(modeliamuser.User)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(target, targetID); err != nil {
+		return nil, types.NewServiceErrorWithCause(http.StatusInternalServerError, "failed to load target user", err)
 	}
-	return nil
+	if target.ID == "" {
+		return nil, types.NewServiceError(http.StatusNotFound, "user not found")
+	}
+	if target.IsSuperuser != nil && *target.IsSuperuser && !isRootOrAdmin(actorUsername) {
+		return nil, userSuperuserTargetForbidden()
+	}
+
+	columns := []string{"username"}
+	if req.GroupID != nil {
+		target.GroupID = *req.GroupID
+		columns = append(columns, "group_id")
+	}
+	if req.Email != nil {
+		target.Email = req.Email
+		columns = append(columns, "email")
+	}
+	if req.Phone != nil {
+		target.Phone = req.Phone
+		columns = append(columns, "phone")
+	}
+	if req.FirstName != nil {
+		target.FirstName = req.FirstName
+		columns = append(columns, "first_name")
+	}
+	if req.LastName != nil {
+		target.LastName = req.LastName
+		columns = append(columns, "last_name")
+	}
+	if req.DisplayName != nil {
+		target.DisplayName = req.DisplayName
+		columns = append(columns, "display_name")
+	}
+	if req.Avatar != nil {
+		target.Avatar = req.Avatar
+		columns = append(columns, "avatar")
+	}
+	if req.Bio != nil {
+		target.Bio = req.Bio
+		columns = append(columns, "bio")
+	}
+	if req.Birthday != nil {
+		target.Birthday = req.Birthday
+		columns = append(columns, "birthday")
+	}
+	if req.Gender != nil {
+		target.Gender = req.Gender
+		columns = append(columns, "gender")
+	}
+	if req.TenantID != nil {
+		target.TenantID = req.TenantID
+		columns = append(columns, "tenant_id")
+	}
+	if len(columns) == 1 {
+		return nil, types.NewServiceError(http.StatusBadRequest, "patch fields are required")
+	}
+
+	target.SetUpdatedBy(ctx.Username)
+	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithSelect(columns...).Update(target); err != nil {
+		return nil, types.NewServiceErrorWithCause(http.StatusInternalServerError, "failed to patch user", err)
+	}
+	return target, nil
 }
 
 func userResourceActor(ctx *types.ServiceContext) (string, *modeliamuser.User, error) {
@@ -200,13 +238,6 @@ func ensureUserCreateAllowed(actorUsername string, req *modeliamuser.User) error
 		return userSuperuserTargetForbidden()
 	}
 	return nil
-}
-
-func ensureUserMutationAllowed(ctx *types.ServiceContext, actorUsername string, req *modeliamuser.User) error {
-	if err := ensureExistingUserTargetAllowed(ctx, actorUsername, req); err != nil {
-		return err
-	}
-	return ensureUserCreateAllowed(actorUsername, req)
 }
 
 func ensureExistingUserTargetAllowed(ctx *types.ServiceContext, actorUsername string, req *modeliamuser.User) error {

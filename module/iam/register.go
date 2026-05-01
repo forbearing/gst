@@ -55,7 +55,6 @@ type Config struct {
 // IAM resource routes:
 //   - POST   /api/iam/users
 //   - DELETE /api/iam/users/:id
-//   - PUT    /api/iam/users/:id
 //   - PATCH  /api/iam/users/:id
 //   - GET    /api/iam/users
 //   - GET    /api/iam/users/:id
@@ -124,15 +123,12 @@ func Register(config ...Config) {
 	module.Use(module.NewWrapper("/iam/users", "id", false, &serviceiamuser.UserService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
 		consts.PHASE_CREATE_MANY,
-		consts.PHASE_UPDATE_MANY,
-		consts.PHASE_PATCH_MANY,
 		consts.PHASE_DELETE_MANY,
 	)
+	module.UseCustom(module.NewWrapper("/iam/users/:id", "id", false, &serviceiamuser.UserPatchService{}), consts.PHASE_PATCH)
 	module.Use(module.NewWrapper("/iam/groups", "id", false, &serviceiamgroup.GroupService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
