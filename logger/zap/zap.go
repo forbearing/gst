@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	casbinl "github.com/casbin/casbin/v2/log"
+	casbinl "github.com/casbin/casbin/v3/log"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/types"

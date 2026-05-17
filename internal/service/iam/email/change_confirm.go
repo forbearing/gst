@@ -6,8 +6,8 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -19,8 +19,8 @@ type ChangeConfirmService struct {
 }
 
 // changeUpdateUser persists the confirmed email state for the target account.
-var changeUpdateUser = func(ctx *types.ServiceContext, user *modeliam.User) error {
-	return database.Database[*modeliam.User](ctx.DatabaseContext()).
+var changeUpdateUser = func(ctx *types.ServiceContext, user *modeliamuser.User) error {
+	return database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 		WithoutHook().
 		WithSelect("email", "email_verified", "email_verified_at", "last_email_changed_at").
 		Update(user)
@@ -130,7 +130,7 @@ func validateEmailChangeFlow(flow iamEmailFlowState) error {
 
 // applyConfirmedEmailChange mutates the in-memory user model to the confirmed
 // email state before persistence.
-func applyConfirmedEmailChange(user *modeliam.User, newEmail string, changedAt time.Time) error {
+func applyConfirmedEmailChange(user *modeliamuser.User, newEmail string, changedAt time.Time) error {
 	if user == nil {
 		return errors.New("email change user is required")
 	}

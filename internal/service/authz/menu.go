@@ -7,7 +7,7 @@ import (
 
 	"github.com/forbearing/gst/database"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -30,13 +30,13 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*modelauth
 	}
 
 	var (
-		user      = new(modeliam.User)
+		user      = new(modeliamuser.User)
 		userRoles = make([]*modelauthz.UserRole, 0)
 		roles     = make([]*modelauthz.Role, 0)
 	)
 
 	// query the current user
-	if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, ctx.UserID); err != nil {
+	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, ctx.UserID); err != nil {
 		log.Error(err)
 		return err
 	}

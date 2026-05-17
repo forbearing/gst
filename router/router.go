@@ -35,7 +35,6 @@ var (
 
 	started atomic.Uint32
 	mu      sync.Mutex
-	done    = make(chan struct{}, 1)
 )
 
 var globalErrors = make([]error, 0)
@@ -57,7 +56,6 @@ func Init() error {
 	root.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	root.GET("/-/healthz", controller.Probe.Healthz)
 	root.GET("/-/readyz", controller.Probe.Readyz)
-	root.GET("/-/pageid", controller.PageID)
 	root.GET("/openapi.json", middleware.BaseAuth(), gin.WrapH(openapigen.DocumentHandler()))
 	root.GET("/docs/*any", middleware.BaseAuth(), ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/openapi.json")))
 	root.GET("/redoc", middleware.BaseAuth(), controller.Redoc)
@@ -67,27 +65,19 @@ func Init() error {
 	base := root.Group("/api")
 	auth = base.Group("")
 	pub = base.Group("")
-
-	go func() {
-		for {
-			select {
-			case mid := <-middleware.CommonMiddlewaresChan:
-				// Only use middlewares before the server start.
-				if started.Load() == 0 {
-					auth.Use(mid)
-					pub.Use(mid)
-				}
-			case mid := <-middleware.AuthMiddlewaresChan:
-				if started.Load() == 0 {
-					// Only use middleware before the server start.
-					auth.Use(mid)
-				}
-			case <-done:
-				// Server has been started. No need to use middlewares anymore.
-				return
+	middleware.SetApplyHandlers(
+		func(mid gin.HandlerFunc) {
+			if started.Load() == 0 {
+				auth.Use(mid)
+				pub.Use(mid)
 			}
-		}
-	}()
+		},
+		func(mid gin.HandlerFunc) {
+			if started.Load() == 0 {
+				auth.Use(mid)
+			}
+		},
+	)
 
 	return nil
 }
@@ -116,7 +106,6 @@ func Run() error {
 
 	// mark the server as started.
 	started.Store(1)
-	done <- struct{}{}
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Errorw("failed to start server", "err", err)

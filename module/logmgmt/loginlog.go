@@ -11,9 +11,8 @@ var _ types.Module[*LoginLog, *LoginLog, *LoginLog] = (*LoginLogModule)(nil)
 type (
 	LoginStatus = modellogmgmt.LoginStatus
 
-	LoginLog        = modellogmgmt.LoginLog
-	LoginLogService = servicelogmgmt.LoginLogService
-	LoginLogModule  struct{}
+	LoginLog       = modellogmgmt.LoginLog
+	LoginLogModule struct{}
 )
 
 const (
@@ -23,7 +22,7 @@ const (
 )
 
 func (*LoginLogModule) Service() types.Service[*LoginLog, *LoginLog, *LoginLog] {
-	return &LoginLogService{}
+	return &servicelogmgmt.LoginLogService{}
 }
 func (*LoginLogModule) Route() string { return "/log/loginlog" }
 func (*LoginLogModule) Pub() bool     { return false }

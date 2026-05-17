@@ -10,15 +10,16 @@ import (
 )
 
 func TestResp[RSP any](t *testing.T, resp *client.Resp, checkFn func(t *testing.T, rsp RSP)) {
+	t.Helper()
+
 	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Code, response.CodeSuccess.Code())
-	require.Equal(t, resp.Msg, response.CodeSuccess.Msg())
+	require.Equal(t, response.CodeSuccess.Code(), resp.Code)
+	require.Equal(t, response.CodeSuccess.Msg(), resp.Msg)
 	require.NotEmpty(t, resp.RequestID)
 	require.NotEmpty(t, resp.Data)
 
 	var rsp RSP
-	require.NoError(t, json.Unmarshal(resp.Data, &rsp))
+	require.NoError(t, json.Unmarshal(resp.Data, &rsp), "response data: %s", string(resp.Data))
 	if checkFn != nil {
 		checkFn(t, rsp)
 	}

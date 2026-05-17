@@ -6,8 +6,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -15,21 +16,21 @@ import (
 // VerificationConfirmService handles the token confirmation step that finalizes
 // the email verification flow.
 type VerificationConfirmService struct {
-	service.Base[*modeliamemail.VerificationConfirm, *modeliamemail.VerificationConfirmReq, *modeliamemail.VerificationConfirmRsp]
+	service.Base[*model.Empty, *modeliamemail.VerificationConfirmReq, *modeliamemail.VerificationConfirmRsp]
 }
 
 var (
 	// verificationLoadUserByID loads the account referenced by the verification token.
-	verificationLoadUserByID = func(ctx *types.ServiceContext, userID string) (*modeliam.User, error) {
-		user := new(modeliam.User)
-		if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, userID); err != nil {
+	verificationLoadUserByID = func(ctx *types.ServiceContext, userID string) (*modeliamuser.User, error) {
+		user := new(modeliamuser.User)
+		if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, userID); err != nil {
 			return nil, err
 		}
 		return user, nil
 	}
 	// verificationUpdateUser persists the verified email state for the target user.
-	verificationUpdateUser = func(ctx *types.ServiceContext, user *modeliam.User) error {
-		return database.Database[*modeliam.User](ctx.DatabaseContext()).
+	verificationUpdateUser = func(ctx *types.ServiceContext, user *modeliamuser.User) error {
+		return database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 			WithoutHook().
 			WithSelect("email_verified", "email_verified_at").
 			Update(user)
@@ -91,7 +92,7 @@ func (s *VerificationConfirmService) Create(ctx *types.ServiceContext, req *mode
 
 // applyEmailVerification updates the in-memory user model with the verified
 // email flags before persistence.
-func applyEmailVerification(user *modeliam.User, verifiedAt time.Time) error {
+func applyEmailVerification(user *modeliamuser.User, verifiedAt time.Time) error {
 	if user == nil {
 		return errors.New("verification user is required")
 	}

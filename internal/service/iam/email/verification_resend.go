@@ -3,6 +3,7 @@ package serviceiamemail
 import (
 	"github.com/cockroachdb/errors"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 )
@@ -10,7 +11,7 @@ import (
 // VerificationResendService handles public requests that resend verification
 // emails for accounts that are still pending verification.
 type VerificationResendService struct {
-	service.Base[*modeliamemail.VerificationResend, *modeliamemail.VerificationResendReq, *modeliamemail.VerificationResendRsp]
+	service.Base[*model.Empty, *modeliamemail.VerificationResendReq, *modeliamemail.VerificationResendRsp]
 }
 
 // Create resends a verification email for an eligible account while keeping the

@@ -273,10 +273,10 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.Group) {
-				// #*modeliam.Group {
+				// #*modeliamgroup.Group {
 				//   +Name        => "g1" #string
-				//   +Type        => "regular" #modeliam.GroupType
-				//   +Status      => "active" #modeliam.GroupStatus
+				//   +Type        => "regular" #modeliamgroup.GroupType
+				//   +Status      => "active" #modeliamgroup.GroupStatus
 				//   +ParentID    => *string(nil)
 				//   +Path        => "" #string
 				//   +Level       => 0 #int

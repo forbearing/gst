@@ -5,17 +5,18 @@ import (
 
 	"github.com/forbearing/gst/cronjob"
 	cronjobiam "github.com/forbearing/gst/internal/cronjob/iam"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
-	serviceiam "github.com/forbearing/gst/internal/service/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
+	serviceiamaccount "github.com/forbearing/gst/internal/service/iam/account"
+	serviceiamemail "github.com/forbearing/gst/internal/service/iam/email"
+	serviceiamgroup "github.com/forbearing/gst/internal/service/iam/group"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
+	serviceiamtenant "github.com/forbearing/gst/internal/service/iam/tenant"
+	serviceiamuser "github.com/forbearing/gst/internal/service/iam/user"
 	"github.com/forbearing/gst/middleware"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module"
+	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types/consts"
-)
-
-type (
-	Session = modeliam.Session
-	Token   = modeliam.Token
 )
 
 // iamConfig stores the configuration for iam module
@@ -28,79 +29,70 @@ type Config struct {
 	SessionExpiration time.Duration // SessionExpiration is the session expiration time, default is 8 hours
 }
 
-// Register registers iam modules,
+// Register registers IAM models, API routes, middleware, and scheduled jobs.
 //
-// Models:
-//   - ChangePassword
-//   - ResetPassword
-//   - AccountStatus
-//   - EmailChangeConfirm
-//   - EmailChangeCancel
-//   - EmailChangeRequest
-//   - EmailChangeResend
-//   - EmailPasswordResetConfirm
-//   - EmailPasswordResetRequest
-//   - EmailVerificationConfirm
-//   - EmailVerificationRequest
-//   - EmailVerificationResend
-//   - Group
-//   - Heartbeat
-//   - Login
-//   - Logout
-//   - Offline
-//   - Me
-//   - OnlineUser
-//   - Signup
-//   - Tenant
-//   - User
+// API Routes:
 //
-// Routes:
+// Session routes:
+//   - POST   /api/iam/session/heartbeat
+//   - GET    /api/iam/session/current
+//   - DELETE /api/iam/session/current
+//   - GET    /api/iam/sessions
+//   - GET    /api/iam/admin/sessions
+//   - GET    /api/iam/admin/sessions/:id
+//   - DELETE /api/iam/sessions
+//   - DELETE /api/iam/sessions/:id
+//   - GET    /api/online-users
+//
+// Account management routes:
+//   - POST   /api/login
+//   - POST   /api/logout
+//   - POST   /api/signup
 //   - POST   /api/iam/change-password
 //   - POST   /api/iam/reset-password
 //   - POST   /api/iam/account-status
-//   - POST   /api/iam/email/change-confirm
-//   - POST   /api/iam/email/change-cancel
-//   - POST   /api/iam/email/change-request
-//   - POST   /api/iam/email/change-resend
-//   - POST   /api/iam/email/password-reset-confirm
-//   - POST   /api/iam/email/password-reset-request
-//   - POST   /api/iam/email/verification-confirm
-//   - POST   /api/iam/email/verification-request
-//   - POST   /api/iam/email/verification-resend
+//
+// IAM resource routes:
+//   - POST   /api/iam/users
+//   - DELETE /api/iam/users/:id
+//   - PATCH  /api/iam/users/:id
+//   - GET    /api/iam/users
+//   - GET    /api/iam/users/:id
 //   - POST   /api/iam/groups
 //   - DELETE /api/iam/groups/:id
 //   - PUT    /api/iam/groups/:id
 //   - PATCH  /api/iam/groups/:id
 //   - GET    /api/iam/groups
 //   - GET    /api/iam/groups/:id
-//   - POST   /api/heartbeat
-//   - POST   /api/login
-//   - POST   /api/logout
-//   - POST   /api/offline
-//   - GET    /api/me
-//   - GET    /api/online-users
-//   - POST   /api/signup
 //   - POST   /api/iam/tenants
 //   - DELETE /api/iam/tenants/:id
 //   - PUT    /api/iam/tenants/:id
 //   - PATCH  /api/iam/tenants/:id
 //   - GET    /api/iam/tenants
 //   - GET    /api/iam/tenants/:id
-//   - POST   /api/iam/users
-//   - DELETE /api/iam/users/:id
-//   - PUT    /api/iam/users/:id
-//   - PATCH  /api/iam/users/:id
-//   - GET    /api/iam/users
-//   - GET    /api/iam/users/:id
+//
+// Email workflow routes:
+//   - POST   /api/iam/email/verification-confirm
+//   - POST   /api/iam/email/verification-request
+//   - POST   /api/iam/email/verification-resend
+//   - POST   /api/iam/email/password-reset-confirm
+//   - POST   /api/iam/email/password-reset-request
+//   - POST   /api/iam/email/change-request
+//   - POST   /api/iam/email/change-resend
+//   - POST   /api/iam/email/change-cancel
+//   - POST   /api/iam/email/change-confirm
 //
 // Middleware:
-//   - IAMSession
+//   - IAMSession for protected IAM routes and session-aware APIs
 //
-// Default disable Tenant module, use `EnableTenant` to enable it.
-// Default session expiration time is 8 hours, use `SessionExpiration` to customize it.
+// Scheduled jobs:
+//   - CleanupOnlineUser runs every 30 seconds and starts immediately after bootstrap
 //
-// NOTE: iam modules register must before "authz" modules register.
-// because "authz" registered middleware "Authz" depend on iam modules registered middleware "IAMSession".
+// Configuration:
+//   - Tenant routes are registered only when EnableTenant is true
+//   - SessionExpiration defaults to 8 hours when not configured
+//
+// NOTE: Register IAM modules before authz modules because authz middleware depends on IAMSession.
 func Register(config ...Config) {
 	cfg := Config{
 		SessionExpiration: 8 * time.Hour, // default session expiration time
@@ -117,255 +109,86 @@ func Register(config ...Config) {
 	iamConfig = cfg
 
 	// Set session expiration in service layer
-	serviceiam.SetSessionExpiration(cfg.SessionExpiration)
+	serviceiamsession.SetSessionExpiration(cfg.SessionExpiration)
 
-	// Use module "ChangePasswordModule"
-	module.Use[
-		*ChangePassword,
-		*ChangePasswordReq,
-		*ChangePasswordRsp,
-		*ChangePasswordService](
-		&ChangePasswordModule{},
+	// Register auth middleware before protected routes so auth handlers are attached deterministically.
+	middleware.RegisterAuth(middleware.IAMSession())
+
+	module.Use(module.NewWrapper("/login", "id", true, &serviceiamaccount.LoginService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/logout", "id", false, &serviceiamaccount.LogoutService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/signup", "id", true, &serviceiamaccount.SignupService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/change-password", "id", false, &serviceiamaccount.ChangePasswordService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/reset-password", "id", false, &serviceiamaccount.ResetPasswordService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/account-status", "id", false, &serviceiamaccount.AccountStatusService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/users", "id", false, &serviceiamuser.UserService{}),
 		consts.PHASE_CREATE,
+		consts.PHASE_DELETE,
+		consts.PHASE_LIST,
+		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_DELETE_MANY,
 	)
-
-	// Use module "ResetPasswordModule" (superuser password reset for another user)
-	module.Use[
-		*ResetPassword,
-		*ResetPasswordReq,
-		*ResetPasswordRsp,
-		*ResetPasswordService](
-		&ResetPasswordModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "AccountStatusModule" (privileged: set another user's active / inactive / locked)
-	module.Use[
-		*AccountStatus,
-		*AccountStatusReq,
-		*AccountStatusRsp,
-		*AccountStatusService](
-		&AccountStatusModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeConfirmModule"
-	module.Use[
-		*EmailChangeConfirm,
-		*EmailChangeConfirmReq,
-		*EmailChangeConfirmRsp,
-		*EmailChangeConfirmService](
-		&EmailChangeConfirmModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeCancelModule"
-	module.Use[
-		*EmailChangeCancel,
-		*EmailChangeCancelReq,
-		*EmailChangeCancelRsp,
-		*EmailChangeCancelService](
-		&EmailChangeCancelModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeRequestModule"
-	module.Use[
-		*EmailChangeRequest,
-		*EmailChangeRequestReq,
-		*EmailChangeRequestRsp,
-		*EmailChangeRequestService](
-		&EmailChangeRequestModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailChangeResendModule"
-	module.Use[
-		*EmailChangeResend,
-		*EmailChangeResendReq,
-		*EmailChangeResendRsp,
-		*EmailChangeResendService](
-		&EmailChangeResendModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailPasswordResetConfirmModule"
-	module.Use[
-		*EmailPasswordResetConfirm,
-		*EmailPasswordResetConfirmReq,
-		*EmailPasswordResetConfirmRsp,
-		*EmailPasswordResetConfirmService](
-		&EmailPasswordResetConfirmModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailPasswordResetRequestModule"
-	module.Use[
-		*EmailPasswordResetRequest,
-		*EmailPasswordResetRequestReq,
-		*EmailPasswordResetRequestRsp,
-		*EmailPasswordResetRequestService](
-		&EmailPasswordResetRequestModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailVerificationConfirmModule"
-	module.Use[
-		*EmailVerificationConfirm,
-		*EmailVerificationConfirmReq,
-		*EmailVerificationConfirmRsp,
-		*EmailVerificationConfirmService](
-		&EmailVerificationConfirmModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailVerificationRequestModule"
-	module.Use[
-		*EmailVerificationRequest,
-		*EmailVerificationRequestReq,
-		*EmailVerificationRequestRsp,
-		*EmailVerificationRequestService](
-		&EmailVerificationRequestModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "EmailVerificationResendModule"
-	module.Use[
-		*EmailVerificationResend,
-		*EmailVerificationResendReq,
-		*EmailVerificationResendRsp,
-		*EmailVerificationResendService](
-		&EmailVerificationResendModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "GroupModule"
-	module.Use[
-		*Group,
-		*Group,
-		*Group,
-		*GroupService](
-		&GroupModule{},
+	module.UseCustom(module.NewWrapper("/iam/users/:id", "id", false, &serviceiamuser.UserPatchService{}), consts.PHASE_PATCH)
+	module.Use(module.NewWrapper("/iam/groups", "id", false, &serviceiamgroup.GroupService{}),
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
 		consts.PHASE_UPDATE,
 		consts.PHASE_PATCH,
 		consts.PHASE_LIST,
 		consts.PHASE_GET,
+		consts.PHASE_CREATE_MANY,
+		consts.PHASE_UPDATE_MANY,
+		consts.PHASE_PATCH_MANY,
+		consts.PHASE_DELETE_MANY,
 	)
-
-	// Use module "HeartbeatModule"
-	module.Use[
-		*Heartbeat,
-		*Heartbeat,
-		*Heartbeat,
-		*HeartbeatService](
-		&HeartbeatModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "LoginModule"
-	module.Use[
-		*Login,
-		*LoginReq,
-		*LoginRsp,
-		*LoginService](
-		&LoginModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "LogoutModule"
-	module.Use[
-		*Logout,
-		*Logout,
-		*LogoutRsp,
-		*LogoutService](
-		&LogoutModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "MeModule"
-	module.Use[
-		*Me,
-		*Me,
-		MeRsp,
-		*MeService](
-		&MeModule{},
-		consts.PHASE_LIST,
-	)
-
-	// Use module "OfflineModule"
-	module.Use[
-		*Offline,
-		*OfflineReq,
-		*Offline,
-		*OfflineService](
-		&OfflineModule{},
-		consts.PHASE_CREATE,
-	)
-
-	// Use module "OnlineUserModule"
-	module.Use[
-		*OnlineUser,
-		*OnlineUser,
-		*OnlineUser,
-		*OnlineUserService](
-		&OnlineUserModule{},
-		consts.PHASE_LIST,
-	)
-
-	// Use module "SignupModule"
-	module.Use[
-		*Signup,
-		*SignupReq,
-		*SignupRsp,
-		*SignupService](
-		&SignupModule{},
-		consts.PHASE_CREATE,
-	)
-
 	if cfg.EnableTenant {
-		// Use module "TenantModule"
-		module.Use[
-			*Tenant,
-			*Tenant,
-			*Tenant,
-			*TenantService](
-			&TenantModule{},
+		module.Use(module.NewWrapper("/iam/tenants", "id", false, &serviceiamtenant.TenantService{}),
 			consts.PHASE_CREATE,
 			consts.PHASE_DELETE,
 			consts.PHASE_UPDATE,
 			consts.PHASE_PATCH,
 			consts.PHASE_LIST,
 			consts.PHASE_GET,
+			consts.PHASE_CREATE_MANY,
+			consts.PHASE_UPDATE_MANY,
+			consts.PHASE_PATCH_MANY,
+			consts.PHASE_DELETE_MANY,
 		)
 	}
 
-	// Use module "UserModule"
-	module.Use[
-		*User,
-		*User,
-		*User,
-		*UserService](
-		&UserModule{},
-		consts.PHASE_CREATE,
-		consts.PHASE_DELETE,
-		consts.PHASE_UPDATE,
-		consts.PHASE_PATCH,
-		consts.PHASE_LIST,
-		consts.PHASE_GET,
-	)
+	module.Use(module.NewWrapper("/iam/session/heartbeat", "id", false, &serviceiamsession.HeartbeatService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentListService{}), consts.PHASE_LIST)
+	module.UseCustom(module.NewWrapper("/iam/session/current", "id", false, &serviceiamsession.CurrentDeleteService{}), consts.PHASE_DELETE)
+	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsListService{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/iam/admin/sessions", "id", false, &serviceiamsession.AdminSessionsListService{}), consts.PHASE_LIST)
+	module.Use(module.NewWrapper("/iam/admin/sessions", "id", false, &serviceiamsession.AdminSessionsGetService{}), consts.PHASE_GET)
+	module.Use(module.NewWrapper("/iam/admin/sessions", "id", false, &serviceiamsession.AdminSessionsDeleteService{}), consts.PHASE_DELETE)
+	module.UseCustom(module.NewWrapper("/iam/admin/users/:id/sessions", "id", false, &serviceiamsession.AdminUserSessionsListService{}), consts.PHASE_LIST)
+	module.UseCustom(module.NewWrapper("/iam/admin/users/:id/sessions", "id", false, &serviceiamsession.AdminUserSessionsDeleteService{}), consts.PHASE_DELETE)
+	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsGetService{}), consts.PHASE_GET)
+	module.UseCustom(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteAllService{}), consts.PHASE_DELETE)
+	module.Use(module.NewWrapper("/iam/sessions", "id", false, &serviceiamsession.SessionsDeleteService{}), consts.PHASE_DELETE)
+	module.Use(module.NewWrapper("/online-users", "id", false, &service.Base[*OnlineUser, *OnlineUser, *OnlineUser]{}), consts.PHASE_LIST)
+
+	module.Use(module.NewWrapper("/iam/email/verification-request", "id", true, &serviceiamemail.VerificationRequestService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/verification-resend", "id", true, &serviceiamemail.VerificationResendService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/verification-confirm", "id", true, &serviceiamemail.VerificationConfirmService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/password-reset-confirm", "id", true, &serviceiamemail.PasswordResetConfirmService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/password-reset-request", "id", true, &serviceiamemail.PasswordResetRequestService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-request", "id", false, &serviceiamemail.ChangeRequestService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-resend", "id", false, &serviceiamemail.ChangeResendService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-cancel", "id", true, &serviceiamemail.ChangeCancelService{}), consts.PHASE_CREATE)
+	module.Use(module.NewWrapper("/iam/email/change-confirm", "id", false, &serviceiamemail.ChangeConfirmService{}), consts.PHASE_CREATE)
+
 	// create default users
 	if len(cfg.DefaultUsers) > 0 {
 		for _, u := range cfg.DefaultUsers {
-			if err := modeliam.GenerateHashedPassword(u); err != nil {
+			if err := modeliamuser.GenerateHashedPassword(u); err != nil {
 				panic(err)
 			}
 		}
 		model.Register(cfg.DefaultUsers...)
 	}
-
-	middleware.RegisterAuth(middleware.IAMSession())
 
 	// cleanup the oneline user that not active every 30 seconds, will run immediately after application bootstrap.
 	cronjob.Register(cronjobiam.CleanupOnlineUser, "*/30 * * * * *", "cleanup online user", cronjob.Config{RunImmediately: true})

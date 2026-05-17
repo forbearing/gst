@@ -38,8 +38,7 @@ func Register() {
 	module.Use[
 		*Helloworld,
 		*Req,
-		*Rsp,
-		*Service](
+		*Rsp](
 		&Module{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -56,8 +55,7 @@ func Register() {
 	module.Use[
 		*Helloworld2,
 		*Helloworld2,
-		*Helloworld2,
-		*Service2](
+		*Helloworld2](
 		&Module2{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,

@@ -9,14 +9,13 @@ import (
 var _ types.Module[*API, *API, APIRsp] = (*APIModule)(nil)
 
 type (
-	API        = modelauthz.API
-	APIRsp     = modelauthz.APIRsp
-	APIService = serviceauthz.APIService
-	APIModule  struct{}
+	API       = modelauthz.API
+	APIRsp    = modelauthz.APIRsp
+	APIModule struct{}
 )
 
 func (*APIModule) Service() types.Service[*API, *API, APIRsp] {
-	return &APIService{}
+	return &serviceauthz.APIService{}
 }
 func (*APIModule) Route() string { return "/apis" }
 func (*APIModule) Pub() bool     { return false }

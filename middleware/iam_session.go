@@ -3,20 +3,16 @@ package middleware
 import (
 	"net/http"
 
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamsession "github.com/forbearing/gst/internal/model/iam/session"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
 	"github.com/mssola/useragent"
 )
 
-// sessionRequiresPasswordChange reads the flag from session user info (set at login / updated on password change).
-func sessionRequiresPasswordChange(session modeliam.Session) bool {
-	if session.UserInfo == nil {
-		return false
-	}
-	v, ok := session.UserInfo["must_change_password"].(bool)
-	return ok && v
+// sessionRequiresPasswordChange reads the flag stored on the session snapshot.
+func sessionRequiresPasswordChange(session modeliamsession.Session) bool {
+	return session.MustChangePassword
 }
 
 // mustChangePasswordExemptRoutes are allowed while MustChangePassword is true on the session.
@@ -26,9 +22,11 @@ func mustChangePasswordExempt(method, path string) bool {
 		return true
 	case method == http.MethodPost && path == "/api/logout":
 		return true
-	case method == http.MethodGet && path == "/api/me":
+	case method == http.MethodGet && path == "/api/iam/session/current":
 		return true
-	case method == http.MethodPost && path == "/api/heartbeat":
+	case method == http.MethodDelete && path == "/api/iam/session/current":
+		return true
+	case method == http.MethodPost && path == "/api/iam/session/heartbeat":
 		return true
 	default:
 		return false
@@ -43,8 +41,7 @@ func IAMSession() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "no session"})
 			return
 		}
-		// fmt.Println("----- SessionRedisKey", helper.SessionRedisKey(identity.SessionNamespace, sessionID))
-		session, e := redis.Cache[modeliam.Session]().WithContext(c.Request.Context()).Get(modeliam.SessionRedisKey(modeliam.SessionNamespace, sessionID))
+		session, e := redis.Cache[modeliamsession.Session]().WithContext(c.Request.Context()).Get(modeliamsession.SessionIDKey(sessionID))
 		if e != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": e.Error()})
 			return

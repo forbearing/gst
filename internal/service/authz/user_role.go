@@ -4,7 +4,7 @@ import (
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/dao"
 	modelauthz "github.com/forbearing/gst/internal/model/authz"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
@@ -39,7 +39,7 @@ func (s *UserRoleService) DeleteAfter(ctx *types.ServiceContext, userRole *model
 func (s *UserRoleService) ListAfter(ctx *types.ServiceContext, data *[]*modelauthz.UserRole) error {
 	log := s.WithServiceContext(ctx, consts.PHASE_LIST_AFTER)
 
-	userMap, err := dao.QueryModelsToMap(ctx.DatabaseContext(), func(u *modeliam.User) string { return u.ID }, nil)
+	userMap, err := dao.QueryModelsToMap(ctx.DatabaseContext(), func(u *modeliamuser.User) string { return u.ID }, nil)
 	if err != nil {
 		log.Error(err)
 		return err

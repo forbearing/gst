@@ -9,13 +9,12 @@ import (
 var _ types.Module[*OperationLog, *OperationLog, *OperationLog] = (*OperationLogModule)(nil)
 
 type (
-	OperationLog        = modellogmgmt.OperationLog
-	OperationLogService = servicelogmgmt.OperationLogService
-	OperationLogModule  struct{}
+	OperationLog       = modellogmgmt.OperationLog
+	OperationLogModule struct{}
 )
 
 func (*OperationLogModule) Service() types.Service[*OperationLog, *OperationLog, *OperationLog] {
-	return &OperationLogService{}
+	return &servicelogmgmt.OperationLogService{}
 }
 
 func (*OperationLogModule) Route() string { return "/log/operationlog" }

@@ -1,9 +1,8 @@
 package model
 
 import (
-	"database/sql/driver"
-
 	"github.com/cockroachdb/errors"
+	"gorm.io/datatypes"
 )
 
 type SysInfo struct {
@@ -112,11 +111,6 @@ type NetworkDevice struct {
 	Speed      uint   `json:"speed,omitempty"` // device max supported speed in Mbps
 }
 type (
-	StorageDevices []StorageDevice
-	NetworkDevices []NetworkDevice
+	StorageDevices = datatypes.JSONSlice[StorageDevice]
+	NetworkDevices = datatypes.JSONSlice[NetworkDevice]
 )
-
-func (sd StorageDevices) Value() (driver.Value, error) { return GormScannerWrapper(&sd).Value() }
-func (sd *StorageDevices) Scan(value any) error        { return GormScannerWrapper(sd).Scan(value) }
-func (nd NetworkDevices) Value() (driver.Value, error) { return GormScannerWrapper(&nd).Value() }
-func (nd *NetworkDevices) Scan(value any) error        { return GormScannerWrapper(nd).Scan(value) }

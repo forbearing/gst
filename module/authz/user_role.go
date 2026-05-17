@@ -9,13 +9,12 @@ import (
 var _ types.Module[*UserRole, *UserRole, *UserRole] = (*UserRoleModule)(nil)
 
 type (
-	UserRole        = modelauthz.UserRole
-	UserRoleService = serviceauthz.UserRoleService
-	UserRoleModule  struct{}
+	UserRole       = modelauthz.UserRole
+	UserRoleModule struct{}
 )
 
 func (*UserRoleModule) Service() types.Service[*UserRole, *UserRole, *UserRole] {
-	return &UserRoleService{}
+	return &serviceauthz.UserRoleService{}
 }
 func (*UserRoleModule) Route() string { return "authz/user-roles" }
 func (*UserRoleModule) Pub() bool     { return false }

@@ -109,8 +109,7 @@ func Register() {
 	module.Use[
 		*TOTPBind,
 		*TOTPBind,
-		*TOTPBindRsp,
-		*TOTPBindService](
+		*TOTPBindRsp](
 		&TOTPBindModule{},
 		consts.PHASE_CREATE,
 	)
@@ -118,8 +117,7 @@ func Register() {
 	module.Use[
 		*TOTPCheck,
 		*TOTPCheckReq,
-		*TOTPCheckRsp,
-		*TOTPCheckService](
+		*TOTPCheckRsp](
 		&TOTPCheckModule{},
 		consts.PHASE_CREATE,
 	)
@@ -127,8 +125,7 @@ func Register() {
 	module.Use[
 		*TOTPConfirm,
 		*TOTPConfirmReq,
-		*TOTPConfirmRsp,
-		*TOTPConfirmService](
+		*TOTPConfirmRsp](
 		&TOTPConfirmModule{},
 		consts.PHASE_CREATE,
 	)
@@ -136,8 +133,7 @@ func Register() {
 	module.Use[
 		*TOTPDevice,
 		*TOTPDevice,
-		*TOTPDevice,
-		*TOTPDeviceService](
+		*TOTPDevice](
 		&TOTPDeviceModule{},
 		consts.PHASE_CREATE,
 		consts.PHASE_DELETE,
@@ -150,8 +146,7 @@ func Register() {
 	module.Use[
 		*TOTPStatus,
 		*TOTPStatus,
-		*TOTPStatusRsp,
-		*TOTPStatusService](
+		*TOTPStatusRsp](
 		&TOTPStatusModule{},
 		consts.PHASE_LIST,
 	)
@@ -159,8 +154,7 @@ func Register() {
 	module.Use[
 		*TOTPUnbind,
 		*TOTPUnbindReq,
-		*TOTPUnbindRsp,
-		*TOTPUnbindService](
+		*TOTPUnbindRsp](
 		&TOTPUnbindModule{},
 		consts.PHASE_CREATE,
 	)
@@ -168,8 +162,7 @@ func Register() {
 	module.Use[
 		*TOTPVerify,
 		*TOTPVerifyReq,
-		*TOTPVerifyRsp,
-		*TOTPVerifyService](
+		*TOTPVerifyRsp](
 		&TOTPVerifyModule{},
 		consts.PHASE_CREATE)
 }

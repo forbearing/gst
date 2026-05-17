@@ -14,6 +14,7 @@ import (
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/internal/helper"
+	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/module/authz"
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/response"
@@ -21,8 +22,10 @@ import (
 )
 
 var (
-	token = "-"
-	port  = 8000
+	token        = "-"
+	port         = 8000
+	rootUsername = "root"
+	rootPassword = "12345678"
 
 	signupAPI = fmt.Sprintf("http://localhost:%d/api/signup", port)
 	loginAPI  = fmt.Sprintf("http://localhost:%d/api/login", port)
@@ -50,14 +53,22 @@ func init() {
 	os.Setenv(config.AUDIT_ENABLE, "true")
 	os.Setenv(config.AUDIT_ASYNC_WRITE, "false")
 
+	iam.Register(iam.Config{
+		DefaultUsers: []*iam.User{
+			{
+				Base:     model.Base{ID: "root"},
+				Type:     "admin",
+				Username: rootUsername,
+				Password: rootPassword,
+			},
+		},
+	})
+	authz.Register()
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
 	}
 
 	go func() {
-		iam.Register()
-		authz.Register()
-
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
 		}
@@ -106,7 +117,10 @@ func TestAuthz(t *testing.T) {
 		})
 	})
 
-	var sessionID string
+	// Authz management endpoints require the built-in admin role. The user created
+	// in signup only covers the authentication flow, so the tests keep a dedicated
+	// root session for listing and mutating authz resources.
+	var adminSessionID string
 	t.Run("login", func(t *testing.T) {
 		cli, err := client.New(loginAPI)
 		require.NoError(t, err)
@@ -122,13 +136,27 @@ func TestAuthz(t *testing.T) {
 			//   +SessionID => "019cbca0-1a0b-7a12-8264-4c0525076cd6" #string
 			// }
 			require.NotEmpty(t, rsp.SessionID)
-			sessionID = rsp.SessionID
+		})
+	})
+	t.Run("login_root", func(t *testing.T) {
+		cli, err := client.New(loginAPI)
+		require.NoError(t, err)
+
+		resp, err := cli.Create(iam.LoginReq{
+			Username: rootUsername,
+			Password: rootPassword,
+		})
+		require.NoError(t, err)
+
+		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			require.NotEmpty(t, rsp.SessionID)
+			adminSessionID = rsp.SessionID
 		})
 	})
 	t.Run("api", func(t *testing.T) {
 		cli, err := client.New(apiAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
-			Value: sessionID,
+			Value: adminSessionID,
 		}))
 		require.NoError(t, err)
 
@@ -136,29 +164,28 @@ func TestAuthz(t *testing.T) {
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp []string) {
 			// #[]string [
-			//   0 => "/api/heartbeat" #string
+			//   0 => "/api/iam/session/heartbeat" #string
 			//   1 => "/api/signup" #string
 			//   2 => "/api/iam/groups" #string
 			//   3 => "/api/menus/{id}" #string
 			//   4 => "/api/authz/user-roles" #string
 			//   5 => "/api/authz/user-roles/{id}" #string
 			//   6 => "/api/login" #string
-			//   7 => "/api/me" #string
+			//   7 => "/api/iam/session/current" #string
 			//   8 => "/api/iam/groups/{id}" #string
 			//   9 => "/api/iam/users/{id}" #string
 			//   10 => "/api/online-users" #string
 			//   11 => "/api/authz/roles/{id}" #string
 			//   12 => "/api/apis" #string
-			//   13 => "/api/offline" #string
-			//   14 => "/api/iam/change-password" #string
-			//   15 => "/api/logout" #string
-			//   16 => "/api/authz/permissions" #string
-			//   17 => "/api/iam/users" #string
-			//   18 => "/api/buttons" #string
-			//   19 => "/api/buttons/{id}" #string
-			//   20 => "/api/authz/permissions/{id}" #string
-			//   21 => "/api/menus" #string
-			//   22 => "/api/authz/roles" #string
+			//   13 => "/api/iam/change-password" #string
+			//   14 => "/api/logout" #string
+			//   15 => "/api/authz/permissions" #string
+			//   16 => "/api/iam/users" #string
+			//   17 => "/api/buttons" #string
+			//   18 => "/api/buttons/{id}" #string
+			//   19 => "/api/authz/permissions/{id}" #string
+			//   20 => "/api/menus" #string
+			//   21 => "/api/authz/roles" #string
 			// ]
 			require.NotEmpty(t, rsp, "apis list should not be empty")
 		})
@@ -167,7 +194,7 @@ func TestAuthz(t *testing.T) {
 	t.Run("permission", func(t *testing.T) {
 		cli, err := client.New(permissionAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
-			Value: sessionID,
+			Value: adminSessionID,
 		}))
 		require.NoError(t, err)
 
@@ -184,7 +211,7 @@ func TestAuthz(t *testing.T) {
 	t.Run("menu", func(t *testing.T) {
 		cli, err := client.New(menuAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
-			Value: sessionID,
+			Value: adminSessionID,
 		}))
 		require.NoError(t, err)
 		var menuID string
@@ -261,7 +288,7 @@ func TestAuthz(t *testing.T) {
 		t.Run("list_expand", func(t *testing.T) {
 			cliExpand, err = client.New(menuAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
-				Value: sessionID,
+				Value: adminSessionID,
 			}), client.WithQueryExpand("Children,Parent", 1))
 			require.NoError(t, err)
 			items := make([]*authz.Menu, 0)
@@ -285,7 +312,7 @@ func TestAuthz(t *testing.T) {
 	t.Run("role", func(t *testing.T) {
 		cli, err := client.New(roleAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
-			Value: sessionID,
+			Value: adminSessionID,
 		}))
 		require.NoError(t, err)
 		var roleID string
@@ -375,7 +402,7 @@ func TestAuthz(t *testing.T) {
 	t.Run("user_role", func(t *testing.T) {
 		cli, err := client.New(userRoleAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
-			Value: sessionID,
+			Value: adminSessionID,
 		}))
 		require.NoError(t, err)
 		var userRoleID string
@@ -385,7 +412,7 @@ func TestAuthz(t *testing.T) {
 		// Create a role for assigning to user (role from previous test was deleted).
 		cliRole, err := client.New(roleAPI, client.WithCookie(&http.Cookie{
 			Name:  "session_id",
-			Value: sessionID,
+			Value: adminSessionID,
 		}))
 		require.NoError(t, err)
 		resp, err = cliRole.Create(&authz.Role{Name: "UserRole Test Role", Code: "userrole_test_role"})

@@ -34,13 +34,12 @@ func init() {
 	os.Setenv(config.LOGGER_DIR, "/tmp/test_module")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
 
+	helloworld.Register()
 	if err := bootstrap.Bootstrap(); err != nil {
 		panic(err)
 	}
 
 	go func() {
-		helloworld.Register()
-
 		if err := bootstrap.Run(); err != nil {
 			panic(err)
 		}

@@ -1,13 +1,5 @@
 package modeliamemail
 
-import "github.com/forbearing/gst/model"
-
-// VerificationConfirm is the model for POST /api/iam/email/verification-confirm.
-// It completes the email verification flow with the issued verification token.
-type VerificationConfirm struct {
-	model.Empty
-}
-
 // VerificationConfirmReq is the payload for POST /api/iam/email/verification-confirm.
 // It carries the verification token from the email link or client-side confirmation flow.
 type VerificationConfirmReq struct {

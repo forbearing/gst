@@ -5,9 +5,9 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
-	modeliam "github.com/forbearing/gst/internal/model/iam"
 	modeliamemail "github.com/forbearing/gst/internal/model/iam/email"
-	"github.com/forbearing/gst/provider/redis"
+	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
+	serviceiamsession "github.com/forbearing/gst/internal/service/iam/session"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"golang.org/x/crypto/bcrypt"
@@ -21,34 +21,24 @@ type PasswordResetConfirmService struct {
 
 var (
 	// passwordResetLoadUserByID loads the account referenced by the password reset token.
-	passwordResetLoadUserByID = func(ctx *types.ServiceContext, userID string) (*modeliam.User, error) {
-		user := new(modeliam.User)
-		if err := database.Database[*modeliam.User](ctx.DatabaseContext()).Get(user, userID); err != nil {
+	passwordResetLoadUserByID = func(ctx *types.ServiceContext, userID string) (*modeliamuser.User, error) {
+		user := new(modeliamuser.User)
+		if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Get(user, userID); err != nil {
 			return nil, err
 		}
 		return user, nil
 	}
 	// passwordResetUpdateUser persists the new password state while skipping hooks that
 	// are unrelated to the reset flow and selecting only the fields changed here.
-	passwordResetUpdateUser = func(ctx *types.ServiceContext, user *modeliam.User) error {
-		return database.Database[*modeliam.User](ctx.DatabaseContext()).
+	passwordResetUpdateUser = func(ctx *types.ServiceContext, user *modeliamuser.User) error {
+		return database.Database[*modeliamuser.User](ctx.DatabaseContext()).
 			WithoutHook().
 			WithSelect("username", "password_hash", "must_change_password").
 			Update(user)
 	}
-	// passwordResetInvalidateSessions clears the cached session mapping so a password
-	// reset immediately revokes access granted by previously issued sessions.
-	passwordResetInvalidateSessions = func(userID string) {
-		if userID == "" {
-			return
-		}
-		prefixedUserID := modeliam.SessionRedisKey(modeliam.SessionNamespace, userID)
-		sessionKey, err := redis.Cache[string]().Get(prefixedUserID)
-		if err == nil && sessionKey != "" {
-			_ = redis.Cache[modeliam.Session]().Delete(sessionKey)
-		}
-		_ = redis.Cache[string]().Delete(prefixedUserID)
-	}
+	// passwordResetInvalidateSessions clears the cached user-session index so a
+	// password reset immediately revokes access granted by previously issued sessions.
+	passwordResetInvalidateSessions = serviceiamsession.InvalidateUserSessions
 )
 
 // Create completes the password reset flow by consuming the one-time token,
@@ -101,7 +91,7 @@ func (s *PasswordResetConfirmService) Create(ctx *types.ServiceContext, req *mod
 
 // applyPasswordReset hashes the supplied password and updates the in-memory user
 // model before persistence.
-func applyPasswordReset(user *modeliam.User, newPassword string) error {
+func applyPasswordReset(user *modeliamuser.User, newPassword string) error {
 	if user == nil {
 		return errors.New("password reset user is required")
 	}

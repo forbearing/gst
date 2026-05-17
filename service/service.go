@@ -19,7 +19,7 @@ var (
 	serviceMap = make(map[string]any)
 	mu         sync.Mutex
 
-	_ types.Service[*model.User, any, any] = (*Base[*model.User, any, any])(nil)
+	_ types.Service[*model.Empty, any, any] = (*Base[*model.Empty, any, any])(nil)
 )
 
 var (
@@ -46,7 +46,7 @@ func serviceKey[M types.Model, REQ types.Request, RSP types.Response](phase cons
 	return key
 }
 
-// Register registers a service instance for the specified phase.
+// Register registers a service type for the specified phase.
 //
 // The service type parameter S can be either a pointer to a struct type (e.g., *MyService)
 // or a non-pointer struct type (e.g., MyService). The function will automatically handle
@@ -78,20 +78,46 @@ func serviceKey[M types.Model, REQ types.Request, RSP types.Response](phase cons
 //   - If Register is called after initialization (e.g., in Init function),
 //     logger.Service is already available, and the service.Logger will be set directly.
 func Register[S types.Service[M, REQ, RSP], M types.Model, REQ types.Request, RSP types.Response](phase consts.Phase) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	// Get the type of S
 	typ := reflect.TypeFor[S]()
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	key := serviceKey[M, REQ, RSP](phase)
 
-	// Always create a pointer instance
-	val := reflect.New(typ).Interface()
-	setLogger(val)
-	serviceMap[key] = val
+	registerValue[M, REQ, RSP](phase, reflect.New(typ).Interface())
+}
+
+// RegisterService registers a concrete service instance for the specified phase.
+//
+// This function complements Register by accepting a runtime service instance.
+// It preserves any preconfigured fields on the provided instance while keeping
+// the existing service lookup behavior unchanged.
+func RegisterService[M types.Model, REQ types.Request, RSP types.Response](phase consts.Phase, svc types.Service[M, REQ, RSP]) {
+	registerValue[M, REQ, RSP](phase, svc)
+}
+
+func registerValue[M types.Model, REQ types.Request, RSP types.Response](phase consts.Phase, svc any) {
+	if svc == nil {
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	key := serviceKey[M, REQ, RSP](phase)
+	val := reflect.ValueOf(svc)
+	if !val.IsValid() {
+		return
+	}
+	if val.Kind() == reflect.Pointer && val.IsNil() {
+		svc = reflect.New(val.Type().Elem()).Interface()
+	} else if val.Kind() != reflect.Pointer {
+		ptr := reflect.New(val.Type())
+		ptr.Elem().Set(val)
+		svc = ptr.Interface()
+	}
+
+	setLogger(svc)
+	serviceMap[key] = svc
 }
 
 func setLogger(s any) {

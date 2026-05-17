@@ -9,14 +9,13 @@ import (
 var _ types.Module[*TOTPBind, *TOTPBind, *TOTPBindRsp] = (*TOTPBindModule)(nil)
 
 type (
-	TOTPBind        = modeltwofa.TOTPBind
-	TOTPBindRsp     = modeltwofa.TOTPBindRsp
-	TOTPBindService = servicetwofa.TOTPBindService
-	TOTPBindModule  struct{}
+	TOTPBind       = modeltwofa.TOTPBind
+	TOTPBindRsp    = modeltwofa.TOTPBindRsp
+	TOTPBindModule struct{}
 )
 
 func (*TOTPBindModule) Service() types.Service[*TOTPBind, *TOTPBind, *TOTPBindRsp] {
-	return &TOTPBindService{}
+	return &servicetwofa.TOTPBindService{}
 }
 func (*TOTPBindModule) Route() string { return "2fa/totp/bind" }
 func (*TOTPBindModule) Pub() bool     { return false }
