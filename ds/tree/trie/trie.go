@@ -2,6 +2,7 @@ package trie
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -169,10 +170,10 @@ func (t *Trie[K, V]) Delete(key []K) (v V, ok bool) {
 	t.size--
 
 	// update node's count from leaf to root
-	for i := len(path) - 1; i >= 0; i-- {
-		path[i].count--
+	for i, node := range slices.Backward(path) {
+		node.count--
 		// if not root node and count is 0, remove the node
-		if i > 0 && path[i].count <= 0 {
+		if i > 0 && node.count <= 0 {
 			parent := path[i-1]
 			delete(parent.children, keys[i-1])
 		}
@@ -239,9 +240,9 @@ func (t *Trie[K, V]) DeletePrefix(prefix []K) int {
 	}
 
 	// Update counts from bottom to top
-	for i := len(path) - 1; i >= 0; i-- {
-		path[i].count -= deleteCount
-		if i > 0 && path[i].count == 0 {
+	for i, node := range slices.Backward(path) {
+		node.count -= deleteCount
+		if i > 0 && node.count == 0 {
 			parent := path[i-1]
 			delete(parent.children, keys[i-1])
 		}
