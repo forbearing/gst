@@ -185,7 +185,8 @@ func Wait() {
 			elapsed := time.Since(startTime)
 			totalPending := tablePending + tableDBPending + recordPending
 
-			zap.S().Infow("waiting for database initialization",
+			zap.S().Infow(
+				"waiting for database initialization",
 				"elapsed", util.FormatDurationSmart(elapsed),
 				"total_pending", totalPending,
 				"default_tables", tablePending,
@@ -200,7 +201,8 @@ func Wait() {
 
 	// Log completion
 	elapsed := time.Since(startTime)
-	zap.S().Infow("database initialization completed",
+	zap.S().Infow(
+		"database initialization completed",
 		"total_time", util.FormatDurationSmart(elapsed),
 	)
 }

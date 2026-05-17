@@ -81,7 +81,8 @@ func inits(modelNames ...string) *ast.FuncDecl {
 	list := make([]ast.Stmt, 0, len(modelNames))
 
 	for _, name := range modelNames {
-		list = append(list,
+		list = append(
+			list,
 			&ast.ExprStmt{
 				X: &ast.CallExpr{
 					Fun: &ast.IndexExpr{

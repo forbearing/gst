@@ -354,7 +354,8 @@ func serviceActionLogQuoted(modelName string, phase consts.Phase, action *dsl.Ac
 // genServiceMethod1 uses AST to generate CreateBefore,CreateAfter,UpdateBefore,UpdateAfter,
 // DeleteBefore,DeleteAfter,GetBefore,GetAfter,PatchBefore,PatchAfter methods.
 func genServiceMethod1(info *ModelInfo, action *dsl.Action, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod1(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod1(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		StmtLogWithServiceContext(info.ModelVarName),
 		StmtLogInfo(serviceActionLogQuoted(info.ModelName, phase, action)),
 		EmptyLine(),
@@ -364,7 +365,8 @@ func genServiceMethod1(info *ModelInfo, action *dsl.Action, phase consts.Phase, 
 
 // genServiceMethod2 uses AST to generate ListBefore, ListAfter methods.
 func genServiceMethod2(info *ModelInfo, action *dsl.Action, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod2(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod2(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		StmtLogWithServiceContext(info.ModelVarName),
 		StmtLogInfo(serviceActionLogQuoted(info.ModelName, phase, action)),
 		EmptyLine(),
@@ -375,7 +377,8 @@ func genServiceMethod2(info *ModelInfo, action *dsl.Action, phase consts.Phase, 
 // genServiceMethod3 uses AST to generate CreateManyBefore, CreateManyAfter,
 // DeleteManyBefore, DeleteManyAfter, UpdateManyBefore, UpdateManyAfter, PatchManyBefore, PatchManyAfter.
 func genServiceMethod3(info *ModelInfo, action *dsl.Action, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod3(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod3(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		StmtLogWithServiceContext(info.ModelVarName),
 		StmtLogInfo(serviceActionLogQuoted(info.ModelName, phase, action)),
 		EmptyLine(),
@@ -385,7 +388,8 @@ func genServiceMethod3(info *ModelInfo, action *dsl.Action, phase consts.Phase, 
 
 // genServiceMethod4 uses AST to generate Create,Delete,Update,Patch,List,Get,CreateMany,DeleteMany,UpdateMany,PatchMany methods.
 func genServiceMethod4(info *ModelInfo, action *dsl.Action, reqName, rspName string, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod4(info.ModelVarName, info.ModelName, info.ModelPkgName, reqName, rspName, phase, roleName,
+	return serviceMethod4(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, reqName, rspName, phase, roleName,
 		StmtLogWithServiceContext(info.ModelVarName),
 		StmtLogInfo(serviceActionLogQuoted(info.ModelName, phase, action)),
 		EmptyLine(),
@@ -398,7 +402,8 @@ func genServiceMethod4(info *ModelInfo, action *dsl.Action, reqName, rspName str
 
 // genServiceMethod5 uses AST to generate Import method.
 func genServiceMethod5(info *ModelInfo, action *dsl.Action, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod5(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod5(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		StmtLogWithServiceContext(info.ModelVarName),
 		StmtLogInfo(serviceActionLogQuoted(info.ModelName, phase, action)),
 		EmptyLine(),
@@ -408,7 +413,8 @@ func genServiceMethod5(info *ModelInfo, action *dsl.Action, phase consts.Phase, 
 
 // genServiceMethod6 uses AST to generate Export method.
 func genServiceMethod6(info *ModelInfo, action *dsl.Action, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod6(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod6(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		StmtLogWithServiceContext(info.ModelVarName),
 		StmtLogInfo(serviceActionLogQuoted(info.ModelName, phase, action)),
 		EmptyLine(),
@@ -418,14 +424,16 @@ func genServiceMethod6(info *ModelInfo, action *dsl.Action, phase consts.Phase, 
 
 // genServiceMethod7 uses AST to generate Filter method.
 func genServiceMethod7(info *ModelInfo, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod7(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod7(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		Returns(ast.NewIdent(strings.ToLower(info.ModelName))),
 	)
 }
 
 // genServiceMethod8 uses AST to generate FilterRaw method.
 func genServiceMethod8(info *ModelInfo, phase consts.Phase, roleName string) *ast.FuncDecl {
-	return serviceMethod8(info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
+	return serviceMethod8(
+		info.ModelVarName, info.ModelName, info.ModelPkgName, phase, roleName,
 		Returns(ast.NewIdent(`""`)),
 	)
 }

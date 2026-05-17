@@ -67,7 +67,8 @@ func (*document) Get(ctx context.Context, indexName string, id string, req *GetR
 		}, nil
 	}
 	if res.IsError() {
-		logger.Errorw("elasticsearch error response",
+		logger.Errorw(
+			"elasticsearch error response",
 			"status", res.Status(),
 			"body", string(body),
 		)
@@ -75,7 +76,8 @@ func (*document) Get(ctx context.Context, indexName string, id string, req *GetR
 	}
 	var result GetResult
 	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Errorw("failed to decode response",
+		logger.Errorw(
+			"failed to decode response",
 			"error", err,
 			"body", string(body),
 		)

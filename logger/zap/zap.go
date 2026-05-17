@@ -230,7 +230,8 @@ func NewZap(filename string, opts ...Option) *zap.Logger {
 	return zap.New(
 		zapcore.NewCore(newLogEncoder(opts...), newLogWriter(opts...), newLogLevel(opts...)),
 		zap.AddCaller(),
-		zap.AddStacktrace(zapcore.FatalLevel))
+		zap.AddStacktrace(zapcore.FatalLevel),
+	)
 }
 
 // NewSugared builds a *zap.SugaredLogger with optional filename and options.
@@ -244,7 +245,8 @@ func NewSugared(filename string, opts ...Option) *zap.SugaredLogger {
 	return zap.New(
 		zapcore.NewCore(newLogEncoder(opts...), newLogWriter(opts...), newLogLevel(opts...)),
 		zap.AddCaller(),
-		zap.AddStacktrace(zapcore.FatalLevel)).Sugar()
+		zap.AddStacktrace(zapcore.FatalLevel),
+	).Sugar()
 }
 
 // newLogWriter selects log sink (stdout/stderr or rolling file).

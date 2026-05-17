@@ -43,7 +43,8 @@ func Init() (err error) {
 		client = nil
 		return errors.Wrap(err, "failed to connect to mqtt broker")
 	}
-	zap.S().Infow("successfully connect to mqtt broker",
+	zap.S().Infow(
+		"successfully connect to mqtt broker",
 		"addr", cfg.Addr,
 		"client_id", clientID,
 		"keepalive", config.App.Keepalive.String(),
@@ -65,7 +66,8 @@ func New(cfg config.Mqtt) (mqtt.Client, error) {
 }
 
 func buildOptions(cfg config.Mqtt) (*mqtt.ClientOptions, error) {
-	clientID = fmt.Sprintf("%s-%d",
+	clientID = fmt.Sprintf(
+		"%s-%d",
 		defaultIfEmpty(cfg.ClientPrefix, "mqtt-client"),
 		rand.New(rand.NewSource(time.Now().UnixNano())).Int(), //nolint:gosec
 	)
@@ -236,14 +238,16 @@ func Publish(topic string, payload any, opts ...PublishOption) error {
 		return fmt.Errorf("publish timeout")
 	}
 	if err := token.Error(); err != nil {
-		logger.Mqtt.Errorw("publish failed",
+		logger.Mqtt.Errorw(
+			"publish failed",
 			"error", err,
 			"topic", topic,
 			"addr", config.App.Mqtt.Addr,
 		)
 		return err
 	}
-	logger.Mqtt.Debugw("publish success",
+	logger.Mqtt.Debugw(
+		"publish success",
 		"topic", topic,
 		"payload", string(data),
 		"qos", opt.QoS,
@@ -263,13 +267,15 @@ func Subscribe(topic string, handler MessageHandler, opts ...SubscribeOption) er
 		opt = opts[0]
 	}
 	wrapper := func(client mqtt.Client, msg mqtt.Message) {
-		logger.Mqtt.Debugw("received message",
+		logger.Mqtt.Debugw(
+			"received message",
 			"topic", msg.Topic(),
 			"payload", string(msg.Payload()),
 		)
 		if handler != nil {
 			if err := handler(msg.Topic(), msg.Payload()); err != nil {
-				logger.Mqtt.Errorw("handle message failed",
+				logger.Mqtt.Errorw(
+					"handle message failed",
 					"error", err,
 					"topic", msg.Topic(),
 				)
@@ -282,7 +288,8 @@ func Subscribe(topic string, handler MessageHandler, opts ...SubscribeOption) er
 		return fmt.Errorf("subscribe timeout")
 	}
 	if err := token.Error(); err != nil {
-		logger.Mqtt.Errorw("subscribe failed",
+		logger.Mqtt.Errorw(
+			"subscribe failed",
 			"error", err,
 			"topic", topic,
 			"addr", config.App.Mqtt.Addr,
@@ -290,7 +297,8 @@ func Subscribe(topic string, handler MessageHandler, opts ...SubscribeOption) er
 		return err
 	}
 
-	logger.Mqtt.Infow("subscribe success",
+	logger.Mqtt.Infow(
+		"subscribe success",
 		"topic", topic,
 		"qos", opt.QoS,
 	)
@@ -308,7 +316,8 @@ func Unsubscribe(topics ...string) error {
 		return fmt.Errorf("unsubscribe timeout")
 	}
 	if err := token.Error(); err != nil {
-		logger.Mqtt.Errorw("unsubscribe failed",
+		logger.Mqtt.Errorw(
+			"unsubscribe failed",
 			"error", err,
 			"topics", topics,
 		)

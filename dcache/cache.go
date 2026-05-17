@@ -112,7 +112,8 @@ func Init() error {
 					continue
 				}
 				fetches.EachError(func(s string, i int32, err error) {
-					log.Error("failed to fetch from kafka",
+					log.Error(
+						"failed to fetch from kafka",
 						zap.Error(err),
 						zap.String("topic", TOPIC_REDIS_SET_DEL),
 						zap.String("s", s),
@@ -157,7 +158,8 @@ func Init() error {
 						// 解析事件
 						event := new(event)
 						if err = json.Unmarshal(record.Value, event); err != nil {
-							log.Error("failed to unmarshal event from kafka record",
+							log.Error(
+								"failed to unmarshal event from kafka record",
 								zap.Error(err),
 								zap.Int64("offset", record.Offset),
 							)
@@ -170,7 +172,8 @@ func Init() error {
 
 						// 规则一：过滤掉时间戳小于该 key 历史最大时间戳的事件
 						if event.TS <= keyMaxTS {
-							log.Warn("skipping outdated event for key",
+							log.Warn(
+								"skipping outdated event for key",
 								zap.String("key", event.Key),
 								zap.Int64("event_ts", event.TS),
 								zap.Int64("key_max_ts", keyMaxTS),
@@ -199,7 +202,8 @@ func Init() error {
 
 				// 如果没有消息需要处理，则继续等待下一批
 				if len(keyEvents) == 0 {
-					log.Debug("no events to process in this batch",
+					log.Debug(
+						"no events to process in this batch",
 						zap.Int("total_records", totalRecords),
 						zap.Int("skipped_records", skippedRecords),
 						zap.Int64("failed_records", failedRecords),
@@ -245,7 +249,8 @@ func Init() error {
 								// logger.Info("redis set", zap.Int64("event_ts", evt.TS), zap.String("key", evt.Key), zap.Any("value", evt.Val), zap.Duration("redis_ttl", evt.RedisTTL))
 								if err = redisCli.Set(baseCtx, evt.Key, []byte(evt.Val), evt.RedisTTL).Err(); err != nil {
 									atomic.AddInt64(&failedRecords, 1)
-									log.Error("failed to set redis key",
+									log.Error(
+										"failed to set redis key",
 										zap.Error(err),
 										zap.String("key", evt.Key),
 										zap.Object("event", evt),
@@ -268,7 +273,8 @@ func Init() error {
 							}
 							var data []byte
 							if data, err = json.Marshal(evtDone); err != nil {
-								log.Error("failed to marshal event in redis set",
+								log.Error(
+									"failed to marshal event in redis set",
 									zap.Error(err),
 									zap.Object("event", evtDone),
 								)
@@ -278,7 +284,8 @@ func Init() error {
 								// 同步推送 kafka 消息
 								produceRecord := &kgo.Record{Topic: TOPIC_REDIS_DONE, Value: data}
 								if err = producer.ProduceSync(baseCtx, produceRecord).FirstErr(); err != nil {
-									log.Error("failed to produce redis set done event",
+									log.Error(
+										"failed to produce redis set done event",
 										zap.Error(err),
 										zap.Object("event", evtDone),
 									)
@@ -287,7 +294,8 @@ func Init() error {
 						case opDel:
 							if evt.SyncToRedis {
 								if err = redisCli.Del(baseCtx, evt.Key).Err(); err != nil {
-									log.Error("failed to del redis key",
+									log.Error(
+										"failed to del redis key",
 										zap.Error(err),
 										zap.String("key", evt.Key),
 										zap.Object("event", evt),
@@ -309,7 +317,8 @@ func Init() error {
 							}
 							var data []byte
 							if data, err = json.Marshal(evtDone); err != nil {
-								log.Error("failed to marshal event in redis del",
+								log.Error(
+									"failed to marshal event in redis del",
 									zap.Error(err),
 									zap.Object("event", evtDone),
 								)
@@ -319,7 +328,8 @@ func Init() error {
 								// 同步推送 kafka 消息
 								produceRecord := &kgo.Record{Topic: TOPIC_REDIS_DONE, Value: data}
 								if err = producer.ProduceSync(baseCtx, produceRecord).FirstErr(); err != nil {
-									log.Error("failed to produce redis del done event",
+									log.Error(
+										"failed to produce redis del done event",
 										zap.Error(err),
 										zap.Object("event", evtDone),
 									)
@@ -342,7 +352,8 @@ func Init() error {
 
 				// 记录处理统计信息
 				if totalRecords > 0 {
-					log.Info("successfully consumed events",
+					log.Info(
+						"successfully consumed events",
 						zap.Int("total", totalRecords),
 						zap.Int("deduplicated", len(eventSlice)),
 						zap.Int64("success", successRecords),

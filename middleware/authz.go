@@ -50,7 +50,8 @@ func Authz() gin.HandlerFunc {
 		}
 		if allow {
 			c.Next()
-			logger.Authz.Infoz("",
+			logger.Authz.Infoz(
+				"",
 				zap.String("sub", sub),
 				zap.String("obj", obj),
 				zap.String("act", act),
@@ -61,7 +62,8 @@ func Authz() gin.HandlerFunc {
 		} else {
 			JSON(c, CodeForbidden)
 			c.Abort()
-			logger.Authz.Infoz("",
+			logger.Authz.Infoz(
+				"",
 				zap.String("sub", sub),
 				zap.String("obj", obj),
 				zap.String("act", act),

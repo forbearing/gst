@@ -50,7 +50,8 @@ func New(cfg config.SQLServer) (*gorm.DB, error) {
 }
 
 func buildDSN(cfg config.SQLServer) string {
-	return fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s&encrypt=%v&trustServerCertificate=%v",
+	return fmt.Sprintf(
+		"sqlserver://%s:%s@%s:%d?database=%s&encrypt=%v&trustServerCertificate=%v",
 		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Database,
 		cfg.Encrypt, cfg.TrustServer,
 	)

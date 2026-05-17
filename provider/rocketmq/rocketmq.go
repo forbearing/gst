@@ -68,7 +68,8 @@ func Init() (err error) {
 func NewProducer(cfg config.RocketMQ) (rocketmq.Producer, error) {
 	var opts []producer.Option
 
-	opts = append(opts, producer.WithNameServer(cfg.NameServerAddrs),
+	opts = append(
+		opts, producer.WithNameServer(cfg.NameServerAddrs),
 		producer.WithVIPChannel(cfg.VipChannelEnabled),
 	)
 
@@ -291,10 +292,14 @@ func Close() {
 
 type customLogger struct{}
 
-func (l *customLogger) Debug(msg string, fields map[string]any)   { logger.RocketMQ.Debug(msg, fields) }
-func (l *customLogger) Info(msg string, fields map[string]any)    { logger.RocketMQ.Info(msg, fields) }
+func (l *customLogger) Debug(msg string, fields map[string]any) { logger.RocketMQ.Debug(msg, fields) }
+
+func (l *customLogger) Info(msg string, fields map[string]any) { logger.RocketMQ.Info(msg, fields) }
+
 func (l *customLogger) Warning(msg string, fields map[string]any) { logger.RocketMQ.Warn(msg, fields) }
-func (l *customLogger) Error(msg string, fields map[string]any)   { logger.RocketMQ.Error(msg, fields) }
-func (l *customLogger) Fatal(msg string, fields map[string]any)   { logger.RocketMQ.Fatal(msg, fields) }
-func (l *customLogger) Level(string)                              {}
-func (l *customLogger) OutputPath(string) error                   { return nil }
+
+func (l *customLogger) Error(msg string, fields map[string]any) { logger.RocketMQ.Error(msg, fields) }
+
+func (l *customLogger) Fatal(msg string, fields map[string]any) { logger.RocketMQ.Fatal(msg, fields) }
+func (l *customLogger) Level(string)                            {}
+func (l *customLogger) OutputPath(string) error                 { return nil }

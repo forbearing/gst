@@ -161,7 +161,8 @@ func New(cfg config.Scylla) (gocqlx.Session, error) {
 type queryObserver struct{}
 
 func (o *queryObserver) ObserveQuery(ctx context.Context, query gocql.ObservedQuery) {
-	logger.Scylla.Infow("ScyllaDB query",
+	logger.Scylla.Infow(
+		"ScyllaDB query",
 		"statement", query.Statement,
 		"values", query.Values,
 		"keyspace", query.Keyspace,
@@ -177,7 +178,8 @@ func (o *batchObserver) ObserveBatch(ctx context.Context, batch gocql.ObservedBa
 	statements := make([]string, 0, len(batch.Statements))
 	statements = append(statements, batch.Statements...)
 
-	logger.Scylla.Infow("ScyllaDB batch",
+	logger.Scylla.Infow(
+		"ScyllaDB batch",
 		"statements", statements,
 		"values", batch.Values,
 		"keyspace", batch.Keyspace,

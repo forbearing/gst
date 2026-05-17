@@ -58,7 +58,8 @@ func (c *TOTPCheckService) Create(ctx *types.ServiceContext, req *modeltwofa.TOT
 	requires2FA := len(devices) > 0
 
 	// 记录检查日志
-	log.Infow("TOTP check completed",
+	log.Infow(
+		"TOTP check completed",
 		"username", req.Username,
 		"user_id", user.ID,
 		"requires_2fa", requires2FA,

@@ -49,21 +49,23 @@ func Init() error {
 	})
 	// HttpRequestsTotal.WithLabelValues("GET").Inc()
 	// HttpRequestsTotal.WithLabelValues("POST").Inc()
-	HTTPRequestsTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: NAMESPACE,
-		Subsystem: SUBSYSTEM,
-		Name:      "http_requests_total",
-		Help:      "Total number of HTTP requests",
-	},
+	HTTPRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: NAMESPACE,
+			Subsystem: SUBSYSTEM,
+			Name:      "http_requests_total",
+			Help:      "Total number of HTTP requests",
+		},
 		[]string{"method", "path", "status"},
 	)
-	HTTPRequestDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: NAMESPACE,
-		Subsystem: SUBSYSTEM,
-		Name:      "http_request_duration_seconds",
-		Help:      "HTTP request latencies in seconds",
-		Buckets:   prometheus.DefBuckets,
-	},
+	HTTPRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: NAMESPACE,
+			Subsystem: SUBSYSTEM,
+			Name:      "http_request_duration_seconds",
+			Help:      "HTTP request latencies in seconds",
+			Buckets:   prometheus.DefBuckets,
+		},
 		[]string{"method", "path", "status"},
 	)
 

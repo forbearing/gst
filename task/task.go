@@ -119,7 +119,8 @@ func runtimestats() error {
 	runtime.ReadMemStats(rtm)
 
 	// 基本运行时信息
-	logger.Runtime.Infow("Basic Runtime Info",
+	logger.Runtime.Infow(
+		"Basic Runtime Info",
 		"GoVersion", runtime.Version(),
 		"GOMAXPROCS", runtime.GOMAXPROCS(0),
 		"NumCPU", runtime.NumCPU(),
@@ -131,7 +132,8 @@ func runtimestats() error {
 	)
 
 	// 内存分配和GC统计
-	logger.Runtime.Infow("Memory Allocation Stats",
+	logger.Runtime.Infow(
+		"Memory Allocation Stats",
 		"Mallocs", rtm.Mallocs,
 		"Frees", rtm.Frees,
 		"LiveObjects", rtm.Mallocs-rtm.Frees,
@@ -142,7 +144,8 @@ func runtimestats() error {
 	)
 
 	// 堆内存统计
-	logger.Runtime.Infow("Heap Memory Stats",
+	logger.Runtime.Infow(
+		"Heap Memory Stats",
 		"HeapAlloc", rtm.HeapAlloc,
 		"HeapSys", rtm.HeapSys,
 		"HeapIdle", rtm.HeapIdle,
@@ -152,7 +155,8 @@ func runtimestats() error {
 	)
 
 	// 栈内存统计
-	logger.Runtime.Infow("Stack Memory Stats",
+	logger.Runtime.Infow(
+		"Stack Memory Stats",
 		"StackInuse", rtm.StackInuse,
 		"StackSys", rtm.StackSys,
 		"MSpanInuse", rtm.MSpanInuse,
@@ -162,7 +166,8 @@ func runtimestats() error {
 	)
 
 	// GC统计
-	logger.Runtime.Infow("GC Stats",
+	logger.Runtime.Infow(
+		"GC Stats",
 		"NumGC", rtm.NumGC,
 		"LastGC", time.UnixMilli(int64(rtm.LastGC/1_000_000)), //nolint:gosec
 		"PauseTotalNs", rtm.PauseTotalNs,
@@ -185,7 +190,8 @@ func runtimestats() error {
 	logger.Runtime.Infow("Recent GC History", "gcHistory", gcHistory)
 
 	// 其他内存统计
-	logger.Runtime.Infow("Other Memory Stats",
+	logger.Runtime.Infow(
+		"Other Memory Stats",
 		"BuckHashSys", rtm.BuckHashSys,
 		"GCSys", rtm.GCSys,
 		"OtherSys", rtm.OtherSys,

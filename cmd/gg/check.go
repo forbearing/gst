@@ -455,7 +455,8 @@ func checkFileJSONTagNaming(filePath string) []string {
 							}
 							violations = append(violations, fmt.Sprintf(
 								"%s: field '%s' json tag '%s' should be '%s'",
-								relPath, fieldName, jsonTag, toSnakeCase(jsonTag)))
+								relPath, fieldName, jsonTag, toSnakeCase(jsonTag),
+							))
 						}
 					}
 				}

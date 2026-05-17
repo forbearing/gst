@@ -164,7 +164,8 @@ func (*document) Search(ctx context.Context, indexName string, req *SearchReques
 
 	if res.IsError() {
 		body, _ := io.ReadAll(res.Body)
-		logger.Errorw("elasticsearch error response",
+		logger.Errorw(
+			"elasticsearch error response",
 			"status", res.Status(),
 			"body", string(body),
 		)

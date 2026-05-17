@@ -1260,7 +1260,8 @@ func (db *database[M]) WithJoinRaw(query string, args ...any) types.Database[M] 
 
 	upperQuery := strings.ToUpper(query)
 	if !strings.Contains(upperQuery, "JOIN") || !strings.Contains(upperQuery, "ON") {
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithJoinRaw")).Warnz("invalid join clause, must contain JOIN and ON",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithJoinRaw")).Warnz(
+			"invalid join clause, must contain JOIN and ON",
 			zap.String("query", query),
 			zap.String("table", db.typ.Name()),
 		)
@@ -3269,7 +3270,8 @@ func (db *database[M]) Health() error {
 
 	// 1.check database connection
 	if err := db.ins.Exec("SELECT 1").Error; err != nil {
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz("database connection check failed",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz(
+			"database connection check failed",
 			zap.Error(err),
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 		)
@@ -3279,7 +3281,8 @@ func (db *database[M]) Health() error {
 	// 2.check database connection pool
 	sqlDB, err := db.ins.DB()
 	if err != nil {
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz("get sql.DB instance failed",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz(
+			"get sql.DB instance failed",
 			zap.Error(err),
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 		)
@@ -3289,7 +3292,8 @@ func (db *database[M]) Health() error {
 	// check database connection pool config
 	stats := sqlDB.Stats()
 	if stats.OpenConnections >= stats.MaxOpenConnections {
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Warnz("database connection pool is full",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Warnz(
+			"database connection pool is full",
 			zap.Int("open", stats.OpenConnections),
 			zap.Int("max", stats.MaxOpenConnections),
 			zap.Int("in_use", stats.InUse),
@@ -3304,14 +3308,16 @@ func (db *database[M]) Health() error {
 		ctx = db.ctx.Context()
 	}
 	if err := sqlDB.PingContext(ctx); err != nil {
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz("database ping failed",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Errorz(
+			"database ping failed",
 			zap.Error(err),
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 		)
 		return fmt.Errorf("database ping failed: %w", err)
 	}
 
-	logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Infoz("database health check passed",
+	logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Health")).Infoz(
+		"database health check passed",
 		zap.Int("open_connections", stats.OpenConnections),
 		zap.Int("in_use_connections", stats.InUse),
 		zap.Int("idle_connections", stats.Idle),
@@ -3397,14 +3403,16 @@ func (db *database[M]) Transaction(fn func(txDB types.Database[M]) error) error 
 			if db.rollbackFunc != nil {
 				db.rollbackFunc()
 			}
-			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Transaction")).Errorz("transaction rolled back due to error",
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Transaction")).Errorz(
+				"transaction rolled back due to error",
 				zap.Error(err),
 				zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 			)
 			return err
 		}
 
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Transaction")).Infoz("transaction committed successfully",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("Transaction")).Infoz(
+			"transaction committed successfully",
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 		)
 		return nil
@@ -3522,14 +3530,16 @@ func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 			if db.rollbackFunc != nil {
 				db.rollbackFunc()
 			}
-			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz("transaction rolled back due to error",
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Errorz(
+				"transaction rolled back due to error",
 				zap.Error(err),
 				zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 			)
 			return err
 		}
 
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Infoz("transaction committed successfully",
+		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("TransactionFunc")).Infoz(
+			"transaction committed successfully",
 			zap.String("cost", util.FormatDurationSmart(time.Since(begin))),
 		)
 		return nil

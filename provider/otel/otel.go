@@ -87,7 +87,8 @@ func Init() error {
 
 	// Create tracer provider
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter,
+		sdktrace.WithBatcher(
+			exporter,
 			sdktrace.WithBatchTimeout(cfg.BufferFlushInterval),
 			sdktrace.WithMaxExportBatchSize(cfg.ReporterQueueSize),
 		),
@@ -111,7 +112,8 @@ func Init() error {
 	tracerProvider = tp
 
 	initialized = true
-	logger.OTEL.Info("otel tracing initialized",
+	logger.OTEL.Info(
+		"otel tracing initialized",
 		zap.String("service_name", cfg.ServiceName),
 		zap.String("exporter_type", string(cfg.ExporterType)),
 		zap.String("sampler_type", string(cfg.SamplerType)),

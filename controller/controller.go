@@ -694,7 +694,8 @@ func UpdateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}
 		bodyID := req.GetID()
 		var id string
-		log.Infoz("update from request",
+		log.Infoz(
+			"update from request",
 			zap.String("param_id", paramID),
 			zap.String("body_id", bodyID),
 			zap.Object(reflect.TypeOf(*new(M)).Elem().String(), req),
@@ -1715,7 +1716,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}
 		// It will returns a empty types.Model if found nothing from database,
 		// we should response status code "CodeNotFound".
-		if len(m.GetID()) == 0 || (m.GetCreatedAt().Equal(time.Time{})) {
+		if len(m.GetID()) == 0 || m.GetCreatedAt().Equal(time.Time{}) {
 			log.Error(CodeNotFound)
 			JSON(c, CodeNotFound)
 			otel.RecordError(span, errors.New(CodeNotFound.Msg()))
