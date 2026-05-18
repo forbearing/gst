@@ -498,7 +498,8 @@ func (dc *distributedCache[T]) listenEvents() {
 				continue
 			}
 			fetches.EachError(func(s string, i int32, err error) {
-				dc.logger.Error("failed to fetch from kafka",
+				dc.logger.Error(
+					"failed to fetch from kafka",
 					zap.Error(err),
 					zap.String("topic", TOPIC_REDIS_DONE),
 					zap.String("s", s),
@@ -512,7 +513,8 @@ func (dc *distributedCache[T]) listenEvents() {
 			for _, record := range records {
 				evt := new(event)
 				if err := json.Unmarshal(record.Value, evt); err != nil {
-					dc.logger.Error("failed to unmarshal event",
+					dc.logger.Error(
+						"failed to unmarshal event",
 						zap.Error(err),
 						zap.String("topic", TOPIC_REDIS_DONE),
 						zap.ByteString("value", record.Value),

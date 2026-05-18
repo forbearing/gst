@@ -18,7 +18,7 @@ func WithQuery(_keyValues ...any) Option {
 	keyValues := make([]string, 0, len(_keyValues))
 	for i := range _keyValues {
 		val := reflect.ValueOf(_keyValues[i])
-		if val.Kind() == reflect.Ptr && !val.IsNil() {
+		if val.Kind() == reflect.Pointer && !val.IsNil() {
 			val = val.Elem()
 		}
 		switch val.Kind() {

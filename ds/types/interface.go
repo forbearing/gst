@@ -29,4 +29,4 @@ type Locker interface {
 	RUnlock()
 }
 
-var _ (Locker) = (*sync.RWMutex)(nil)
+var _ Locker = (*sync.RWMutex)(nil)

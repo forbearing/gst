@@ -65,7 +65,7 @@ func getAvailableConfigs() map[string]reflect.Type {
 		jsonTag := field.Tag.Get("json")
 		if jsonTag != "" && jsonTag != "-" {
 			// Remove omitempty and other options from tag
-			configName := strings.Split(jsonTag, ",")[0]
+			configName, _, _ := strings.Cut(jsonTag, ",")
 			configs[configName] = field.Type
 		}
 	}
@@ -122,7 +122,7 @@ func runDump(cmd *cobra.Command, args []string) error {
 			field := configType.Field(i)
 			jsonTag := field.Tag.Get("json")
 			if jsonTag != "" && jsonTag != "-" {
-				name := strings.Split(jsonTag, ",")[0]
+				name, _, _ := strings.Cut(jsonTag, ",")
 				if name == configName {
 					specificConfig = configValue.Field(i).Interface()
 					break

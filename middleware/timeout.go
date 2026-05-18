@@ -59,7 +59,8 @@ func Timeout(timeout time.Duration) gin.HandlerFunc {
 		case <-ctx.Done():
 			// Request timed out
 			if !c.Writer.Written() {
-				zap.S().Warnw("request timeout",
+				zap.S().Warnw(
+					"request timeout",
 					"path", c.Request.URL.Path,
 					"method", c.Request.Method,
 					"timeout", timeout,

@@ -102,7 +102,7 @@ func New(cfg config.Elasticsearch) (*elasticsearch.Client, error) {
 		if cfg.RetryBackoff {
 			esCfg.RetryBackoff = func(attempt int) time.Duration {
 				// Calculate exponential backoff with min and max bounds
-				retryDelay := min(cfg.RetryBackoffMin*time.Duration(1<<uint(attempt)), cfg.RetryBackoffMax) //nolint:gosec
+				retryDelay := min(cfg.RetryBackoffMin*time.Duration(1<<uint(attempt)), cfg.RetryBackoffMax)
 				return retryDelay
 			}
 		}

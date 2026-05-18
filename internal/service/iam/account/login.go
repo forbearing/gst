@@ -180,6 +180,7 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	}
 
 	// Set cookie
+	//nolint:gosec // Secure is intentionally false so local HTTP development keeps session cookies.
 	http.SetCookie(ctx.Writer, &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,

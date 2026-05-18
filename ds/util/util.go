@@ -1,8 +1,9 @@
 package util
 
 import (
+	"cmp"
+
 	"github.com/segmentio/fasthash/fnv1a"
-	"golang.org/x/exp/constraints"
 )
 
 type Comparator[T any] func(x, y T) int
@@ -22,7 +23,7 @@ func Equal[T comparable](a, b T) bool {
 }
 
 // Less wraps the '<' operator for ordered types.
-func Less[T constraints.Ordered](a, b T) bool {
+func Less[T cmp.Ordered](a, b T) bool {
 	return a < b
 }
 
@@ -41,7 +42,7 @@ func Compare[T any](a, b T, less LessFn[T]) int {
 }
 
 // Max returns the max of a and b.
-func Max[T constraints.Ordered](a, b T) T {
+func Max[T cmp.Ordered](a, b T) T {
 	if a > b {
 		return a
 	}
@@ -49,7 +50,7 @@ func Max[T constraints.Ordered](a, b T) T {
 }
 
 // Min returns the min of a and b.
-func Min[T constraints.Ordered](a, b T) T {
+func Min[T cmp.Ordered](a, b T) T {
 	if a < b {
 		return a
 	}
@@ -60,7 +61,7 @@ func Min[T constraints.Ordered](a, b T) T {
 // If x compares less than lo, returns lo;
 // otherwise if hi compares less that x, returns hi;
 // otherwise returns v.
-func Clamp[T constraints.Ordered](x, lo, hi T) T {
+func Clamp[T cmp.Ordered](x, lo, hi T) T {
 	return Max(lo, Min(hi, x))
 }
 

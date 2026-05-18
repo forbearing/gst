@@ -112,14 +112,16 @@ func benchmark(b *testing.B, sizes []int, f1 func(list *linkedlist.List[int]), f
 }
 
 func BenchmarkLinkedList_PushBack(b *testing.B) {
-	benchmark(b, []int{10},
+	benchmark(
+		b, []int{10},
 		func(list *linkedlist.List[int]) { _ = list.PushBack(0) },
 		func(list *golist.List) { _ = list.PushBack(0) },
 	)
 }
 
 func BenchmarkLinkedList_PushFront(b *testing.B) {
-	benchmark(b, []int{10},
+	benchmark(
+		b, []int{10},
 		func(list *linkedlist.List[int]) { _ = list.PushFront(0) },
 		func(list *golist.List) { _ = list.PushBack(0) },
 	)
@@ -304,7 +306,8 @@ func benchmarkInsertBefore(b *testing.B, _ int) {
 }
 
 func BenchmarkLinkedList_PopBack(b *testing.B) {
-	benchmark(b, []int{10000000},
+	benchmark(
+		b, []int{10000000},
 		func(list *linkedlist.List[int]) {
 			_ = list.PopBack()
 		},
@@ -319,7 +322,8 @@ func BenchmarkLinkedList_PopBack(b *testing.B) {
 }
 
 func BenchmarkLinkedList_PopFront(b *testing.B) {
-	benchmark(b, []int{10000000},
+	benchmark(
+		b, []int{10000000},
 		func(list *linkedlist.List[int]) {
 			_ = list.PopFront()
 		},
@@ -335,7 +339,8 @@ func BenchmarkLinkedList_PopFront(b *testing.B) {
 
 func BenchmarkLinkedList_FindWorstCase(b *testing.B) {
 	equal := func(a, b int) bool { return a == b }
-	benchmark(b, []int{10, 10000},
+	benchmark(
+		b, []int{10, 10000},
 		func(list *linkedlist.List[int]) { list.Find(-1, equal) },
 		func(list *golist.List) { stdListFind(list, -1, equal) },
 	)
@@ -343,7 +348,8 @@ func BenchmarkLinkedList_FindWorstCase(b *testing.B) {
 
 func BenchmarkLinkedList_FindBestCase(b *testing.B) {
 	equal := func(a, b int) bool { return a == b }
-	benchmark(b, []int{10, 10000},
+	benchmark(
+		b, []int{10, 10000},
 		func(list *linkedlist.List[int]) { list.Find(0, equal) },
 		func(list *golist.List) { stdListFind(list, 0, equal) },
 	)

@@ -150,7 +150,8 @@ func New(cfg config.Mongo) (*mongo.Client, error) {
 }
 
 func buildURI(cfg config.Mongo) string {
-	uri := fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=%s",
+	uri := fmt.Sprintf(
+		"mongodb://%s:%s@%s:%d/%s?authSource=%s",
 		cfg.Username, cfg.Password, cfg.Host, cfg.Port,
 		cfg.Database, cfg.AuthSource,
 	)

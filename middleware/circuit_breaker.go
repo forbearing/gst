@@ -37,7 +37,8 @@ func CircuitBreaker() gin.HandlerFunc {
 			}
 
 			// Log circuit breaker error
-			zap.S().Errorw("circuit breaker error",
+			zap.S().Errorw(
+				"circuit breaker error",
 				"error", err.Error(),
 				"path", path,
 				"method", method,

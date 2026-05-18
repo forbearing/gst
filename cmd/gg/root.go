@@ -24,7 +24,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&prune, "prune", false, "Prune disabled service action files with user confirmation")
 
-	rootCmd.AddCommand(genCmd,
+	rootCmd.AddCommand(
+		genCmd,
 		watchCmd,
 		newCmd,
 		astCmd,

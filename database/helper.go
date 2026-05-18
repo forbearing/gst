@@ -126,7 +126,8 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 
 		// Log operation results
 		if err != nil {
-			logger.Database.WithDatabaseContext(db.ctx, consts.Phase(op)).Errorz("",
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase(op)).Errorz(
+				"",
 				zap.Error(err),
 				zap.String("table", reflect.TypeOf(*new(M)).Elem().Name()),
 				zap.String("batch", strconv.Itoa(_batch)),
@@ -135,7 +136,8 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 				zap.Bool("dry_run", db.dryRun),
 			)
 		} else {
-			logger.Database.WithDatabaseContext(db.ctx, consts.Phase(op)).Infoz("",
+			logger.Database.WithDatabaseContext(db.ctx, consts.Phase(op)).Infoz(
+				"",
 				zap.String("table", reflect.TypeOf(*new(M)).Elem().Name()),
 				zap.String("batch", strconv.Itoa(_batch)),
 				zap.String("cost", util.FormatDurationSmart(time.Since(begin))),

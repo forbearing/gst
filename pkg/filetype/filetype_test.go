@@ -86,7 +86,8 @@ func TestDetectFiletype(t *testing.T) {
 		wantMime Mime
 	}
 
-	cases := make([]testCase, 0,
+	cases := make(
+		[]testCase, 0,
 		len(documentFiles)+
 			len(textFiles)+
 			len(compressFiles)+

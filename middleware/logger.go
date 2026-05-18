@@ -33,7 +33,8 @@ func Logger(filename ...string) gin.HandlerFunc {
 		if span != nil && span.IsRecording() {
 			spanContext := span.SpanContext()
 			if spanContext.HasTraceID() {
-				traceFields = append(traceFields,
+				traceFields = append(
+					traceFields,
 					zap.String("trace_id", spanContext.TraceID().String()),
 					zap.String("span_id", spanContext.SpanID().String()),
 				)

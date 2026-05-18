@@ -17,7 +17,8 @@ func getProcessStats() {
 	if info, err := process.NewProcess(int32(os.Getpid())); err == nil {
 		// Get memory info
 		if memInfo, err := info.MemoryInfo(); err == nil {
-			logger.Runtime.Infow("Process Stats",
+			logger.Runtime.Infow(
+				"Process Stats",
 				"RSS", memInfo.RSS, // Resident Set Size
 				"VMS", memInfo.VMS, // Virtual Memory Size
 			)
@@ -25,7 +26,8 @@ func getProcessStats() {
 
 		// Get CPU times
 		if cpuTimes, err := info.Times(); err == nil {
-			logger.Runtime.Infow("Process CPU Stats",
+			logger.Runtime.Infow(
+				"Process CPU Stats",
 				"UserTime", time.Duration(cpuTimes.User*float64(time.Second)),
 				"SystemTime", time.Duration(cpuTimes.System*float64(time.Second)),
 			)
@@ -34,7 +36,8 @@ func getProcessStats() {
 		// Get application startup time
 		if ctime, err := info.CreateTime(); err == nil {
 			startTime := time.Unix(ctime/1000, (ctime%1000)*int64(time.Millisecond))
-			logger.Runtime.Infow("Application Uptime",
+			logger.Runtime.Infow(
+				"Application Uptime",
 				"StartTime", startTime,
 				"Uptime", util.FormatDurationSmart(time.Since(startTime), 2),
 			)

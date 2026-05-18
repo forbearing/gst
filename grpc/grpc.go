@@ -91,7 +91,8 @@ func Init() error {
 			PermitWithoutStream: true,            // 允许客户端在没有活跃RPC时发送ping
 		}
 
-		opts = append(opts,
+		opts = append(
+			opts,
 			grpc.KeepaliveParams(serverParams),
 			grpc.KeepaliveEnforcementPolicy(enforcementPolicy),
 		)
@@ -279,7 +280,8 @@ func LoggingStreamInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamSe
 func RecoveryUnaryInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			zap.S().Errorw("grpc unary call panic recovered",
+			zap.S().Errorw(
+				"grpc unary call panic recovered",
 				"method", info.FullMethod,
 				"panic", r,
 			)
@@ -294,7 +296,8 @@ func RecoveryUnaryInterceptor(ctx context.Context, req any, info *grpc.UnaryServ
 func RecoveryStreamInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			zap.S().Errorw("grpc stream call panic recovered",
+			zap.S().Errorw(
+				"grpc stream call panic recovered",
 				"method", info.FullMethod,
 				"panic", r,
 			)

@@ -29,7 +29,7 @@ type TableColumn struct {
 }
 
 func (t *TableColumn) CreateBefore(*types.ModelContext) error {
-	if (t.Visiable) == nil {
+	if t.Visiable == nil {
 		t.Visiable = util.ValueOf(true)
 	}
 	// id cannot be hidden

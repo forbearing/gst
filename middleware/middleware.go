@@ -119,14 +119,16 @@ func Init() (err error) {
 			return failureRatio >= cbCfg.FailureRate
 		},
 		OnStateChange: func(name string, from, to gobreaker.State) {
-			zap.S().Infow("circuit breaker state changed",
+			zap.S().Infow(
+				"circuit breaker state changed",
 				"name", name,
 				"from", from.String(),
 				"to", to.String(),
 			)
 		},
 	})
-	zap.S().Infow("circuit breaker initialized",
+	zap.S().Infow(
+		"circuit breaker initialized",
 		"name", cbCfg.Name,
 		"max_requests", cbCfg.MaxRequests,
 		"min_requests", cbCfg.MinRequests,

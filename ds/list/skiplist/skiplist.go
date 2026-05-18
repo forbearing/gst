@@ -449,7 +449,8 @@ func (sl *SkipList[K, V]) options() []Option[K, V] {
 	if sl.nodeFormatter != nil {
 		ops = append(ops, WithNodeFormatter(sl.nodeFormatter))
 	}
-	ops = append(ops,
+	ops = append(
+		ops,
 		WithMaxLevel[K, V](sl.maxLevel),
 		WithProbability[K, V](sl.p),
 	)

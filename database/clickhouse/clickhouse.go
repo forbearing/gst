@@ -55,7 +55,8 @@ func New(cfg config.Clickhouse) (*gorm.DB, error) {
 
 func buildDSN(cfg config.Clickhouse) string {
 	// return "clickhouse://default:clickhouse@localhost:9010/default?debug=true?compress=false?read_timeout=5s?write_timeout=5s?dial_timeout=5s"
-	return fmt.Sprintf("clickhouse://%s:%s@%s:%d/%s?debug=%t?compress=%t?read_timeout=%s?write_timeout=%s?dial_timeout=%s",
+	return fmt.Sprintf(
+		"clickhouse://%s:%s@%s:%d/%s?debug=%t?compress=%t?read_timeout=%s?write_timeout=%s?dial_timeout=%s",
 		cfg.Username, cfg.Password,
 		cfg.Host, cfg.Port, cfg.Database,
 		cfg.Debug, cfg.Compress, cfg.ReadTimeout, cfg.WriteTimeout, cfg.DialTimeout,

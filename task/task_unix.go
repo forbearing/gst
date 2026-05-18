@@ -16,7 +16,8 @@ import (
 func getProcessStats() {
 	var rusage syscall.Rusage
 	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &rusage); err == nil {
-		logger.Runtime.Infow("Process Stats",
+		logger.Runtime.Infow(
+			"Process Stats",
 			"UserTime", time.Duration(rusage.Utime.Sec)*time.Second+time.Duration(rusage.Utime.Usec)*time.Microsecond,
 			"SystemTime", time.Duration(rusage.Stime.Sec)*time.Second+time.Duration(rusage.Stime.Usec)*time.Microsecond,
 			"MaxRSS", rusage.Maxrss, // Maximum resident set size
@@ -31,7 +32,8 @@ func getProcessStats() {
 	if info, err := process.NewProcess(int32(os.Getpid())); err == nil { //nolint:gosec
 		if ctime, err := info.CreateTime(); err == nil {
 			startTime = time.Unix(ctime/1000, (ctime%1000)*int64(time.Millisecond))
-			logger.Runtime.Infow("Application Uptime",
+			logger.Runtime.Infow(
+				"Application Uptime",
 				"StartTime", startTime,
 				"Uptime", util.FormatDurationSmart(time.Since(startTime), 2),
 			)

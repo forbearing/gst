@@ -36,7 +36,8 @@ func TestMigrate(t *testing.T) {
 		schema, err := dumper.Dump(config.DBPostgres, User{}, Group{})
 		require.NoError(t, err)
 
-		migrated, err := dbmigrate.Migrate([]string{schema}, config.DBPostgres,
+		migrated, err := dbmigrate.Migrate(
+			[]string{schema}, config.DBPostgres,
 			&dbmigrate.DatabaseConfig{
 				Host:     "127.0.0.1",
 				Port:     5432,

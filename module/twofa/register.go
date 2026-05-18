@@ -164,5 +164,6 @@ func Register() {
 		*TOTPVerifyReq,
 		*TOTPVerifyRsp](
 		&TOTPVerifyModule{},
-		consts.PHASE_CREATE)
+		consts.PHASE_CREATE,
+	)
 }
