@@ -1,6 +1,114 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+
+<a name="v0.10.14"></a>
+## [v0.10.14] - 2026-05-18
+### Chore
+- modernize config parsing and trie loops
+- address lint findings from make check
+- remove legacy demo controllers and captcha dependencies
+- resolve golangci-lint issues
+- update pkg/filetype testcase
+- **deps:** upgrade dependencies to latest version
+- **deps:** add godump
+- **deps:** upgrade dependencies to latest version
+- **deps:** remove unused github.com/goforj/godump
+- **gitignore:** ignore ggshield cache directory
+
+### Docs
+- update CLAUDE.md
+- require grouped placement for type and constant definitions
+- reorganize module guidelines and custom API model rules
+- tighten module test helper placement guidance
+- add module API test conventions and rename code section
+- expand module file layout scenarios for CRUD and custom IAM
+- clarify per-endpoint vs per-resource module layout
+- document rules for git commit suggestion requests
+- document rules for git commit suggestion requests
+- document rules for git commit suggestion requests
+- **database:** require a new Database() call per operation chain
+
+### Feat
+- **codegen:** humanize service log.Info when DSL Filename is set
+- **controller:** map ServiceError.Coder to JSON responses
+- **iam:** validate account on login/me and fix account status session invalidation
+- **iam:** add account-status API and align reset-password actor
+- **redis:** add sorted-set helpers and rename delete API
+- **response:** implement Coder and add account status codes
+- **types:** add Coder and optional coder on ServiceError
+
+### Fix
+- **codegen:** avoid to generate multiple level service dir
+- **controller:** pass serviceCtxAfter to DeleteManyAfter hook
+- **controller:** log nil request/response as "<nil>" for zap safety
+- **gg:** service path collapse and prune for custom Filename outputs
+- **iam:** restrict user patch to allow-listed profile fields
+- **service:** stop reusing Database handle after List queries
+
+### Refactor
+- **atomic:** use typed sync/atomic for flags and cache stats
+- **iam:** split user model and service into iam/user packages
+- **iam:** centralize session resolution in GetCurrentSession
+
+### Style
+- apply gofumpt formatting
+
+### Test
+- tighten TestResp checks and assertion order
+
+### Pull Requests
+- Merge pull request [#85](https://github.com/forbearing/gst/issues/85) from forbearing/dev
+- Merge pull request [#84](https://github.com/forbearing/gst/issues/84) from forbearing/dev
+- Merge pull request [#83](https://github.com/forbearing/gst/issues/83) from forbearing/dev
+- Merge pull request [#82](https://github.com/forbearing/gst/issues/82) from forbearing/dev
+
+### BREAKING CHANGE
+
+Tenant types moved from internal/model/iam to
+internal/model/iam/tenant; update imports accordingly.
+
+Group types moved from internal/model/iam to
+internal/model/iam/group; update imports and generated code accordingly.
+
+POST /api/offline is no longer registered; clients
+must use other session revocation APIs (e.g. admin or self-service
+delete flows).
+
+Casbin major-version upgrade; downstream code using casbin/v2
+alongside this module must migrate to v3-compatible APIs.
+
+modeliamsession.SessionRedisKey and SessionUserRedisKey were
+removed/replaced; update external callers to SessionIDKey/SessionUserKey.
+
+aichat APIs and module registration are removed from the framework.
+
+Redis session snapshot key namespace changes from iam:session
+to iam:session:id; existing session keys must be migrated or users must re-login.
+
+- GET /api/me is removed in favor of GET /api/iam/session/current (response shape changes).
+- POST /api/heartbeat is moved to POST /api/iam/session/heartbeat.
+- Session payload stored in Redis changes shape; existing sessions may be incompatible.
+
+IAM email endpoints path changed:
+- /iam/email-change-cancel -> /iam/email/change-cancel
+- /iam/email-change-confirm -> /iam/email/change-confirm
+- /iam/email-change-request -> /iam/email/change-request
+- /iam/email-change-resend -> /iam/email/change-resend
+- /iam/email-password-reset-confirm -> /iam/email/password-reset-confirm
+- /iam/email-password-reset-request -> /iam/email/password-reset-request
+- /iam/email-verification-confirm -> /iam/email/verification-confirm
+- /iam/email-verification-request -> /iam/email/verification-request
+- /iam/email-verification-resend -> /iam/email/verification-resend
+
+verification endpoints moved from
+- /iam/email-verification-{request,confirm,resend}
+to
+- /iam/email/verification-{request,confirm,resend}
+
+
+<a name="v0.10.13"></a>
+## [v0.10.13] - 2026-03-08
 ### Build
 - test ds
 - test moudle/twofa
@@ -17,6 +125,7 @@
 - **deps:** upgrade dependencies to latest version
 - **deps:** upgrade dependencies to latest version
 - **examples:** ignore gitguardian check
+- **release:** generate CHANGELOG.md
 
 ### Ci
 - add revive "dot-imports" check
@@ -59,6 +168,9 @@
 ### Test
 - **authz:** add menu, role, user_role register tests and fix permission/shadow
 - **module:** move testResp to internal/helper.TestResp
+
+### Pull Requests
+- Merge pull request [#81](https://github.com/forbearing/gst/issues/81) from forbearing/dev
 
 
 <a name="v0.10.12"></a>
@@ -610,11 +722,11 @@
 - Merge pull request [#51](https://github.com/forbearing/gst/issues/51) from forbearing/dev
 
 
-<a name="v0.10.0-beta.3"></a>
-## [v0.10.0-beta.3] - 2025-11-08
-
 <a name="list"></a>
 ## [list] - 2025-11-08
+
+<a name="v0.10.0-beta.3"></a>
+## [v0.10.0-beta.3] - 2025-11-08
 ### Chore
 - **release:** generate CHANGEME.md
 
@@ -3008,7 +3120,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 <a name="v0.0.1"></a>
 ## v0.0.1 - 2024-02-15
 
-[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.12...HEAD
+[Unreleased]: https://github.com/forbearing/gst/compare/v0.10.14...HEAD
+[v0.10.14]: https://github.com/forbearing/gst/compare/v0.10.13...v0.10.14
+[v0.10.13]: https://github.com/forbearing/gst/compare/v0.10.12...v0.10.13
 [v0.10.12]: https://github.com/forbearing/gst/compare/v0.10.11...v0.10.12
 [v0.10.11]: https://github.com/forbearing/gst/compare/v0.10.10...v0.10.11
 [v0.10.10]: https://github.com/forbearing/gst/compare/v0.10.9...v0.10.10
@@ -3028,9 +3142,9 @@ Migration: Update service implementations to specify REQ and RSP types:
 [v0.10.0]: https://github.com/forbearing/gst/compare/v0.10.0-beta.6...v0.10.0
 [v0.10.0-beta.6]: https://github.com/forbearing/gst/compare/v0.10.0-beta.5...v0.10.0-beta.6
 [v0.10.0-beta.5]: https://github.com/forbearing/gst/compare/v0.10.0-beta.4...v0.10.0-beta.5
-[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...v0.10.0-beta.4
-[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.3
-[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...list
+[v0.10.0-beta.4]: https://github.com/forbearing/gst/compare/list...v0.10.0-beta.4
+[list]: https://github.com/forbearing/gst/compare/v0.10.0-beta.3...list
+[v0.10.0-beta.3]: https://github.com/forbearing/gst/compare/v0.10.0-beta.2...v0.10.0-beta.3
 [v0.10.0-beta.2]: https://github.com/forbearing/gst/compare/v0.10.0-beta.1...v0.10.0-beta.2
 [v0.10.0-beta.1]: https://github.com/forbearing/gst/compare/v0.10.0-beta.0...v0.10.0-beta.1
 [v0.10.0-beta.0]: https://github.com/forbearing/gst/compare/v0.9.7-beta.4...v0.10.0-beta.0
