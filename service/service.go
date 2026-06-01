@@ -186,9 +186,12 @@ func (Base[M, REQ, RSP]) List(*types.ServiceContext, REQ) (RSP, error)   { retur
 func (Base[M, REQ, RSP]) Get(*types.ServiceContext, REQ) (RSP, error)    { return *new(RSP), nil }
 
 func (Base[M, REQ, RSP]) CreateMany(*types.ServiceContext, REQ) (RSP, error) { return *new(RSP), nil }
+
 func (Base[M, REQ, RSP]) DeleteMany(*types.ServiceContext, REQ) (RSP, error) { return *new(RSP), nil }
+
 func (Base[M, REQ, RSP]) UpdateMany(*types.ServiceContext, REQ) (RSP, error) { return *new(RSP), nil }
-func (Base[M, REQ, RSP]) PatchMany(*types.ServiceContext, REQ) (RSP, error)  { return *new(RSP), nil }
+
+func (Base[M, REQ, RSP]) PatchMany(*types.ServiceContext, REQ) (RSP, error) { return *new(RSP), nil }
 
 func (Base[M, REQ, RSP]) CreateBefore(*types.ServiceContext, M) error  { return nil }
 func (Base[M, REQ, RSP]) CreateAfter(*types.ServiceContext, M) error   { return nil }
