@@ -3,6 +3,7 @@ package dbmigrate
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/forbearing/gst/config"
 	"github.com/sqldef/sqldef/v3"
@@ -28,6 +29,27 @@ type MigrateOption struct {
 	Schemas    []string
 	DryRun     bool
 	EnableDrop bool
+}
+
+var (
+	dryRunDatabaseWrapperMu sync.Mutex
+	dryRunDatabaseWrappers  []*dryRunDatabaseWrapper
+)
+
+type dryRunDatabaseWrapper struct {
+	database.Database
+}
+
+func newDryRunDatabase(db database.Database) (*database.DryRunDatabase, error) {
+	wrapper := &dryRunDatabaseWrapper{Database: db}
+
+	// sqldef derives dry-run driver names from the wrapped DB pointer.
+	// Keep wrappers alive so a later dry-run cannot reuse the same address.
+	dryRunDatabaseWrapperMu.Lock()
+	dryRunDatabaseWrappers = append(dryRunDatabaseWrappers, wrapper)
+	dryRunDatabaseWrapperMu.Unlock()
+
+	return database.NewDryRunDatabase(wrapper)
 }
 
 // Migrate applies the schema changes to the database.
@@ -74,13 +96,9 @@ func Migrate(schemas []string, dbtyp config.DBType, cfg *DatabaseConfig, opt *Mi
 		parseMode = parser.ParserModePostgres
 		genMode = schema.GeneratorModePostgres
 	case config.DBSqlite:
-		// db, err = sqlite3.NewDatabase(dbcfg)
-		// parseMode = parser.ParserModeSQLite3
-		// genMode = schema.GeneratorModeSQLite3
-		// 暂时不支持 sqlite, 因为 sqldef/sqlite3 引入的 modernc.org/sqlite 会注册 sqlite 驱动
-		// 而项目中其他地方(如 gorm-adapter) 可能使用了 glebarez/go-sqlite 也注册了 sqlite 驱动
-		// 导致 panic: sql: Register called twice for driver sqlite
-		return false, fmt.Errorf("sqlite migration is temporarily disabled due to driver conflict")
+		db, err = newSQLiteDatabase(dbcfg)
+		parseMode = parser.ParserModeSQLite3
+		genMode = schema.GeneratorModeSQLite3
 	}
 	if err != nil {
 		return false, err
@@ -147,7 +165,7 @@ func run(generatorMode schema.GeneratorMode, db database.Database, sqlParser dat
 	}
 
 	if options.DryRun || len(options.CurrentFile) > 0 {
-		dryRunDB, dryRunErr := database.NewDryRunDatabase(db)
+		dryRunDB, dryRunErr := newDryRunDatabase(db)
 		if dryRunErr != nil {
 			return false, dryRunErr
 		}
