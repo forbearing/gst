@@ -8,7 +8,30 @@ GOBIN := $(shell go env GOBIN)
 GOPATH := $(shell go env GOPATH)
 GO_BIN_DIR := $(if $(GOBIN),$(GOBIN),$(GOPATH)/bin)
 
+GOLANGCI_LINT_PKG := github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+GOFUMPT_PKG := mvdan.cc/gofumpt
+MODERNIZE_PKG := golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize
+NILNESS_PKG := golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness
+SHADOW_PKG := golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
+LOSTCANCEL_PKG := golang.org/x/tools/go/analysis/passes/lostcancel/cmd/lostcancel
+STRINGINTCONV_PKG := golang.org/x/tools/go/analysis/passes/stringintconv/cmd/stringintconv
+
 INSTALL_BINS := golangci-lint gofumpt modernize nilness shadow lostcancel stringintconv gg
+# install_tool_if_missing installs a Makefile-managed tool only when it is unavailable.
+define install_tool_if_missing
+	@if ! command -v $(1) >/dev/null 2>&1 && [ ! -x "$(GO_BIN_DIR)/$(1)" ]; then \
+		echo "Installing $(1)@$(2)..."; \
+		mkdir -p "$(GO_BIN_DIR)"; \
+		go install $(3)@$(2); \
+	fi
+endef
+
+# run_tool resolves tools installed during the current make invocation before running them.
+define run_tool
+	@tool="$$(command -v $(1) 2>/dev/null || printf '%s' "$(GO_BIN_DIR)/$(1)")"; \
+		echo "$(1) $(2)"; \
+		"$$tool" $(2)
+endef
 
 # Default target
 help:
@@ -41,8 +64,9 @@ build:
 	go build ./...
 
 format:
+	$(call install_tool_if_missing,gofumpt,$(GOFUMPT_VERSION),$(GOFUMPT_PKG))
 	@echo "Running gofumpt..."
-	gofumpt -l -w .
+	$(call run_tool,gofumpt,-l -w .)
 
 # Run go vet
 vet:
@@ -51,33 +75,39 @@ vet:
 
 # Run modernize
 modernize:
+	$(call install_tool_if_missing,modernize,$(GOTOOLS_VERSION),$(MODERNIZE_PKG))
 	@echo "Running modernize..."
-	modernize ./...
+	$(call run_tool,modernize,./...)
 
 # Run golangci-lint
 lint:
+	$(call install_tool_if_missing,golangci-lint,$(GOLANGCI_LINT_VERSION),$(GOLANGCI_LINT_PKG))
 	@echo "Running golangci-lint..."
-	golangci-lint run ./...
+	$(call run_tool,golangci-lint,run ./...)
 
 # Run nilness analysis
 nilness:
+	$(call install_tool_if_missing,nilness,$(GOTOOLS_VERSION),$(NILNESS_PKG))
 	@echo "Running nilness analysis..."
-	nilness ./...
+	$(call run_tool,nilness,./...)
 
 # Run shadow analysis
 shadow:
+	$(call install_tool_if_missing,shadow,$(GOTOOLS_VERSION),$(SHADOW_PKG))
 	@echo "Running shadow analysis..."
-	shadow ./...
+	$(call run_tool,shadow,./...)
 
 # Run lostcancel analysis
 lostcancel:
+	$(call install_tool_if_missing,lostcancel,$(GOTOOLS_VERSION),$(LOSTCANCEL_PKG))
 	@echo "Running lostcancel analysis..."
-	lostcancel ./...
+	$(call run_tool,lostcancel,./...)
 
 # Run stringintconv analysis
 stringintconv:
+	$(call install_tool_if_missing,stringintconv,$(GOTOOLS_VERSION),$(STRINGINTCONV_PKG))
 	@echo "Running stringintconv analysis..."
-	stringintconv ./...
+	$(call run_tool,stringintconv,./...)
 
 # Run unit tests
 test:
@@ -133,19 +163,19 @@ fix:
 install:
 	@echo "Installing development tools from go.mod..."
 	@echo "Installing golangci-lint@$(GOLANGCI_LINT_VERSION)..."
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@go install $(GOLANGCI_LINT_PKG)@$(GOLANGCI_LINT_VERSION)
 	@echo "Installing gofumpt@$(GOFUMPT_VERSION)..."
-	@go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
+	@go install $(GOFUMPT_PKG)@$(GOFUMPT_VERSION)
 	@echo "Installing modernize@$(GOTOOLS_VERSION)..."
-	@go install golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@$(GOTOOLS_VERSION)
+	@go install $(MODERNIZE_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing nilness@$(GOTOOLS_VERSION)..."
-	@go install golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness@$(GOTOOLS_VERSION)
+	@go install $(NILNESS_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing shadow@$(GOTOOLS_VERSION)..."
-	@go install golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow@$(GOTOOLS_VERSION)
+	@go install $(SHADOW_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing lostcancel@$(GOTOOLS_VERSION)..."
-	@go install golang.org/x/tools/go/analysis/passes/lostcancel/cmd/lostcancel@$(GOTOOLS_VERSION)
+	@go install $(LOSTCANCEL_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing stringintconv@$(GOTOOLS_VERSION)..."
-	@go install golang.org/x/tools/go/analysis/passes/stringintconv/cmd/stringintconv@$(GOTOOLS_VERSION)
+	@go install $(STRINGINTCONV_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing gg command..."
 	@go install ./cmd/gg
 	@echo "Installation completed!"
