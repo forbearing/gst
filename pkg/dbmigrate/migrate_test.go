@@ -1,6 +1,7 @@
 package dbmigrate_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/forbearing/gst/config"
@@ -69,15 +70,33 @@ func TestMigrate(t *testing.T) {
 		schema, err := dumper.Dump(config.DBSqlite, User{}, Group{})
 		require.NoError(t, err)
 
+		database := filepath.Join(t.TempDir(), "test.db")
 		migrated, err := dbmigrate.Migrate([]string{schema}, config.DBSqlite,
 			&dbmigrate.DatabaseConfig{
-				Database: "test",
+				Database: database,
 			},
 			&dbmigrate.MigrateOption{
 				DryRun: true,
 			})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "sqlite migration is temporarily disabled")
+		require.NoError(t, err)
+		require.True(t, migrated)
+
+		migrated, err = dbmigrate.Migrate([]string{schema}, config.DBSqlite,
+			&dbmigrate.DatabaseConfig{
+				Database: database,
+			},
+			&dbmigrate.MigrateOption{})
+		require.NoError(t, err)
+		require.True(t, migrated)
+
+		migrated, err = dbmigrate.Migrate([]string{schema}, config.DBSqlite,
+			&dbmigrate.DatabaseConfig{
+				Database: database,
+			},
+			&dbmigrate.MigrateOption{
+				DryRun: true,
+			})
+		require.NoError(t, err)
 		require.False(t, migrated)
 	})
 }
