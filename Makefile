@@ -1,4 +1,4 @@
-.PHONY: check build format vet modernize lint shadow nilness lostcancel stringintconv test testv fix install uninstall help
+.PHONY: check build format vet modernize lint shadow nilness test testv fix install uninstall help
 
 # Tool versions - must match go.mod exactly
 GOLANGCI_LINT_VERSION := $(shell go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2)
@@ -13,10 +13,8 @@ GOFUMPT_PKG := mvdan.cc/gofumpt
 MODERNIZE_PKG := golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize
 NILNESS_PKG := golang.org/x/tools/go/analysis/passes/nilness/cmd/nilness
 SHADOW_PKG := golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
-LOSTCANCEL_PKG := golang.org/x/tools/go/analysis/passes/lostcancel/cmd/lostcancel
-STRINGINTCONV_PKG := golang.org/x/tools/go/analysis/passes/stringintconv/cmd/stringintconv
 
-INSTALL_BINS := golangci-lint gofumpt modernize nilness shadow lostcancel stringintconv gg
+INSTALL_BINS := golangci-lint gofumpt modernize nilness shadow gg
 # install_tool_if_missing installs a Makefile-managed tool only when it is unavailable.
 define install_tool_if_missing
 	@if ! command -v $(1) >/dev/null 2>&1 && [ ! -x "$(GO_BIN_DIR)/$(1)" ]; then \
@@ -44,8 +42,6 @@ help:
 	@echo "  modernize      - Run modernize"
 	@echo "  nilness        - Run nilness analysis"
 	@echo "  shadow         - Run shadow analysis"
-	@echo "  lostcancel     - Run lostcancel analysis"
-	@echo "  stringintconv  - Run stringintconv analysis"
 	@echo "  test           - Run unit tests (simple output)"
 	@echo "  testv          - Run unit tests with verbose output"
 	@echo "  fix            - Auto-fix code issues (gofumpt, golangci-lint, shadow, modernize)"
@@ -55,7 +51,7 @@ help:
 
 # Run all code quality checks
 # Order matches make install tool installation order
-check: build lint format modernize nilness shadow lostcancel stringintconv vet
+check: build lint format modernize nilness shadow vet
 	@echo "All checks passed successfully!"
 
 # Build the project
@@ -96,18 +92,6 @@ shadow:
 	$(call install_tool_if_missing,shadow,$(GOTOOLS_VERSION),$(SHADOW_PKG))
 	@echo "Running shadow analysis..."
 	$(call run_tool,shadow,./...)
-
-# Run lostcancel analysis
-lostcancel:
-	$(call install_tool_if_missing,lostcancel,$(GOTOOLS_VERSION),$(LOSTCANCEL_PKG))
-	@echo "Running lostcancel analysis..."
-	$(call run_tool,lostcancel,./...)
-
-# Run stringintconv analysis
-stringintconv:
-	$(call install_tool_if_missing,stringintconv,$(GOTOOLS_VERSION),$(STRINGINTCONV_PKG))
-	@echo "Running stringintconv analysis..."
-	$(call run_tool,stringintconv,./...)
 
 # Run unit tests
 test:
@@ -172,10 +156,6 @@ install:
 	@go install $(NILNESS_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing shadow@$(GOTOOLS_VERSION)..."
 	@go install $(SHADOW_PKG)@$(GOTOOLS_VERSION)
-	@echo "Installing lostcancel@$(GOTOOLS_VERSION)..."
-	@go install $(LOSTCANCEL_PKG)@$(GOTOOLS_VERSION)
-	@echo "Installing stringintconv@$(GOTOOLS_VERSION)..."
-	@go install $(STRINGINTCONV_PKG)@$(GOTOOLS_VERSION)
 	@echo "Installing gg command..."
 	@go install ./cmd/gg
 	@echo "Installation completed!"
