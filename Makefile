@@ -1,9 +1,14 @@
-.PHONY: check build format vet modernize lint shadow nilness lostcancel stringintconv test testv fix install help
+.PHONY: check build format vet modernize lint shadow nilness lostcancel stringintconv test testv fix install uninstall help
 
 # Tool versions - must match go.mod exactly
 GOLANGCI_LINT_VERSION := $(shell go list -m -f '{{.Version}}' github.com/golangci/golangci-lint/v2)
 GOFUMPT_VERSION := $(shell go list -m -f '{{.Version}}' mvdan.cc/gofumpt)
 GOTOOLS_VERSION := $(shell go list -m -f '{{.Version}}' golang.org/x/tools)
+GOBIN := $(shell go env GOBIN)
+GOPATH := $(shell go env GOPATH)
+GO_BIN_DIR := $(if $(GOBIN),$(GOBIN),$(GOPATH)/bin)
+
+INSTALL_BINS := golangci-lint gofumpt modernize nilness shadow lostcancel stringintconv gg
 
 # Default target
 help:
@@ -22,6 +27,7 @@ help:
 	@echo "  testv          - Run unit tests with verbose output"
 	@echo "  fix            - Auto-fix code issues (gofumpt, golangci-lint, shadow, modernize)"
 	@echo "  install        - Install gg command and development tools"
+	@echo "  uninstall      - Uninstall gg command and development tools"
 	@echo "  help           - Show this help message"
 
 # Run all code quality checks
@@ -143,3 +149,17 @@ install:
 	@echo "Installing gg command..."
 	@go install ./cmd/gg
 	@echo "Installation completed!"
+
+# Uninstall gg command and development tools
+uninstall:
+	@echo "Uninstalling development tools from $(GO_BIN_DIR)..."
+	@for bin in $(INSTALL_BINS); do \
+		path="$(GO_BIN_DIR)/$$bin"; \
+		if [ -e "$$path" ]; then \
+			rm -f "$$path"; \
+			echo "Removed $$path"; \
+		else \
+			echo "Skipped $$path (not installed)"; \
+		fi; \
+	done
+	@echo "Uninstallation completed!"
