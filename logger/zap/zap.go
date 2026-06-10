@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	casbinl "github.com/casbin/casbin/v3/log"
 	"github.com/forbearing/gst/config"
@@ -20,6 +22,11 @@ import (
 	gorml "gorm.io/gorm/logger"
 )
 
+const (
+	defaultLogBufferSize    = 256 * 1024
+	defaultLogFlushInterval = time.Second
+)
+
 var (
 	mode          config.Mode
 	logFile       string
@@ -29,6 +36,9 @@ var (
 	logMaxAge     int
 	logMaxSize    int
 	logMaxBackups int
+
+	bufferedLogWritersMu sync.Mutex
+	bufferedLogWriters   []*zapcore.BufferedWriteSyncer
 )
 
 // Option configures encoder behavior for constructors.
@@ -130,7 +140,9 @@ func Clean() {
 	}
 
 	// Gin logger
-	_ = logger.Gin.Sync()
+	if logger.Gin != nil {
+		_ = logger.Gin.Sync()
+	}
 
 	// gorm logger
 	gormLogs := []gorml.Interface{
@@ -155,6 +167,8 @@ func Clean() {
 			}
 		}
 	}
+
+	stopBufferedLogWriters()
 }
 
 // New builds a types.Logger backed by *zap.Logger.
@@ -260,14 +274,41 @@ func newLogWriter(_ ...Option) zapcore.WriteSyncer {
 	case "":
 		return zapcore.AddSync(os.Stdout)
 	default:
-		return zapcore.AddSync(&lumberjack.Logger{
-			Filename:   filepath.Join(config.App.Dir, logFile),
-			MaxAge:     logMaxAge,
-			MaxSize:    logMaxSize,
-			MaxBackups: logMaxBackups,
-			LocalTime:  true,
-			Compress:   false, // openwrt may not support compress.
-		})
+		writer := &zapcore.BufferedWriteSyncer{
+			WS: zapcore.AddSync(&lumberjack.Logger{
+				Filename:   filepath.Join(config.App.Dir, logFile),
+				MaxAge:     logMaxAge,
+				MaxSize:    logMaxSize,
+				MaxBackups: logMaxBackups,
+				LocalTime:  true,
+				Compress:   false, // openwrt may not support compress.
+			}),
+			Size:          defaultLogBufferSize,
+			FlushInterval: defaultLogFlushInterval,
+		}
+		registerBufferedLogWriter(writer)
+		return writer
+	}
+}
+
+func registerBufferedLogWriter(writer *zapcore.BufferedWriteSyncer) {
+	if writer == nil {
+		return
+	}
+
+	bufferedLogWritersMu.Lock()
+	bufferedLogWriters = append(bufferedLogWriters, writer)
+	bufferedLogWritersMu.Unlock()
+}
+
+func stopBufferedLogWriters() {
+	bufferedLogWritersMu.Lock()
+	writers := bufferedLogWriters
+	bufferedLogWriters = nil
+	bufferedLogWritersMu.Unlock()
+
+	for _, writer := range writers {
+		_ = writer.Stop()
 	}
 }
 
