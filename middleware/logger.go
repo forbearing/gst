@@ -19,11 +19,11 @@ func Logger(filename ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
-		labelPath := sanitizeLabelValue(path)
 		query := c.Request.URL.RawQuery
 		c.Set(consts.CTX_ROUTE, path)
 		c.Next()
 
+		labelPath := sanitizeLabelValue(c.FullPath())
 		prommetrics.HTTPRequestsTotal.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Inc()
 		prommetrics.HTTPRequestDuration.WithLabelValues(c.Request.Method, labelPath, strconv.Itoa(c.Writer.Status())).Observe(time.Since(start).Seconds())
 
