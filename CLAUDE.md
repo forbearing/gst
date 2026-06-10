@@ -76,3 +76,26 @@ go install ./cmd/gg
 ### 开发完后
 
 - 必须执行 `make check` 确保代码检查能通过
+
+
+
+## 其他
+
+### 生成 skill
+
+```bash
+repomix \
+  --include "**/*.go,go.mod,go.sum,Makefile,*.md,**/*.md,**/*.ini" \
+  --ignore "**/*.log,**/.env*,**/*secret*,**/*credential*,**/*key*,**/vendor/**,**/tmp/**,**/.git/**,**/node_modules/**,**/dist/**,**/coverage/**,**/testdata/**,**/testcode/**,examples/**" \
+  --skill-generate gst \
+  --skill-output /Users/a2/.codex/skills/gst \
+  --force
+```
+
+### 如何使用当前框架
+
+1. `make install` 安装 gg 命令
+2. `gg new myproject` 创建项目
+3. 修改 model 文件：例如 model/user.go、model/config/file.go。model 层只用来定义数据模型和轻量级 hook
+4. 执行 `gg gen` 生成 service、router 代码
+5. 在对应的 service 代码中完成具体的业务逻辑。service 层用来实现业务逻辑和复杂 hook
