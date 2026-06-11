@@ -4,12 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"time"
 
-	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
@@ -17,7 +14,6 @@ import (
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
 func patchValue(log types.Logger, typ reflect.Type, oldVal reflect.Value, newVal reflect.Value) {
@@ -129,15 +125,6 @@ func patchValue(log types.Logger, typ reflect.Type, oldVal reflect.Value, newVal
 		}
 		oldVal.Field(i).Set(newVal.Field(i)) // set old value by new value
 	}
-}
-
-// getCallerInfo returns the file name and line number of the caller
-func getCallerInfo(skip int) (string, int) {
-	_, file, line, ok := runtime.Caller(skip)
-	if !ok {
-		return "unknown", 0
-	}
-	return filepath.Base(file), line
 }
 
 func extractConfig[M types.Model](cfg ...*types.ControllerConfig[M]) (handler func(ctx *types.DatabaseContext) types.Database[M], db any) {
@@ -408,28 +395,4 @@ func handleServiceError(c *gin.Context, ctx *types.ServiceContext, err error) {
 
 	// Default error handling
 	JSON(c, CodeFailure.WithErr(err))
-}
-
-// logRequest logs the HTTP request using zap logger if enabled in config
-func logRequest(log types.Logger, phase consts.Phase, req any) {
-	if !config.App.Logger.Controller.LogRequest {
-		return
-	}
-	if req == nil {
-		log.Infow("request", zap.String("phase", phase.MethodName()), zap.String("request", "<nil>"))
-	} else {
-		log.Infow("request", zap.String("phase", phase.MethodName()), zap.Any("request", req))
-	}
-}
-
-// logResponse logs the HTTP response using zap logger if enabled in config
-func logResponse(log types.Logger, phase consts.Phase, rsp any) {
-	if !config.App.Logger.Controller.LogResponse {
-		return
-	}
-	if rsp == nil {
-		log.Infow("response", zap.String("phase", phase.MethodName()), zap.String("response", "<nil>"))
-	} else {
-		log.Infow("response", zap.String("phase", phase.MethodName()), zap.Any("response", rsp))
-	}
 }

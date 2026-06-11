@@ -10,8 +10,6 @@ const (
 	LOGGER_MAX_AGE                 = "LOGGER_MAX_AGE"                 //nolint:staticcheck
 	LOGGER_MAX_SIZE                = "LOGGER_MAX_SIZE"                //nolint:staticcheck
 	LOGGER_MAX_BACKUPS             = "LOGGER_MAX_BACKUPS"             //nolint:staticcheck
-	LOGGER_CONTROLLER_LOG_REQUEST  = "LOGGER_CONTROLLER_LOG_REQUEST"  //nolint:staticcheck
-	LOGGER_CONTROLLER_LOG_RESPONSE = "LOGGER_CONTROLLER_LOG_RESPONSE" //nolint:staticcheck
 	LOGGER_HTTP_BODY_ENABLED       = "LOGGER_HTTP_BODY_ENABLED"       //nolint:staticcheck
 	LOGGER_HTTP_BODY_LOG_REQUEST   = "LOGGER_HTTP_BODY_LOG_REQUEST"   //nolint:staticcheck
 	LOGGER_HTTP_BODY_LOG_RESPONSE  = "LOGGER_HTTP_BODY_LOG_RESPONSE"  //nolint:staticcheck
@@ -58,22 +56,8 @@ type Logger struct {
 	// The value default to 3.
 	MaxBackups int `json:"max_backups" ini:"max_backups" yaml:"max_backups" mapstructure:"max_backups"`
 
-	// Controller contains controller-specific logging configurations
-	Controller ControllerLogger `json:"controller" ini:"controller" yaml:"controller" mapstructure:"controller"`
-
 	// HTTPBody contains HTTP request and response body logging configurations.
 	HTTPBody HTTPBodyLogger `json:"http_body" ini:"http_body" yaml:"http_body" mapstructure:"http_body"`
-}
-
-// ControllerLogger represents controller logging configuration
-type ControllerLogger struct {
-	// LogRequest enables logging of HTTP request body using zap logger
-	// Default: true
-	LogRequest bool `json:"log_request" ini:"log_request" yaml:"log_request" mapstructure:"log_request"`
-
-	// LogResponse enables logging of HTTP response body using zap logger
-	// Default: true
-	LogResponse bool `json:"log_response" ini:"log_response" yaml:"log_response" mapstructure:"log_response"`
 }
 
 // HTTPBodyLogger represents HTTP body logging configuration.
@@ -106,8 +90,6 @@ func (*Logger) setDefault() {
 	cv.SetDefault("logger.max_age", 30)
 	cv.SetDefault("logger.max_size", 100)
 	cv.SetDefault("logger.max_backups", 1)
-	cv.SetDefault("logger.controller.log_request", false)
-	cv.SetDefault("logger.controller.log_response", false)
 	cv.SetDefault("logger.http_body.enabled", false)
 	cv.SetDefault("logger.http_body.log_request", false)
 	cv.SetDefault("logger.http_body.log_response", false)
