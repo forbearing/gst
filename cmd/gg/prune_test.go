@@ -35,6 +35,21 @@ func TestGenRunPrunesServiceFilesWhenModelDirHasNoModels(t *testing.T) {
 	}
 }
 
+func TestPruneRunRemovesDeepEmptyServiceDirectories(t *testing.T) {
+	setupEmptyModelPruneProject(t)
+	confirmPruneDeletion(t)
+
+	oldServiceFile := filepath.Join(serviceDir, "config", "namespace", "app", "env", "item", "create.go")
+	writeTestFile(t, oldServiceFile, "package item\n\ntype Creator struct{}\n")
+
+	pruneRun()
+
+	emptyServiceDir := filepath.Join(serviceDir, "config")
+	if fileExists(emptyServiceDir) {
+		t.Fatalf("expected empty service directory %s to be removed", emptyServiceDir)
+	}
+}
+
 func setupEmptyModelPruneProject(t *testing.T) {
 	t.Helper()
 

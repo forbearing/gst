@@ -524,74 +524,48 @@ func pathUnderRoot(path, root string) (string, error) {
 	return path, nil
 }
 
-// removeEmptyDirectories recursively removes empty directories starting from the given root directory
+// removeEmptyDirectories removes empty child directories below the given root directory.
 func removeEmptyDirectories(rootDir string) {
+	dirs := make([]string, 0)
 	_ = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			//nolint:nilerr
 			return nil // Continue walking even if there's an error
 		}
 
-		// Skip the root directory itself
-		if path == rootDir {
+		if path == rootDir || !info.IsDir() {
 			return nil
 		}
 
-		// Only process directories
-		if !info.IsDir() {
-			return nil
-		}
-
-		// Check if directory is empty
-		entries, err := os.ReadDir(path)
-		if err != nil {
-			//nolint:nilerr
-			return nil // Continue if we can't read the directory
-		}
-
-		// If directory is empty, remove it
-		if len(entries) == 0 {
-			// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
-			if err := os.Remove(path); err == nil {
-				fmt.Printf("  %s Removed empty directory %s\n", green("✔"), path)
-			}
-		}
-
+		dirs = append(dirs, path)
 		return nil
 	})
 
-	// Run multiple passes to handle nested empty directories
-	// After removing a directory, its parent might become empty
-	for range 3 {
-		emptyDirsFound := false
-		_ = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || path == rootDir || !info.IsDir() {
-				//nolint:nilerr
-				return nil
+	sort.Slice(dirs, func(i, j int) bool {
+		return directoryDepth(rootDir, dirs[i]) > directoryDepth(rootDir, dirs[j])
+	})
+
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		if len(entries) == 0 {
+			// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
+			if err := os.Remove(dir); err == nil {
+				fmt.Printf("  %s Removed empty directory %s\n", green("✔"), dir)
 			}
-
-			entries, err := os.ReadDir(path)
-			if err != nil {
-				//nolint:nilerr
-				return nil
-			}
-
-			if len(entries) == 0 {
-				// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
-				if err := os.Remove(path); err == nil {
-					fmt.Printf("  %s Removed empty directory %s\n", green("✔"), path)
-					emptyDirsFound = true
-				}
-			}
-
-			return nil
-		})
-
-		// If no empty directories were found in this pass, we're done
-		if !emptyDirsFound {
-			break
 		}
 	}
+}
+
+func directoryDepth(rootDir, path string) int {
+	rel, err := filepath.Rel(rootDir, path)
+	if err != nil || rel == "." {
+		return 0
+	}
+	return strings.Count(rel, string(filepath.Separator)) + 1
 }
 
 // buildHierarchicalEndpoints constructs complete hierarchical endpoint paths for all models.
