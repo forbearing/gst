@@ -9,7 +9,6 @@ import (
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/forbearing/gst/util"
 	"go.uber.org/zap"
 )
 
@@ -86,7 +85,7 @@ func (s *RoleService) remarkMenus(ctx *types.ServiceContext, role *modelauthz.Ro
 		}
 	}
 
-	role.Remark = util.ValueOf(strings.TrimSpace(sb.String()))
+	role.Remark = new(strings.TrimSpace(sb.String()))
 
 	// NOTE: Role has "UpdateBefore" hook to update role's permissions.
 	// this service operations just update role's remark, so we should not invoke any "hooks" here.

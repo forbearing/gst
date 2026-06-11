@@ -58,9 +58,7 @@ func getAvailableConfigs() map[string]reflect.Type {
 	configType := reflect.TypeFor[config.Config]()
 
 	// Iterate through all fields in the Config struct
-	for i := 0; i < configType.NumField(); i++ {
-		field := configType.Field(i)
-
+	for field := range configType.Fields() {
 		// Get the json tag name as the config name
 		jsonTag := field.Tag.Get("json")
 		if jsonTag != "" && jsonTag != "-" {

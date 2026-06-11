@@ -12,7 +12,6 @@ import (
 	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/forbearing/gst/util"
 	"github.com/gertd/go-pluralize"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3gen"
@@ -1258,7 +1257,7 @@ func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey
 			processAllResponseTypes[RSP](rspSchemaRef)
 			doc.Components.Responses[rspKey] = &openapi3.ResponseRef{
 				Value: &openapi3.Response{
-					Description: util.ValueOf(fmt.Sprintf("%s Response", name)),
+					Description: new(fmt.Sprintf("%s Response", name)),
 					Content:     openapi3.NewContentWithJSONSchemaRef(rspSchemaRef),
 				},
 			}
@@ -1879,8 +1878,7 @@ func addSchemaTitle[T any](schemaRef *openapi3.SchemaRef) {
 	for typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
-	for i := range typ.NumField() {
-		field := typ.Field(i)
+	for field := range typ.Fields() {
 		jsonTag := getFieldTag(field, consts.TAG_JSON)
 		if len(jsonTag) == 0 {
 			continue
@@ -1897,8 +1895,7 @@ func addSchemaTitle[T any](schemaRef *openapi3.SchemaRef) {
 
 	// Process Base model fields
 	baseType := reflect.TypeFor[model.Base]()
-	for i := range baseType.NumField() {
-		field := baseType.Field(i)
+	for field := range baseType.Fields() {
 		jsonTag := getFieldTag(field, consts.TAG_JSON)
 		if len(jsonTag) == 0 {
 			continue
@@ -1950,8 +1947,7 @@ func convertDatatypesJSONTypeSchema(propRef *openapi3.SchemaRef, field reflect.S
 	}
 
 	var dataType reflect.Type
-	for i := 0; i < typ.NumField(); i++ {
-		f := typ.Field(i)
+	for f := range typ.Fields() {
 		if f.Name == "Data" || f.Name == "data" || f.IsExported() {
 			dataType = f.Type
 			break
@@ -1989,8 +1985,7 @@ func schemaFromType(dataType reflect.Type) *openapi3.SchemaRef {
 	switch dataType.Kind() {
 	case reflect.Struct:
 		schema := openapi3.NewObjectSchema()
-		for i := 0; i < dataType.NumField(); i++ {
-			f := dataType.Field(i)
+		for f := range dataType.Fields() {
 			if !f.IsExported() {
 				continue
 			}
@@ -2028,8 +2023,7 @@ func addQueryParameters[M types.Model, REQ types.Request, RSP types.Response](op
 	modelDocs := parseModelDocs(modelInstance)
 
 	typ := reflect.TypeOf(*new(M)).Elem()
-	for i := range typ.NumField() {
-		field := typ.Field(i)
+	for field := range typ.Fields() {
 		// 只有增加了 schema 标签的字段才支持通过 request query 参数进行后端查询
 		schemaTag := getFieldTag(field, consts.TAG_SCHEMA)
 		if len(schemaTag) == 0 {
@@ -2054,8 +2048,7 @@ func addQueryParameters[M types.Model, REQ types.Request, RSP types.Response](op
 	baseDocs := getBaseModelDocs()
 
 	baseType := reflect.TypeFor[model.Base]()
-	for i := range baseType.NumField() {
-		field := baseType.Field(i)
+	for field := range baseType.Fields() {
 		schemaTag := getFieldTag(field, consts.TAG_SCHEMA)
 		if len(schemaTag) == 0 {
 			continue
@@ -2380,7 +2373,7 @@ func registerCommonResponses() {
 	// 400 Bad Request
 	doc.Components.Responses["BadRequest"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Bad Request - The request was invalid or cannot be served"),
+			Description: new("Bad Request - The request was invalid or cannot be served"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2424,7 +2417,7 @@ func registerCommonResponses() {
 	// 401 Unauthorized
 	doc.Components.Responses["Unauthorized"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Unauthorized - Authentication credentials were missing or incorrect"),
+			Description: new("Unauthorized - Authentication credentials were missing or incorrect"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2468,7 +2461,7 @@ func registerCommonResponses() {
 	// 403 Forbidden
 	doc.Components.Responses["Forbidden"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Forbidden - The request is understood, but access is not allowed"),
+			Description: new("Forbidden - The request is understood, but access is not allowed"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2512,7 +2505,7 @@ func registerCommonResponses() {
 	// 404 Not Found
 	doc.Components.Responses["NotFound"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Not Found - The requested resource could not be found"),
+			Description: new("Not Found - The requested resource could not be found"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2556,7 +2549,7 @@ func registerCommonResponses() {
 	// 409 Conflict
 	doc.Components.Responses["Conflict"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Conflict - The request could not be completed due to a conflict with the current state"),
+			Description: new("Conflict - The request could not be completed due to a conflict with the current state"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2600,7 +2593,7 @@ func registerCommonResponses() {
 	// 422 Unprocessable Entity
 	doc.Components.Responses["UnprocessableEntity"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Unprocessable Entity - The request was well-formed but contains semantic errors"),
+			Description: new("Unprocessable Entity - The request was well-formed but contains semantic errors"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2660,7 +2653,7 @@ func registerCommonResponses() {
 	// 429 Too Many Requests
 	doc.Components.Responses["TooManyRequests"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Too Many Requests - Rate limit exceeded"),
+			Description: new("Too Many Requests - Rate limit exceeded"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2704,7 +2697,7 @@ func registerCommonResponses() {
 	// 500 Internal Server Error
 	doc.Components.Responses["InternalServerError"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Internal Server Error - An unexpected error occurred"),
+			Description: new("Internal Server Error - An unexpected error occurred"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2748,7 +2741,7 @@ func registerCommonResponses() {
 	// 502 Bad Gateway
 	doc.Components.Responses["BadGateway"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Bad Gateway - Invalid response from upstream server"),
+			Description: new("Bad Gateway - Invalid response from upstream server"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},
@@ -2786,7 +2779,7 @@ func registerCommonResponses() {
 	// 503 Service Unavailable
 	doc.Components.Responses["ServiceUnavailable"] = &openapi3.ResponseRef{
 		Value: &openapi3.Response{
-			Description: util.ValueOf("Service Unavailable - The server is currently unable to handle the request"),
+			Description: new("Service Unavailable - The server is currently unable to handle the request"),
 			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
 				Value: &openapi3.Schema{
 					Type: &openapi3.Types{openapi3.TypeObject},

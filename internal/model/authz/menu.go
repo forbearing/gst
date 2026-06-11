@@ -7,7 +7,6 @@ import (
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
-	"github.com/forbearing/gst/util"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gorm.io/datatypes"
@@ -149,7 +148,7 @@ func (m *Menu) validate() error {
 		m.ParentID = RootID
 	}
 	if m.Visiable == nil {
-		m.Visiable = util.ValueOf(true)
+		m.Visiable = new(true)
 	}
 	if len(m.DomainPattern) == 0 {
 		m.DomainPattern = ".*"

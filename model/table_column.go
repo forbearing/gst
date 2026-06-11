@@ -30,11 +30,11 @@ type TableColumn struct {
 
 func (t *TableColumn) CreateBefore(*types.ModelContext) error {
 	if t.Visiable == nil {
-		t.Visiable = util.ValueOf(true)
+		t.Visiable = new(true)
 	}
 	// id cannot be hidden
 	if t.Key == "id" {
-		t.Visiable = util.ValueOf(true)
+		t.Visiable = new(true)
 	}
 	return nil
 }

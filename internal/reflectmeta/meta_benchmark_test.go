@@ -26,8 +26,7 @@ func BenchmarkNativeReflect(b *testing.B) {
 	typ := reflect.TypeFor[User]()
 
 	for b.Loop() {
-		for i := range typ.NumField() {
-			field := typ.Field(i)
+		for field := range typ.Fields() {
 			_ = field.Tag.Get("json")
 			_ = field.Tag.Get("schema")
 			_ = field.Tag.Get("gorm")

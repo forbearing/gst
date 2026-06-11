@@ -372,8 +372,7 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 // handleServiceError handles ServiceError
 func handleServiceError(c *gin.Context, ctx *types.ServiceContext, err error) {
 	// Check if it's a ServiceError
-	var serviceErr *types.ServiceError
-	if errors.As(err, &serviceErr) {
+	if serviceErr, ok := errors.AsType[*types.ServiceError](err); ok {
 		if serviceErr.Coder != nil {
 			// Code and CodeInstance both expose WithStatus → CodeInstance; same handling.
 			switch co := serviceErr.Coder.(type) {

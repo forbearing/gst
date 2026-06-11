@@ -203,7 +203,7 @@ func (db *database[M]) prepare() error {
 	// - model.Purge() returns true: hard delete (permanent deletion)
 	// - model.Purge() returns false: soft delete (only update deleted_at field)
 	if db.enablePurge == nil {
-		db.enablePurge = util.ValueOf(db.m.Purge())
+		db.enablePurge = new(db.m.Purge())
 	}
 
 	return nil
@@ -1627,7 +1627,7 @@ func (db *database[M]) WithPurge(enable ...bool) types.Database[M] {
 	}
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	db.enablePurge = util.ValueOf(_enable)
+	db.enablePurge = new(_enable)
 	return db
 }
 

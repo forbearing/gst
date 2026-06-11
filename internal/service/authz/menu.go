@@ -11,7 +11,6 @@ import (
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
-	"github.com/forbearing/gst/util"
 	"github.com/samber/lo"
 )
 
@@ -66,7 +65,7 @@ func (m *MenuService) filterByRole(ctx *types.ServiceContext, data *[]*modelauth
 	// the user has no roles, use the default role.
 	if len(roles) == 0 {
 		if err := database.Database[*modelauthz.Role](ctx.DatabaseContext()).
-			WithQuery(&modelauthz.Role{Default: util.ValueOf(true)}).
+			WithQuery(&modelauthz.Role{Default: new(true)}).
 			List(&roles); err != nil {
 			log.Error(err)
 			return err

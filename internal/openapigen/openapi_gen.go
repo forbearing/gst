@@ -229,8 +229,7 @@ func buildSchema(typ reflect.Type, resp *openapi3.Schema) {
 	// 	)
 	// }
 
-	for i := range typ.NumField() {
-		field := typ.Field(i)
+	for field := range typ.Fields() {
 		jsonTag := getFieldTag(field, consts.TAG_JSON)
 		switch field.Type.Kind() {
 		case reflect.Bool:

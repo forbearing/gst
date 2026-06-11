@@ -1313,8 +1313,8 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			}
 			// fmt.Println("_expends: ", _expands)
 			fieldsMap := make(map[string]reflect.Kind)
-			for i := range typ.NumField() {
-				fieldsMap[typ.Field(i).Name] = typ.Field(i).Type.Kind()
+			for field := range typ.Fields() {
+				fieldsMap[field.Name] = field.Type.Kind()
 			}
 			for _, e := range _expands {
 				// If the expanding field not exists in the structure fiedls, skip depth expand.
@@ -1653,8 +1653,8 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			}
 			// fmt.Println("_expends: ", _expands)
 			fieldsMap := make(map[string]reflect.Kind)
-			for i := range typ.NumField() {
-				fieldsMap[typ.Field(i).Name] = typ.Field(i).Type.Kind()
+			for field := range typ.Fields() {
+				fieldsMap[field.Name] = field.Type.Kind()
 			}
 			for _, e := range _expands {
 				// If the expanding field not exists in the structure fiedls, skip depth expand.
@@ -2821,8 +2821,8 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			}
 			// fmt.Println("_expends: ", _expands)
 			fieldsMap := make(map[string]reflect.Kind)
-			for i := range typ.NumField() {
-				fieldsMap[typ.Field(i).Name] = typ.Field(i).Type.Kind()
+			for field := range typ.Fields() {
+				fieldsMap[field.Name] = field.Type.Kind()
 			}
 			for _, e := range _expands {
 				// If the expanding field not exists in the structure fiedls, skip depth expand.

@@ -71,7 +71,7 @@ func (r *UserRole) CreateAfter(ctx *types.ModelContext) error {
 	if len(casbinRules) > 0 {
 		casbinRules[0].User = user.Username
 		casbinRules[0].Role = r.RoleCode
-		casbinRules[0].Remark = util.ValueOf(fmt.Sprintf("%s -> %s", r.Username, r.RoleCode))
+		casbinRules[0].Remark = new(fmt.Sprintf("%s -> %s", r.Username, r.RoleCode))
 		return database.Database[*CasbinRule](ctx.DatabaseContext()).Update(casbinRules[0])
 	}
 	return nil

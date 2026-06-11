@@ -18,7 +18,6 @@ import (
 	"github.com/forbearing/gst/model"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
-	"github.com/forbearing/gst/util"
 	"github.com/stretchr/testify/require"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -132,12 +131,12 @@ type TestUser struct {
 
 func (t *TestUser) Purge() bool { return true }
 func (t *TestUser) CreateBefore(ctx *types.ModelContext) error {
-	t.Remark = util.ValueOf(string(remarkUserCreateBefore))
+	t.Remark = new(string(remarkUserCreateBefore))
 	return nil
 }
 
 func (t *TestUser) UpdateBefore(ctx *types.ModelContext) error {
-	t.Remark = util.ValueOf(string(remarkUserUpdateBefore))
+	t.Remark = new(string(remarkUserUpdateBefore))
 	return nil
 }
 

@@ -103,8 +103,8 @@ func IsEmpty[T any]() bool {
 	}
 
 	invalidFieldCount := 0
-	for i := 0; i < typ.NumField(); i++ {
-		ftyp := typ.Field(i).Type
+	for field := range typ.Fields() {
+		ftyp := field.Type
 		for ftyp.Kind() == reflect.Pointer {
 			ftyp = ftyp.Elem()
 		}
@@ -142,8 +142,7 @@ func IsValid[T any]() bool {
 	}
 
 	// T fields contains `Empty` or `Any`, return false
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
+	for field := range typ.Fields() {
 		if field.Type == reflect.TypeFor[Empty]() || field.Type == reflect.TypeFor[Any]() {
 			return false
 		}
