@@ -12,6 +12,10 @@ const (
 	LOGGER_MAX_BACKUPS             = "LOGGER_MAX_BACKUPS"             //nolint:staticcheck
 	LOGGER_CONTROLLER_LOG_REQUEST  = "LOGGER_CONTROLLER_LOG_REQUEST"  //nolint:staticcheck
 	LOGGER_CONTROLLER_LOG_RESPONSE = "LOGGER_CONTROLLER_LOG_RESPONSE" //nolint:staticcheck
+	LOGGER_HTTP_BODY_ENABLED       = "LOGGER_HTTP_BODY_ENABLED"       //nolint:staticcheck
+	LOGGER_HTTP_BODY_LOG_REQUEST   = "LOGGER_HTTP_BODY_LOG_REQUEST"   //nolint:staticcheck
+	LOGGER_HTTP_BODY_LOG_RESPONSE  = "LOGGER_HTTP_BODY_LOG_RESPONSE"  //nolint:staticcheck
+	LOGGER_HTTP_BODY_MAX_BODY_SIZE = "LOGGER_HTTP_BODY_MAX_BODY_SIZE" //nolint:staticcheck
 )
 
 // Logger represents section "logger" for client-side or server-side configuration,
@@ -56,6 +60,9 @@ type Logger struct {
 
 	// Controller contains controller-specific logging configurations
 	Controller ControllerLogger `json:"controller" ini:"controller" yaml:"controller" mapstructure:"controller"`
+
+	// HTTPBody contains HTTP request and response body logging configurations.
+	HTTPBody HTTPBodyLogger `json:"http_body" ini:"http_body" yaml:"http_body" mapstructure:"http_body"`
 }
 
 // ControllerLogger represents controller logging configuration
@@ -67,6 +74,26 @@ type ControllerLogger struct {
 	// LogResponse enables logging of HTTP response body using zap logger
 	// Default: true
 	LogResponse bool `json:"log_response" ini:"log_response" yaml:"log_response" mapstructure:"log_response"`
+}
+
+// HTTPBodyLogger represents HTTP body logging configuration.
+type HTTPBodyLogger struct {
+	// Enabled enables HTTP request and response body logging middleware.
+	// Default: false
+	Enabled bool `json:"enabled" ini:"enabled" yaml:"enabled" mapstructure:"enabled"`
+
+	// LogRequest enables logging of JSON HTTP request bodies.
+	// Default: false
+	LogRequest bool `json:"log_request" ini:"log_request" yaml:"log_request" mapstructure:"log_request"`
+
+	// LogResponse enables logging of JSON HTTP response bodies.
+	// Default: false
+	LogResponse bool `json:"log_response" ini:"log_response" yaml:"log_response" mapstructure:"log_response"`
+
+	// MaxBodySize limits how much request or response body data can be logged.
+	// Values are parsed with github.com/dustin/go-humanize, for example "64KB".
+	// Default: 64KB
+	MaxBodySize string `json:"max_body_size" ini:"max_body_size" yaml:"max_body_size" mapstructure:"max_body_size"`
 }
 
 func (*Logger) setDefault() {
@@ -81,4 +108,8 @@ func (*Logger) setDefault() {
 	cv.SetDefault("logger.max_backups", 1)
 	cv.SetDefault("logger.controller.log_request", false)
 	cv.SetDefault("logger.controller.log_response", false)
+	cv.SetDefault("logger.http_body.enabled", false)
+	cv.SetDefault("logger.http_body.log_request", false)
+	cv.SetDefault("logger.http_body.log_response", false)
+	cv.SetDefault("logger.http_body.max_body_size", "64KB")
 }

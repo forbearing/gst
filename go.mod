@@ -32,6 +32,7 @@ require (
 	github.com/coocood/freecache v1.2.7
 	github.com/creasty/defaults v1.8.0
 	github.com/dgraph-io/ristretto/v2 v2.4.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/elastic/go-elasticsearch/v8 v8.19.6
 	github.com/fatih/color v1.19.0
@@ -205,7 +206,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/denis-tingaikin/go-header v0.5.0 // indirect
 	github.com/dlclark/regexp2 v1.12.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eapache/go-resiliency v1.7.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.9.0 // indirect
