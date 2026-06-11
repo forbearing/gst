@@ -93,16 +93,10 @@ func genRun() {
 	}
 
 	if len(allModels) == 0 {
-		if prune && len(oldServiceFiles) > 0 {
-			fmt.Println(gray("  No models found, pruning service files only"))
-			logSection("Prune Disabled Service Files")
-			pruneServiceFiles(oldServiceFiles, allModels)
-		} else {
-			fmt.Println(gray("  No models found, nothing to do"))
-		}
-		return
+		fmt.Println(gray("  No models found, generating empty registration files"))
+	} else {
+		fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 	}
-	fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 
 	modelStmts := make([]ast.Stmt, 0)
 	serviceStmts := make([]ast.Stmt, 0)

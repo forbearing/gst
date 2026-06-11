@@ -7,7 +7,7 @@ import (
 )
 
 func TestPruneRunPrunesServiceFilesWhenModelDirHasNoModels(t *testing.T) {
-	setupEmptyModelPruneProject(t)
+	setupEmptyModelProject(t)
 	confirmPruneDeletion(t)
 
 	oldServiceFile := filepath.Join(serviceDir, "user", "create.go")
@@ -21,7 +21,7 @@ func TestPruneRunPrunesServiceFilesWhenModelDirHasNoModels(t *testing.T) {
 }
 
 func TestGenRunPrunesServiceFilesWhenModelDirHasNoModels(t *testing.T) {
-	setupEmptyModelPruneProject(t)
+	setupEmptyModelProject(t)
 	confirmPruneDeletion(t)
 	prune = true
 
@@ -36,7 +36,7 @@ func TestGenRunPrunesServiceFilesWhenModelDirHasNoModels(t *testing.T) {
 }
 
 func TestPruneRunRemovesDeepEmptyServiceDirectories(t *testing.T) {
-	setupEmptyModelPruneProject(t)
+	setupEmptyModelProject(t)
 	confirmPruneDeletion(t)
 
 	oldServiceFile := filepath.Join(serviceDir, "config", "namespace", "app", "env", "item", "create.go")
@@ -50,7 +50,7 @@ func TestPruneRunRemovesDeepEmptyServiceDirectories(t *testing.T) {
 	}
 }
 
-func setupEmptyModelPruneProject(t *testing.T) {
+func setupEmptyModelProject(t *testing.T) {
 	t.Helper()
 
 	wd, err := os.Getwd()
