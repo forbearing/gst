@@ -85,17 +85,24 @@ func genRun() {
 	propagateParentParams(allModels)
 
 	checkErr(err)
-	if len(allModels) == 0 {
-		fmt.Println(gray("  No models found, nothing to do"))
-		return
-	}
-	fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 
 	// Record old service files list (if prune option is enabled)
 	var oldServiceFiles []string
 	if prune {
 		oldServiceFiles = scanExistingServiceFiles(serviceDir)
 	}
+
+	if len(allModels) == 0 {
+		if prune && len(oldServiceFiles) > 0 {
+			fmt.Println(gray("  No models found, pruning service files only"))
+			logSection("Prune Disabled Service Files")
+			pruneServiceFiles(oldServiceFiles, allModels)
+		} else {
+			fmt.Println(gray("  No models found, nothing to do"))
+		}
+		return
+	}
+	fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 
 	modelStmts := make([]ast.Stmt, 0)
 	serviceStmts := make([]ast.Stmt, 0)

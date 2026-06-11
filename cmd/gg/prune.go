@@ -35,10 +35,10 @@ func pruneRun() {
 	allModels, err := codegen.FindModels(module, modelDir, serviceDir, excludes)
 	checkErr(err)
 	if len(allModels) == 0 {
-		fmt.Println(gray("  No models found, nothing to do"))
-		return
+		fmt.Println(gray("  No models found, pruning service files only"))
+	} else {
+		fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 	}
-	fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 
 	// Scan existing service files
 	oldServiceFiles := scanExistingServiceFiles(serviceDir)
