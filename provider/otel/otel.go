@@ -48,6 +48,8 @@ var (
 	ErrOTELIsDisabled = errors.New("otel is disabled")
 )
 
+type requestRootSpanKey struct{}
+
 // Init initializes the OpenTelemetry tracer with OTLP exporters.
 // This function replaces the deprecated Jaeger exporter with OTLP exporters
 // that are compatible with Jaeger and other tracing backends.
@@ -167,6 +169,27 @@ func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) 
 // SpanFromContext returns the span from the context
 func SpanFromContext(ctx context.Context) trace.Span {
 	return trace.SpanFromContext(ctx)
+}
+
+// ContextWithRequestRootSpan marks the current span as the root span for one HTTP request.
+func ContextWithRequestRootSpan(ctx context.Context) context.Context {
+	span := trace.SpanFromContext(ctx)
+	if span == nil || !span.SpanContext().IsValid() {
+		return ctx
+	}
+	return context.WithValue(ctx, requestRootSpanKey{}, span)
+}
+
+// RequestRootContext returns ctx with the request root span restored as the current span.
+func RequestRootContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	span, ok := ctx.Value(requestRootSpanKey{}).(trace.Span)
+	if !ok || span == nil || !span.SpanContext().IsValid() {
+		return ctx
+	}
+	return trace.ContextWithSpan(ctx, span)
 }
 
 // createExporter creates an exporter based on configuration

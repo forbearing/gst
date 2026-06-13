@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -66,7 +67,23 @@ func TestTracingUsesIncomingTraceIDHeader(t *testing.T) {
 	require.Equal(t, incomingTraceID, w.Header().Get(consts.HEADER_TRACE_ID))
 }
 
+func TestTracingMarksHTTPSpanAsRequestRoot(t *testing.T) {
+	source := readMiddlewareSource(t, "tracing.go")
+	require.Contains(t, source, "ctx = gstotel.ContextWithRequestRootSpan(ctx)")
+}
+
+func TestMiddlewareWrapperStartsMiddlewareSpansFromRequestRoot(t *testing.T) {
+	source := readMiddlewareSource(t, "wrapper.go")
+	require.Contains(t, source, "parentCtx := gstotel.RequestRootContext(originalCtx)")
+}
+
 func setupTracingTest(t *testing.T) {
+	t.Helper()
+
+	setupTracingTestWithEndpoint(t, "127.0.0.1:1", 0)
+}
+
+func setupTracingTestWithEndpoint(t *testing.T, endpoint string, samplerParam float64) {
 	t.Helper()
 
 	gin.SetMode(gin.TestMode)
@@ -76,11 +93,11 @@ func setupTracingTest(t *testing.T) {
 	config.App.OTEL.Enable = true
 	config.App.OTEL.ServiceName = "gst-test"
 	config.App.OTEL.ExporterType = config.ExportTypeOtlpHTTP
-	config.App.OTEL.OTLPEndpoint = "127.0.0.1:1"
+	config.App.OTEL.OTLPEndpoint = endpoint
 	config.App.OTEL.OTLPInsecure = true
 	config.App.OTEL.SamplerType = config.SamplerTypeConst
-	config.App.OTEL.SamplerParam = 0
-	config.App.OTEL.BufferFlushInterval = time.Second
+	config.App.OTEL.SamplerParam = samplerParam
+	config.App.OTEL.BufferFlushInterval = 10 * time.Millisecond
 	config.App.OTEL.ReporterQueueSize = 100
 	t.Cleanup(func() {
 		config.App = originalConfig
@@ -97,4 +114,12 @@ func setupTracingTest(t *testing.T) {
 	t.Cleanup(func() {
 		gstotel.Close()
 	})
+}
+
+func readMiddlewareSource(t *testing.T, filename string) string {
+	t.Helper()
+
+	source, err := os.ReadFile(filename)
+	require.NoError(t, err)
+	return string(source)
 }

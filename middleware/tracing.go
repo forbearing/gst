@@ -41,6 +41,7 @@ func Tracing() gin.HandlerFunc {
 
 			// Start new span
 			ctx, span = gstotel.StartSpan(parentCtx, spanName, trace.WithSpanKind(trace.SpanKindServer))
+			ctx = gstotel.ContextWithRequestRootSpan(ctx)
 
 			// Extract OTEL trace ID and span ID
 			spanContext := span.SpanContext()

@@ -37,12 +37,17 @@ func middlewareWrapper(name string, middleware gin.HandlerFunc) gin.HandlerFunc 
 		// Create span name with middleware prefix
 		spanName := fmt.Sprintf("middleware.%s", name)
 
-		// Start new span for middleware execution
-		ctx, span := gstotel.StartSpan(c.Request.Context(), spanName)
+		// Start new span for middleware execution under the HTTP request span.
+		originalCtx := c.Request.Context()
+		parentCtx := gstotel.RequestRootContext(originalCtx)
+		ctx, span := gstotel.StartSpan(parentCtx, spanName)
 		defer span.End()
 
 		// Update request context with the new span context
 		c.Request = c.Request.WithContext(ctx)
+		defer func() {
+			c.Request = c.Request.WithContext(originalCtx)
+		}()
 
 		// Set span attributes
 		span.SetAttributes(

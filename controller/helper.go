@@ -156,7 +156,8 @@ func startControllerSpan[M types.Model](c *gin.Context, phase consts.Phase) (con
 
 	// Create child span for controller operation
 	spanName := fmt.Sprintf("Controller.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := gstotel.StartSpan(c.Request.Context(), spanName)
+	parentCtx := gstotel.RequestRootContext(c.Request.Context())
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 
 	// Update request context with new span context
 	c.Request = c.Request.WithContext(spanCtx)
