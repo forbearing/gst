@@ -122,25 +122,25 @@ func Init() error {
 	return nil
 }
 
-// Close closes the Jaeger tracer
-func Close() error {
+// Close closes the OpenTelemetry tracer provider.
+func Close() {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if !initialized || tracerProvider == nil {
-		return nil
+		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := tracerProvider.Shutdown(ctx); err != nil {
-		return errors.Wrap(err, "failed to shutdown tracer provider")
+		logger.OTEL.Errorw("failed to shutdown tracer provider", "err", err)
 	}
 
 	initialized = false
+	tracerProvider = nil
 	logger.OTEL.Info("otel tracer closed")
-	return nil
 }
 
 // GetTracer returns the global tracer
