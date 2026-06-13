@@ -8,6 +8,7 @@ import (
 	"demo/service/config/file/encrypt"
 	"demo/service/conversation"
 	"demo/service/conversation/message"
+	"demo/service/ping"
 
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types/consts"
@@ -27,4 +28,5 @@ func init() {
 	service.Register[*conversation.Deleter](consts.PHASE_DELETE)
 	service.Register[*conversation.Patcher](consts.PHASE_PATCH)
 	service.Register[*conversation.Lister](consts.PHASE_LIST)
+	service.Register[*ping.Lister](consts.PHASE_LIST)
 }

@@ -35,5 +35,6 @@ func Init() error {
 	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations/:conv", &types.ControllerConfig[*model.Conversation]{ParamName: "conv"}, consts.Patch)
 	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations", &types.ControllerConfig[*model.Conversation]{}, consts.List)
 	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations/:conv", &types.ControllerConfig[*model.Conversation]{ParamName: "conv"}, consts.Get)
+	router.Register[*model.Ping, *model.Ping, *model.PingRsp](router.Pub(), "ping", &types.ControllerConfig[*model.Ping]{}, consts.List)
 	return nil
 }
