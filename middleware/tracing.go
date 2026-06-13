@@ -3,16 +3,20 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -25,15 +29,18 @@ func Tracing() gin.HandlerFunc {
 		var ctx context.Context
 
 		// If OTEL is enabled, create OpenTelemetry span and use its trace ID
-		if otel.IsEnabled() {
+		if gstotel.IsEnabled() {
 			// Create span name from HTTP method and route
 			spanName := c.Request.Method + " " + c.FullPath()
 			if c.FullPath() == "" {
 				spanName = c.Request.Method + " " + c.Request.URL.Path
 			}
 
+			// Extract upstream trace context before starting the server span.
+			parentCtx := extractRequestTraceContext(c.Request.Context(), c.Request.Header)
+
 			// Start new span
-			ctx, span = otel.StartSpan(c.Request.Context(), spanName)
+			ctx, span = gstotel.StartSpan(parentCtx, spanName, trace.WithSpanKind(trace.SpanKindServer))
 
 			// Extract OTEL trace ID and span ID
 			spanContext := span.SpanContext()
@@ -116,7 +123,7 @@ func Tracing() gin.HandlerFunc {
 		c.Header("X-Trace-ID", traceID)
 
 		// Add gst trace IDs as span attributes if OTEL is enabled
-		if otel.IsEnabled() && span != nil {
+		if gstotel.IsEnabled() && span != nil {
 			span.SetAttributes(
 				attribute.String(fmt.Sprintf("%s.trace_id", config.App.OTEL.ServiceName), traceID),
 				attribute.String(fmt.Sprintf("%s.span_id", config.App.OTEL.ServiceName), spanID),
@@ -140,6 +147,46 @@ func Tracing() gin.HandlerFunc {
 	}
 }
 
+func extractRequestTraceContext(ctx context.Context, header http.Header) context.Context {
+	parentCtx := otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(header))
+	if trace.SpanContextFromContext(parentCtx).IsValid() {
+		return parentCtx
+	}
+
+	traceIDValue := strings.TrimSpace(header.Get(consts.HEADER_TRACE_ID))
+	if len(traceIDValue) == 0 {
+		traceIDValue = strings.TrimSpace(header.Get(consts.TRACE_ID))
+	}
+	if len(traceIDValue) == 0 {
+		return parentCtx
+	}
+
+	traceID, err := trace.TraceIDFromHex(traceIDValue)
+	if err != nil {
+		return parentCtx
+	}
+
+	spanIDValue := strings.TrimSpace(header.Get(consts.HEADER_SPAN_ID))
+	if len(spanIDValue) == 0 {
+		spanIDValue = strings.TrimSpace(header.Get(consts.SPAN_ID))
+	}
+	if len(spanIDValue) == 0 {
+		spanIDValue = "0000000000000001"
+	}
+	spanID, err := trace.SpanIDFromHex(spanIDValue)
+	if err != nil {
+		spanID = trace.SpanID{0, 0, 0, 0, 0, 0, 0, 1}
+	}
+
+	spanContext := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+		Remote:     true,
+	})
+	return trace.ContextWithRemoteSpanContext(parentCtx, spanContext)
+}
+
 // GetSpanFromContext retrieves the OpenTelemetry span from Gin context
 func GetSpanFromContext(c *gin.Context) trace.Span {
 	if span, exists := c.Get("otel_span"); exists {
@@ -154,7 +201,7 @@ func GetSpanFromContext(c *gin.Context) trace.Span {
 func AddSpanTags(c *gin.Context, tags map[string]any) {
 	span := GetSpanFromContext(c)
 	if span != nil && span.IsRecording() {
-		otel.AddSpanTags(span, tags)
+		gstotel.AddSpanTags(span, tags)
 	}
 }
 
@@ -162,7 +209,7 @@ func AddSpanTags(c *gin.Context, tags map[string]any) {
 func AddSpanEvent(c *gin.Context, name string, attrs ...attribute.KeyValue) {
 	span := GetSpanFromContext(c)
 	if span != nil && span.IsRecording() {
-		otel.AddSpanEvent(span, name, attrs...)
+		gstotel.AddSpanEvent(span, name, attrs...)
 	}
 }
 
@@ -170,6 +217,6 @@ func AddSpanEvent(c *gin.Context, name string, attrs ...attribute.KeyValue) {
 func RecordError(c *gin.Context, err error) {
 	span := GetSpanFromContext(c)
 	if span != nil && span.IsRecording() {
-		otel.RecordError(span, err)
+		gstotel.RecordError(span, err)
 	}
 }
