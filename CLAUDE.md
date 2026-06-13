@@ -57,6 +57,8 @@ go install ./cmd/gg
 - 禁止在 gst 项目根目录执行 `cmd/gg` 的任何命令\*\* - 很容易破坏当前项目代码。测试 `cmd/gg` 命令请到 `examples/demo` 项目目录下执行。
 - 修改了代码，当前代码如果有测试用例，必须确保测试用例通过
 - internal/model 不需要使用 dsl 来定义接口行为
+- 禁止操作 git 暂存区、提交等操作，这就是这类命令禁止操作：`git add`, `git restore`, `git commit`，
+    如果你发现暂存区、代码提交发生变化这是正常的，因为我在和你并行操作。你只需要关注代码变动即可。
 
 
 
@@ -88,7 +90,7 @@ repomix \
   --include "**/*.go,go.mod,go.sum,Makefile,*.md,**/*.md,**/*.ini" \
   --ignore "**/*.log,**/.env*,**/*secret*,**/*credential*,**/*key*,**/vendor/**,**/tmp/**,**/.git/**,**/node_modules/**,**/dist/**,**/coverage/**,**/testdata/**,**/testcode/**,examples/**" \
   --skill-generate gst \
-  --skill-output /Users/a2/.codex/skills/gst \
+  --skill-output ~/.codex/skills/gst \
   --force
 ```
 
