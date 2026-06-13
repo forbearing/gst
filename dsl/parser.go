@@ -32,7 +32,7 @@ import (
 //
 // The parser supports various DSL patterns:
 //   - Global settings: Enabled(), Endpoint("path"), Migrate(true)
-//   - Action configuration: Create().Enabled(true).Payload[Type].Result[Type]
+//   - Action configuration: Create().Payload[Type].Result[Type]
 //   - Service and visibility: Service(true), Public(false)
 func Parse(file *ast.File, endpoint string) map[string]*Design {
 	designBase, designEmpty := parse(file)
@@ -57,11 +57,10 @@ func Parse(file *ast.File, endpoint string) map[string]*Design {
 		m[name] = design
 	}
 
-	// set the default values for Design
-	// Default action, the action always not nil,
-	// Action default value:
-	//	Enabled default to "true"
-	//	Service default to "false"
+	// Set default values for Design.
+	// Declared actions default to enabled when parsed by parseAction.
+	// Missing actions are initialized here and remain disabled by default.
+	// Service defaults to false for both declared and missing actions.
 	for name, design := range m {
 		// Default endpoint is the lower case of the model name.
 		if len(design.Endpoint) == 0 {
@@ -225,7 +224,7 @@ func parse(file *ast.File) (map[string]*ast.FuncDecl, map[string]*ast.FuncDecl) 
 
 // parseDesign parses a Design method's AST declaration and extracts the DSL configuration.
 // It analyzes the function body to find DSL calls like Enabled(), Endpoint(), Migrate(),
-// and action configurations like Create().Enabled(true).Payload[Type].
+// and action configurations like Create().Payload[Type].Result[Type].
 //
 // Parameters:
 //   - fn: The AST function declaration for the Design() method
@@ -310,11 +309,9 @@ func parseDesign(fn *ast.FuncDecl) *Design {
 		//
 		// Route("/config/apps", func() {
 		// 	List(func() {
-		// 		Enabled(true)
 		// 		Service(true)
 		// 	})
 		// 	Get(func() {
-		// 		Enabled(true)
 		// 		Service(true)
 		// 	})
 		// })
@@ -455,7 +452,7 @@ func parseDesign(fn *ast.FuncDecl) *Design {
 //   - bool: true if parsing was successful, false otherwise
 //
 // The function parses DSL calls within the action function body:
-//   - Enabled(true/false): Sets whether the action is enabled
+//   - Enabled(true/false): Sets whether the action is enabled. Declared actions default to enabled.
 //   - Service(true/false): Sets whether to generate service layer code
 //   - Public(true/false): Sets whether the API endpoint is public
 //   - Filename("name"): Sets a custom filename for the generated service file
@@ -465,7 +462,6 @@ func parseDesign(fn *ast.FuncDecl) *Design {
 // Example usage in DSL:
 //
 //	Create(func() {
-//	    Enabled(true)
 //	    Service(true)
 //	    Payload[CreateUserRequest]
 //	    Result[*User]
@@ -473,8 +469,8 @@ func parseDesign(fn *ast.FuncDecl) *Design {
 func parseAction(phase consts.Phase, funcName string, expr ast.Expr) (*Action, bool) {
 	var payload string
 	var result string
-	var enabled bool    // default to false
-	var service bool    // default to true
+	enabled := true     // declared actions are enabled by default
+	var service bool    // default to false
 	var public bool     // default to false
 	var filename string // default to ""
 

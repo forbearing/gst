@@ -28,13 +28,12 @@
 //
 //		// Define alternative routes for different access patterns
 //		Route("public/users", func() {
-//			List(func() { Enabled(true); Public(true) })
-//			Get(func() { Enabled(true); Public(true) })
+//			List(func() { Public(true) })
+//			Get(func() { Public(true) })
 //		})
 //
 //		// Configure Create operation
 //		Create(func() {
-//			Enabled(true)
 //			Service(true)   // Generate service code
 //			Public(false)   // Internal API only
 //			Payload[CreateUserRequest]()
@@ -42,10 +41,10 @@
 //		})
 //
 //		// Configure other operations...
-//		Update(func() { Enabled(true) })
-//		Delete(func() { Enabled(true) })
-//		List(func() { Enabled(true) })
-//		Get(func() { Enabled(true) })
+//		Update(func() {})
+//		Delete(func() {})
+//		List(func() {})
+//		Get(func() {})
 //	}
 //
 // Custom Service Filenames:
@@ -55,7 +54,6 @@
 //
 //	Route("/attachment/upload", func() {
 //		Create(func() {
-//			Enabled(true)
 //			Service(true)
 //			Filename("upload")  // generates upload.go instead of create.go
 //		})
@@ -86,8 +84,8 @@ import (
 //     When set to false, no API code will be generated for this model.
 //     Default: true
 //  2. When used in action configuration functions (e.g., Create, Update, List, Get),
-//     it controls whether the specific action/route should be generated.
-//     Default: false (actions must be explicitly enabled)
+//     it controls whether the declared action should be generated.
+//     Default: true for declared actions; actions that are not declared remain disabled.
 func Enabled(bool) {}
 
 // Endpoint sets a custom endpoint path for the model's API routes.
@@ -148,11 +146,9 @@ func Param(string) {}
 //
 //	Route("/config/apps", func() {
 //	    List(func() {
-//	        Enabled(true)
 //	        Service(true)
 //	    })
 //	    Get(func() {
-//	        Enabled(true)
 //	        Service(true)
 //	    })
 //	})
@@ -179,12 +175,12 @@ func Param(string) {}
 //	    Endpoint("apps")
 //	    Param("app")
 //	    Route("apps", func() {
-//	        List(func() { Enabled(true) })
-//	        Get(func() { Enabled(true) })
+//	        List(func() {})
+//	        Get(func() {})
 //	    })
 //	    Route("config/apps", func() {
-//	        List(func() { Enabled(true); Service(true) })
-//	        Get(func() { Enabled(true); Service(true) })
+//	        List(func() { Service(true) })
+//	        Get(func() { Service(true) })
 //	    })
 //	}
 //
@@ -227,14 +223,12 @@ func Service(bool) {}
 //	// causing a conflict. With Filename, they produce separate files:
 //	Route("/attachment/upload", func() {
 //	    Create(func() {
-//	        Enabled(true)
 //	        Service(true)
 //	        Filename("upload")  // generates service/shared/attachment/upload.go
 //	    })
 //	})
 //	Route("/attachment/parse", func() {
 //	    Create(func() {
-//	        Enabled(true)
 //	        Service(true)
 //	        Filename("parse")   // generates service/shared/attachment/parse.go
 //	    })
@@ -259,7 +253,8 @@ func Result[T any]() {}
 
 // Create defines the configuration for the create operation.
 // The function parameter allows setting Enabled, Service, Public, Payload, and Result.
-// Example: Create(func() { Enabled(true); Payload[CreateUserRequest](); Result[*User]() })
+// Declaring the action enables it by default.
+// Example: Create(func() { Payload[CreateUserRequest](); Result[*User]() })
 func Create(func()) {}
 
 // Delete defines the configuration for the delete operation.
@@ -365,8 +360,8 @@ type Design struct {
 	//
 	// Usage in Design():
 	//   Route("/config/apps", func() {
-	//       List(func() { Enabled(true); Service(false) })
-	//       Get(func() { Enabled(true); Service(false) })
+	//       List(func() {})
+	//       Get(func() { Service(true) })
 	//   })
 	//
 	// This populates routes["/config/apps"] with List and Get Action configurations.
@@ -422,7 +417,7 @@ func (d *Design) Range(fn func(route string, action *Action)) { rangeAction(d, f
 // Each operation (Create, Update, Delete, etc.) has its own Action configuration.
 type Action struct {
 	// Enabled indicates whether this specific action should be generated.
-	// Default: false (actions must be explicitly enabled)
+	// Declared actions default to true; actions not declared in Design are disabled.
 	Enabled bool
 
 	// Service indicates whether service layer code should be generated for this action.
