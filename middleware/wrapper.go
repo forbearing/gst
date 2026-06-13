@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/config"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -29,7 +29,7 @@ import (
 func middlewareWrapper(name string, middleware gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Skip tracing if OTEL is not enabled
-		if !otel.IsEnabled() {
+		if !gstotel.IsEnabled() {
 			middleware(c)
 			return
 		}
@@ -38,7 +38,7 @@ func middlewareWrapper(name string, middleware gin.HandlerFunc) gin.HandlerFunc 
 		spanName := fmt.Sprintf("middleware.%s", name)
 
 		// Start new span for middleware execution
-		ctx, span := otel.StartSpan(c.Request.Context(), spanName)
+		ctx, span := gstotel.StartSpan(c.Request.Context(), spanName)
 		defer span.End()
 
 		// Update request context with the new span context

@@ -10,7 +10,7 @@ import (
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/logger"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
@@ -61,7 +61,7 @@ import (
 //	HTTP → Controller → Service → Database → GORM
 //
 // Note: Must be called after `defer db.reset()` to ensure proper cleanup order.
-// Jaeger tracing is automatically enabled when otel.IsEnabled() returns true.
+// Jaeger tracing is automatically enabled when gstotel.IsEnabled() returns true.
 func (db *database[M]) trace(op string, batch ...int) (func(error), context.Context, trace.Span) {
 	begin := time.Now()
 	var _batch int
@@ -72,10 +72,10 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 	// Create database operation span if Jaeger is enabled
 	var ctx context.Context
 	var span trace.Span
-	if otel.IsEnabled() && db.ctx != nil {
+	if gstotel.IsEnabled() && db.ctx != nil {
 		modelName := reflect.TypeOf(*new(M)).Elem().Name()
 		spanName := "Database." + op + " " + modelName
-		ctx, span = otel.StartSpan(db.ctx.Context(), spanName)
+		ctx, span = gstotel.StartSpan(db.ctx.Context(), spanName)
 
 		// Propagate OTEL trace ID to DatabaseContext so database logs carry trace_id
 		if len(db.ctx.TraceID) == 0 {
@@ -115,7 +115,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 
 			if err != nil {
 				span.SetStatus(codes.Error, err.Error())
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				span.SetAttributes(attribute.Bool("error", true))
 			} else {
 				span.SetStatus(codes.Ok, "")
@@ -404,15 +404,19 @@ func boolToInt(b bool) int {
 //		return obj.CreateBefore()
 //	})
 func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phase, parentSpan trace.Span, fn func(ctx context.Context) error) error {
-	if !otel.IsEnabled() || ctx == nil || parentSpan == nil {
-		return fn(context.Background())
+	hookCtx := context.Background()
+	if ctx != nil {
+		hookCtx = ctx.Context()
+	}
+	if !gstotel.IsEnabled() || ctx == nil || parentSpan == nil {
+		return fn(hookCtx)
 	}
 
 	modelName := reflect.TypeOf(*new(M)).Elem().Name()
 	// Create child span under database span for hook execution
 	spanName := "Model." + phase.MethodName() + " " + modelName
-	parentCtx := trace.ContextWithSpan(context.Background(), parentSpan)
-	childCtx, span := otel.StartSpan(parentCtx, spanName)
+	parentCtx := trace.ContextWithSpan(hookCtx, parentSpan)
+	childCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// Add hook-specific attributes
@@ -437,7 +441,7 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		otel.RecordError(span, err)
+		gstotel.RecordError(span, err)
 		span.SetAttributes(attribute.Bool("error", true))
 	} else {
 		span.SetStatus(codes.Ok, "")
@@ -447,7 +451,7 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 }
 
 // func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phase, parentSpan trace.Span, fn func() error) error {
-// 	if !otel.IsEnabled() || ctx == nil || parentSpan == nil {
+// 	if !gstotel.IsEnabled() || ctx == nil || parentSpan == nil {
 // 		return fn()
 // 	}
 //
@@ -455,7 +459,7 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 // 	// Create child span under database span for hook execution
 // 	spanName := "Model." + phase.MethodName() + " " + modelName
 // 	parentCtx := trace.ContextWithSpan(context.Background(), parentSpan)
-// 	_, span := otel.StartSpan(parentCtx, spanName)
+// 	_, span := gstotel.StartSpan(parentCtx, spanName)
 // 	defer span.End()
 //
 // 	// Add hook-specific attributes
@@ -480,7 +484,7 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 //
 // 	if err != nil {
 // 		span.SetStatus(codes.Error, err.Error())
-// 		otel.RecordError(span, err)
+// 		gstotel.RecordError(span, err)
 // 		span.SetAttributes(attribute.Bool("error", true))
 // 	} else {
 // 		span.SetStatus(codes.Ok, "")
