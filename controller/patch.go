@@ -11,7 +11,7 @@ import (
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -77,7 +77,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 			if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 				log.Error(reqErr)
 				JSON(c, CodeInvalidParam.WithErr(reqErr))
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, reqErr)
 				return
 			}
 			if errors.Is(reqErr, io.EOF) {
@@ -90,7 +90,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 			}); err != nil {
 				log.Error(err)
 				handleServiceError(c, serviceCtx, err)
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 			// Check if response is already written (e.g., SSE streaming)
@@ -108,7 +108,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		if err := c.ShouldBindJSON(&req); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		if len(id) == 0 {
@@ -117,7 +117,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		if len(id) == 0 {
 			log.Error(CodeNotFoundRouteParam)
 			JSON(c, CodeNotFoundRouteParam)
-			otel.RecordError(span, errors.New(CodeNotFoundRouteParam.Msg()))
+			gstotel.RecordError(span, errors.New(CodeNotFoundRouteParam.Msg()))
 			return
 		}
 		data := make([]M, 0)
@@ -131,7 +131,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		if err := handler(types.NewDatabaseContext(c)).WithLimit(1).WithQuery(m).List(&data); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		if len(data) != 1 {
@@ -157,14 +157,14 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxBefore, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 2.Partial update resource in database.
 		if err := handler(types.NewDatabaseContext(c)).Update(cur); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 3.Perform business logic processing after partial update resource.
@@ -175,7 +175,7 @@ func PatchFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxAfter, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 

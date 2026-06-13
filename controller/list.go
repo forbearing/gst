@@ -13,7 +13,7 @@ import (
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -99,7 +99,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			if err = c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
 				log.Error(err)
 				JSON(c, CodeInvalidParam.WithErr(err))
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 			var serviceCtx *types.ServiceContext
@@ -109,7 +109,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			}); err != nil {
 				log.Error(err)
 				handleServiceError(c, serviceCtx, err)
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 			// Check if response is already written (e.g., SSE streaming)
@@ -232,7 +232,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxBefore, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		sortBy, _ := c.GetQuery(consts.QUERY_SORTBY)
@@ -259,7 +259,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 			List(&data); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 3.Perform business logic processing after list resources.
@@ -270,7 +270,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxAfter, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		total := new(int64)
@@ -294,7 +294,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 				Count(total); err != nil {
 				log.Error(err)
 				JSON(c, CodeFailure.WithErr(err))
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 		}

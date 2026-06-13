@@ -8,7 +8,7 @@ import (
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/pkg/filetype"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -39,21 +39,21 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// check file size.
 		if file.Size > int64(MAX_IMPORT_SIZE) {
 			log.Error(CodeTooLargeFile)
 			JSON(c, CodeTooLargeFile)
-			otel.RecordError(span, errors.New(CodeTooLargeFile.Msg()))
+			gstotel.RecordError(span, errors.New(CodeTooLargeFile.Msg()))
 			return
 		}
 		fd, err := file.Open()
 		if err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		defer fd.Close()
@@ -62,7 +62,7 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if _, err = io.Copy(buf, fd); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// filetype must be png or jpg.
@@ -78,7 +78,7 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 
@@ -90,7 +90,7 @@ func ImportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if err := handler(types.NewDatabaseContext(c)).Update(ml...); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// // record operation log to database.

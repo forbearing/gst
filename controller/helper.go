@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/database"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
@@ -156,13 +156,13 @@ func startControllerSpan[M types.Model](c *gin.Context, phase consts.Phase) (con
 
 	// Create child span for controller operation
 	spanName := fmt.Sprintf("Controller.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(c.Request.Context(), spanName)
+	spanCtx, span := gstotel.StartSpan(c.Request.Context(), spanName)
 
 	// Update request context with new span context
 	c.Request = c.Request.WithContext(spanCtx)
 
 	// Add controller-specific attributes
-	otel.AddSpanTags(span, map[string]any{
+	gstotel.AddSpanTags(span, map[string]any{
 		"component":            "controller",
 		"controller.operation": phase.MethodName(),
 		"controller.model":     modelName,
@@ -180,7 +180,7 @@ func traceServiceHook[M types.Model](parentCtx context.Context, phase consts.Pha
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -190,7 +190,7 @@ func traceServiceHook[M types.Model](parentCtx context.Context, phase consts.Pha
 	// file, line := getCallerInfo(2)
 
 	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
+	gstotel.AddSpanTags(span, map[string]any{
 		"component":         "service",
 		"service.operation": phase.MethodName(),
 		"service.model":     modelName,
@@ -205,12 +205,12 @@ func traceServiceHook[M types.Model](parentCtx context.Context, phase consts.Pha
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"hook.duration_ms": duration.Milliseconds(),
 			"hook.success":     err == nil,
 		})
 		if err != nil {
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 		}
 	}()
 
@@ -225,7 +225,7 @@ func traceServiceOperation[M types.Model, RSP types.Response](parentCtx context.
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -235,7 +235,7 @@ func traceServiceOperation[M types.Model, RSP types.Response](parentCtx context.
 	// file, line := getCallerInfo(2)
 
 	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
+	gstotel.AddSpanTags(span, map[string]any{
 		"component":         "service",
 		"service.operation": phase.MethodName(),
 		"service.model":     modelName,
@@ -251,12 +251,12 @@ func traceServiceOperation[M types.Model, RSP types.Response](parentCtx context.
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"hook.duration_ms": duration.Milliseconds(),
 			"hook.success":     err == nil,
 		})
 		if err != nil {
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 		}
 	}()
 
@@ -271,7 +271,7 @@ func traceServiceExport[M types.Model, T []byte](parentCtx context.Context, phas
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -281,7 +281,7 @@ func traceServiceExport[M types.Model, T []byte](parentCtx context.Context, phas
 	// file, line := getCallerInfo(2)
 
 	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
+	gstotel.AddSpanTags(span, map[string]any{
 		"component":         "service",
 		"service.operation": phase.MethodName(),
 		"service.model":     modelName,
@@ -297,12 +297,12 @@ func traceServiceExport[M types.Model, T []byte](parentCtx context.Context, phas
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"hook.duration_ms": duration.Milliseconds(),
 			"hook.success":     err == nil,
 		})
 		if err != nil {
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 		}
 	}()
 
@@ -317,7 +317,7 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -327,7 +327,7 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 	// file, line := getCallerInfo(2)
 
 	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
+	gstotel.AddSpanTags(span, map[string]any{
 		"component":         "service",
 		"service.operation": phase.MethodName(),
 		"service.model":     modelName,
@@ -343,12 +343,12 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"hook.duration_ms": duration.Milliseconds(),
 			"hook.success":     err == nil,
 		})
 		if err != nil {
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 		}
 	}()
 

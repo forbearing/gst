@@ -12,7 +12,7 @@ import (
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -71,7 +71,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 				if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 					log.Error(reqErr)
 					JSON(c, CodeInvalidParam.WithErr(reqErr))
-					otel.RecordError(span, err)
+					gstotel.RecordError(span, reqErr)
 					return
 				}
 			}
@@ -85,7 +85,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			}); err != nil {
 				log.Error(err)
 				handleServiceError(c, serviceCtx, err)
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 			// Check if response is already written (e.g., SSE streaming)
@@ -100,7 +100,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if reqErr = c.ShouldBindJSON(&req); reqErr != nil && !errors.Is(reqErr, io.EOF) {
 			log.Error(reqErr)
 			JSON(c, CodeInvalidParam.WithErr(reqErr))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, reqErr)
 			return
 		}
 		if errors.Is(reqErr, io.EOF) {
@@ -119,7 +119,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxBefore, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 2.Create resource in database.
@@ -131,7 +131,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			if err = handler(types.NewDatabaseContext(c)).WithExpand(req.Expands()).Create(req); err != nil {
 				log.Error(err)
 				JSON(c, CodeFailure.WithErr(err))
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 		}
@@ -143,7 +143,7 @@ func CreateFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxAfter, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 

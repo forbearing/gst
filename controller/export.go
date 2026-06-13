@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/forbearing/gst/logger"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -136,7 +136,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		sortBy, _ := c.GetQuery(consts.QUERY_SORTBY)
@@ -160,7 +160,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 			List(&data); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 3.Perform business logic processing after list resources.
@@ -169,7 +169,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		}); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		log.Info("export data length: ", len(data))
@@ -180,7 +180,7 @@ func ExportFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...
 		if err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// // 5.record operation log to database.

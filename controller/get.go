@@ -12,7 +12,7 @@ import (
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -81,7 +81,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			if err = c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
 				log.Error(err)
 				JSON(c, CodeInvalidParam.WithErr(err))
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 			var serviceCtx *types.ServiceContext
@@ -91,7 +91,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			}); err != nil {
 				log.Error(err)
 				handleServiceError(c, serviceCtx, err)
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				return
 			}
 			// Check if response is already written (e.g., SSE streaming)
@@ -108,7 +108,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		if len(param) == 0 {
 			log.Error(CodeNotFoundRouteParam)
 			JSON(c, CodeNotFoundRouteParam)
-			otel.RecordError(span, errors.New(CodeNotFoundRouteParam.Msg()))
+			gstotel.RecordError(span, errors.New(CodeNotFoundRouteParam.Msg()))
 			return
 		}
 		index, _ := c.GetQuery(consts.QUERY_INDEX)
@@ -189,7 +189,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxBefore, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 2.Get resource from database.
@@ -201,7 +201,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 			Get(m, param); err != nil {
 			log.Error(err)
 			JSON(c, CodeFailure.WithErr(err))
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// 3.Perform business logic processing after get resource.
@@ -212,7 +212,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		}); err != nil {
 			log.Error(err)
 			handleServiceError(c, serviceCtxAfter, err)
-			otel.RecordError(span, err)
+			gstotel.RecordError(span, err)
 			return
 		}
 		// It will returns a empty types.Model if found nothing from database,
@@ -220,7 +220,7 @@ func GetFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*ty
 		if len(m.GetID()) == 0 || m.GetCreatedAt().Equal(time.Time{}) {
 			log.Error(CodeNotFound)
 			JSON(c, CodeNotFound)
-			otel.RecordError(span, errors.New(CodeNotFound.Msg()))
+			gstotel.RecordError(span, errors.New(CodeNotFound.Msg()))
 			return
 		}
 
