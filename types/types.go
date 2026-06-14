@@ -126,12 +126,14 @@ type QueryConfig struct {
 	RawQueryArgs []any  // Arguments for the raw SQL query parameters
 }
 
-// SQLStatement contains a generated SQL statement and its bound variables.
-// SQL keeps placeholders intact; Vars contains the values that would be bound
-// by the database driver if the statement were executed.
+// SQLStatement contains a generated SQL statement in executable and rendered forms.
 type SQLStatement struct {
-	SQL  string
-	Vars []any
+	// Query is the parameterized SQL with placeholders.
+	Query string
+	// Args contains the values bound to Query.
+	Args []any
+	// RenderedSQL is dialect-rendered SQL for logging, inspection, and manual debugging.
+	RenderedSQL string
 }
 
 // ServiceError represents an error with a custom HTTP status code

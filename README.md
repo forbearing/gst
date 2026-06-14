@@ -387,7 +387,7 @@ GORM session 可能保留子句。
 
 - `WithDB` 接收自定义 `*gorm.DB`，并可能自动迁移模型，除非 `WithTable` 禁用了迁移。
 - `WithTable` 设置自定义表名，并禁用当前链路的自动迁移。
-- `WithBuildSQL` 只构建下一次终止操作的 SQL，并把 SQL 与绑定参数追加到传入的 `[]SQLStatement`。
+- `WithBuildSQL` 只构建下一次终止操作的 SQL，并把可执行的 `Query`、`Args` 与便于调试复制的 `RenderedSQL` 追加到传入的 `[]SQLStatement`。
 - `WithDryRun` 只构建 SQL，不执行数据库 I/O、框架 hook、缓存变更或对象字段填充。
 - 选项只作用于下一个终止操作，操作结束后会被重置。
 

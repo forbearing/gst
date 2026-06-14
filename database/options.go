@@ -321,8 +321,8 @@ func (db *database[M]) WithDryRun() types.Database[M] {
 }
 
 // WithBuildSQL enables SQL build mode for the next terminal operation.
-// It appends generated SQL and bound variables to statements without executing database I/O,
-// model hooks, cache mutation, or object field filling.
+// It appends generated Query, Args, and RenderedSQL values to statements without
+// executing database I/O, model hooks, cache mutation, or object field filling.
 //
 // WithBuildSQL is intended for CRUD, read, cleanup, and health-check SQL generation.
 // Transaction helpers are not supported because they manage real transaction control flow.
@@ -345,7 +345,8 @@ func (db *database[M]) WithBuildSQL(statements *[]types.SQLStatement) types.Data
 }
 
 // collectSQL appends generated SQL to the active WithBuildSQL collector.
-// It preserves placeholders in SQL and returns bound values separately in SQLStatement.Vars.
+// It preserves placeholders in Query, keeps bound values in Args, and stores
+// dialect-rendered SQL in RenderedSQL for inspection.
 func (db *database[M]) collectSQL(tx *gorm.DB) error {
 	if tx == nil {
 		return nil
@@ -357,12 +358,17 @@ func (db *database[M]) collectSQL(tx *gorm.DB) error {
 		return ErrNilSQLBuilder
 	}
 	if tx.Statement != nil {
-		if sql := tx.Statement.SQL.String(); len(sql) > 0 {
-			vars := append([]any(nil), tx.Statement.Vars...)
+		if query := tx.Statement.SQL.String(); len(query) > 0 {
+			args := append([]any(nil), tx.Statement.Vars...)
+			renderedSQL := query
+			if tx.Dialector != nil {
+				renderedSQL = tx.Dialector.Explain(query, args...)
+			}
 			db.mu.Lock()
 			*db.sqlStatements = append(*db.sqlStatements, types.SQLStatement{
-				SQL:  sql,
-				Vars: vars,
+				Query:       query,
+				Args:        args,
+				RenderedSQL: renderedSQL,
 			})
 			db.mu.Unlock()
 		}

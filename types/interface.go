@@ -170,7 +170,7 @@ type DatabaseOption[M Model] interface {
 	WithCache(...bool) Database[M]
 	// WithOmit excludes specified fields from INSERT, UPDATE, and SELECT operations.
 	WithOmit(...string) Database[M]
-	// WithBuildSQL builds SQL for the next terminal operation and appends statements to the provided collector.
+	// WithBuildSQL builds SQL for the next terminal operation and appends Query, Args, and RenderedSQL to the collector.
 	WithBuildSQL(statements *[]SQLStatement) Database[M]
 	// WithDryRun builds SQL without database I/O, framework hooks, cache mutation, or object field filling.
 	WithDryRun() Database[M]

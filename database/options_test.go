@@ -710,7 +710,8 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)
 		requireSQLContains(t, stmts[0], "SELECT", "FROM", "test_users", "WHERE", "ORDER BY")
-		require.Contains(t, stmts[0].Vars, u1.Name)
+		require.Contains(t, stmts[0].Args, u1.Name)
+		require.Contains(t, stmts[0].RenderedSQL, u1.Name)
 		require.Len(t, users, 0, "WithBuildSQL should not execute the query or fill the destination")
 	})
 
@@ -724,7 +725,8 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)
 		requireSQLContains(t, stmts[0], "INSERT", "INTO", "test_users")
-		require.Contains(t, stmts[0].Vars, user.Name)
+		require.Contains(t, stmts[0].Args, user.Name)
+		require.Contains(t, stmts[0].RenderedSQL, user.Name)
 		require.Empty(t, user.ID, "WithBuildSQL should not fill model IDs")
 		require.Nil(t, user.CreatedAt, "WithBuildSQL should not fill created_at")
 		require.Nil(t, user.UpdatedAt, "WithBuildSQL should not fill updated_at")
@@ -754,9 +756,11 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.Len(t, stmts, 2)
 		requireSQLContains(t, stmts[0], "INSERT", "INTO", "test_users")
 		requireSQLContains(t, stmts[1], "INSERT", "INTO", "test_users")
-		require.Contains(t, stmts[0].Vars, users[0].Name)
-		require.Contains(t, stmts[0].Vars, users[1].Name)
-		require.Contains(t, stmts[1].Vars, users[2].Name)
+		require.Contains(t, stmts[0].Args, users[0].Name)
+		require.Contains(t, stmts[0].Args, users[1].Name)
+		require.Contains(t, stmts[1].Args, users[2].Name)
+		require.Contains(t, stmts[0].RenderedSQL, users[0].Name)
+		require.Contains(t, stmts[1].RenderedSQL, users[2].Name)
 	})
 
 	t.Run("TransactionUnsupported", func(t *testing.T) {
@@ -790,7 +794,8 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)
 		requireSQLContains(t, stmts[0], "SELECT", "FROM", "test_users", "WHERE")
-		require.Equal(t, []any{requestedID}, stmts[0].Vars, "Get SQL should only use the requested id")
+		require.Equal(t, []any{requestedID}, stmts[0].Args, "Get SQL should only use the requested id")
+		require.Contains(t, stmts[0].RenderedSQL, requestedID)
 		require.Equal(t, existingID, dest.ID, "WithBuildSQL should leave destination values unchanged")
 	})
 
@@ -819,7 +824,8 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, stmts, 1)
 		requireSQLContains(t, stmts[0], "INSERT", "INTO", "test_users")
-		require.Contains(t, stmts[0].Vars, user.Name)
+		require.Contains(t, stmts[0].Args, user.Name)
+		require.Contains(t, stmts[0].RenderedSQL, user.Name)
 		require.Empty(t, user.ID, "WithBuildSQL should not fill model IDs")
 		require.Nil(t, user.CreatedAt, "WithBuildSQL should not fill created_at")
 		require.Nil(t, user.UpdatedAt, "WithBuildSQL should not fill updated_at")
@@ -861,7 +867,7 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 func requireSQLContains(t *testing.T, stmt types.SQLStatement, parts ...string) {
 	t.Helper()
 
-	sql := strings.ToUpper(stmt.SQL)
+	sql := strings.ToUpper(stmt.Query)
 	for _, part := range parts {
 		require.Contains(t, sql, strings.ToUpper(part))
 	}
