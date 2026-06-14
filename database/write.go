@@ -71,7 +71,8 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 		dryRunObjs := cloneDryRunModels(objs)
 		for i := 0; i < len(dryRunObjs); i += batchSize {
 			end := min(i+batchSize, len(dryRunObjs))
-			if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Save(dryRunObjs[i:end]).Error; err != nil {
+			tx := db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Save(dryRunObjs[i:end])
+			if err = db.collectSQL(tx); err != nil {
 				return err
 			}
 		}
@@ -243,12 +244,14 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 		for i := 0; i < len(dryRunObjs); i += batchSize {
 			end := min(i+batchSize, len(dryRunObjs))
 			if util.Deref(db.enablePurge) {
-				if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Unscoped().Delete(dryRunObjs[i:end]).Error; err != nil {
+				tx := db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Unscoped().Delete(dryRunObjs[i:end])
+				if err = db.collectSQL(tx); err != nil {
 					return err
 				}
 				continue
 			}
-			if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Delete(dryRunObjs[i:end]).Error; err != nil {
+			tx := db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Delete(dryRunObjs[i:end])
+			if err = db.collectSQL(tx); err != nil {
 				return err
 			}
 		}
@@ -416,7 +419,8 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 		dryRunObjs := cloneDryRunModels(objs)
 		for i := 0; i < len(dryRunObjs); i += batchSize {
 			end := min(i+batchSize, len(dryRunObjs))
-			if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Save(dryRunObjs[i:end]).Error; err != nil {
+			tx := db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Save(dryRunObjs[i:end])
+			if err = db.collectSQL(tx); err != nil {
 				zap.S().Error(err)
 				return err
 			}
@@ -551,7 +555,8 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 	}
 
 	if db.dryRun {
-		return db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error
+		tx := db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value)
+		return db.collectSQL(tx)
 	}
 
 	if db.enableCache {

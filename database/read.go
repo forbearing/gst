@@ -68,7 +68,8 @@ func (db *database[M]) List(dest *[]M) (err error) {
 			tableName = db.tableName
 		}
 		db.applyCursorPagination()
-		return db.dryRunReadSession().Table(tableName).Find(dest).Error
+		tx := db.dryRunReadSession().Table(tableName).Find(dest)
+		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -272,9 +273,11 @@ func (db *database[M]) Get(dest M, id string) (err error) {
 		dryRunDest := cloneDryRunModel(dest)
 		dryRunDest.ClearID()
 		if len(tableName) == 0 {
-			return db.dryRunReadSession().Where("id = ?", id).Find(dryRunDest).Error
+			tx := db.dryRunReadSession().Where("id = ?", id).Find(dryRunDest)
+			return db.collectSQL(tx)
 		}
-		return db.dryRunReadSession().Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dryRunDest).Error
+		tx := db.dryRunReadSession().Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dryRunDest)
+		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -457,7 +460,8 @@ func (db *database[M]) Count(count *int64) (err error) {
 		if len(db.tableName) > 0 {
 			tableName = db.tableName
 		}
-		return db.dryRunReadSession().Table(tableName).Model(*new(M)).Limit(-1).Count(count).Error
+		tx := db.dryRunReadSession().Table(tableName).Model(*new(M)).Limit(-1).Count(count)
+		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -580,7 +584,8 @@ func (db *database[M]) First(dest M) (err error) {
 		if len(db.tableName) > 0 {
 			tableName = db.tableName
 		}
-		return db.dryRunReadSession().Table(tableName).First(dest).Error
+		tx := db.dryRunReadSession().Table(tableName).First(dest)
+		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -753,7 +758,8 @@ func (db *database[M]) Last(dest M) (err error) {
 		if len(db.tableName) > 0 {
 			tableName = db.tableName
 		}
-		return db.dryRunReadSession().Table(tableName).Last(dest).Error
+		tx := db.dryRunReadSession().Table(tableName).Last(dest)
+		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -926,7 +932,8 @@ func (db *database[M]) Take(dest M) (err error) {
 		if len(db.tableName) > 0 {
 			tableName = db.tableName
 		}
-		return db.dryRunReadSession().Table(tableName).Take(dest).Error
+		tx := db.dryRunReadSession().Table(tableName).Take(dest)
+		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
 		goto QUERY

@@ -29,6 +29,8 @@ var (
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
 	ErrIDRequired          = errors.New("id is required")
+	ErrNilSQLBuilder       = errors.New("sql builder function cannot be nil")
+	ErrBuildSQLTransaction = errors.New("build sql does not support transaction operations")
 )
 
 // migratedModelMap records the model already migrated to
@@ -68,6 +70,10 @@ type database[M types.Model] struct {
 	batchSize   int    // batch size for bulk operations. affects Create, Update, Delete.
 	noHook      bool   // disable model hook.
 	dryRun      bool   // build SQL without database I/O, hooks, cache mutation, or object field filling.
+
+	// sql
+	buildingSQL   bool
+	sqlStatements *[]types.SQLStatement
 
 	// cursor pagination
 	cursorField  string // field used for cursor pagination, default is "id"
@@ -142,6 +148,11 @@ func (db *database[M]) reset() {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
+	// reset model metadata
+	var empty M
+	db.m = empty
+	db.typ = nil
+
 	db.enablePurge = nil
 	db.enableCache = false
 	db.tableName = ""
@@ -149,6 +160,10 @@ func (db *database[M]) reset() {
 	db.noHook = false
 	db.shouldAutoMigrate = nil
 	db.dryRun = false
+
+	// reset sql build state
+	db.buildingSQL = false
+	db.sqlStatements = nil
 
 	// reset cursor pagination fields
 	db.cursorField = ""

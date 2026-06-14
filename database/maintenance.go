@@ -46,7 +46,11 @@ func (db *database[M]) Cleanup() (err error) {
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	return db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0)).Error
+	tx := db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Limit(-1).Where("deleted_at IS NOT NULL").Model(*new(M)).Unscoped().Delete(make([]M, 0))
+	if db.dryRun {
+		return db.collectSQL(tx)
+	}
+	return tx.Error
 }
 
 // Health performs comprehensive database health checks including connectivity,
@@ -76,6 +80,10 @@ func (db *database[M]) Health() error {
 
 	if err := db.prepare(); err != nil {
 		return err
+	}
+	if db.buildingSQL {
+		tx := db.ins.Session(&gorm.Session{DryRun: true}).Exec("SELECT 1")
+		return db.collectSQL(tx)
 	}
 
 	begin := time.Now()

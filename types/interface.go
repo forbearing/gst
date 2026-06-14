@@ -120,6 +120,8 @@ type Database[M Model] interface {
 	Transaction(fn func(txDB Database[M]) error) error
 	// TransactionFunc executes fn in a transaction for multi-model work; each Database used inside fn must call WithTx(tx).
 	TransactionFunc(fn func(tx any) error) error
+	// BuildSQL builds SQL for the operations run inside fn without executing database I/O.
+	BuildSQL(fn func(db Database[M]) error) ([]SQLStatement, error)
 
 	DatabaseOption[M]
 }

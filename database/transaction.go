@@ -68,6 +68,9 @@ func (db *database[M]) Transaction(fn func(txDB types.Database[M]) error) error 
 	if err := db.prepare(); err != nil {
 		return err
 	}
+	if db.buildingSQL {
+		return ErrBuildSQLTransaction
+	}
 
 	begin := time.Now()
 
@@ -202,6 +205,9 @@ func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 
 	if err := db.prepare(); err != nil {
 		return err
+	}
+	if db.buildingSQL {
+		return ErrBuildSQLTransaction
 	}
 
 	begin := time.Now()
