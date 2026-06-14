@@ -80,10 +80,10 @@ func TestMiddlewareWrapperStartsMiddlewareSpansFromRequestRoot(t *testing.T) {
 func setupTracingTest(t *testing.T) {
 	t.Helper()
 
-	setupTracingTestWithEndpoint(t, "127.0.0.1:1", 0)
+	setupTracingTestWithEndpoint(t, "http://127.0.0.1:1/v1/traces")
 }
 
-func setupTracingTestWithEndpoint(t *testing.T, endpoint string, samplerParam float64) {
+func setupTracingTestWithEndpoint(t *testing.T, endpoint string) {
 	t.Helper()
 
 	gin.SetMode(gin.TestMode)
@@ -92,13 +92,14 @@ func setupTracingTestWithEndpoint(t *testing.T, endpoint string, samplerParam fl
 	config.App = new(config.Config)
 	config.App.OTEL.Enable = true
 	config.App.OTEL.ServiceName = "gst-test"
-	config.App.OTEL.ExporterType = config.ExportTypeOtlpHTTP
-	config.App.OTEL.OTLPEndpoint = endpoint
-	config.App.OTEL.OTLPInsecure = true
-	config.App.OTEL.SamplerType = config.SamplerTypeConst
-	config.App.OTEL.SamplerParam = samplerParam
-	config.App.OTEL.BufferFlushInterval = 10 * time.Millisecond
-	config.App.OTEL.ReporterQueueSize = 100
+	config.App.OTEL.ExporterOTLPProtocol = config.OTLPProtocolHTTPProtobuf
+	config.App.OTEL.ExporterOTLPTracesEndpoint = endpoint
+	config.App.OTEL.ExporterOTLPCompression = config.OTLPCompressionNone
+	config.App.OTEL.TracesSampler = config.TracesSamplerParentBasedAlwaysOn
+	config.App.OTEL.BSPMaxQueueSize = 100
+	config.App.OTEL.BSPMaxExportBatchSize = 100
+	config.App.OTEL.BSPScheduleDelay = 10 * time.Millisecond
+	config.App.OTEL.BSPExportTimeout = time.Second
 	t.Cleanup(func() {
 		config.App = originalConfig
 	})
