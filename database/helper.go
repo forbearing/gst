@@ -38,7 +38,7 @@ import (
 //   - Comprehensive span attributes including operation metadata
 //   - Error-aware logging and span status management
 //   - Batch operation support with size tracking
-//   - Cache and try-run mode status recording
+//   - Cache and dry-run mode status recording
 //   - Smart duration formatting for readability
 //   - Context propagation to GORM operations
 //
@@ -150,7 +150,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 
 // structFieldToMap extracts the field tags from a struct and writes them into a map.
 // This map can then be used to build SQL query conditions.
-// FIXME: if the field type is boolean or ineger, disable the fuzzy matching.
+// FIXME: if the field type is boolean or integer, disable the fuzzy matching.
 func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.Value, q map[string]string) {
 	if q == nil {
 		q = make(map[string]string)

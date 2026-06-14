@@ -122,7 +122,7 @@ func (db *database[M]) Transaction(fn func(txDB types.Database[M]) error) error 
 // Transaction behavior:
 // - If the function returns nil: transaction is automatically committed
 // - If the function returns an error: transaction is automatically rolled back
-// - All database operations within the function are executed in the same transaction
+// - Operations that call WithTx(tx) are executed in the same transaction
 //
 // Relationship with other transaction methods:
 // - Use Transaction: For single-model transactions (recommended, safer - auto WithTx)
@@ -163,42 +163,16 @@ func (db *database[M]) Transaction(fn func(txDB types.Database[M]) error) error 
 //	    return orderDB.Update(&order)
 //	})
 //
-// TransactionFunc executes a function within a database transaction.
-// The tx parameter is the underlying GORM transaction instance (*gorm.DB).
-// Use WithTx(tx) to create database instances that operate within the transaction.
-//
-// Behavior:
-//   - If the function returns nil: transaction is automatically committed
-//   - If the function returns an error: transaction is automatically rolled back
-//   - Custom rollback function (set via WithRollback) is executed only when transaction fails
-//   - All database operations must use WithTx(tx) to be part of the transaction
-//   - Operations without WithTx(tx) will execute outside the transaction context
-//
-// Important: Always use WithTx(tx) for database operations within the transaction function.
-// Operations without WithTx(tx) will not be part of the transaction and will not be rolled back.
-//
-// Example with automatic transaction management:
-//
-//	err := db.TransactionFunc(func(tx any) error {
-//	    userDB := database.Database[*model.User](nil)
-//	    if err := userDB.WithTx(tx).Create(&user); err != nil {
-//	        return err // automatic rollback
-//	    }
-//	    return nil // automatic commit
-//	})
-//
-// Example with custom rollback callback:
+// Example - With custom rollback:
 //
 //	err := db.WithRollback(func() {
-//	    // Custom rollback logic (e.g., cleanup external resources, send notifications)
-//	    // This function is called automatically when transaction fails
-//	    // Handle any errors internally (e.g., log them)
+//	    // Custom rollback logic
 //	}).TransactionFunc(func(tx any) error {
 //	    userDB := database.Database[*model.User](nil)
 //	    if err := userDB.WithTx(tx).Create(&user); err != nil {
-//	        return err // automatic rollback, rollback function will be called
+//	        return err // Automatic rollback, rollback function will be called
 //	    }
-//	    return nil // automatic commit, rollback function will NOT be called
+//	    return nil // Automatic commit, rollback function will NOT be called
 //	})
 func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 	defer db.reset()

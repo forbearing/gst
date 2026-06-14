@@ -94,7 +94,7 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 						continue
 					}
 
-					// create the table records that must be pre-exists before database curds.
+					// Create records that must exist before database CRUD operations.
 					// NOTE: we should always creates records after table migration finished.
 					//
 					// We should running this goroutine in a separate goroutine to avoid blocking the main goroutine.
@@ -134,12 +134,12 @@ func InitDatabase(db *gorm.DB, dbmap map[string]*gorm.DB) (err error) {
 	return nil
 }
 
-// Transaction start a transaction as a block, return error will rollback, otherwise to commit.
-// Transaction executes an arbitrary number of commands in fc within a transaction.
+// Transaction starts a transaction block. Returning an error rolls it back; returning nil commits it.
+// Transaction executes an arbitrary number of commands in fn within a transaction.
 // On success the changes are committed; if an error occurs they are rolled back.
 func Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error { return db.Transaction(fn) }
 
-// Exec executes raw sql without return rows
+// Exec executes raw SQL without returning rows.
 func Exec(db *gorm.DB, sql string, values any) error { return db.Exec(sql, values).Error }
 
 // Wait blocks until all pending database initialization operations are completed.

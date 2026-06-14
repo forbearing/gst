@@ -552,7 +552,7 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 	return db
 }
 
-// WithSelect specifies fields to select when querying, creating, or updating records.
+// WithSelect specifies fields to select when querying or updating records.
 // The method automatically includes defaultsColumns (id, created_by, updated_by, created_at, updated_at, deleted_at)
 // in addition to the specified columns to ensure essential fields are always available.
 // Empty or whitespace-only column names are filtered out, and duplicate defaultsColumns are avoided.
@@ -568,7 +568,7 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 // WARNING: Using WithSelect may result in the removal of certain fields from table records
 // if there are multiple hooks in the service and model layers. Use with caution.
 //
-// Affect Operations: Update, List, Get, First, Last, Take
+// Affected operations: Update, List, Get, First, Last, Take.
 func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
@@ -898,7 +898,7 @@ func (db *database[M]) WithExpand(expand []string, order ...string) types.Databa
 //
 // Behavior:
 //   - Multiple values for the same field are combined with OR logic (exclude if matches any value)
-//   - Multiple fields are combined with AND logic (exclude if matches all field conditions)
+//   - Multiple fields add separate NOT conditions, so a record is excluded if it matches any excluded field condition
 //   - Empty exclude map has no effect
 //
 // Example:

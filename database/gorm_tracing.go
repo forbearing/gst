@@ -11,15 +11,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// GormTracingPlugin is a GORM plugin that adds distributed tracing to database operations
+// GormTracingPlugin is a GORM plugin that adds distributed tracing to database operations.
 type GormTracingPlugin struct{}
 
-// Name returns the plugin name
+// Name returns the plugin name.
 func (p *GormTracingPlugin) Name() string {
 	return "gorm:tracing"
 }
 
-// Initialize initializes the plugin
+// Initialize initializes the plugin.
 func (p *GormTracingPlugin) Initialize(db *gorm.DB) error {
 	// Register callbacks for different operations
 	if err := p.registerCallbacks(db); err != nil {
@@ -219,7 +219,7 @@ func (p *GormTracingPlugin) finishSpan(db *gorm.DB) {
 	}
 }
 
-// InstallGormTracingPlugin installs the GORM tracing plugin to the given database instance
+// InstallGormTracingPlugin installs the GORM tracing plugin to the given database instance.
 func InstallGormTracingPlugin(db *gorm.DB) error {
 	plugin := &GormTracingPlugin{}
 	return db.Use(plugin)

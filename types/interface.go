@@ -130,11 +130,11 @@ type Database[M Model] interface {
 // Options apply to the next terminal operation and are reset afterward. Start a
 // new chain with database.Database[M](ctx) for each independent operation.
 type DatabaseOption[M Model] interface {
-	// WithDB uses a custom *gorm.DB and may auto-migrate the model unless WithTable disables it.
+	// WithDB uses a custom *gorm.DB; callers must migrate custom schemas explicitly.
 	WithDB(any) Database[M]
 	// WithTx binds operations to a *gorm.DB transaction, primarily inside TransactionFunc.
 	WithTx(tx any) Database[M]
-	// WithTable sets a custom table name and disables automatic migration for that chain.
+	// WithTable sets a custom table name; the table must already exist.
 	WithTable(name string) Database[M]
 	// WithDebug enables debug mode to show detailed SQL queries.
 	WithDebug() Database[M]
@@ -144,7 +144,7 @@ type DatabaseOption[M Model] interface {
 	WithCursor(string, bool, ...string) Database[M]
 	// WithTimeRange applies a time range filter to the query.
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
-	// WithSelect specifies fields for SELECT and write column selection where supported.
+	// WithSelect specifies fields for SELECT and Update column selection where supported.
 	WithSelect(columns ...string) Database[M]
 	// WithIndex specifies database index hints for query optimization (MySQL only).
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]

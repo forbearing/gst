@@ -226,7 +226,8 @@ QUERY:
 //   - dest: Pointer to model instance where the result will be stored
 //   - id: Primary key value of the record to retrieve
 //
-// Returns ErrIDRequired if id is empty, or database errors if record not found.
+// Returns ErrIDRequired if id is empty. A missing record leaves dest empty and does not return
+// gorm.ErrRecordNotFound because Get uses GORM Find.
 //
 // Features:
 //   - Automatic result caching when enabled
@@ -237,8 +238,8 @@ QUERY:
 // Example:
 //
 //	var user User
-//	Get(&user, "user123").  // Get user by ID
-//	WithExpand("Orders").Get(&user, "user123")  // Get user with orders
+//	Get(&user, "user123")  // Get user by ID
+//	WithExpand([]string{"Orders"}).Get(&user, "user123")  // Get user with orders
 func (db *database[M]) Get(dest M, id string) (err error) {
 	defer db.reset()
 
@@ -372,12 +373,8 @@ QUERY:
 	if len(db.tableName) > 0 {
 		tableName = db.tableName
 	}
-	// NOTE: In GORM v2, if the primary key field (e.g. "ID") is already set
-	// on the struct `dest`, calling db.Find(dest) will automatically build
-	// a query with a "WHERE primary_key = ?" clause.
-	// This behavior does NOT exist in older versions of GORM,
-	// where db.Find(dest) without Where(...) would scan the whole table.
-	// To be safe across versions, db.First(dest, id) is explicit.
+	// Use an explicit WHERE clause instead of relying on primary key fields
+	// already present on dest.
 	//
 	// dest.SetID(id)
 	// if err = db.db.Table(tableName).Find(dest).Error; err != nil {
@@ -426,8 +423,8 @@ QUERY:
 // Features:
 //   - Automatic result caching when enabled
 //   - Cache-first lookup for improved performance
-//   - Respects query modifiers such as WHERE, ORDER, and LIMIT.
-//   - Uses LIMIT(-1) to ensure accurate count with existing LIMIT clauses
+//   - Respects query modifiers such as WHERE and JOIN
+//   - Uses LIMIT(-1) to clear existing LIMIT clauses and count all matching rows
 //
 // Example:
 //
@@ -536,7 +533,6 @@ QUERY:
 //
 // Parameters:
 //   - dest: Pointer to model instance where the result will be stored
-//   - _cache: Optional cache parameter for advanced caching control
 //
 // Returns database errors if no record is found or query fails.
 //
@@ -707,7 +703,6 @@ QUERY:
 //
 // Parameters:
 //   - dest: Pointer to model instance where the result will be stored
-//   - _cache: Optional cache parameter for advanced caching control
 //
 // Returns database errors if no record is found or query fails.
 //
@@ -879,7 +874,6 @@ QUERY:
 //
 // Parameters:
 //   - dest: Pointer to model instance where the result will be stored
-//   - _cache: Optional cache parameter for advanced caching control
 //
 // Returns database errors if no record is found or query fails.
 //
@@ -896,7 +890,7 @@ QUERY:
 //
 //	var user User
 //	Take(&user)  // Get any user record
-//	WithQuery("status = ?", "active").Take(&user)  // Get any active user
+//	WithQuery(&User{Status: "active"}).Take(&user)  // Get any active user
 func (db *database[M]) Take(dest M) (err error) {
 	defer db.reset()
 

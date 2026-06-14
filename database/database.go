@@ -33,8 +33,8 @@ var (
 	ErrBuildSQLTransaction = errors.New("build sql does not support transaction operations")
 )
 
-// migratedModelMap records the model already migrated to
-// avoid duplicate migration and improve performance.
+// migratedModelMap records model/database pairs seen by operation builders.
+// The key tracking is retained for compatibility with existing setup paths.
 // Key is "dbIdentifier:modelType", value is "struct{}{}".
 // dbIdentifier is the unique identifier of the database instance (e.g., pointer address of the underlying database connection).
 var migratedModelMap sync.Map
@@ -55,7 +55,7 @@ var (
 	}
 )
 
-// database inplement types.Database[T types.Model] interface.
+// database implements types.Database[M].
 type database[M types.Model] struct {
 	ins *gorm.DB
 	m   M
@@ -185,7 +185,8 @@ func (db *database[M]) prepare() error {
 	db.typ = reflect.TypeOf(*new(M)).Elem()
 	db.m = reflect.New(db.typ).Interface().(M) //nolint:errcheck
 
-	// temporarily disable auto migrate
+	// AutoMigrate is intentionally disabled for operation chains. Framework
+	// initialization and custom callers are responsible for schema creation.
 	// if db.shouldAutoMigrate != nil && *db.shouldAutoMigrate {
 	// 	session := db.ins
 	// 	if tableName := db.m.GetTableName(); len(tableName) > 0 {
@@ -212,6 +213,7 @@ func (db *database[M]) prepare() error {
 // Database creates and returns a generic database manipulator implementing types.Database interface.
 // Provides comprehensive CRUD capabilities with advanced features like caching, hooks, and query building.
 // Automatically enables debug mode when log level is set to debug.
+// Required tables must exist before executing operations with the returned manipulator.
 //
 // Type Parameters:
 //   - M: Model type that implements types.Model interface
@@ -272,8 +274,7 @@ func Database[M types.Model](ctx *types.DatabaseContext) types.Database[M] {
 		ctx: dbctx,
 	}
 
-	// Set up auto migration for default database if not already migrated
-	// Use database identifier + model type as key to support multiple database instances
+	// Track database identifier + model type for compatibility with existing setup bookkeeping.
 	dbIdentifier := getDBIdentifier(DB)
 	modelType := reflect.TypeFor[M]().String()
 	migrationKey := fmt.Sprintf("%s:%s", dbIdentifier, modelType)
@@ -286,6 +287,7 @@ func Database[M types.Model](ctx *types.DatabaseContext) types.Database[M] {
 	return db
 }
 
+// Inited reports whether the package-level default database has been initialized.
 func Inited() bool {
 	return DB != nil
 }

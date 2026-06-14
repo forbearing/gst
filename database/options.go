@@ -15,14 +15,15 @@ import (
 
 // WithDB sets the underlying GORM database instance for this database manipulator.
 // This allows switching between different database connections or configurations.
+// The custom database must already contain the tables required by the operation.
 //
 // Parameters:
 //   - x: The GORM database instance (*gorm.DB). If nil or invalid, returns the original instance.
 //
 // Behavior:
-//   - Enables auto migration for the specified database (unless WithTable was called)
-//   - Supports multiple database instances with automatic migration tracking
+//   - Switches the operation chain to the provided database instance
 //   - Preserves context from the original database instance
+//   - Uses the provided database as-is
 //
 // Examples:
 //
@@ -39,7 +40,7 @@ import (
 //	database.Database[*model.User](nil).WithDB(db1).Create(&user1)
 //	database.Database[*model.User](nil).WithDB(db2).Create(&user2)
 //
-// NOTE: If WithTable is called, auto migration will be disabled.
+// NOTE: WithDB expects the required tables to already exist in the target database.
 // NOTE: Invalid database type (not *gorm.DB) will log a warning and return the original instance.
 func (db *database[M]) WithDB(x any) types.Database[M] {
 	var empty *gorm.DB
@@ -68,8 +69,7 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 			ctx = db.ctx.Context()
 		}
 	}
-	// If "db.shouldAutoMigrate" is not nil, it means the database options `WithTable` was called.
-	// If called `WithTable`, "auto migration" must be disabled.
+	// Keep existing setup bookkeeping for compatibility with prior operation-chain state.
 	if db.shouldAutoMigrate == nil {
 		// Use database identifier + model type as key to support multiple database instances
 		dbIdentifier := getDBIdentifier(_db)
@@ -96,9 +96,9 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 //   - name: The custom table name to use. Overrides the model's GetTableName() result.
 //
 // Behavior:
-//   - Disables auto migration when called (requires manual migration)
 //   - Overrides the default table name for all subsequent operations
 //   - Often used in combination with WithDB to work with custom databases and tables
+//   - Uses the named table as-is
 //
 // Examples:
 //
@@ -107,7 +107,7 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 //
 //	// Combined with WithDB
 //	customDB := sqlite.New(config.Sqlite{...})
-//	require.NoError(t, customDB.AutoMigrate(&model.User{})) // Manual migration required
+//	// Assume the "users" table already exists in customDB.
 //	database.Database[*model.User](nil).WithDB(customDB).WithTable("users").Create(&user)
 //
 //	// Chainable with other methods
@@ -117,7 +117,6 @@ func (db *database[M]) WithDB(x any) types.Database[M] {
 //	    WithQuery(&model.User{Name: "John"}).
 //	    List(&users)
 //
-// NOTE: Calling WithTable disables auto migration. You must manually migrate the table.
 // NOTE: The table must exist in the database before performing operations.
 func (db *database[M]) WithTable(name string) types.Database[M] {
 	db.mu.Lock()
@@ -235,7 +234,7 @@ func (db *database[M]) WithTx(tx any) types.Database[M] {
 //	    Create(users...)
 //
 // NOTE: If size is 0 or not set, default batch sizes are used (1000 for Create/Update, 10000 for Delete).
-// NOTE: The batch size setting persists for the database instance and affects all subsequent operations.
+// NOTE: The batch size setting applies only to the current operation chain and is reset afterward.
 func (db *database[M]) WithBatchSize(size int) types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()
