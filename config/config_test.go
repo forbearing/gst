@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -130,6 +131,74 @@ func TestRegisterNonStructType(t *testing.T) {
 	assert.Equal(t, 0, intVal)
 }
 
+func TestInitReadsYAMLConfigFile(t *testing.T) {
+	clearConfigEnvForTest(t)
+
+	filename := filepath.Join(t.TempDir(), "config.yaml")
+	requireWriteConfigFile(t, filename, `
+server:
+  port: 8091
+  mode: test
+redis:
+  enable: true
+  namespace: yamlapp
+`)
+
+	config.SetConfigFile(filename)
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 8091, config.App.Server.Port)
+	assert.Equal(t, config.Mode("test"), config.App.Server.Mode)
+	assert.Equal(t, true, config.App.Redis.Enable)
+	assert.Equal(t, "yamlapp", config.App.Redis.Namespace)
+}
+
+func TestInitReadsJSONConfigFile(t *testing.T) {
+	clearConfigEnvForTest(t)
+
+	filename := filepath.Join(t.TempDir(), "config.json")
+	requireWriteConfigFile(t, filename, `{
+  "server": {
+    "port": 8092,
+    "mode": "local"
+  },
+  "redis": {
+    "enable": true,
+    "namespace": "jsonapp"
+  }
+}`)
+
+	config.SetConfigFile(filename)
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 8092, config.App.Server.Port)
+	assert.Equal(t, config.Mode("local"), config.App.Server.Mode)
+	assert.Equal(t, true, config.App.Redis.Enable)
+	assert.Equal(t, "jsonapp", config.App.Redis.Namespace)
+}
+
+func TestInitDiscoversYAMLConfigByDefault(t *testing.T) {
+	clearConfigEnvForTest(t)
+	t.Chdir(t.TempDir())
+	requireWriteConfigFile(t, "config.yaml", `
+server:
+  port: 8093
+  mode: pre
+`)
+
+	config.SetConfigFile("")
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 8093, config.App.Server.Port)
+	assert.Equal(t, config.Mode("pre"), config.App.Server.Mode)
+}
+
 type Wechat struct {
 	AppID     string `json:"app_id" mapstructure:"app_id" default:"myappid"`
 	AppSecret string `json:"app_secret" mapstructure:"app_secret" default:"myappsecret"`
@@ -146,4 +215,45 @@ type Nats struct {
 
 type TestConfig struct {
 	Value string `json:"value" mapstructure:"value" default:"default_value"`
+}
+
+func requireWriteConfigFile(t *testing.T, filename, content string) {
+	t.Helper()
+
+	if dir := filepath.Dir(filename); dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func clearConfigEnvForTest(t *testing.T) {
+	t.Helper()
+
+	keys := []string{
+		"SERVER_MODE",
+		"SERVER_PORT",
+		"REDIS_ENABLE",
+		"REDIS_NAMESPACE",
+	}
+	for _, key := range keys {
+		value, ok := os.LookupEnv(key)
+		if err := os.Unsetenv(key); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if ok {
+				if err := os.Setenv(key, value); err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err := os.Unsetenv(key); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 }

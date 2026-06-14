@@ -21,20 +21,18 @@ import (
 )
 
 const (
-	noneExpireToken  = `fake_token`
-	noneExpireUser   = "admin"
-	noneExpirePass   = "admin"
-	baseAuthUsername = "admin"
-	baseAuthPassword = "admin"
+	noneExpireToken   = `fake_token`
+	noneExpireUser    = "admin"
+	noneExpirePass    = "admin"
+	baseAuthUsername  = "admin"
+	baseAuthPassword  = "admin"
+	defaultConfigName = "config"
 )
 
 var (
 	App = new(Config)
 
-	configPaths = []string{}
-	configFile  = ""
-	configName  = "config"
-	configType  = "ini"
+	configFile = ""
 
 	registeredConfigs = make(map[string]any)
 	registeredTypes   = make(map[string]reflect.Type)
@@ -149,24 +147,14 @@ func Init() (err error) {
 	App = new(Config)
 	App.setDefault()
 
-	if len(configFile) > 0 {
-		cv.SetConfigFile(configFile)
-	} else {
-		cv.SetConfigName(configName)
-		cv.SetConfigType(configType)
-	}
 	cv.AddConfigPath(".")
-	cv.AddConfigPath("/etc/")
-	for _, path := range configPaths {
-		cv.AddConfigPath(path)
-	}
 
-	if err = cv.ReadInConfig(); err != nil {
+	if err = readConfigFile(); err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configFileNotFoundError) {
 			// Only create config file if not in test.
 			if flag.Lookup("test.v") == nil {
-				if err = os.WriteFile(filepath.Join(tempdir, fmt.Sprintf("%s.%s", configName, configType)), nil, 0o600); err != nil {
+				if err = os.WriteFile(filepath.Join(tempdir, fmt.Sprintf("%s.%s", defaultConfigName, defaultConfigTypes()[0])), nil, 0o600); err != nil {
 					return errors.Wrap(err, "failed to create config file")
 				}
 			}
@@ -184,6 +172,37 @@ func Init() (err error) {
 	inited = true
 
 	return nil
+}
+
+func readConfigFile() error {
+	if len(configFile) > 0 {
+		cv.SetConfigFile(configFile)
+		return cv.ReadInConfig()
+	}
+
+	for _, typ := range defaultConfigTypes() {
+		filename := fmt.Sprintf("%s.%s", defaultConfigName, typ)
+		info, err := os.Stat(filename)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return errors.Wrapf(err, "failed to inspect config file %s", filename)
+		}
+		if info.IsDir() {
+			continue
+		}
+		cv.SetConfigFile(filename)
+		return cv.ReadInConfig()
+	}
+
+	cv.SetConfigName(defaultConfigName)
+	cv.SetConfigType(defaultConfigTypes()[0])
+	return cv.ReadInConfig()
+}
+
+func defaultConfigTypes() []string {
+	return []string{"ini", "yaml", "yml", "json"}
 }
 
 func Clean() {
@@ -462,37 +481,12 @@ func Get[T any]() (t T) {
 	return t
 }
 
-// SetConfigFile set the config file path.
+// SetConfigFile sets an explicit config file path.
 // You should always call this function before `Init`.
 func SetConfigFile(file string) {
 	mu.Lock()
 	defer mu.Unlock()
 	configFile = file
-}
-
-// SetConfigName set the config file name, default to 'config'.
-// NOTE: any suffix will be ignored and the default file type is ini.
-// You should always call this function before `Init`.
-func SetConfigName(name string) {
-	mu.Lock()
-	defer mu.Unlock()
-	configName = name
-}
-
-// SetConfigType set the config file type, default to 'ini'.
-// You should always call this function before `Init`.
-func SetConfigType(typ string) {
-	mu.Lock()
-	defer mu.Unlock()
-	configType = typ
-}
-
-// AddPath add custom config path. default: ./config, /etc
-// You should always call this function before `Init`.
-func AddPath(paths ...string) {
-	mu.Lock()
-	defer mu.Unlock()
-	configPaths = append(configPaths, paths...)
 }
 
 // Save config instance to destination io.Writer

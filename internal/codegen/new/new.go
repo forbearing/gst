@@ -10,7 +10,6 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/fatih/color"
-	"github.com/forbearing/gst/config"
 )
 
 // ============================================================
@@ -118,7 +117,7 @@ func Run(projectName string) error {
 	logFileCreate(".gitignore")
 
 	// config.ini.example
-	if err := createTeplConfig(); err != nil {
+	if err := createTeplConfig(projectDir); err != nil {
 		return err
 	}
 	logFileCreate("config.ini.example")
@@ -179,33 +178,50 @@ func createFile(path string, content string) error {
 	return os.WriteFile(path, []byte(content), 0o600)
 }
 
-func createTeplConfig() error {
-	oldStdout := os.Stdout
-	defer func() { os.Stdout = oldStdout }()
+func createTeplConfig(appName string) error {
+	content := fmt.Sprintf(`[app]
+name = %s
+description = A Go application built with gst framework
 
-	null, err := os.Open(os.DevNull)
-	if err != nil {
-		return err
-	}
-	os.Stdout = null
+[server]
+mode = dev
+listen =
+port = 8080
 
-	if err = config.Init(); err != nil {
-		return err
-	}
-	defer config.Clean()
+[database]
+type = sqlite
 
-	// Create config file
-	configFile, err := os.Create("config.ini")
-	if err != nil {
-		return err
-	}
-	defer configFile.Close()
+[sqlite]
+path = ./data.db
+database = main
+is_memory = true
+enable = true
 
-	if err := config.Save(configFile); err != nil {
-		return err
-	}
-	if err := os.Rename("config.ini", "config.ini.example"); err != nil {
-		return err
-	}
-	return nil
+[mysql]
+host = 127.0.0.1
+port = 3306
+database =
+username = root
+password =
+charset = utf8mb4
+enable = true
+
+[postgres]
+host = 127.0.0.1
+port = 5432
+database =
+username = postgres
+password =
+sslmode = disable
+timezone = Asia/Shanghai
+enable = true
+
+[redis]
+enable = false
+addr = 127.0.0.1:6379
+db = 0
+password =
+namespace = %s
+`, appName, appName)
+	return os.WriteFile("config.ini.example", []byte(content), 0o600)
 }
