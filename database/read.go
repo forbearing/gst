@@ -17,6 +17,11 @@ import (
 	glogger "gorm.io/gorm/logger"
 )
 
+// dryRunReadSession builds read SQL through GORM without executing database I/O.
+func (db *database[M]) dryRunReadSession() *gorm.DB {
+	return db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)})
+}
+
 // List retrieves multiple records from the database based on applied conditions.
 // Returns all records if no conditions are specified, or filtered records with WithQuery.
 // Supports caching, pagination, sorting, and eager loading of associations.
@@ -56,6 +61,14 @@ func (db *database[M]) List(dest *[]M) (err error) {
 		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
 	} else if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
+	}
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		db.applyCursorPagination()
+		return db.dryRunReadSession().Table(tableName).Find(dest).Error
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -251,6 +264,16 @@ func (db *database[M]) Get(dest M, id string) (err error) {
 	} else if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		if len(tableName) == 0 {
+			return db.dryRunReadSession().Where("id = ?", id).Find(dest).Error
+		}
+		return db.dryRunReadSession().Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dest).Error
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -427,6 +450,13 @@ func (db *database[M]) Count(count *int64) (err error) {
 
 	begin := time.Now()
 	var key string
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		return db.dryRunReadSession().Table(tableName).Model(*new(M)).Limit(-1).Count(count).Error
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -542,6 +572,13 @@ func (db *database[M]) First(dest M) (err error) {
 		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
 	} else if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
+	}
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		return db.dryRunReadSession().Table(tableName).First(dest).Error
 	}
 	if !db.enableCache {
 		goto QUERY
@@ -709,6 +746,13 @@ func (db *database[M]) Last(dest M) (err error) {
 	} else if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		return db.dryRunReadSession().Table(tableName).Last(dest).Error
+	}
 	if !db.enableCache {
 		goto QUERY
 	}
@@ -874,6 +918,13 @@ func (db *database[M]) Take(dest M) (err error) {
 		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
 	} else if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
+	}
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		return db.dryRunReadSession().Table(tableName).Take(dest).Error
 	}
 	if !db.enableCache {
 		goto QUERY

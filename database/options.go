@@ -289,25 +289,27 @@ func (db *database[M]) WithRollback(rollbackFunc func()) types.Database[M] {
 	return db
 }
 
-// WithDryRun enables dry-run mode to preview SQL queries without executing them.
-// Useful for debugging, query optimization, and testing query generation.
-// The generated SQL will be logged but not executed against the database.
+// WithDryRun enables dry-run mode to build SQL without executing database I/O.
+// Useful for debugging, query optimization, testing query generation, and measuring
+// framework overhead without touching the backing database.
+// The generated SQL will be built by GORM but not executed against the database.
 //
 // Behavior:
-//   - Create/Update/Delete/UpdateByID: Previews SQL without modifying database
-//   - Query operations (List, Get, Count, First, Last, Take): Not affected (queries still execute normally)
-//   - Model hooks are still executed even in dry-run mode
+//   - Create/Update/Delete/UpdateByID: Builds SQL without modifying database rows
+//   - List/Get/Count/First/Last/Take: Builds SQL without reading database rows
+//   - Read operations leave destination values unchanged because no rows are loaded
+//   - Write hooks keep their existing dry-run behavior, but read operations do not
+//     run result-dependent hooks because no records are fetched
 //
 // Example:
 //
-//	WithDryRun().Create(&user)              // Preview INSERT SQL without creating record
-//	WithDryRun().Update(&user)              // Preview UPDATE SQL without updating record
-//	WithDryRun().Delete(&user)              // Preview DELETE SQL without deleting record
-//	WithDryRun().UpdateByID(id, "name", v)  // Preview UPDATE SQL without updating record
-//	WithDryRun().List(&users)               // List still returns results (dry-run doesn't affect queries)
+//	WithDryRun().Create(&user)              // Build INSERT SQL without creating record
+//	WithDryRun().Update(&user)              // Build UPDATE SQL without updating record
+//	WithDryRun().Delete(&user)              // Build DELETE SQL without deleting record
+//	WithDryRun().UpdateByID(id, "name", v)  // Build UPDATE SQL without updating record
+//	WithDryRun().List(&users)               // Build SELECT SQL without loading records
 //
-// WithDryRun only executes model hooks without performing actual database write operations.
-// Also logs the SQL statements that would have been executed.
+// WithDryRun is build-only: it does not execute generated SQL against the database.
 func (db *database[M]) WithDryRun() types.Database[M] {
 	db.mu.Lock()
 	defer db.mu.Unlock()

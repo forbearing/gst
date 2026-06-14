@@ -523,63 +523,63 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not affect query operations (List still returns results)
+		// WithDryRun should only build the SELECT statement without executing it.
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().List(&users))
-		require.Len(t, users, 3, "List should return results even in dry-run mode")
+		require.Len(t, users, 0, "List should not return results in dry-run mode")
 	})
 
 	t.Run("Get", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not affect query operations (Get still returns results)
+		// WithDryRun should only build the SELECT statement without executing it.
 		uu := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Get(uu, u1.ID))
 		require.NotNil(t, uu)
-		require.Equal(t, u1.ID, uu.ID, "Get should return results even in dry-run mode")
+		require.Empty(t, uu.ID, "Get should not return results in dry-run mode")
 	})
 
 	t.Run("Count", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not affect query operations (Count still returns results)
+		// WithDryRun should only build the SELECT statement without executing it.
 		count := new(int64)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Count(count))
-		require.Equal(t, int64(3), *count, "Count should return results even in dry-run mode")
+		require.Equal(t, int64(0), *count, "Count should not execute in dry-run mode")
 	})
 
 	t.Run("First", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not affect query operations (First still returns results)
+		// WithDryRun should only build the SELECT statement without executing it.
 		uu := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().First(uu))
 		require.NotNil(t, uu)
-		require.NotEmpty(t, uu.ID, "First should return results even in dry-run mode")
+		require.Empty(t, uu.ID, "First should not return results in dry-run mode")
 	})
 
 	t.Run("Last", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not affect query operations (Last still returns results)
+		// WithDryRun should only build the SELECT statement without executing it.
 		uu := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Last(uu))
 		require.NotNil(t, uu)
-		require.NotEmpty(t, uu.ID, "Last should return results even in dry-run mode")
+		require.Empty(t, uu.ID, "Last should not return results in dry-run mode")
 	})
 
 	t.Run("Take", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not affect query operations (Take still returns results)
+		// WithDryRun should only build the SELECT statement without executing it.
 		uu := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Take(uu))
 		require.NotNil(t, uu)
-		require.NotEmpty(t, uu.ID, "Take should return results even in dry-run mode")
+		require.Empty(t, uu.ID, "Take should not return results in dry-run mode")
 	})
 }
