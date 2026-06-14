@@ -335,7 +335,6 @@ type Database[M Model] interface {
 	Health() error
 	Transaction(fn func(txDB Database[M]) error) error
 	TransactionFunc(fn func(tx any) error) error
-	BuildSQL(fn func(db Database[M]) error) ([]SQLStatement, error)
 
 	DatabaseOption[M]
 }
@@ -362,6 +361,7 @@ type DatabaseOption[M Model] interface {
 	WithPurge(...bool) Database[M]
 	WithCache(...bool) Database[M]
 	WithOmit(...string) Database[M]
+	WithBuildSQL(statements *[]SQLStatement) Database[M]
 	WithDryRun() Database[M]
 	WithoutHook() Database[M]
 }
@@ -387,6 +387,7 @@ GORM session 可能保留子句。
 
 - `WithDB` 接收自定义 `*gorm.DB`，并可能自动迁移模型，除非 `WithTable` 禁用了迁移。
 - `WithTable` 设置自定义表名，并禁用当前链路的自动迁移。
+- `WithBuildSQL` 只构建下一次终止操作的 SQL，并把 SQL 与绑定参数追加到传入的 `[]SQLStatement`。
 - `WithDryRun` 只构建 SQL，不执行数据库 I/O、框架 hook、缓存变更或对象字段填充。
 - 选项只作用于下一个终止操作，操作结束后会被重置。
 

@@ -29,7 +29,7 @@ var (
 	ErrNotAddressableSlice = errors.New("slice is not addressable")
 	ErrNotSetSlice         = errors.New("slice cannot set")
 	ErrIDRequired          = errors.New("id is required")
-	ErrNilSQLBuilder       = errors.New("sql builder function cannot be nil")
+	ErrNilSQLBuilder       = errors.New("sql statement collector cannot be nil")
 	ErrBuildSQLTransaction = errors.New("build sql does not support transaction operations")
 )
 
@@ -72,7 +72,7 @@ type database[M types.Model] struct {
 	dryRun      bool   // build SQL without database I/O, hooks, cache mutation, or object field filling.
 
 	// sql
-	buildingSQL   bool
+	buildingSQL   bool // collect generated SQL statements for WithBuildSQL.
 	sqlStatements *[]types.SQLStatement
 
 	// cursor pagination

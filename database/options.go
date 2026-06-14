@@ -320,6 +320,56 @@ func (db *database[M]) WithDryRun() types.Database[M] {
 	return db
 }
 
+// WithBuildSQL enables SQL build mode for the next terminal operation.
+// It appends generated SQL and bound variables to statements without executing database I/O,
+// model hooks, cache mutation, or object field filling.
+//
+// WithBuildSQL is intended for CRUD, read, cleanup, and health-check SQL generation.
+// Transaction helpers are not supported because they manage real transaction control flow.
+//
+// Example:
+//
+//	var statements []types.SQLStatement
+//	err := database.Database[*User](nil).
+//	    WithBuildSQL(&statements).
+//	    WithQuery(&User{Name: "John"}).
+//	    List(&users)
+func (db *database[M]) WithBuildSQL(statements *[]types.SQLStatement) types.Database[M] {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	db.dryRun = true
+	db.buildingSQL = true
+	db.sqlStatements = statements
+	return db
+}
+
+// collectSQL appends generated SQL to the active WithBuildSQL collector.
+// It preserves placeholders in SQL and returns bound values separately in SQLStatement.Vars.
+func (db *database[M]) collectSQL(tx *gorm.DB) error {
+	if tx == nil {
+		return nil
+	}
+	if !db.buildingSQL {
+		return tx.Error
+	}
+	if db.sqlStatements == nil {
+		return ErrNilSQLBuilder
+	}
+	if tx.Statement != nil {
+		if sql := tx.Statement.SQL.String(); len(sql) > 0 {
+			vars := append([]any(nil), tx.Statement.Vars...)
+			db.mu.Lock()
+			*db.sqlStatements = append(*db.sqlStatements, types.SQLStatement{
+				SQL:  sql,
+				Vars: vars,
+			})
+			db.mu.Unlock()
+		}
+	}
+	return tx.Error
+}
+
 // WithoutHook disables model hooks (callbacks) for the current operation.
 // Bypasses BeforeCreate, AfterCreate, BeforeUpdate, AfterUpdate, etc. hooks.
 // Use when you need direct database operations without business logic interference.

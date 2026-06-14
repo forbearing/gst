@@ -7,6 +7,7 @@ import (
 	"github.com/forbearing/gst/module/iam"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
+	"github.com/kr/pretty"
 )
 
 type Lister struct {
@@ -18,6 +19,13 @@ func (p *Lister) List(ctx *types.ServiceContext, req *model.Ping) (rsp *model.Pi
 	n := new(int64)
 	_ = database.Database[*iam.User](ctx.DatabaseContext()).WithDryRun().List(&users)
 	_ = database.Database[*iam.User](ctx.DatabaseContext()).WithDryRun().Count(n)
+
+	sqls := make([]types.SQLStatement, 0)
+
+	_ = database.Database[*iam.User](ctx.DatabaseContext()).WithBuildSQL(&sqls).WithQuery(&iam.User{Username: "test"}).List(&users)
+	pretty.Println(sqls)
+	_ = database.Database[*iam.User](ctx.DatabaseContext()).WithBuildSQL(&sqls).Count(n)
+	pretty.Println(sqls)
 
 	return &model.PingRsp{
 		Msg: "pong",

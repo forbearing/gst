@@ -120,8 +120,6 @@ type Database[M Model] interface {
 	Transaction(fn func(txDB Database[M]) error) error
 	// TransactionFunc executes fn in a transaction for multi-model work; each Database used inside fn must call WithTx(tx).
 	TransactionFunc(fn func(tx any) error) error
-	// BuildSQL builds SQL for the operations run inside fn without executing database I/O.
-	BuildSQL(fn func(db Database[M]) error) ([]SQLStatement, error)
 
 	DatabaseOption[M]
 }
@@ -172,6 +170,8 @@ type DatabaseOption[M Model] interface {
 	WithCache(...bool) Database[M]
 	// WithOmit excludes specified fields from INSERT, UPDATE, and SELECT operations.
 	WithOmit(...string) Database[M]
+	// WithBuildSQL builds SQL for the next terminal operation and appends statements to the provided collector.
+	WithBuildSQL(statements *[]SQLStatement) Database[M]
 	// WithDryRun builds SQL without database I/O, framework hooks, cache mutation, or object field filling.
 	WithDryRun() Database[M]
 	// WithoutHook disables model hooks for the operation.

@@ -2,6 +2,7 @@ package database_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/database/sqlite"
 	"github.com/forbearing/gst/model"
+	"github.com/forbearing/gst/types"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
@@ -685,6 +687,184 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		require.NotNil(t, uu)
 		require.Empty(t, uu.ID, "Take should not return results in dry-run mode")
 	})
+}
+
+func TestDatabaseWithBuildSQL(t *testing.T) {
+	t.Run("NilCollector", func(t *testing.T) {
+		users := make([]*TestUser, 0)
+		err := database.Database[*TestUser](nil).WithBuildSQL(nil).List(&users)
+
+		require.ErrorIs(t, err, database.ErrNilSQLBuilder)
+	})
+
+	t.Run("List", func(t *testing.T) {
+		var stmts []types.SQLStatement
+		users := make([]*TestUser, 0)
+
+		err := database.Database[*TestUser](nil).
+			WithBuildSQL(&stmts).
+			WithQuery(&TestUser{Name: u1.Name}).
+			WithOrder("created_at DESC").
+			List(&users)
+
+		require.NoError(t, err)
+		require.Len(t, stmts, 1)
+		requireSQLContains(t, stmts[0], "SELECT", "FROM", "test_users", "WHERE", "ORDER BY")
+		require.Contains(t, stmts[0].Vars, u1.Name)
+		require.Len(t, users, 0, "WithBuildSQL should not execute the query or fill the destination")
+	})
+
+	t.Run("CreateDoesNotExecute", func(t *testing.T) {
+		defer cleanupTestData()
+
+		var stmts []types.SQLStatement
+		user := &TestUser{Name: "build-sql-create", Email: "build-sql-create@example.com"}
+		err := database.Database[*TestUser](nil).WithBuildSQL(&stmts).Create(user)
+
+		require.NoError(t, err)
+		require.Len(t, stmts, 1)
+		requireSQLContains(t, stmts[0], "INSERT", "INTO", "test_users")
+		require.Contains(t, stmts[0].Vars, user.Name)
+		require.Empty(t, user.ID, "WithBuildSQL should not fill model IDs")
+		require.Nil(t, user.CreatedAt, "WithBuildSQL should not fill created_at")
+		require.Nil(t, user.UpdatedAt, "WithBuildSQL should not fill updated_at")
+		require.Nil(t, user.Remark, "WithBuildSQL should not run model hooks")
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: user.Name}).
+			List(&users))
+		require.Len(t, users, 0, "WithBuildSQL should not create database rows")
+	})
+
+	t.Run("BatchCreate", func(t *testing.T) {
+		var stmts []types.SQLStatement
+		users := []*TestUser{
+			{Name: "build-sql-batch-1", Email: "build-sql-batch-1@example.com"},
+			{Name: "build-sql-batch-2", Email: "build-sql-batch-2@example.com"},
+			{Name: "build-sql-batch-3", Email: "build-sql-batch-3@example.com"},
+		}
+
+		err := database.Database[*TestUser](nil).
+			WithBuildSQL(&stmts).
+			WithBatchSize(2).
+			Create(users...)
+
+		require.NoError(t, err)
+		require.Len(t, stmts, 2)
+		requireSQLContains(t, stmts[0], "INSERT", "INTO", "test_users")
+		requireSQLContains(t, stmts[1], "INSERT", "INTO", "test_users")
+		require.Contains(t, stmts[0].Vars, users[0].Name)
+		require.Contains(t, stmts[0].Vars, users[1].Name)
+		require.Contains(t, stmts[1].Vars, users[2].Name)
+	})
+
+	t.Run("TransactionUnsupported", func(t *testing.T) {
+		var stmts []types.SQLStatement
+		err := database.Database[*TestUser](nil).WithBuildSQL(&stmts).Transaction(func(txDB types.Database[*TestUser]) error {
+			return nil
+		})
+
+		require.ErrorIs(t, err, database.ErrBuildSQLTransaction)
+		require.Len(t, stmts, 0)
+	})
+
+	t.Run("TransactionFuncUnsupported", func(t *testing.T) {
+		var stmts []types.SQLStatement
+		err := database.Database[*TestUser](nil).WithBuildSQL(&stmts).TransactionFunc(func(tx any) error {
+			return nil
+		})
+
+		require.ErrorIs(t, err, database.ErrBuildSQLTransaction)
+		require.Len(t, stmts, 0)
+	})
+
+	t.Run("GetIgnoresDestinationID", func(t *testing.T) {
+		existingID := u1.ID
+		requestedID := u2.ID
+		dest := &TestUser{Base: model.Base{ID: existingID}}
+		var stmts []types.SQLStatement
+
+		err := database.Database[*TestUser](nil).WithBuildSQL(&stmts).Get(dest, requestedID)
+
+		require.NoError(t, err)
+		require.Len(t, stmts, 1)
+		requireSQLContains(t, stmts[0], "SELECT", "FROM", "test_users", "WHERE")
+		require.Equal(t, []any{requestedID}, stmts[0].Vars, "Get SQL should only use the requested id")
+		require.Equal(t, existingID, dest.ID, "WithBuildSQL should leave destination values unchanged")
+	})
+
+	t.Run("WithCache", func(t *testing.T) {
+		defer cleanupTestData()
+
+		listCache := cache.Cache[[]*TestUser]()
+		modelCache := cache.Cache[*TestUser]()
+		listCache.Clear()
+		modelCache.Clear()
+		defer listCache.Clear()
+		defer modelCache.Clear()
+
+		cachedList := []*TestUser{{Name: "build-sql-cached-list"}}
+		cachedUser := &TestUser{Name: "build-sql-cached-user"}
+		require.NoError(t, listCache.Set("build-sql-list-cache", cachedList, time.Minute))
+		require.NoError(t, modelCache.Set(u1.ID, cachedUser, time.Minute))
+
+		var stmts []types.SQLStatement
+		user := &TestUser{Name: "build-sql-dry-run-cache", Email: "build-sql-dry-run-cache@example.com"}
+		err := database.Database[*TestUser](nil).
+			WithCache().
+			WithBuildSQL(&stmts).
+			Create(user)
+
+		require.NoError(t, err)
+		require.Len(t, stmts, 1)
+		requireSQLContains(t, stmts[0], "INSERT", "INTO", "test_users")
+		require.Contains(t, stmts[0].Vars, user.Name)
+		require.Empty(t, user.ID, "WithBuildSQL should not fill model IDs")
+		require.Nil(t, user.CreatedAt, "WithBuildSQL should not fill created_at")
+		require.Nil(t, user.UpdatedAt, "WithBuildSQL should not fill updated_at")
+		require.Nil(t, user.Remark, "WithBuildSQL should not run model hooks")
+
+		gotList, err := listCache.Get("build-sql-list-cache")
+		require.NoError(t, err, "WithBuildSQL should not clear list cache")
+		require.Equal(t, cachedList, gotList)
+
+		gotUser, err := modelCache.Get(u1.ID)
+		require.NoError(t, err, "WithBuildSQL should not delete model cache")
+		require.Equal(t, cachedUser, gotUser)
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: user.Name}).
+			List(&users))
+		require.Len(t, users, 0, "WithBuildSQL should not create database rows")
+	})
+
+	t.Run("ResetsAfterAction", func(t *testing.T) {
+		defer cleanupTestData()
+
+		var stmts []types.SQLStatement
+		user := &TestUser{Name: "build-sql-reset", Email: "build-sql-reset@example.com"}
+		require.NoError(t, database.Database[*TestUser](nil).WithBuildSQL(&stmts).Create(user))
+		require.Len(t, stmts, 1)
+
+		require.NoError(t, database.Database[*TestUser](nil).Create(user))
+
+		users := make([]*TestUser, 0)
+		require.NoError(t, database.Database[*TestUser](nil).
+			WithQuery(&TestUser{Name: user.Name}).
+			List(&users))
+		require.Len(t, users, 1, "normal actions after WithBuildSQL should execute database I/O")
+	})
+}
+
+func requireSQLContains(t *testing.T, stmt types.SQLStatement, parts ...string) {
+	t.Helper()
+
+	sql := strings.ToUpper(stmt.SQL)
+	for _, part := range parts {
+		require.Contains(t, sql, strings.ToUpper(part))
+	}
 }
 
 type dryRunSoftDeleteUser struct {
