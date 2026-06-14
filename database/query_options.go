@@ -10,7 +10,6 @@ import (
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
-	"go.uber.org/zap"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/hints"
@@ -593,34 +592,6 @@ func (db *database[M]) WithSelect(columns ...string) types.Database[M] {
 	return db
 }
 
-// WithSelectRaw allows specifying raw SQL SELECT clause with optional arguments.
-// Unlike WithSelect, this method does not automatically add defaultsColumns.
-// Use this when you need full control over the SELECT statement.
-//
-// Parameters:
-//   - selectRaw: Raw SQL SELECT clause or column expressions
-//   - args: Optional arguments for parameterized queries
-//
-// Example:
-//
-//	WithSelectRaw("COUNT(*) as total, AVG(price) as avg_price")
-//	WithSelectRaw("users.name, orders.amount")
-//
-// Note: For Update operations, WithSelectRaw may not work correctly because it does not
-// automatically include id field. Use WithSelect for Update operations instead.
-//
-// Affect Operations: Update, List, Get, First, Last, Take
-// WithSelectRaw
-func (db *database[M]) WithSelectRaw(selectRaw any, args ...any) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	// db.ins = db.ins.Select(query, args...)
-	// lazy load
-	db.selectRaw = selectRaw
-	db.selectRawArgs = args
-	return db
-}
-
 // WithLock adds row-level locking to the query for concurrent access control.
 // Uses SELECT ... FOR UPDATE to prevent other transactions from modifying selected rows.
 // Must be used within a transaction (Transaction or TransactionFunc) to be effective.
@@ -693,201 +664,6 @@ func (db *database[M]) WithLock(mode ...consts.LockMode) types.Database[M] {
 		Strength: strength,
 		Options:  options,
 	})
-	return db
-}
-
-// WithJoinRaw adds a raw SQL JOIN clause to the query.
-// Provides full control over JOIN operations including INNER, LEFT, RIGHT, and FULL OUTER joins.
-//
-// Parameters:
-//   - query: Raw SQL JOIN clause
-//   - args: Optional arguments for parameterized queries
-//
-// Example:
-//
-//	WithJoinRaw("LEFT JOIN orders ON users.id = orders.user_id")
-//	WithJoinRaw("INNER JOIN categories c ON products.category_id = c.id AND c.status = ?", "active")
-//
-// WithJoinRaw adds JOIN clause to query.
-//
-// Basic Join:
-//
-//	db.WithJoinRaw("JOIN users ON users.id = orders.user_id")
-//
-// Left Join with conditions:
-//
-//	db.WithJoinRaw("LEFT JOIN users ON users.id = orders.user_id AND users.active = ?", 1)
-//
-// Multiple Joins:
-//
-//	db.WithJoinRaw("LEFT JOIN users ON users.id = orders.user_id").
-//	    WithJoinRaw("LEFT JOIN products ON products.id = orders.product_id")
-//
-// Join with Select:
-//
-//	db.WithSelectRaw("orders.*, users.name").
-//	    WithJoinRaw("LEFT JOIN users ON users.id = orders.user_id")
-//
-// Complex Examples:
-//
-// 1. Query order with user info:
-//
-//	type Order struct {
-//	    ID     string `gorm:"primarykey"`
-//	    UserID string
-//	    Amount float64
-//	    User   User   `gorm:"foreignKey:UserID"`
-//	}
-//
-//	type User struct {
-//	    ID    string `gorm:"primarykey"`
-//	    Name  string
-//	    Email string
-//	}
-//
-//	var orders []Order
-//	err := Database[*Order]().
-//	    WithSelectRaw("orders.*, users.name as user_name").
-//	    WithJoinRaw("LEFT JOIN users ON users.id = orders.user_id").
-//	    List(&orders)
-//
-// 2. Multi-table join query:
-//
-//	var details []OrderDetail
-//	err := Database[*OrderDetail]().
-//	    WithSelectRaw("order_details.*, orders.amount, products.name as product_name").
-//	    WithJoinRaw("LEFT JOIN orders ON orders.id = order_details.order_id").
-//	    WithJoinRaw("LEFT JOIN products ON products.id = order_details.product_id").
-//	    List(&details)
-//
-// 3. Query orders with active users:
-//
-//	var orders []Order
-//	err := Database[*Order]().
-//	    WithSelectRaw("orders.*, users.name").
-//	    WithJoinRaw("LEFT JOIN users ON users.id = orders.user_id AND users.active = ?", 1).
-//	    List(&orders)
-//
-// 4. Complex query with multiple conditions:
-//
-//	var orders []Order
-//	err := Database[*Order]().
-//	    WithSelectRaw("orders.*, users.name, products.name as product_name").
-//	    WithJoinRaw("LEFT JOIN users ON users.id = orders.user_id").
-//	    WithJoinRaw("LEFT JOIN order_details ON order_details.order_id = orders.id").
-//	    WithJoinRaw("LEFT JOIN products ON products.id = order_details.product_id").
-//	    WithTimeRange("orders.created_at", startTime, endTime).
-//	    WithOrder("orders.created_at DESC").
-//	    WithScope(page, size).
-//	    List(&orders)
-func (db *database[M]) WithJoinRaw(query string, args ...any) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
-	query = strings.TrimSpace(query)
-	if len(query) == 0 {
-		return db
-	}
-
-	upperQuery := strings.ToUpper(query)
-	if !strings.Contains(upperQuery, "JOIN") || !strings.Contains(upperQuery, "ON") {
-		logger.Database.WithDatabaseContext(db.ctx, consts.Phase("WithJoinRaw")).Warnz(
-			"invalid join clause, must contain JOIN and ON",
-			zap.String("query", query),
-			zap.String("table", db.typ.Name()),
-		)
-		return db
-	}
-
-	db.ins = db.ins.Joins(query, args...)
-	return db
-}
-
-// WithGroup adds GROUP BY clause to the query for data aggregation.
-// Used with aggregate functions like COUNT, SUM, AVG, etc.
-//
-// Parameters:
-//   - name: Column name or expression to group by
-//
-// Example:
-//
-//	WithGroup("category_id")  // Group by category
-//	WithGroup("DATE(created_at)")  // Group by date
-//
-// WithGroup adds GROUP BY clause to SELECT statement.
-// For example:
-//
-//	// Basic group by
-//	db.WithGroup("user_id")
-//
-//	// Group by multiple columns
-//	db.WithGroup("user_id, order_status")
-//
-//	// Common usage with aggregate functions
-//	db.WithSelectRaw("user_id, COUNT(*) as order_count, SUM(amount) as total_amount").
-//	   WithGroup("user_id")
-//
-// Note: WithGroup is typically used with aggregate functions (COUNT, SUM, AVG, etc.)
-// and should be combined with WithSelectRaw to specify the grouped fields.
-func (db *database[M]) WithGroup(name string) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	name = strings.TrimSpace(name)
-	if len(name) > 0 {
-		db.ins = db.ins.Group(name)
-	}
-	return db
-}
-
-// WithHaving adds HAVING clause to the query for filtering grouped results.
-// Used in conjunction with GROUP BY to filter aggregated data.
-//
-// Parameters:
-//   - query: HAVING condition expression
-//   - args: Optional arguments for parameterized conditions
-//
-// Example:
-//
-//	WithGroup("category_id").WithHaving("COUNT(*) > ?", 5)
-//	WithHaving("SUM(amount) > 1000")
-//
-// WithHaving adds HAVING clause to filter grouped records.
-// HAVING clause is used to filter groups, similar to WHERE but operates on grouped records.
-// For example:
-//
-//	// Basic having clause
-//	db.WithHaving("COUNT(*) > ?", 5)
-//
-//	// With aggregate functions
-//	db.WithSelectRaw("user_id, COUNT(*) as order_count, SUM(amount) as total_amount").
-//	   WithGroup("user_id").
-//	   WithHaving("SUM(amount) > ?", 1000)
-//
-//	// Multiple conditions
-//	db.WithHaving("COUNT(*) > ? AND SUM(amount) > ?", 5, 1000)
-//
-// Note: WithHaving must be used with GROUP BY clause and aggregate functions.
-// WithHaving adds HAVING clause to filter grouped results.
-// Used with GROUP BY to apply conditions on aggregated data.
-// Similar to WHERE but operates on grouped results after aggregation.
-//
-// Parameters:
-//   - query: HAVING condition (string, map, or struct)
-//   - args: Optional arguments for parameterized queries
-//
-// Examples:
-//
-//	WithHaving("COUNT(*) > ?", 5)                    // Groups with more than 5 records
-//	WithHaving("AVG(price) > 100")                   // Groups with average price > 100
-//	WithHaving("SUM(amount) BETWEEN ? AND ?", 1000, 5000)  // Sum within range
-//	WithHaving(map[string]any{"COUNT(*)": 10})       // Exact count match
-//
-// Note: HAVING clause is typically used after GROUP BY operations.
-// Use WithGroup() before WithHaving() for proper SQL structure.
-func (db *database[M]) WithHaving(query any, args ...any) types.Database[M] {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-	db.ins = db.ins.Having(query, args...)
 	return db
 }
 
@@ -993,6 +769,30 @@ func (db *database[M]) WithLimit(limit int) types.Database[M] {
 		limit = defaultLimit
 	}
 	db.ins = db.ins.Limit(limit)
+	return db
+}
+
+// WithOffset adds OFFSET clause to skip records before returning query results.
+// Used together with WithLimit for offset-based pagination.
+//
+// Parameters:
+//   - offset: Number of records to skip. If offset <= 0, the offset clause is cleared.
+//
+// Returns the same database instance for method chaining.
+//
+// Example:
+//
+//	WithOffset(20).WithLimit(10)  // Skip 20 records and return at most 10 records
+//	WithOffset(0)                // Clears any previous offset
+//
+// Note: WithOffset only affects SELECT queries (List, Get, First, Last, etc.).
+func (db *database[M]) WithOffset(offset int) types.Database[M] {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if offset <= 0 {
+		offset = -1
+	}
+	db.ins = db.ins.Offset(offset)
 	return db
 }
 

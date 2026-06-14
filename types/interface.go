@@ -146,14 +146,10 @@ type DatabaseOption[M Model] interface {
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
 	// WithSelect specifies fields for SELECT and write column selection where supported.
 	WithSelect(columns ...string) Database[M]
-	// WithSelectRaw specifies a raw SQL SELECT clause with optional arguments.
-	WithSelectRaw(query any, args ...any) Database[M]
 	// WithIndex specifies database index hints for query optimization (MySQL only).
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
 	// WithRollback configures a callback that runs when Transaction or TransactionFunc rolls back.
 	WithRollback(rollbackFunc func()) Database[M]
-	// WithJoinRaw adds a raw JOIN clause to the query.
-	WithJoinRaw(query string, args ...any) Database[M]
 	// WithLock adds row-level locking to SELECT queries (must be used within a transaction).
 	WithLock(mode ...consts.LockMode) Database[M]
 	// WithBatchSize sets the batch size for Create, Update, and Delete.
@@ -162,6 +158,8 @@ type DatabaseOption[M Model] interface {
 	WithPagination(page, size int) Database[M]
 	// WithLimit restricts the number of returned records for read operations.
 	WithLimit(limit int) Database[M]
+	// WithOffset skips records before returning read operation results.
+	WithOffset(offset int) Database[M]
 	// WithExclude excludes records matching specified conditions.
 	WithExclude(map[string][]any) Database[M]
 	// WithOrder adds ORDER BY clause to sort query results.

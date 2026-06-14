@@ -411,9 +411,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 		if db.batchSize > 0 {
 			batchSize = db.batchSize
 		}
-		if db.selectRaw != nil {
-			db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-		} else if len(db.selectColumns) > 0 {
+		if len(db.selectColumns) > 0 {
 			db.ins = db.ins.Select(db.selectColumns)
 		}
 		dryRunObjs := cloneDryRunModels(objs)
@@ -474,9 +472,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 		batchSize = db.batchSize
 	}
 	// set selected columns.
-	if db.selectRaw != nil {
-		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-	} else if len(db.selectColumns) > 0 {
+	if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
 	for i := 0; i < len(objs); i += batchSize {

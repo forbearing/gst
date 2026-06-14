@@ -83,8 +83,6 @@ type database[M types.Model] struct {
 
 	// select
 	selectColumns []string
-	selectRaw     any
-	selectRawArgs []any
 
 	// rollback control
 	rollbackFunc func() // rollback function for manual transaction control
@@ -141,7 +139,7 @@ func (db *database[M]) regexpOperator() string {
 
 // reset clears this wrapper's option fields (WithQuery, WithSelect, limits, etc.) after each
 // CRUD method returns. It does not replace the underlying *gorm.DB session: GORM may still
-// retain WHERE/ORDER/JOIN clauses on that chain. Reusing the same Database handle for another
+// retain WHERE/ORDER clauses on that chain. Reusing the same Database handle for another
 // independent operation is incorrect; callers must call Database[M](ctx) again for each new
 // operation chain. See Database function documentation.
 func (db *database[M]) reset() {
@@ -173,8 +171,6 @@ func (db *database[M]) reset() {
 
 	// reset select
 	db.selectColumns = nil
-	db.selectRaw = nil
-	db.selectRawArgs = nil
 
 	// reset rollback function
 	db.rollbackFunc = nil

@@ -57,9 +57,7 @@ func (db *database[M]) List(dest *[]M) (err error) {
 	begin := time.Now()
 	var key string
 	// set selected columns.
-	if db.selectRaw != nil {
-		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-	} else if len(db.selectColumns) > 0 {
+	if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
 	if db.dryRun {
@@ -260,9 +258,7 @@ func (db *database[M]) Get(dest M, id string) (err error) {
 	begin := time.Now()
 	var key string
 	// set selected columns.
-	if db.selectRaw != nil {
-		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-	} else if len(db.selectColumns) > 0 {
+	if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
 	if db.dryRun {
@@ -430,7 +426,7 @@ QUERY:
 // Features:
 //   - Automatic result caching when enabled
 //   - Cache-first lookup for improved performance
-//   - Respects all query modifiers (WHERE, JOIN, GROUP BY, etc.)
+//   - Respects query modifiers such as WHERE, ORDER, and LIMIT.
 //   - Uses LIMIT(-1) to ensure accurate count with existing LIMIT clauses
 //
 // Example:
@@ -438,7 +434,6 @@ QUERY:
 //	var total int64
 //	WithQuery(&User{Status: "active"}).Count(&total)  // Count active records
 //	WithQuery(&User{Name: "john"}).Count(&total)      // Count records matching name
-//	WithJoinRaw("LEFT JOIN orders ON users.id = orders.user_id").Count(&total)  // Count with JOIN
 //
 // Note: The count parameter must be a non-nil pointer to int64.
 func (db *database[M]) Count(count *int64) (err error) {
@@ -574,9 +569,7 @@ func (db *database[M]) First(dest M) (err error) {
 	begin := time.Now()
 	var key string
 	// set selected columns.
-	if db.selectRaw != nil {
-		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-	} else if len(db.selectColumns) > 0 {
+	if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
 	if db.dryRun {
@@ -748,9 +741,7 @@ func (db *database[M]) Last(dest M) (err error) {
 	begin := time.Now()
 	var key string
 	// set selected columns.
-	if db.selectRaw != nil {
-		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-	} else if len(db.selectColumns) > 0 {
+	if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
 	if db.dryRun {
@@ -922,9 +913,7 @@ func (db *database[M]) Take(dest M) (err error) {
 	begin := time.Now()
 	var key string
 	// set selected columns.
-	if db.selectRaw != nil {
-		db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
-	} else if len(db.selectColumns) > 0 {
+	if len(db.selectColumns) > 0 {
 		db.ins = db.ins.Select(db.selectColumns)
 	}
 	if db.dryRun {

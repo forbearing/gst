@@ -335,6 +335,7 @@ type Database[M Model] interface {
 	Health() error
 	Transaction(fn func(txDB Database[M]) error) error
 	TransactionFunc(fn func(tx any) error) error
+	BuildSQL(fn func(db Database[M]) error) ([]SQLStatement, error)
 
 	DatabaseOption[M]
 }
@@ -348,14 +349,13 @@ type DatabaseOption[M Model] interface {
 	WithCursor(string, bool, ...string) Database[M]
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
 	WithSelect(columns ...string) Database[M]
-	WithSelectRaw(query any, args ...any) Database[M]
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
 	WithRollback(rollbackFunc func()) Database[M]
-	WithJoinRaw(query string, args ...any) Database[M]
 	WithLock(mode ...consts.LockMode) Database[M]
 	WithBatchSize(size int) Database[M]
 	WithPagination(page, size int) Database[M]
 	WithLimit(limit int) Database[M]
+	WithOffset(offset int) Database[M]
 	WithExclude(map[string][]any) Database[M]
 	WithOrder(order string) Database[M]
 	WithExpand(expand []string, order ...string) Database[M]
