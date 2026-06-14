@@ -10,8 +10,7 @@ go install github.com/forbearing/gst/cmd/gg@latest
 
 `gg` 是 gst 的项目脚手架和代码生成工具。它的核心职责不是替代业务代码，而是根
 据 `model` 中的 DSL 声明维护项目骨架、路由注册、service 注册和默认 service
-action 文件。日常使用时，应在基于 gst 创建的业务后端项目根目录执行 `gg` 命
-令，不要在 gst 框架源码根目录对业务项目执行生成命令。
+action 文件，面向基于 gst 创建的业务后端项目使用。
 
 ### 创建项目
 
@@ -27,7 +26,7 @@ gg new github.com/example/myapp
 - 创建 `configx`、`cronjob`、`middleware`、`model`、`service`、`module`、
   `router`、`dao`、`provider` 等基础目录和文件。
 - 生成应用入口 `main.go`。
-- 生成 `config.ini.example`。
+- 生成包含基础必要配置的 `config.ini.example`。
 - 执行 `go mod tidy`。
 - 初始化 git 仓库。
 
@@ -36,6 +35,23 @@ gg new github.com/example/myapp
 ```bash
 cd myapp
 cp config.ini.example config.ini
+```
+
+如需查看框架支持的完整默认配置，可以运行：
+
+```bash
+gg config defaults --format ini
+```
+
+也可以查看某个配置段，或在 INI、JSON、TOML、YAML 之间转换配置文件：
+
+```bash
+gg config list
+gg config defaults server --format yaml
+gg config defaults server --format toml
+gg config convert config.ini config.yaml
+gg config convert config.yaml config.json
+gg config convert config.json config.toml
 ```
 
 ### 声明模型和接口

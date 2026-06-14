@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/forbearing/gst/config"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -35,6 +36,19 @@ func TestConfigDefaultsYAMLCanSelectSection(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal([]byte(out), &data))
 	require.ElementsMatch(t, []string{"server"}, mapKeys(data))
 
+	server, ok := data["server"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "dev", fmt.Sprint(server["mode"]))
+}
+
+func TestConfigDefaultsTOMLUsesTOMLFormat(t *testing.T) {
+	out, err := executeConfigCommandForTest("defaults", "server", "--format", "toml")
+	require.NoError(t, err)
+	require.Contains(t, out, "[server]")
+	require.NotContains(t, out, "{")
+
+	var data map[string]any
+	require.NoError(t, toml.Unmarshal([]byte(out), &data))
 	server, ok := data["server"].(map[string]any)
 	require.True(t, ok)
 	require.Equal(t, "dev", fmt.Sprint(server["mode"]))
@@ -98,6 +112,7 @@ func TestConfigConvertOutputCanBeLoadedByConfigPackage(t *testing.T) {
 	input := filepath.Join(tmp, "config.ini")
 	yamlOutput := filepath.Join(tmp, "config.yaml")
 	jsonOutput := filepath.Join(tmp, "config.json")
+	tomlOutput := filepath.Join(tmp, "config.toml")
 	writeConfigTestFile(t, input, `[server]
 port = 8094
 mode = local
@@ -114,6 +129,35 @@ namespace = converted
 	_, err = executeConfigCommandForTest("convert", input, jsonOutput)
 	require.NoError(t, err)
 	requireConfigFileCanLoad(t, jsonOutput, 8094, config.Mode("local"), "converted")
+
+	_, err = executeConfigCommandForTest("convert", input, tomlOutput)
+	require.NoError(t, err)
+	requireConfigFileCanLoad(t, tomlOutput, 8094, config.Mode("local"), "converted")
+}
+
+func TestConfigConvertTOMLToJSON(t *testing.T) {
+	tmp := t.TempDir()
+	input := filepath.Join(tmp, "config.toml")
+	writeConfigTestFile(t, input, `[server]
+port = 8097
+mode = "stg"
+
+[redis]
+enable = true
+namespace = "tomlconverted"
+`)
+
+	out, err := executeConfigCommandForTest("convert", input, "--to", "json")
+	require.NoError(t, err)
+
+	var data map[string]any
+	require.NoError(t, json.Unmarshal([]byte(out), &data))
+	server, ok := data["server"].(map[string]any)
+	require.True(t, ok)
+	redis, ok := data["redis"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "8097", fmt.Sprint(server["port"]))
+	require.Equal(t, "tomlconverted", fmt.Sprint(redis["namespace"]))
 }
 
 func TestConfigConvertRefusesOverwriteWithoutForce(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
@@ -24,6 +25,7 @@ type configFileFormat string
 const (
 	configFormatINI  configFileFormat = "ini"
 	configFormatJSON configFileFormat = "json"
+	configFormatTOML configFileFormat = "toml"
 	configFormatYAML configFileFormat = "yaml"
 )
 
@@ -49,7 +51,7 @@ func newConfigCmd() *cobra.Command {
 		Long: `Manage gst configuration files.
 
 Use this command to inspect framework default configuration and convert
-configuration files between INI, JSON, and YAML formats.`,
+configuration files between INI, JSON, TOML, and YAML formats.`,
 	}
 
 	cmd.AddCommand(
@@ -86,6 +88,7 @@ When section is provided, only that top-level configuration section is printed.
 The default output format is INI, matching the default gst config file format.`,
 		Example: `  gg config defaults
   gg config defaults server --format yaml
+  gg config defaults server --format toml
   gg config defaults redis --format json --output redis.json
   gg config defaults --format yaml --output config.yaml --force`,
 		Args: cobra.MaximumNArgs(1),
@@ -94,7 +97,7 @@ The default output format is INI, matching the default gst config file format.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.format, "format", "f", string(configFormatINI), "output format: ini, json, yaml")
+	cmd.Flags().StringVarP(&opts.format, "format", "f", string(configFormatINI), "output format: ini, json, toml, yaml")
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "write output to file instead of stdout")
 	cmd.Flags().BoolVar(&opts.force, "force", false, "overwrite output file if it exists")
 	return cmd
@@ -105,13 +108,14 @@ func newConfigConvertCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "convert <input> [output]",
 		Short: "Convert configuration files between formats",
-		Long: `Convert configuration files between INI, JSON, and YAML formats.
+		Long: `Convert configuration files between INI, JSON, TOML, and YAML formats.
 
 Input and output formats are inferred from file extensions unless --from or --to
 is provided. If no output file is provided, --to is required and converted
 content is written to stdout.`,
 		Example: `  gg config convert config.ini config.yaml
   gg config convert config.yaml config.json
+  gg config convert config.json config.toml
   gg config convert config.json config.ini --force
   gg config convert config.ini --to yaml`,
 		Args: cobra.RangeArgs(1, 2),
@@ -120,8 +124,8 @@ content is written to stdout.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&opts.from, "from", "", "input format override: ini, json, yaml")
-	cmd.Flags().StringVar(&opts.to, "to", "", "output format override: ini, json, yaml")
+	cmd.Flags().StringVar(&opts.from, "from", "", "input format override: ini, json, toml, yaml")
+	cmd.Flags().StringVar(&opts.to, "to", "", "output format override: ini, json, toml, yaml")
 	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "write output to file instead of stdout")
 	cmd.Flags().BoolVar(&opts.force, "force", false, "overwrite output file if it exists")
 	return cmd
@@ -324,6 +328,12 @@ func decodeConfigData(content []byte, format configFileFormat) (map[string]any, 
 			return nil, err
 		}
 		return data, nil
+	case configFormatTOML:
+		var data map[string]any
+		if err := toml.Unmarshal(content, &data); err != nil {
+			return nil, err
+		}
+		return data, nil
 	case configFormatYAML:
 		var data map[string]any
 		if err := yaml.Unmarshal(content, &data); err != nil {
@@ -345,6 +355,12 @@ func encodeConfigData(data map[string]any, format configFileFormat) ([]byte, err
 			return nil, errors.Wrap(err, "failed to encode JSON")
 		}
 		return append(content, '\n'), nil
+	case configFormatTOML:
+		content, err := toml.Marshal(data)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to encode TOML")
+		}
+		return content, nil
 	case configFormatYAML:
 		content, err := yaml.Marshal(data)
 		if err != nil {
@@ -514,10 +530,12 @@ func normalizeConfigFormat(format string) (configFileFormat, error) {
 		return configFormatINI, nil
 	case "json":
 		return configFormatJSON, nil
+	case "toml":
+		return configFormatTOML, nil
 	case "yaml", "yml":
 		return configFormatYAML, nil
 	default:
-		return "", fmt.Errorf("unsupported config format %q; supported formats: ini, json, yaml", format)
+		return "", fmt.Errorf("unsupported config format %q; supported formats: ini, json, toml, yaml", format)
 	}
 }
 

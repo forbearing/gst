@@ -181,6 +181,31 @@ func TestInitReadsJSONConfigFile(t *testing.T) {
 	assert.Equal(t, "jsonapp", config.App.Redis.Namespace)
 }
 
+func TestInitReadsTOMLConfigFile(t *testing.T) {
+	clearConfigEnvForTest(t)
+
+	filename := filepath.Join(t.TempDir(), "config.toml")
+	requireWriteConfigFile(t, filename, `
+[server]
+port = 8095
+mode = "stg"
+
+[redis]
+enable = true
+namespace = "tomlapp"
+`)
+
+	config.SetConfigFile(filename)
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 8095, config.App.Server.Port)
+	assert.Equal(t, config.Mode("stg"), config.App.Server.Mode)
+	assert.Equal(t, true, config.App.Redis.Enable)
+	assert.Equal(t, "tomlapp", config.App.Redis.Namespace)
+}
+
 func TestInitDiscoversYAMLConfigByDefault(t *testing.T) {
 	clearConfigEnvForTest(t)
 	t.Chdir(t.TempDir())
@@ -197,6 +222,24 @@ server:
 
 	assert.Equal(t, 8093, config.App.Server.Port)
 	assert.Equal(t, config.Mode("pre"), config.App.Server.Mode)
+}
+
+func TestInitDiscoversTOMLConfigByDefault(t *testing.T) {
+	clearConfigEnvForTest(t)
+	t.Chdir(t.TempDir())
+	requireWriteConfigFile(t, "config.toml", `
+[server]
+port = 8096
+mode = "prod"
+`)
+
+	config.SetConfigFile("")
+	if err := config.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 8096, config.App.Server.Port)
+	assert.Equal(t, config.Mode("prod"), config.App.Server.Mode)
 }
 
 type Wechat struct {

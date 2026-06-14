@@ -202,7 +202,7 @@ func readConfigFile() error {
 }
 
 func defaultConfigTypes() []string {
-	return []string{"ini", "yaml", "yml", "json"}
+	return []string{"ini", "yaml", "yml", "json", "toml"}
 }
 
 func Clean() {
