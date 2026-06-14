@@ -23,10 +23,12 @@ import (
 //   - Uses unscoped delete to bypass soft delete protection
 //   - Applies to all records in the table (ignores query conditions)
 //   - Helps maintain database performance by removing obsolete data
+//   - WithDryRun builds cleanup SQL without permanently removing rows
 //
 // Example:
 //
 //	Cleanup()  // Remove all soft-deleted records
+//	WithDryRun().Cleanup()  // Build cleanup SQL without removing records
 //
 // Note: This operation affects the entire table and ignores any previously
 // set query conditions. Use with caution in production environments.

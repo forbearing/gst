@@ -73,31 +73,27 @@ type Logger interface {
 	ZapLogger
 }
 
-// Database provides comprehensive database operations for any model type.
-// Supports CRUD operations, flexible querying, transactions, and advanced features.
+// Database defines the model-scoped database operation contract.
+// It provides CRUD operations, query builders, transactions, cleanup, health checks,
+// and optional cache/dry-run behavior for a single Model type.
 //
 // Type Parameters:
 //   - M: Model type that implements Model interface
 //
-// Features:
-//   - CRUD operations with automatic timestamp management
-//   - Flexible querying with various finder methods
-//   - Transaction support for single and multi-model operations
-//   - Health monitoring and cleanup capabilities
-//   - Optional caching support for improved performance
-//
 // The interface embeds DatabaseOption[M] to provide chainable query building.
+// A chain is expected to end with one terminal operation, such as Create, List,
+// Get, Count, Cleanup, Health, Transaction, or TransactionFunc.
 //
-// Implementations share an underlying GORM session. You must call database.Database[M](ctx)
-// again for each separate operation chain. Keeping the returned value in a variable and running
-// another independent operation on it (e.g. List then Get/Update) is incorrect usage; see
-// database.Database.
+// Implementations share an underlying GORM session. Call database.Database[M](ctx)
+// again for each independent operation chain. Keeping the returned value in a
+// variable and running another independent operation on it (for example, List
+// then Get or Update) is incorrect usage; see database.Database.
 type Database[M Model] interface {
-	// Create inserts one or multiple records into the database.
+	// Create inserts one or more records, setting framework IDs and timestamps unless WithDryRun is enabled.
 	Create(objs ...M) error
-	// Delete removes one or multiple records from the database.
+	// Delete removes one or more records using WithPurge, the model Purge setting, or soft delete by default.
 	Delete(objs ...M) error
-	// Update modifies one or multiple records in the database.
+	// Update saves one or more full model values and updates timestamps unless WithDryRun is enabled.
 	Update(objs ...M) error
 	// UpdateByID updates a single field of a record by its ID.
 	UpdateByID(id string, key string, value any) error
@@ -105,60 +101,61 @@ type Database[M Model] interface {
 	List(dest *[]M) error
 	// Get retrieves a single record by its ID.
 	Get(dest M, id string) error
-	// First retrieves the first record ordered by primary key.
+	// First retrieves the first record matching the current query conditions.
 	First(dest M) error
-	// Last retrieves the last record ordered by primary key.
+	// Last retrieves the last record matching the current query conditions.
 	Last(dest M) error
 	// Take retrieves the first record in no specified order.
 	Take(dest M) error
 	// Count returns the total number of records matching the query conditions.
 	Count(*int64) error
-	// Cleanup permanently deletes all soft-deleted records.
+	// Cleanup permanently deletes all soft-deleted records; WithDryRun only builds the cleanup SQL.
 	Cleanup() error
-	// Health checks the database connectivity and basic operations.
+	// Health checks database connectivity and is not disabled by WithDryRun.
 	Health() error
-	// Transaction executes a function within a transaction (single-model, recommended).
+	// Transaction executes fn in a transaction for this model and passes a transaction-bound Database.
 	Transaction(fn func(txDB Database[M]) error) error
-	// TransactionFunc executes a function within a transaction (multi-model, requires WithTx).
+	// TransactionFunc executes fn in a transaction for multi-model work; each Database used inside fn must call WithTx(tx).
 	TransactionFunc(fn func(tx any) error) error
 
 	DatabaseOption[M]
 }
 
-// DatabaseOption provides chainable query building methods for database operations.
-// All methods return Database[M] to support method chaining.
+// DatabaseOption provides chainable options for a single Database operation chain.
+// Options apply to the next terminal operation and are reset afterward. Start a
+// new chain with database.Database[M](ctx) for each independent operation.
 type DatabaseOption[M Model] interface {
-	// WithDB sets a custom database instance for operations.
+	// WithDB uses a custom *gorm.DB and may auto-migrate the model unless WithTable disables it.
 	WithDB(any) Database[M]
-	// WithTx sets transaction context for operations (used with TransactionFunc).
+	// WithTx binds operations to a *gorm.DB transaction, primarily inside TransactionFunc.
 	WithTx(tx any) Database[M]
-	// WithTable sets a custom table name for operations.
+	// WithTable sets a custom table name and disables automatic migration for that chain.
 	WithTable(name string) Database[M]
 	// WithDebug enables debug mode to show detailed SQL queries.
 	WithDebug() Database[M]
-	// WithQuery sets query conditions based on model fields or raw SQL.
+	// WithQuery adds query conditions from model fields or raw SQL configuration.
 	WithQuery(query M, config ...QueryConfig) Database[M]
-	// WithCursor enables cursor-based pagination for efficient large dataset traversal.
+	// WithCursor enables cursor-based pagination for List operations.
 	WithCursor(string, bool, ...string) Database[M]
 	// WithTimeRange applies a time range filter to the query.
 	WithTimeRange(columnName string, startTime time.Time, endTime time.Time) Database[M]
-	// WithSelect specifies fields to select in queries.
+	// WithSelect specifies fields for SELECT and write column selection where supported.
 	WithSelect(columns ...string) Database[M]
-	// WithSelectRaw specifies raw SQL for field selection.
+	// WithSelectRaw specifies a raw SQL SELECT clause with optional arguments.
 	WithSelectRaw(query any, args ...any) Database[M]
 	// WithIndex specifies database index hints for query optimization (MySQL only).
 	WithIndex(indexName string, hint ...consts.IndexHintMode) Database[M]
-	// WithRollback configures a rollback function for manual transaction control.
+	// WithRollback configures a callback that runs when Transaction or TransactionFunc rolls back.
 	WithRollback(rollbackFunc func()) Database[M]
 	// WithJoinRaw adds a raw JOIN clause to the query.
 	WithJoinRaw(query string, args ...any) Database[M]
 	// WithLock adds row-level locking to SELECT queries (must be used within a transaction).
 	WithLock(mode ...consts.LockMode) Database[M]
-	// WithBatchSize sets the batch size for bulk operations.
+	// WithBatchSize sets the batch size for Create, Update, and Delete.
 	WithBatchSize(size int) Database[M]
 	// WithPagination applies pagination parameters (page, size) to the query.
 	WithPagination(page, size int) Database[M]
-	// WithLimit restricts the number of returned records.
+	// WithLimit restricts the number of returned records for read operations.
 	WithLimit(limit int) Database[M]
 	// WithExclude excludes records matching specified conditions.
 	WithExclude(map[string][]any) Database[M]
@@ -166,13 +163,13 @@ type DatabaseOption[M Model] interface {
 	WithOrder(order string) Database[M]
 	// WithExpand enables eager loading of specified associations.
 	WithExpand(expand []string, order ...string) Database[M]
-	// WithPurge controls whether to permanently delete records (hard delete).
+	// WithPurge controls whether Delete permanently removes records instead of soft deleting them.
 	WithPurge(...bool) Database[M]
-	// WithCache enables query result caching.
+	// WithCache enables cache reads/writes for supported read operations and cache invalidation for writes.
 	WithCache(...bool) Database[M]
-	// WithOmit excludes specified fields from operations.
+	// WithOmit excludes specified fields from INSERT, UPDATE, and SELECT operations.
 	WithOmit(...string) Database[M]
-	// WithDryRun enables dry-run mode to preview SQL without executing.
+	// WithDryRun builds SQL without database I/O, framework hooks, cache mutation, or object field filling.
 	WithDryRun() Database[M]
 	// WithoutHook disables model hooks for the operation.
 	WithoutHook() Database[M]

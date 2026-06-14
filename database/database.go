@@ -67,7 +67,7 @@ type database[M types.Model] struct {
 	tableName   string // support multiple custom table name, always used with the `WithDB` method.
 	batchSize   int    // batch size for bulk operations. affects Create, Update, Delete.
 	noHook      bool   // disable model hook.
-	dryRun      bool   // dry run mode, preview SQL without executing
+	dryRun      bool   // build SQL without database I/O, hooks, cache mutation, or object field filling.
 
 	// cursor pagination
 	cursorField  string // field used for cursor pagination, default is "id"

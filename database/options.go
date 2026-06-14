@@ -297,6 +297,8 @@ func (db *database[M]) WithRollback(rollbackFunc func()) types.Database[M] {
 // Behavior:
 //   - Create/Update/Delete/UpdateByID: Builds SQL without modifying database rows
 //   - List/Get/Count/First/Last/Take: Builds SQL without reading database rows
+//   - Cleanup: Builds cleanup DELETE SQL without permanently removing soft-deleted rows
+//   - Health: Not affected; it still executes connection checks
 //   - Read operations leave destination values unchanged because no rows are loaded
 //   - Model hooks are not executed because dry-run is limited to SQL construction
 //   - Cache entries are not read, cleared, deleted, or written
@@ -309,6 +311,7 @@ func (db *database[M]) WithRollback(rollbackFunc func()) types.Database[M] {
 //	WithDryRun().Delete(&user)              // Build DELETE SQL without deleting record
 //	WithDryRun().UpdateByID(id, "name", v)  // Build UPDATE SQL without updating record
 //	WithDryRun().List(&users)               // Build SELECT SQL without loading records
+//	WithDryRun().Cleanup()                  // Build cleanup DELETE SQL without removing rows
 //
 // WithDryRun is build-only: it does not execute generated SQL, model hooks, cache mutation, or object field filling.
 func (db *database[M]) WithDryRun() types.Database[M] {

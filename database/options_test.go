@@ -11,6 +11,7 @@ import (
 	"github.com/forbearing/gst/database/sqlite"
 	"github.com/forbearing/gst/model"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func TestDatabaseWithDB(t *testing.T) {
@@ -619,6 +620,27 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Get(uu, u1.ID))
 		require.NotNil(t, uu)
 		require.Empty(t, uu.ID, "Get should not return results in dry-run mode")
+	})
+
+	t.Run("GetIgnoresDestinationIDWhenBuildingSQL", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		const callbackName = "gst:test:dry_run_get_sql"
+		_ = database.DB.Callback().Query().Remove(callbackName)
+		var gotVars []any
+		require.NoError(t, database.DB.Callback().Query().After("gorm:query").Register(callbackName, func(tx *gorm.DB) {
+			gotVars = append([]any(nil), tx.Statement.Vars...)
+		}))
+		t.Cleanup(func() {
+			require.NoError(t, database.DB.Callback().Query().Remove(callbackName))
+		})
+
+		existingID := u1.ID
+		uu := &TestUser{Base: model.Base{ID: existingID}}
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Get(uu, u2.ID))
+		require.Equal(t, existingID, uu.ID, "Get should leave destination values unchanged in dry-run mode")
+		require.Equal(t, []any{u2.ID}, gotVars, "Get dry-run SQL should only use the requested id")
 	})
 
 	t.Run("Count", func(t *testing.T) {

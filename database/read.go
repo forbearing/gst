@@ -269,10 +269,12 @@ func (db *database[M]) Get(dest M, id string) (err error) {
 		if len(db.tableName) > 0 {
 			tableName = db.tableName
 		}
+		dryRunDest := cloneDryRunModel(dest)
+		dryRunDest.ClearID()
 		if len(tableName) == 0 {
-			return db.dryRunReadSession().Where("id = ?", id).Find(dest).Error
+			return db.dryRunReadSession().Where("id = ?", id).Find(dryRunDest).Error
 		}
-		return db.dryRunReadSession().Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dest).Error
+		return db.dryRunReadSession().Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dryRunDest).Error
 	}
 	if !db.enableCache {
 		goto QUERY

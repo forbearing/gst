@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/forbearing/gst/database"
+	"github.com/forbearing/gst/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,6 +61,25 @@ func TestDatabaseCleanup(t *testing.T) {
 	require.NoError(t, database.Database[*TestCategory](nil).Cleanup())
 }
 
+func TestDatabaseCleanupWithDryRun(t *testing.T) {
+	require.NoError(t, database.DB.AutoMigrate(&cleanupSoftDeleteUser{}))
+	t.Cleanup(func() {
+		require.NoError(t, database.DB.Migrator().DropTable(&cleanupSoftDeleteUser{}))
+	})
+
+	u1 := &cleanupSoftDeleteUser{Name: "cleanup-user-1", Base: model.Base{ID: "cleanup-user-1"}}
+	u2 := &cleanupSoftDeleteUser{Name: "cleanup-user-2", Base: model.Base{ID: "cleanup-user-2"}}
+	require.NoError(t, database.Database[*cleanupSoftDeleteUser](nil).Create(u1, u2))
+	require.NoError(t, database.Database[*cleanupSoftDeleteUser](nil).Delete(u1, u2))
+	require.Equal(t, int64(2), countSoftDeletedCleanupUsers(t), "setup should leave two soft-deleted users")
+
+	require.NoError(t, database.Database[*cleanupSoftDeleteUser](nil).WithDryRun().Cleanup())
+	require.Equal(t, int64(2), countSoftDeletedCleanupUsers(t), "dry-run Cleanup should not remove soft-deleted users")
+
+	require.NoError(t, database.Database[*cleanupSoftDeleteUser](nil).Cleanup())
+	require.Equal(t, int64(0), countSoftDeletedCleanupUsers(t), "Cleanup should permanently remove soft-deleted users")
+}
+
 func TestDatabaseHealth(t *testing.T) {
 	// Test basic health check - should pass when database is healthy
 	require.NoError(t, database.Database[*TestUser](nil).Health())
@@ -76,4 +96,18 @@ func TestDatabaseHealth(t *testing.T) {
 	// Test health check with different model types - should work for all models
 	require.NoError(t, database.Database[*TestProduct](nil).Health())
 	require.NoError(t, database.Database[*TestCategory](nil).Health())
+}
+
+type cleanupSoftDeleteUser struct {
+	Name string `json:"name"`
+
+	model.Base
+}
+
+func countSoftDeletedCleanupUsers(t *testing.T) int64 {
+	t.Helper()
+
+	var count int64
+	require.NoError(t, database.DB.Model(&cleanupSoftDeleteUser{}).Unscoped().Where("deleted_at IS NOT NULL").Count(&count).Error)
+	return count
 }
