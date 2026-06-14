@@ -36,23 +36,16 @@ func (Message) Design() {
 	Endpoint("messages")
 
 	Create(func() {
-		Enabled(true)
 		Service(true)
 	})
-	Patch(func() {
-		Enabled(true)
-	})
+	Patch(func() {})
 	List(func() {
-		Enabled(true)
 		Service(true)
 	})
-	Get(func() {
-		Enabled(true)
-	})
+	Get(func() {})
 
 	Route("messages", func() {
 		DeleteMany(func() {
-			Enabled(true)
 			Service(true)
 		})
 	})

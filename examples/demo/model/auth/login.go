@@ -18,7 +18,6 @@ type LoginRsp struct {
 func (Login) Design() {
 	Route("/auth/login", func() {
 		List(func() {
-			Enabled(true)
 			Filename("login")
 			Public(true)
 			Service(true)

@@ -47,29 +47,20 @@ func (File) Design() {
 
 	Route("/config/files", func() {
 		Create(func() {
-			Enabled(true)
 			Service(true)
 		})
 		Update(func() {
-			Enabled(true)
 			Service(true)
 		})
-		Patch(func() {
-			Enabled(true)
-		})
+		Patch(func() {})
 		List(func() {
-			Enabled(true)
 			Service(true)
 		})
-		Get(func() {
-			Enabled(true)
-		})
+		Get(func() {})
 	})
 
 	Route("/config/namespaces/:namespace/files", func() {
-		List(func() {
-			Enabled(true)
-		})
+		List(func() {})
 	})
 }
 

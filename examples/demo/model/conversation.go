@@ -32,24 +32,18 @@ func (Conversation) Design() {
 	Param("conv")
 
 	Create(func() {
-		Enabled(true)
 		Service(true)
 	})
 	Delete(func() {
-		Enabled(true)
 		Service(true)
 	})
 	Patch(func() {
-		Enabled(true)
 		Service(true)
 	})
 	List(func() {
-		Enabled(true)
 		Service(true)
 	})
-	Get(func() {
-		Enabled(true)
-	})
+	Get(func() {})
 }
 
 func (Conversation) Purge() bool { return true }

@@ -29,7 +29,6 @@ type SearchDedupRsp struct {
 func (Search) Design() {
 	Route("/search-sources/dedup", func() {
 		Create(func() {
-			Enabled(true)
 			Filename("dedup")
 			Service(true)
 			Payload[*SearchDedupReq]()
