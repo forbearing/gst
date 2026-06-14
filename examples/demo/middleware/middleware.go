@@ -1,9 +1,6 @@
 package middleware
 
 import (
-	"math/rand/v2"
-	"time"
-
 	"github.com/forbearing/gst/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -13,19 +10,13 @@ func init() {
 }
 
 func Middleware1(c *gin.Context) {
-	n := rand.IntN(1000)
-
-	time.Sleep(time.Duration(n) * time.Millisecond)
+	c.Set("name", "middleware1")
 }
 
 func Middleware2(c *gin.Context) {
-	n := rand.IntN(1000)
-
-	time.Sleep(time.Duration(n) * time.Millisecond)
+	c.Set("name", "middleware2")
 }
 
 func Middleware3(c *gin.Context) {
-	n := rand.IntN(1000)
-
-	time.Sleep(time.Duration(n) * time.Millisecond)
+	c.Set("name", "middleware3")
 }
