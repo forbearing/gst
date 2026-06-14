@@ -15,7 +15,7 @@ import (
 
 // Create inserts one or multiple records into the database.
 // Automatically sets ID (if empty), created_at, and updated_at timestamps.
-// Executes CreateBefore and CreateAfter model hooks unless disabled with WithoutHook.
+// Executes CreateBefore and CreateAfter model hooks unless disabled with WithoutHook or WithDryRun.
 // Supports batch processing for large datasets using configurable batch sizes.
 //
 // Parameters:
@@ -25,10 +25,11 @@ import (
 //   - Automatically generates ID if empty using SetID()
 //   - Sets created_at and updated_at timestamps to current time
 //   - Supports batch processing for performance
-//   - Clears related cache entries
+//   - Clears related cache entries unless WithDryRun is enabled
 //   - Returns nil if no valid objects provided (empty slice or all objects are empty)
 //
 // Returns error if validation fails, database constraints are violated, or hooks return errors.
+// WithDryRun builds SQL only and does not execute hooks, database I/O, cache mutation, or object field filling.
 //
 // Example:
 //
@@ -57,6 +58,25 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	}
 	done, ctx, span := db.trace("Create", len(objs))
 	defer done(err)
+
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		batchSize := defaultBatchSize
+		if db.batchSize > 0 {
+			batchSize = db.batchSize
+		}
+		dryRunObjs := cloneDryRunModels(objs)
+		for i := 0; i < len(dryRunObjs); i += batchSize {
+			end := min(i+batchSize, len(dryRunObjs))
+			if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Save(dryRunObjs[i:end]).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
@@ -112,7 +132,7 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
-		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
+		if err = db.ins.Session(&gorm.Session{}).Table(tableName).Save(objs[i:end]).Error; err != nil {
 			return err
 		}
 	}
@@ -166,7 +186,7 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 // Delete removes one or multiple records from the database.
 // By default performs soft delete (sets deleted_at timestamp).
 // Use WithPurge() for permanent deletion (hard delete).
-// Executes DeleteBefore and DeleteAfter model hooks unless disabled with WithoutHook.
+// Executes DeleteBefore and DeleteAfter model hooks unless disabled with WithoutHook or WithDryRun.
 //
 // Parameters:
 //   - objs: One or more model instances to delete. Empty objects are automatically filtered out.
@@ -176,8 +196,9 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 //   - Hard delete (with WithPurge): Permanently removes records from database
 //   - Soft-deleted records are automatically excluded from List, Get, First, Last, Count, and other query operations
 //   - Supports batch processing for performance
-//   - Clears related cache entries
+//   - Clears related cache entries unless WithDryRun is enabled
 //   - Returns nil if no valid objects provided (empty slice or all objects are empty)
+//   - WithDryRun builds SQL only and does not execute hooks, database I/O, cache mutation, or object field filling
 //
 // Example:
 //
@@ -208,6 +229,31 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 	}
 	done, ctx, span := db.trace("Delete", len(objs))
 	defer done(err)
+
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		batchSize := defaultDeleteBatchSize
+		if db.batchSize > 0 {
+			batchSize = db.batchSize
+		}
+		dryRunObjs := cloneDryRunModels(objs)
+		for i := 0; i < len(dryRunObjs); i += batchSize {
+			end := min(i+batchSize, len(dryRunObjs))
+			if util.Deref(db.enablePurge) {
+				if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Unscoped().Delete(dryRunObjs[i:end]).Error; err != nil {
+					return err
+				}
+				continue
+			}
+			if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Delete(dryRunObjs[i:end]).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
@@ -256,7 +302,7 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 		}
 		for i := 0; i < len(objs); i += batchSize {
 			end := min(i+batchSize, len(objs))
-			if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Unscoped().Delete(objs[i:end]).Error; err != nil {
+			if err = db.ins.Session(&gorm.Session{}).Table(tableName).Unscoped().Delete(objs[i:end]).Error; err != nil {
 				return err
 			}
 			if db.enableCache {
@@ -279,7 +325,7 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 		}
 		for i := 0; i < len(objs); i += batchSize {
 			end := min(i+batchSize, len(objs))
-			if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Delete(objs[i:end]).Error; err != nil {
+			if err = db.ins.Session(&gorm.Session{}).Table(tableName).Delete(objs[i:end]).Error; err != nil {
 				return err
 			}
 			if db.enableCache {
@@ -307,7 +353,7 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 
 // Update modifies one or multiple records in the database.
 // Automatically updates the updated_at timestamp for each record.
-// Executes UpdateBefore and UpdateAfter model hooks unless disabled with WithoutHook.
+// Executes UpdateBefore and UpdateAfter model hooks unless disabled with WithoutHook or WithDryRun.
 // Uses GORM's Save method which performs INSERT or UPDATE based on primary key existence.
 //
 // Parameters:
@@ -320,8 +366,9 @@ func (db *database[M]) Delete(_objs ...M) (err error) {
 //   - Preserves created_at timestamp (not modified during update)
 //   - Updates all fields of the model
 //   - Supports batch processing for performance
-//   - Clears related cache entries
+//   - Clears related cache entries unless WithDryRun is enabled
 //   - Returns nil if no valid objects provided (empty slice or all objects are empty)
+//   - WithDryRun builds SQL only and does not execute hooks, database I/O, cache mutation, or object field filling
 //
 // Example:
 //
@@ -351,6 +398,31 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	}
 	done, ctx, span := db.trace("Update", len(objs))
 	defer done(err)
+
+	if db.dryRun {
+		tableName := db.m.GetTableName()
+		if len(db.tableName) > 0 {
+			tableName = db.tableName
+		}
+		batchSize := defaultBatchSize
+		if db.batchSize > 0 {
+			batchSize = db.batchSize
+		}
+		if db.selectRaw != nil {
+			db.ins = db.ins.Select(db.selectRaw, db.selectRawArgs...)
+		} else if len(db.selectColumns) > 0 {
+			db.ins = db.ins.Select(db.selectColumns)
+		}
+		dryRunObjs := cloneDryRunModels(objs)
+		for i := 0; i < len(dryRunObjs); i += batchSize {
+			end := min(i+batchSize, len(dryRunObjs))
+			if err = db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Save(dryRunObjs[i:end]).Error; err != nil {
+				zap.S().Error(err)
+				return err
+			}
+		}
+		return nil
+	}
 
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
@@ -405,7 +477,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 	}
 	for i := 0; i < len(objs); i += batchSize {
 		end := min(i+batchSize, len(objs))
-		if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Save(objs[i:end]).Error; err != nil {
+		if err = db.ins.Session(&gorm.Session{}).Table(tableName).Save(objs[i:end]).Error; err != nil {
 			zap.S().Error(err)
 			return err
 		}
@@ -443,6 +515,7 @@ func (db *database[M]) Update(_objs ...M) (err error) {
 // Behavior:
 //   - Automatically updates the updated_at timestamp
 //   - Does not invoke UpdateBefore/UpdateAfter hooks for performance reasons
+//   - Does not mutate cache when WithDryRun is enabled
 //   - Returns ErrIDRequired if id is empty
 //   - Returns ErrEmptyFieldName if name is empty
 //   - Returns ErrNilValue if value is nil
@@ -471,6 +544,16 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 	done, ctx, _ := db.trace("UpdateById")
 	defer done(err)
 
+	// return db.db.Model(*new(M)).Where("id = ?", id).Update(name, value).Error
+	tableName := db.m.GetTableName()
+	if len(db.tableName) > 0 {
+		tableName = db.tableName
+	}
+
+	if db.dryRun {
+		return db.ins.Session(&gorm.Session{DryRun: true}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error
+	}
+
 	if db.enableCache {
 		defer cache.Cache[[]M]().WithContext(ctx).Clear()
 	}
@@ -487,16 +570,39 @@ func (db *database[M]) UpdateByID(id string, name string, value any) (err error)
 	// 	}()
 	// }
 
-	// return db.db.Model(*new(M)).Where("id = ?", id).Update(name, value).Error
-	tableName := db.m.GetTableName()
-	if len(db.tableName) > 0 {
-		tableName = db.tableName
-	}
-	if err = db.ins.Session(&gorm.Session{DryRun: db.dryRun}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error; err != nil {
+	if err = db.ins.Session(&gorm.Session{}).Table(tableName).Model(*new(M)).Where("id = ?", id).Update(name, value).Error; err != nil {
 		return err
 	}
 	if db.enableCache {
 		_ = cache.Cache[M]().WithContext(ctx).Delete(id)
 	}
 	return nil
+}
+
+// cloneDryRunModels returns shallow copies so GORM dry-run callbacks can build SQL without
+// mutating caller-owned model fields such as ID, timestamps, or soft-delete markers.
+func cloneDryRunModels[M types.Model](objs []M) []M {
+	cloned := make([]M, 0, len(objs))
+	for _, obj := range objs {
+		cloned = append(cloned, cloneDryRunModel(obj))
+	}
+	return cloned
+}
+
+func cloneDryRunModel[M types.Model](obj M) M {
+	value := reflect.ValueOf(obj)
+	if !value.IsValid() || value.Kind() != reflect.Pointer || value.IsNil() {
+		return obj
+	}
+	elem := value.Elem()
+	if !elem.IsValid() || elem.Kind() != reflect.Struct {
+		return obj
+	}
+	cloned := reflect.New(elem.Type())
+	cloned.Elem().Set(elem)
+	model, ok := cloned.Interface().(M)
+	if !ok {
+		return obj
+	}
+	return model
 }

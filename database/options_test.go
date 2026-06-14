@@ -3,10 +3,13 @@ package database_test
 import (
 	"os"
 	"testing"
+	"time"
 
+	"github.com/forbearing/gst/cache"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/database/sqlite"
+	"github.com/forbearing/gst/model"
 	"github.com/stretchr/testify/require"
 )
 
@@ -469,11 +472,21 @@ func TestDatabaseWithDryRun(t *testing.T) {
 	t.Run("Create", func(t *testing.T) {
 		defer cleanupTestData()
 
-		// WithDryRun should not actually create records
+		// WithDryRun should only build the INSERT statement without executing hooks or database I/O.
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Create(ul...))
+		require.Nil(t, u1.Remark, "Create should not run model hooks in dry-run mode")
+		require.Nil(t, u2.Remark, "Create should not run model hooks in dry-run mode")
+		require.Nil(t, u3.Remark, "Create should not run model hooks in dry-run mode")
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
 		require.Len(t, users, 0, "records should not be created in dry-run mode")
+
+		dryRunUser := &TestUser{Name: "dry-run-create", Email: "dry-run-create@example.com"}
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Create(dryRunUser))
+		require.Empty(t, dryRunUser.ID, "Create should not set ID in dry-run mode")
+		require.Nil(t, dryRunUser.CreatedAt, "Create should not set created_at in dry-run mode")
+		require.Nil(t, dryRunUser.UpdatedAt, "Create should not set updated_at in dry-run mode")
+		require.Nil(t, dryRunUser.Remark, "Create should not run model hooks in dry-run mode")
 	})
 
 	t.Run("Delete", func(t *testing.T) {
@@ -488,21 +501,89 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Delete(u1))
 		require.NoError(t, database.Database[*TestUser](nil).Count(count))
 		require.Equal(t, int64(3), *count, "records should not be deleted in dry-run mode")
+
+		softDeleteUser := &dryRunSoftDeleteUser{Name: "dry-run-soft-delete", Base: model.Base{ID: "dry-run-soft-delete"}}
+		require.NoError(t, database.Database[*dryRunSoftDeleteUser](nil).WithDryRun().Delete(softDeleteUser))
+		require.False(t, softDeleteUser.DeletedAt.Valid, "Delete should not set deleted_at in dry-run mode")
 	})
 
 	t.Run("Update", func(t *testing.T) {
 		defer cleanupTestData()
 		setupTestData(t)
 
-		// WithDryRun should not actually update records
+		// WithDryRun should only build the UPDATE statement without executing hooks or database I/O.
 		originalName := u1.Name
 		u1.Name = "updated_name"
+		u1.Remark = nil
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Update(u1))
+		require.Nil(t, u1.Remark, "Update should not run model hooks in dry-run mode")
 
 		// Verify record is not updated
 		uu := new(TestUser)
 		require.NoError(t, database.Database[*TestUser](nil).Get(uu, u1.ID))
 		require.Equal(t, originalName, uu.Name, "name should not be updated in dry-run mode")
+
+		dryRunUser := &TestUser{Name: "dry-run-update", Email: "dry-run-update@example.com"}
+		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Update(dryRunUser))
+		require.Empty(t, dryRunUser.ID, "Update should not set ID in dry-run mode")
+		require.Nil(t, dryRunUser.CreatedAt, "Update should not set created_at in dry-run mode")
+		require.Nil(t, dryRunUser.UpdatedAt, "Update should not set updated_at in dry-run mode")
+		require.Nil(t, dryRunUser.Remark, "Update should not run model hooks in dry-run mode")
+	})
+
+	t.Run("Cache", func(t *testing.T) {
+		defer cleanupTestData()
+		setupTestData(t)
+
+		assertDryRunKeepsCache := func(t *testing.T, fn func() error) {
+			t.Helper()
+
+			listCache := cache.Cache[[]*TestUser]()
+			modelCache := cache.Cache[*TestUser]()
+			listCache.Clear()
+			modelCache.Clear()
+			defer listCache.Clear()
+			defer modelCache.Clear()
+
+			cachedList := []*TestUser{{Name: "cached-list"}}
+			cachedUser := &TestUser{Name: "cached-user"}
+			require.NoError(t, listCache.Set("dry-run-list-cache", cachedList, time.Minute))
+			require.NoError(t, modelCache.Set(u1.ID, cachedUser, time.Minute))
+
+			require.NoError(t, fn())
+
+			gotList, err := listCache.Get("dry-run-list-cache")
+			require.NoError(t, err, "dry-run should not clear list cache")
+			require.Equal(t, cachedList, gotList, "dry-run should leave list cache unchanged")
+
+			gotUser, err := modelCache.Get(u1.ID)
+			require.NoError(t, err, "dry-run should not delete model cache")
+			require.Equal(t, cachedUser, gotUser, "dry-run should leave model cache unchanged")
+		}
+
+		t.Run("Create", func(t *testing.T) {
+			assertDryRunKeepsCache(t, func() error {
+				return database.Database[*TestUser](nil).WithCache().WithDryRun().Create(ul...)
+			})
+		})
+
+		t.Run("Delete", func(t *testing.T) {
+			assertDryRunKeepsCache(t, func() error {
+				return database.Database[*TestUser](nil).WithCache().WithDryRun().Delete(u1)
+			})
+		})
+
+		t.Run("Update", func(t *testing.T) {
+			assertDryRunKeepsCache(t, func() error {
+				return database.Database[*TestUser](nil).WithCache().WithDryRun().Update(u1)
+			})
+		})
+
+		t.Run("UpdateByID", func(t *testing.T) {
+			assertDryRunKeepsCache(t, func() error {
+				return database.Database[*TestUser](nil).WithCache().WithDryRun().UpdateByID(u1.ID, "name", "updated_name")
+			})
+		})
 	})
 
 	t.Run("UpdateByID", func(t *testing.T) {
@@ -582,4 +663,10 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		require.NotNil(t, uu)
 		require.Empty(t, uu.ID, "Take should not return results in dry-run mode")
 	})
+}
+
+type dryRunSoftDeleteUser struct {
+	Name string `json:"name"`
+
+	model.Base
 }
