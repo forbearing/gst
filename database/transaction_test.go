@@ -17,9 +17,12 @@ func TestDatabaseTransaction(t *testing.T) {
 	flag := 0
 	users := make([]*TestUser, 0)
 
+	err := database.Database[*TestUser](nil).Transaction(nil)
+	require.ErrorIs(t, err, database.ErrNilTransactionFunc)
+
 	// Test Transaction - transaction success
 	// Transaction automatically injects txDB, no need for WithTx
-	err := database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
+	err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
 		// No need to call WithTx - txDB already has transaction context
 		return txDB.Create(ul...)
 	})
@@ -136,8 +139,11 @@ func TestDatabaseTransactionFunc(t *testing.T) {
 	flag := 0
 	users := make([]*TestUser, 0)
 
+	err := database.Database[*TestUser](nil).TransactionFunc(nil)
+	require.ErrorIs(t, err, database.ErrNilTransactionFunc)
+
 	// Test TransactionFunc - transaction success
-	err := database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
+	err = database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
 		require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).Create(ul...))
 		return nil
 	})

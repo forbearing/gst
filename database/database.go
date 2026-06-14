@@ -30,6 +30,7 @@ var (
 	ErrNotSetSlice         = errors.New("slice cannot set")
 	ErrIDRequired          = errors.New("id is required")
 	ErrNilSQLBuilder       = errors.New("sql statement collector cannot be nil")
+	ErrNilTransactionFunc  = errors.New("transaction function cannot be nil")
 	ErrBuildSQLTransaction = errors.New("build sql does not support transaction operations")
 )
 

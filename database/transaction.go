@@ -62,9 +62,14 @@ import (
 //	})
 //
 // For multi-model transactions, use TransactionFunc instead.
+//
+// Returns ErrNilTransactionFunc if fn is nil.
 func (db *database[M]) Transaction(fn func(txDB types.Database[M]) error) error {
 	defer db.reset()
 
+	if fn == nil {
+		return ErrNilTransactionFunc
+	}
 	if err := db.prepare(); err != nil {
 		return err
 	}
@@ -174,9 +179,14 @@ func (db *database[M]) Transaction(fn func(txDB types.Database[M]) error) error 
 //	    }
 //	    return nil // Automatic commit, rollback function will NOT be called
 //	})
+//
+// Returns ErrNilTransactionFunc if fn is nil.
 func (db *database[M]) TransactionFunc(fn func(tx any) error) error {
 	defer db.reset()
 
+	if fn == nil {
+		return ErrNilTransactionFunc
+	}
 	if err := db.prepare(); err != nil {
 		return err
 	}

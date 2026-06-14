@@ -382,6 +382,7 @@ GORM session 可能保留子句。
 - `Health` 仍会执行真实连接检查，不会被 `WithDryRun` 禁用。
 - `Transaction` 是单模型事务辅助方法，会传入绑定事务的 `Database`。
 - `TransactionFunc` 用于多模型事务；回调中使用的每个 database 句柄都必须调用 `WithTx(tx)`。
+- `Transaction` 与 `TransactionFunc` 的回调不能为 nil，否则会返回 `ErrNilTransactionFunc`。
 
 重要选项语义：
 
