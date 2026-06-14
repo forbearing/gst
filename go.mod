@@ -68,6 +68,7 @@ require (
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/panjf2000/ants/v2 v2.12.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/pkg/sftp v1.13.10
 	github.com/pquerna/otp v1.5.0
 	github.com/prometheus-community/pro-bing v0.8.0
@@ -355,7 +356,6 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pdfcpu/pdfcpu v0.9.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/pganalyze/pg_query_go/v6 v6.2.2 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.27 // indirect
