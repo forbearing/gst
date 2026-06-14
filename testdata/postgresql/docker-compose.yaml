@@ -1,40 +1,42 @@
-# https://github.com/felipewom/docker-compose-postgres/blob/main/.env
-version: "3"
-
+# references: https://hub.docker.com/_/postgres, https://hub.docker.com/r/dpage/pgadmin4
 services:
-  database:
-    image: "postgres:latest"
+  postgres:
+    image: postgres:17-alpine
     ports:
-      - 15432:5432
-    env_file:
-      - .env
-    networks:
-      - postgres-network
+      - "15432:5432"
+    environment:
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+      POSTGRES_DB: test
+      TZ: Asia/Shanghai
     volumes:
-      # - ${PWD}/db-data/:/var/lib/postgresql/data/
-      # - ${PWD}/init.sql:/docker-entrypoint-initdb.d/init.sql
-      # - /tmp/postgres/db-data/:/var/lib/postgresql/data/
-      # - /tmp/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-      - /tmp/postgres/db-data/:/var/lib/postgresql/data/
-      - ${PWD}/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4:latest
     ports:
-      - 15433:80
-    env_file:
-      - .env
-    depends_on:
-      - database
-    networks:
-      - postgres-network
+      - "15433:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.admin
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
     volumes:
-      # - ${PWD}/pgadmin-data/:/var/lib/pgadmin/
-      - /tmp/postgres/pgadmin-data/:/var/lib/pgadmin/
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
-networks:
-  postgres-network:
-    driver: bridge
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
