@@ -14,14 +14,16 @@ import (
 // ErrEntryNotFound is returned when a cache entry is not found.
 var ErrEntryNotFound = errors.New("cache entry not found")
 
-// Initializer defines components that perform one-time application setup.
-// Typical implementations include config loaders, logger setup, and resource init.
+// Initializer defines a bootstrap component that performs one-time setup.
+// Implementations should return an error when required configuration, connections,
+// or runtime resources cannot be initialized.
 type Initializer interface {
 	Init() error
 }
 
-// StandardLogger provides leveled logging and formatted variants.
-// Fatal/Fatalf should exit after logging.
+// StandardLogger provides plain and printf-style leveled logging methods.
+// Fatal and Fatalf follow the underlying logger's fatal behavior and should
+// terminate the process after writing the log entry.
 type StandardLogger interface {
 	Debug(args ...any)
 	Info(args ...any)
@@ -36,8 +38,8 @@ type StandardLogger interface {
 	Fatalf(format string, args ...any)
 }
 
-// StructuredLogger logs with key-value pairs (msg plus fields).
-// Methods with suffix 'w' mean "with fields".
+// StructuredLogger provides sugared structured logging with alternating
+// key/value fields. Methods with suffix "w" mean "with fields".
 type StructuredLogger interface {
 	Debugw(msg string, keysAndValues ...any)
 	Infow(msg string, keysAndValues ...any)
@@ -46,8 +48,8 @@ type StructuredLogger interface {
 	Fatalw(msg string, keysAndValues ...any)
 }
 
-// ZapLogger logs with typed zap fields.
-// Methods with suffix 'z' use zap.Field values.
+// ZapLogger provides structured logging with typed zap.Field values.
+// Methods with suffix "z" are the low-allocation typed-field variants.
 type ZapLogger interface {
 	Debugz(msg string, fields ...zap.Field)
 	Infoz(msg string, fields ...zap.Field)
@@ -56,8 +58,9 @@ type ZapLogger interface {
 	Fatalz(msg string, fields ...zap.Field)
 }
 
-// Logger combines standard, structured, and zap logging with context helpers.
-// With* methods attach fields, objects/arrays, and request/service/db context.
+// Logger combines plain, sugared structured, and typed zap logging methods.
+// With attaches string key/value fields. WithObject, WithArray, and the context
+// helpers return derived loggers with additional structured fields.
 type Logger interface {
 	With(fields ...string) Logger
 
@@ -175,13 +178,14 @@ type DatabaseOption[M Model] interface {
 	WithoutHook() Database[M]
 }
 
-// Model defines the contract for all data models in the framework.
-// Provides database operations, audit trail, lifecycle hooks, and logging support.
+// Model defines the framework contract for database-backed and action models.
+// Typical database resources embed model.Base. Action-only models may use
+// model.Empty or model.Any when they do not represent persistent rows.
 //
 // Type Requirements:
 //   - Must be a pointer to struct (e.g., *User)
-//   - Must have an "ID" field as primary key
-//   - Should embed model.Base for common functionality
+//   - Database resources should expose an ID primary key through GetID/SetID/ClearID
+//   - Hooks should be idempotent enough to run as part of framework CRUD phases
 type Model interface {
 	GetTableName() string // GetTableName returns the table name.
 	GetID() string
@@ -195,10 +199,10 @@ type Model interface {
 	SetUpdatedBy(string)
 	SetCreatedAt(time.Time)
 	SetUpdatedAt(time.Time)
-	Expands() []string // Expands returns the foreign keys should preload.
+	Expands() []string // Expands returns association paths that should be preloaded by default.
 	Excludes() map[string][]any
 	Purge() bool                                  // Purge indicates whether to permanently delete records (hard delete). Default is false (soft delete).
-	MarshalLogObject(zapcore.ObjectEncoder) error // MarshalLogObject implement zap.ObjectMarshaler
+	MarshalLogObject(zapcore.ObjectEncoder) error // MarshalLogObject implements zap.ObjectMarshaler.
 
 	CreateBefore(*ModelContext) error
 	CreateAfter(*ModelContext) error
@@ -217,19 +221,17 @@ type (
 	Response any
 )
 
-// Service provides business logic operations for model types.
-// Defines the service layer between controllers and database operations.
+// Service defines the controller-facing business operation contract for a model.
+// Generated controllers call these methods for CRUD, batch CRUD, lifecycle hooks,
+// import/export, filtering, and logging.
 //
 // Type Parameters:
 //   - M: Model type that implements Model interface
-//   - REQ: Request type (typically DTOs or request structures)
-//   - RSP: Response type (typically DTOs or response structures)
+//   - REQ: Request type for the current action or resource operation
+//   - RSP: Response type for the current action or resource operation
 //
-// Features:
-//   - CRUD and batch operations
-//   - Lifecycle hooks (Before/After methods)
-//   - Data import/export
-//   - Custom filtering logic
+// Custom actions should use action-specific REQ/RSP types instead of reusing
+// types from other endpoints, even when the fields are identical.
 type Service[M Model, REQ Request, RSP Response] interface {
 	Create(*ServiceContext, REQ) (RSP, error)
 	Delete(*ServiceContext, REQ) (RSP, error)
@@ -274,15 +276,14 @@ type Service[M Model, REQ Request, RSP Response] interface {
 	Logger
 }
 
-// Cache provides a unified caching abstraction with consistent error handling.
-// Supports TTL, context-aware operations, and distributed tracing.
+// Cache provides a typed key/value cache abstraction with TTL and context propagation.
 //
 // Type Parameters:
-//   - T: Serializable data type
+//   - T: Cached value type
 //
 // Error Handling:
 //   - Get/Peek return ErrEntryNotFound when key doesn't exist
-//   - All operations return errors for proper error handling
+//   - Set/Delete return backend errors when storage operations fail
 type Cache[T any] interface {
 	// Get retrieves a value from the cache by key.
 	// Returns ErrEntryNotFound if the key does not exist.
@@ -310,21 +311,14 @@ type Cache[T any] interface {
 	// Clear removes all entries from the cache.
 	Clear()
 
-	// WithContext replaces the cache internal context that used to propagate span context.
+	// WithContext returns a cache handle that uses ctx for tracing or cancellation propagation.
 	WithContext(ctx context.Context) Cache[T]
 }
 
-// DistributedCache provides a two-level distributed caching system combining local memory cache
-// with Redis backend for synchronized caching across multiple nodes.
+// DistributedCache extends Cache with explicit local-plus-remote synchronization helpers.
 //
 // Type Parameters:
-//   - T: Serializable data type
-//
-// Features:
-//   - Automatic cache synchronization across multiple application instances
-//   - Configurable TTL for both local and distributed cache layers
-//   - Event-driven cache invalidation using Kafka messaging
-//   - Thread-safe concurrent operations
+//   - T: Cached value type
 type DistributedCache[T any] interface {
 	Cache[T]
 
@@ -338,8 +332,9 @@ type DistributedCache[T any] interface {
 	DeleteWithSync(key string) error
 }
 
-// RBAC provides role-based access control operations.
-// Supports roles, permissions, and subject assignments with flexible resource and action management.
+// RBAC provides role, permission, and subject assignment operations.
+// When RBAC is disabled or not initialized, the framework may provide a safe
+// no-op implementation whose methods succeed without side effects.
 //
 // RBAC Model:
 //   - Subject: Users or entities that need access
@@ -362,8 +357,8 @@ type RBAC interface {
 	UnassignRole(subject string, role string) error
 }
 
-// Module defines a module system for creating modular API endpoints
-// with automatic CRUD operations, routing, and service layer integration.
+// Module describes a registered API module: route metadata, auth exposure,
+// resource parameter name, and the service implementation used by controllers.
 //
 // Type Parameters:
 //   - M: Model type that implements Model interface
