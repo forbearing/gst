@@ -17,6 +17,8 @@ const (
 	StyleInfo
 	StyleMuted
 	StyleBold
+	StyleBlue
+	StyleMagenta
 )
 
 // Symbol identifies the Unicode symbol used by command output primitives.
@@ -50,6 +52,10 @@ func Text(style Style, format string, args ...any) string {
 		return sprint(text, color.FgHiBlack)
 	case StyleBold:
 		return sprint(text, color.Bold)
+	case StyleBlue:
+		return sprint(text, color.FgHiBlue)
+	case StyleMagenta:
+		return sprint(text, color.FgHiMagenta)
 	default:
 		return text
 	}

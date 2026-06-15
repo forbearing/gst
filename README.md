@@ -80,7 +80,7 @@ git init
 1. 在 `model/**/*.go` 中声明资源模型或动作模型。
 2. 每次修改 DSL 后运行 `gg gen`。
 3. 在生成的 `service/**` 文件中实现业务逻辑或 hook。
-4. 使用 `gg routes` 检查生成的接口路径。
+4. 使用 `gg routes` 检查生成的 model 和接口层级关系。
 5. 使用 `gg check` 检查项目结构和依赖边界。
 6. 删除 model、关闭 action 或调整 `Filename(...)` 后，运行 `gg prune` 或
    `gg gen --prune` 清理废弃 service 文件。
@@ -339,7 +339,8 @@ func init() {
 | `gg gen --prune` | 生成后联动清理废弃 service action 文件 |
 | `gg check` | 检查业务项目结构、命名、依赖边界和 tag 约束 |
 | `gg prune` | 只扫描并清理废弃 service action 文件 |
-| `gg routes` | 打印当前生成的路由树 |
+| `gg routes` | 按 model 层级打印当前生成的接口路径 |
+| `gg route-tree` | 按 URL 层级打印当前生成的路由树 |
 | `gg watch` | 监听 `model` 目录并自动执行 `gg gen` |
 | `gg migrate` | 根据当前模型和数据库配置执行迁移 |
 | `gg run` | 使用热重载方式启动业务项目 |
@@ -410,6 +411,25 @@ service，比如多个 `Create`，应使用 `Filename(...)` 避免生成文件�
 ```bash
 gg gen
 gg routes
+```
+
+如果想按 model 文件层级查看 model 和接口关系，可以运行：
+
+```bash
+gg routes --model
+```
+
+需要排查生成的请求、响应和路径参数绑定时，可以运行：
+
+```bash
+gg routes --detail
+```
+
+如果只想查看认证或公开路由，可以加上 scope 过滤：
+
+```bash
+gg routes --scope auth
+gg routes --scope pub
 ```
 
 也可以启动服务后访问 Swagger 文档：

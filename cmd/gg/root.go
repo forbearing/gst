@@ -32,6 +32,7 @@ func init() {
 		pruneCmd,
 		checkCmd,
 		routesCmd,
+		routeTreeCmd,
 		dockerCmd,
 		k8sCmd,
 		buildCmd,
