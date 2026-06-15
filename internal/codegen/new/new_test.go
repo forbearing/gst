@@ -66,3 +66,31 @@ password =
 namespace = myapp
 `, string(got))
 }
+
+func TestEnsureFileExistsReportsCreatedFiles(t *testing.T) {
+	tmp := t.TempDir()
+	oldWd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tmp))
+	t.Cleanup(func() {
+		require.NoError(t, os.Chdir(oldWd))
+	})
+
+	created, err := EnsureFileExists()
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{
+		"configx/configx.go",
+		"cronjob/cronjob.go",
+		"middleware/middleware.go",
+		"model/model.go",
+		"service/service.go",
+		"module/module.go",
+		"router/router.go",
+		"dao/.gitkeep",
+		"provider/.gitkeep",
+	}, created)
+
+	created, err = EnsureFileExists()
+	require.NoError(t, err)
+	require.Empty(t, created)
+}

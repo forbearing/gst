@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
 
@@ -122,7 +123,7 @@ func init() {
 
 // k8sGenRun generates Kubernetes manifests
 func k8sGenRun(cmd *cobra.Command, args []string) error {
-	logSection("Generate Kubernetes Manifests")
+	clioutput.Section("Generate Kubernetes Manifests")
 
 	// Create k8s directory if it doesn't exist
 	k8sDir := "k8s"
@@ -161,7 +162,7 @@ func k8sGenRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("%s Kubernetes manifests generated successfully in %s/\n", green("✔"), k8sDir)
+	clioutput.Success("", "Kubernetes manifests generated successfully in %s/", k8sDir)
 	return nil
 }
 
@@ -172,7 +173,7 @@ func k8sApplyRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("kubectl is not installed or not accessible: %w", err)
 	}
 
-	logSection("Apply Kubernetes Manifests")
+	clioutput.Section("Apply Kubernetes Manifests")
 
 	k8sDir := "k8s"
 	if !fileExists(k8sDir) {
@@ -185,11 +186,11 @@ func k8sApplyRun(cmd *cobra.Command, args []string) error {
 	execCmd.Stderr = os.Stderr
 
 	if err := execCmd.Run(); err != nil {
-		fmt.Printf("%s Failed to apply Kubernetes manifests: %v\n", red("✘"), err)
+		clioutput.Error("", "Failed to apply Kubernetes manifests: %v", err)
 		return fmt.Errorf("kubectl apply failed: %w", err)
 	}
 
-	fmt.Printf("%s Kubernetes manifests applied successfully to namespace: %s\n", green("✔"), k8sNamespace)
+	clioutput.Success("", "Kubernetes manifests applied successfully to namespace: %s", k8sNamespace)
 	return nil
 }
 
@@ -200,7 +201,7 @@ func k8sDeleteRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("kubectl is not installed or not accessible: %w", err)
 	}
 
-	logSection("Delete Kubernetes Resources")
+	clioutput.Section("Delete Kubernetes Resources")
 
 	k8sDir := "k8s"
 	if !fileExists(k8sDir) {
@@ -213,11 +214,11 @@ func k8sDeleteRun(cmd *cobra.Command, args []string) error {
 	execCmd.Stderr = os.Stderr
 
 	if err := execCmd.Run(); err != nil {
-		fmt.Printf("%s Failed to delete Kubernetes resources: %v\n", red("✘"), err)
+		clioutput.Error("", "Failed to delete Kubernetes resources: %v", err)
 		return fmt.Errorf("kubectl delete failed: %w", err)
 	}
 
-	fmt.Printf("%s Kubernetes resources deleted successfully from namespace: %s\n", green("✔"), k8sNamespace)
+	clioutput.Success("", "Kubernetes resources deleted successfully from namespace: %s", k8sNamespace)
 	return nil
 }
 
@@ -225,7 +226,7 @@ func k8sDeleteRun(cmd *cobra.Command, args []string) error {
 func checkKubectlInstalled() error {
 	_, err := exec.LookPath("kubectl")
 	if err != nil {
-		fmt.Printf("%s kubectl is not installed or not in PATH\n", yellow("⚠"))
+		clioutput.Warn("", "kubectl is not installed or not in PATH")
 		return fmt.Errorf("kubectl command not found")
 	}
 	return nil
@@ -431,18 +432,18 @@ func k8sDeployRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("kubectl is not installed or not accessible: %w", err)
 	}
 
-	logSection("Deploy to Kubernetes Cluster")
+	clioutput.Section("Deploy to Kubernetes Cluster")
 
 	// Step 1: Generate manifests
-	fmt.Printf("%s Step 1/2: Generating Kubernetes manifests...\n", cyan("ℹ"))
+	clioutput.Info("", "Step 1/2: Generating Kubernetes manifests...")
 	if err := k8sGenRun(cmd, args); err != nil {
-		fmt.Printf("%s Failed to generate Kubernetes manifests: %v\n", red("✘"), err)
+		clioutput.Error("", "Failed to generate Kubernetes manifests: %v", err)
 		return fmt.Errorf("manifest generation failed: %w", err)
 	}
-	fmt.Printf("%s Manifests generated successfully\n", green("✔"))
+	clioutput.Success("", "Manifests generated successfully")
 
 	// Step 2: Apply manifests to cluster
-	fmt.Printf("%s Step 2/2: Applying manifests to cluster (namespace: %s)...\n", cyan("ℹ"), k8sNamespace)
+	clioutput.Info("", "Step 2/2: Applying manifests to cluster (namespace: %s)...", k8sNamespace)
 
 	k8sDir := "k8s"
 	if !fileExists(k8sDir) {
@@ -455,15 +456,15 @@ func k8sDeployRun(cmd *cobra.Command, args []string) error {
 	execCmd.Stderr = os.Stderr
 
 	if err := execCmd.Run(); err != nil {
-		fmt.Printf("%s Failed to apply Kubernetes manifests: %v\n", red("✘"), err)
+		clioutput.Error("", "Failed to apply Kubernetes manifests: %v", err)
 		return fmt.Errorf("kubectl apply failed: %w", err)
 	}
 
-	fmt.Printf("%s Deployment completed successfully!\n", green("✔"))
-	fmt.Printf("%s Application deployed to namespace: %s\n", green("ℹ"), k8sNamespace)
-	fmt.Printf("%s Replicas: %d, Port: %d\n", green("ℹ"), k8sReplicas, k8sPort)
+	clioutput.Success("", "Deployment completed successfully")
+	clioutput.Info("", "Application deployed to namespace: %s", k8sNamespace)
+	clioutput.Info("", "Replicas: %d, Port: %d", k8sReplicas, k8sPort)
 	if k8sIngress {
-		fmt.Printf("%s Ingress configuration included\n", green("ℹ"))
+		clioutput.Info("", "Ingress configuration included")
 	}
 
 	return nil

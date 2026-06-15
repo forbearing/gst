@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/forbearing/gst/internal/codegen/gen"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/spf13/cobra"
@@ -40,20 +41,20 @@ var migrateCmd = &cobra.Command{
 		if err := os.WriteFile(targetFile, []byte(fullContent), 0o600); err != nil {
 			return fmt.Errorf("failed to write file %s: %w", targetFile, err)
 		}
-		fmt.Printf("Generated %s\n", targetFile)
+		clioutput.Success("CREATE", "%s", targetFile)
 
 		// 4.5 Run go mod tidy to ensure dependencies are met
-		fmt.Println("Running go mod tidy...")
+		clioutput.Info("", "Running go mod tidy...")
 		tidyCmd := exec.Command("go", "mod", "tidy")
 		tidyCmd.Stdout = os.Stdout
 		tidyCmd.Stderr = os.Stderr
 		if err := tidyCmd.Run(); err != nil {
-			fmt.Printf("Warning: go mod tidy failed: %v\n", err)
+			clioutput.Warn("", "go mod tidy failed: %v", err)
 			// Continue anyway, as go run might still work or give better error
 		}
 
 		// 5. Run the generated code
-		fmt.Println("Running migration...")
+		clioutput.Info("", "Running migration...")
 		runCmd := exec.Command("go", "run", targetFile)
 		runCmd.Stdout = os.Stdout
 		runCmd.Stderr = os.Stderr
@@ -109,7 +110,7 @@ func main() {
 
 	// Write the schema to a file for reference or debugging.
 	if err := os.WriteFile("schema.sql", []byte(schema), 0o644); err != nil {
-		fmt.Printf("Failed to write schema.sql: %v\n", err)
+		fmt.Printf("  ✘ Failed to write schema.sql: %v\n", err)
 	}
 
 	// Get database configuration based on the configured database type.
@@ -222,13 +223,13 @@ func performMigration(schema string, cfg *dbmigrate.DatabaseConfig) error {
 	}
 
 	if !hasChange {
-		fmt.Println("No changes detected.")
+		fmt.Println("  → No changes detected.")
 		return nil
 	}
 
 	// Confirm execution with the user.
 	if !confirmExecution() {
-		fmt.Println("Migration canceled.")
+		fmt.Println("  → Migration canceled.")
 		return nil
 	}
 
@@ -240,13 +241,13 @@ func performMigration(schema string, cfg *dbmigrate.DatabaseConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Migration executed successfully.")
+	fmt.Println("  ✔ Migration executed successfully.")
 	return nil
 }
 
 // confirmExecution prompts the user for confirmation to proceed.
 func confirmExecution() bool {
-	fmt.Print("\nDo you want to execute the migration? [y/N]: ")
+	fmt.Print("\n? Do you want to execute the migration? [y/N]: ")
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(input)

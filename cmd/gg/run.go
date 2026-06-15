@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
 
@@ -28,21 +29,21 @@ func init() {
 }
 
 func runRun(cmd *cobra.Command, args []string) error {
-	logSection("Check Air Installation")
+	clioutput.Section("Check Air Installation")
 
 	// Check if air is installed
 	if !isAirInstalled() {
-		fmt.Printf("%s Air is not installed, installing...\n", yellow("→"))
+		clioutput.Item("", "Air is not installed, installing...")
 		if err := installAir(); err != nil {
-			fmt.Printf("%s Failed to install air: %v\n", red("✘"), err)
+			clioutput.Error("", "Failed to install air: %v", err)
 			return err
 		}
-		fmt.Printf("%s Air installed successfully\n", green("✔"))
+		clioutput.Success("", "Air installed successfully")
 	} else {
-		fmt.Printf("%s Air is already installed\n", green("✔"))
+		clioutput.Success("", "Air is already installed")
 	}
 
-	logSection("Start Development Server")
+	clioutput.Section("Start Development Server")
 
 	// Prepare air command with arguments
 	airArgs := []string{}
@@ -51,14 +52,14 @@ func runRun(cmd *cobra.Command, args []string) error {
 	}
 
 	// Run air command
-	fmt.Printf("%s Starting air with hot reload...\n", cyan("▶"))
+	clioutput.Info("", "Starting air with hot reload...")
 	airCmd := exec.Command("air", airArgs...)
 	airCmd.Stdout = os.Stdout
 	airCmd.Stderr = os.Stderr
 	airCmd.Stdin = os.Stdin
 
 	if err := airCmd.Run(); err != nil {
-		fmt.Printf("%s Air command failed: %v\n", red("✘"), err)
+		clioutput.Error("", "Air command failed: %v", err)
 		return err
 	}
 

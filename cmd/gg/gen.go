@@ -13,6 +13,7 @@ import (
 
 	"github.com/forbearing/gst/ds/tree/trie"
 	"github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/forbearing/gst/internal/codegen"
 	"github.com/forbearing/gst/internal/codegen/gen"
 	pkgnew "github.com/forbearing/gst/internal/codegen/new"
@@ -33,7 +34,7 @@ var tsCmd = &cobra.Command{
 	Use:   "ts",
 	Short: "generate typescript interface code",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("not implemented")
+		clioutput.Warn("", "TypeScript generation is not implemented yet")
 	},
 }
 
@@ -48,38 +49,29 @@ func genRun() {
 		checkErr(err)
 	}
 
-	// Architecture dependency check
-	if CheckArchitectureDependency() > 0 {
-		os.Exit(1)
-	}
-	// Model Singular Naming Check
-	if CheckModelSingularNaming() > 0 {
-		os.Exit(1)
-	}
-	// Model JSON Tag Naming Check
-	if CheckModelJSONTagNaming() > 0 {
-		os.Exit(1)
-	}
-	// Model Package Naming Check
-	if CheckModelPackageNaming() > 0 {
-		os.Exit(1)
-	}
-	// Directory Restriction Check
-	if CheckAllowedDirectories() > 0 {
+	if runProjectChecks() > 0 {
 		os.Exit(1)
 	}
 
 	// Ensure required files exist
-	logSection("Ensure Required Files")
-	_ = pkgnew.EnsureFileExists()
+	clioutput.Section("Ensure Required Files")
+	createdFiles, err := pkgnew.EnsureFileExists()
+	checkErr(err)
+	if len(createdFiles) == 0 {
+		clioutput.Success("", "Required files are present")
+	} else {
+		for _, file := range createdFiles {
+			clioutput.Success("CREATE", "%s", file)
+		}
+	}
 
 	if !fileExists(modelDir) {
-		logError(fmt.Sprintf("model dir not found: %s", modelDir))
+		clioutput.Error("", "model dir not found: %s", modelDir)
 		os.Exit(1)
 	}
 
 	// Scan all models
-	logSection("Scan Models")
+	clioutput.Section("Scan Models")
 	allModels, err := codegen.FindModels(module, modelDir, serviceDir, excludes)
 	buildHierarchicalEndpoints(allModels)
 	propagateParentParams(allModels)
@@ -93,9 +85,9 @@ func genRun() {
 	}
 
 	if len(allModels) == 0 {
-		fmt.Println(gray("  No models found, generating empty registration files"))
+		clioutput.Item("", "No models found, generating empty registration files")
 	} else {
-		fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
+		clioutput.Success("", "%d models found", len(allModels))
 	}
 
 	modelStmts := make([]ast.Stmt, 0)
@@ -188,7 +180,7 @@ func genRun() {
 	// ============================================================
 	// Generate model/service/router/main files
 	// ============================================================
-	logSection("Generate Files")
+	clioutput.Section("Generate Files")
 
 	modelImports := lo.Keys(modelImportMap)
 	sort.Strings(modelImports)
@@ -220,7 +212,7 @@ func genRun() {
 	// ============================================================
 	// Apply actions to services
 	// ============================================================
-	logSection("Apply Actions To Services")
+	clioutput.Section("Apply Actions To Services")
 
 	fset := token.NewFileSet()
 	applyFile := func(filename string, code string, action *dsl.Action, servicePkgName string, modelInfo *gen.ModelInfo) {
@@ -246,15 +238,15 @@ func genRun() {
 				// Use original FileSet to preserve comment positions
 				code, err = gen.FormatNodeExtraWithFileSet(f, fset)
 				checkErr(err)
-				logUpdate(safePath)
+				clioutput.Status(clioutput.StyleWarn, clioutput.SymbolSuccess, "UPDATE", "%s", safePath)
 				checkErr(ensureParentDir(safePath))
 				// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
 				checkErr(os.WriteFile(safePath, []byte(code), 0o600))
 			} else {
-				logSkip(safePath)
+				clioutput.Item("SKIP", "%s", safePath)
 			}
 		} else {
-			logCreate(safePath)
+			clioutput.Success("CREATE", "%s", safePath)
 			checkErr(ensureParentDir(safePath))
 			// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
 			checkErr(os.WriteFile(safePath, []byte(code), 0o600))
@@ -290,8 +282,8 @@ func genRun() {
 	// ============================================================
 	// Completion message
 	// ============================================================
-	logSection("Done")
-	fmt.Printf("\n%s Code generation completed successfully!\n", green("🎉"))
+	clioutput.Section("Done")
+	clioutput.Done("Code generation completed successfully!")
 }
 
 // scanExistingServiceFiles scans existing service files in the service directory.
@@ -342,7 +334,7 @@ func scanExistingServiceFiles(serviceDir string) []string {
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("Warning: failed to scan existing service files: %v\n", err)
+		clioutput.Warn("", "failed to scan existing service files: %v", err)
 	}
 	return files
 }
@@ -412,17 +404,17 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 
 	// Display ignored files if any
 	if len(ignoredFiles) > 0 {
-		fmt.Printf("\n%s Files ignored by config:\n", gray("→"))
+		clioutput.Section("Files Ignored By Config")
 		for _, file := range ignoredFiles {
-			fmt.Printf("  %s %s\n", gray("→ IGNORE"), file)
+			clioutput.Item("", "ignore %s", file)
 		}
 	}
 
 	if len(filesToDelete) == 0 {
 		if len(ignoredFiles) > 0 {
-			fmt.Printf("\n  %s No disabled service files to prune (all files are ignored)\n", green("✔"))
+			clioutput.Success("", "No disabled service files to prune (all files are ignored)")
 		} else {
-			fmt.Printf("  %s No disabled service files to prune\n", green("✔"))
+			clioutput.Success("", "No disabled service files to prune")
 		}
 		// Still check for empty directories even if no files to delete
 		removeEmptyDirectories(serviceDir)
@@ -430,28 +422,28 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 	}
 
 	// Display list of files to be deleted
-	fmt.Printf("\n%s Files to be deleted:\n", yellow("⚠"))
+	clioutput.Section("Files To Be Deleted")
 	for _, file := range filesToDelete {
-		fmt.Printf("  %s %s\n", red("✘"), file)
+		clioutput.Error("", "%s", file)
 	}
 
 	// Ask user for confirmation
-	fmt.Printf("\n%s Do you want to delete these files? (y/N): ", cyan("?"))
+	clioutput.Prompt("Do you want to delete these files? (y/N): ")
 	var response string
 	_, _ = fmt.Scanln(&response)
 
 	response = strings.ToLower(strings.TrimSpace(response))
 	if response != "y" && response != "yes" {
-		fmt.Printf("  %s Deletion canceled\n", gray("→"))
+		clioutput.Item("", "Deletion canceled")
 		return
 	}
 
 	// Execute deletion operation
 	for _, file := range filesToDelete {
 		if err := os.Remove(file); err != nil {
-			fmt.Printf("  %s Failed to delete %s: %v\n", red("✘"), file, err)
+			clioutput.Error("", "Failed to delete %s: %v", file, err)
 		} else {
-			fmt.Printf("  %s Deleted %s\n", green("✔"), file)
+			clioutput.Success("", "Deleted %s", file)
 		}
 	}
 
@@ -511,7 +503,7 @@ func removeEmptyDirectories(rootDir string) {
 		if len(entries) == 0 {
 			// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
 			if err := os.Remove(dir); err == nil {
-				fmt.Printf("  %s Removed empty directory %s\n", green("✔"), dir)
+				clioutput.Success("", "Removed empty directory %s", dir)
 			}
 		}
 	}

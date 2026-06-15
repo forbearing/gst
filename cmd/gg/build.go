@@ -16,6 +16,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
 
@@ -150,7 +151,7 @@ func init() {
 }
 
 func buildRun(cmd *cobra.Command, args []string) error {
-	logSection("Build")
+	clioutput.Section("Build")
 
 	oldStdout := os.Stdout
 	devNull, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0o666)
@@ -206,13 +207,13 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	successCount := 0
 	for _, target := range targets {
 		if err := buildForTarget(target, buildInfo, config, buildFile); err != nil {
-			fmt.Printf("%s Failed to build for %s: %v\n", red("✘"), target.String(), err)
+			clioutput.Error("", "Failed to build for %s: %v", target.String(), err)
 			if config.ExitWhenError {
 				os.Exit(1)
 			}
 			continue
 		}
-		fmt.Printf("%s Built successfully for %s\n", green("✔"), target.String())
+		clioutput.Success("", "Built successfully for %s", target.String())
 		successCount++
 	}
 
@@ -220,11 +221,11 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("all builds failed")
 	}
 
-	fmt.Printf("%s Build completed: %d/%d successful\n", green("✔"), successCount, len(targets))
+	clioutput.Success("", "Build completed: %d/%d successful", successCount, len(targets))
 	if config.Output != "" {
-		fmt.Printf("%s Output: %s\n", gray("→"), config.Output)
+		clioutput.Item("", "Output: %s", config.Output)
 	} else {
-		fmt.Printf("%s Output directory: %s\n", gray("→"), config.Path)
+		clioutput.Item("", "Output directory: %s", config.Path)
 	}
 
 	return nil
@@ -281,8 +282,8 @@ func overrideConfigWithFlags(config *Build) {
 
 // dumpBuildEnvironment prints build environment information
 func dumpBuildEnvironment() {
-	fmt.Printf("%s Build Environment:\n", gray("ℹ"))
-	fmt.Printf("  Go Version: %s\n", runtime.Version())
+	clioutput.Info("", "Build Environment:")
+	clioutput.Line(clioutput.StyleMuted, "Go Version: %s", runtime.Version())
 	// Get GOROOT using go env command instead of deprecated runtime.GOROOT()
 	goroot := "unknown"
 	if cmd := exec.Command("go", "env", "GOROOT"); cmd != nil {
@@ -290,17 +291,17 @@ func dumpBuildEnvironment() {
 			goroot = strings.TrimSpace(string(output))
 		}
 	}
-	fmt.Printf("  Go Root: %s\n", goroot)
-	fmt.Printf("  Go Path: %s\n", os.Getenv("GOPATH"))
-	fmt.Printf("  Go Mod Cache: %s\n", os.Getenv("GOMODCACHE"))
-	fmt.Printf("  CGO Enabled: %s\n", os.Getenv("CGO_ENABLED"))
-	fmt.Printf("  Current OS: %s\n", runtime.GOOS)
-	fmt.Printf("  Current Arch: %s\n", runtime.GOARCH)
-	fmt.Printf("  Num CPU: %d\n", runtime.NumCPU())
+	clioutput.Line(clioutput.StyleMuted, "Go Root: %s", goroot)
+	clioutput.Line(clioutput.StyleMuted, "Go Path: %s", os.Getenv("GOPATH"))
+	clioutput.Line(clioutput.StyleMuted, "Go Mod Cache: %s", os.Getenv("GOMODCACHE"))
+	clioutput.Line(clioutput.StyleMuted, "CGO Enabled: %s", os.Getenv("CGO_ENABLED"))
+	clioutput.Line(clioutput.StyleMuted, "Current OS: %s", runtime.GOOS)
+	clioutput.Line(clioutput.StyleMuted, "Current Arch: %s", runtime.GOARCH)
+	clioutput.Line(clioutput.StyleMuted, "Num CPU: %d", runtime.NumCPU())
 
 	if buildInfo, ok := debugPkg.ReadBuildInfo(); ok {
-		fmt.Printf("  Module: %s\n", buildInfo.Main.Path)
-		fmt.Printf("  Module Version: %s\n", buildInfo.Main.Version)
+		clioutput.Line(clioutput.StyleMuted, "Module: %s", buildInfo.Main.Path)
+		clioutput.Line(clioutput.StyleMuted, "Module Version: %s", buildInfo.Main.Version)
 	}
 	fmt.Println()
 }
@@ -311,7 +312,7 @@ func packResources(config *Build) error {
 		return nil
 	}
 
-	fmt.Printf("%s Packing resources...\n", gray("📦"))
+	clioutput.Info("", "Packing resources...")
 
 	dirs := strings.Split(config.PackSrc, ",")
 	for i, dir := range dirs {
@@ -326,7 +327,7 @@ func packResources(config *Build) error {
 
 	// This is a simplified implementation
 	// In a real implementation, you would pack the directories into the Go file
-	fmt.Printf("%s Resource packing completed: %s\n", green("✔"), config.PackDst)
+	clioutput.Success("", "Resource packing completed: %s", config.PackDst)
 
 	return nil
 }
@@ -375,7 +376,7 @@ func getBuildInfo(config *Build) (*BuildInfo, error) {
 	} else {
 		version, err := getGitVersion()
 		if err != nil {
-			fmt.Printf("%s Failed to get git version, using 'dev': %v\n", yellow("⚠"), err)
+			clioutput.Warn("", "Failed to get git version, using 'dev': %v", err)
 			info.Version = "dev"
 		} else {
 			info.Version = version
@@ -517,9 +518,6 @@ func buildForTarget(target BuildTarget, info *BuildInfo, config *Build, buildFil
 	}
 
 	cmd.Env = env
-
-	// // Print the build command
-	// fmt.Printf("%s Executing: %s\n", cyan("→"), strings.Join(append([]string{"go"}, args...), " "))
 
 	// Execute build
 	if output, err := cmd.CombinedOutput(); err != nil {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
 
@@ -75,6 +76,8 @@ var (
 	dockerPush    bool
 )
 
+const dockerBuildFailureMessage = "Docker build failed: %v"
+
 func init() {
 	// Add subcommands to docker command
 	dockerCmd.AddCommand(dockerGenCmd, dockerBuildCmd)
@@ -96,7 +99,7 @@ func dockerGenRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate Dockerfile: %w", err)
 	}
 
-	fmt.Printf("%s Dockerfile generated successfully at: ./Dockerfile\n", green("✔"))
+	clioutput.Success("", "Dockerfile generated successfully at: ./Dockerfile")
 	return nil
 }
 
@@ -124,8 +127,8 @@ func dockerBuildRun(cmd *cobra.Command, args []string) error {
 
 	// Build Docker image (skip if Docker is not available)
 	if err := buildDockerImage(tag); err != nil {
-		fmt.Printf("%s Docker build skipped: %v\n", yellow("⚠"), err)
-		fmt.Printf("%s Dockerfile generated successfully at: ./Dockerfile\n", green("✔"))
+		clioutput.Warn("", dockerBuildFailureMessage, err)
+		clioutput.Success("", "Dockerfile generated successfully at: ./Dockerfile")
 		return nil
 	}
 
@@ -136,9 +139,9 @@ func dockerBuildRun(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("%s Docker image built successfully: %s\n", green("✔"), tag)
+	clioutput.Success("", "Docker image built successfully: %s", tag)
 	if dockerPush {
-		fmt.Printf("%s Docker image pushed successfully: %s\n", green("✔"), tag)
+		clioutput.Success("", "Docker image pushed successfully: %s", tag)
 	}
 
 	return nil
@@ -148,7 +151,7 @@ func dockerBuildRun(cmd *cobra.Command, args []string) error {
 func checkDockerInstalled() error {
 	_, err := exec.LookPath("docker")
 	if err != nil {
-		fmt.Printf("%s Docker is not installed or not in PATH\n", yellow("⚠"))
+		clioutput.Warn("", "Docker is not installed or not in PATH")
 		return fmt.Errorf("docker command not found")
 	}
 	return nil
@@ -158,11 +161,11 @@ func checkDockerInstalled() error {
 func generateDockerfile() error {
 	dockerfilePath := "Dockerfile"
 	if fileExists(dockerfilePath) {
-		fmt.Printf("%s Dockerfile already exists, skipping generation\n", yellow("→"))
+		clioutput.Item("", "Dockerfile already exists, skipping generation")
 		return nil
 	}
 
-	logSection("Generate Dockerfile")
+	clioutput.Section("Generate Dockerfile")
 
 	// Get module name for binary name
 	moduleName, err := getModuleName()
@@ -175,11 +178,11 @@ func generateDockerfile() error {
 	dockerfileContent := generateDockerfileContent(binaryName)
 
 	if err := os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0o600); err != nil {
-		fmt.Printf("%s Failed to write Dockerfile: %v\n", red("✘"), err)
+		clioutput.Error("", "Failed to write Dockerfile: %v", err)
 		return fmt.Errorf("failed to write Dockerfile: %w", err)
 	}
 
-	fmt.Printf("%s Dockerfile generated successfully\n", green("✔"))
+	clioutput.Success("", "Dockerfile generated successfully")
 	return nil
 }
 
@@ -287,7 +290,7 @@ func getDefaultImageTag() (string, error) {
 
 // buildDockerImage builds the Docker image
 func buildDockerImage(tag string) error {
-	logSection("Build Docker Image")
+	clioutput.Section("Build Docker Image")
 
 	args := []string{"build"}
 
@@ -302,7 +305,6 @@ func buildDockerImage(tag string) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("%s Failed to build Docker image: %v\n", red("✘"), err)
 		return fmt.Errorf("docker build failed: %w", err)
 	}
 
@@ -311,18 +313,18 @@ func buildDockerImage(tag string) error {
 
 // pushDockerImage pushes the Docker image to registry
 func pushDockerImage(tag string) error {
-	logSection("Push Docker Image")
+	clioutput.Section("Push Docker Image")
 
 	cmd := exec.Command("docker", "push", tag)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("%s Failed to push Docker image: %v\n", red("✘"), err)
+		clioutput.Error("", "Failed to push Docker image: %v", err)
 		return fmt.Errorf("docker push failed: %w", err)
 	}
 
-	fmt.Printf("%s Docker image pushed successfully: %s\n", green("✔"), tag)
+	clioutput.Success("", "Docker image pushed successfully: %s", tag)
 	return nil
 }
 

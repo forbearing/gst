@@ -7,9 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 
 	"github.com/cockroachdb/errors"
-	"github.com/fatih/color"
+	"github.com/forbearing/gst/internal/clioutput"
 )
 
 // ============================================================
@@ -29,39 +30,6 @@ var fileContentMap = map[string]string{
 }
 
 // ============================================================
-// 彩色输出工具
-// ============================================================
-
-var (
-	green  = color.New(color.FgHiGreen).SprintFunc()
-	yellow = color.New(color.FgHiYellow).SprintFunc()
-	red    = color.New(color.FgHiRed).SprintFunc()
-	cyan   = color.New(color.FgHiCyan).SprintFunc()
-	gray   = color.New(color.FgHiBlack).SprintFunc()
-	bold   = color.New(color.Bold).SprintFunc()
-)
-
-func logSection(title string) {
-	fmt.Printf("\n%s %s\n", cyan("▶"), bold(title))
-}
-
-func logSuccess(msg string) {
-	fmt.Printf("  %s %s\n", green("✔"), msg)
-}
-
-func logInfo(msg string) {
-	fmt.Printf("  %s %s\n", yellow("ℹ"), msg)
-}
-
-func logError(msg string) {
-	fmt.Printf("  %s %s\n", red("✘"), msg)
-}
-
-func logFileCreate(filename string) {
-	fmt.Printf("  %s %s\n", green("✔"), filename)
-}
-
-// ============================================================
 // Run: 初始化新项目
 // ============================================================
 
@@ -69,12 +37,12 @@ func Run(projectName string) error {
 	projectDir := filepath.Base(projectName)
 
 	// 项目目录
-	logSection("Create Project Directory")
+	clioutput.Section("Create Project Directory")
 	if err := os.MkdirAll(projectDir, 0o755); err != nil {
-		logError("failed to create project directory")
+		clioutput.Error("", "failed to create project directory")
 		return err
 	}
-	logSuccess(projectDir)
+	clioutput.Success("", "%s", projectDir)
 
 	// 切换目录
 	if err := os.Chdir(projectDir); err != nil {
@@ -82,25 +50,25 @@ func Run(projectName string) error {
 	}
 
 	// 初始化 Go module
-	logSection("Initialize Go Module")
-	logInfo(fmt.Sprintf("go mod init %s", projectName))
+	clioutput.Section("Initialize Go Module")
+	clioutput.Info("", "go mod init %s", projectName)
 	cmd := exec.Command("go", "mod", "init", projectName)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		logError("go mod init failed")
+		clioutput.Error("", "go mod init failed")
 		return err
 	}
-	logSuccess("Go module initialized")
+	clioutput.Success("", "Go module initialized")
 
 	// 生成项目文件
-	logSection("Generate Project Files")
+	clioutput.Section("Generate Project Files")
 	for file, content := range fileContentMap {
 		if err := createFile(file, content); err != nil {
-			logError(fmt.Sprintf("Failed to create %s", file))
+			clioutput.Error("", "Failed to create %s", file)
 			return err
 		}
-		logFileCreate(file)
+		clioutput.Success("CREATE", "%s", file)
 	}
 
 	// main.go
@@ -108,49 +76,49 @@ func Run(projectName string) error {
 		projectName, projectName, projectName, projectName, projectName, projectName, projectName)); err != nil {
 		return err
 	}
-	logFileCreate("main.go")
+	clioutput.Success("CREATE", "%s", "main.go")
 
 	// .gitignore
 	if err := createFile(".gitignore", gitignoreContent); err != nil {
 		return err
 	}
-	logFileCreate(".gitignore")
+	clioutput.Success("CREATE", "%s", ".gitignore")
 
 	// config.ini.example
 	if err := createTeplConfig(projectDir); err != nil {
 		return err
 	}
-	logFileCreate("config.ini.example")
+	clioutput.Success("CREATE", "%s", "config.ini.example")
 
 	// 运行 go mod tidy
-	logSection("Run Go Mod Tidy")
+	clioutput.Section("Run Go Mod Tidy")
 	cmd = exec.Command("go", "mod", "tidy")
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err := cmd.Run(); err != nil {
-		logError("go mod tidy failed")
+		clioutput.Error("", "go mod tidy failed")
 		return err
 	}
-	logSuccess("Dependencies tidied")
+	clioutput.Success("", "Dependencies tidied")
 
 	// 初始化 git 仓库
-	logSection("Initialize Git Repository")
+	clioutput.Section("Initialize Git Repository")
 	cmd = exec.Command("git", "init")
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err := cmd.Run(); err != nil {
-		logError("git init failed")
+		clioutput.Error("", "git init failed")
 		return err
 	}
-	logSuccess("Git repository initialized")
+	clioutput.Success("", "Git repository initialized")
 
 	// 最终提示
-	logSection("Project Initialization Completed")
-	fmt.Printf("\n%s Project %s created successfully!\n", green("🎉"), bold(projectDir))
-	fmt.Println("\nNext steps:")
-	fmt.Printf("  %s %s\n", cyan("$"), "cd "+projectDir)
-	fmt.Printf("  %s %s\n", cyan("$"), "git add .")
-	fmt.Printf("  %s %s\n", cyan("$"), "git commit -m \"Initial commit\"")
+	clioutput.Section("Project Initialization Completed")
+	clioutput.Done("Project %s created successfully!", clioutput.Text(clioutput.StyleBold, "%s", projectDir))
+	clioutput.Section("Next Steps")
+	clioutput.Command("cd %s", projectDir)
+	clioutput.Command("git add .")
+	clioutput.Command("git commit -m \"Initial commit\"")
 
 	return nil
 }
@@ -159,15 +127,24 @@ func Run(projectName string) error {
 // 辅助函数
 // ============================================================
 
-func EnsureFileExists() error {
-	for file, content := range fileContentMap {
+func EnsureFileExists() ([]string, error) {
+	files := make([]string, 0, len(fileContentMap))
+	for file := range fileContentMap {
+		files = append(files, file)
+	}
+	sort.Strings(files)
+
+	var created []string
+	for _, file := range files {
+		content := fileContentMap[file]
 		if _, err := os.Stat(file); err != nil && errors.Is(err, os.ErrNotExist) {
 			if err := createFile(file, content); err != nil {
-				return err
+				return created, err
 			}
+			created = append(created, file)
 		}
 	}
-	return nil
+	return created, nil
 }
 
 func createFile(path string, content string) error {

@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/fatih/color"
+	"github.com/forbearing/gst/internal/clioutput"
 )
 
 func checkErr(err error) {
@@ -32,47 +31,18 @@ func ensureParentDir(filename string) error {
 	return err
 }
 
-var (
-	green  = color.New(color.FgHiGreen).SprintFunc()
-	yellow = color.New(color.FgHiYellow).SprintFunc()
-	red    = color.New(color.FgHiRed).SprintFunc()
-	cyan   = color.New(color.FgHiCyan).SprintFunc()
-	gray   = color.New(color.FgHiBlack).SprintFunc()
-	bold   = color.New(color.Bold).SprintFunc()
-)
-
-func logSection(title string) {
-	fmt.Printf("\n%s %s\n", cyan("▶"), bold(title))
-}
-
-func logCreate(filename string) {
-	fmt.Printf("  %s %s\n", green("✔ CREATE"), filename)
-}
-
-func logUpdate(filename string) {
-	fmt.Printf("  %s %s\n", yellow("✔ UPDATE"), filename)
-}
-
-func logSkip(filename string) {
-	fmt.Printf("  %s %s\n", gray("→ SKIP"), filename)
-}
-
-func logError(msg string) {
-	fmt.Printf("  %s %s\n", red("✘ ERROR"), msg)
-}
-
 func writeFileWithLog(filename string, content string) {
 	if fileExists(filename) {
 		oldData, err := os.ReadFile(filename)
 		checkErr(err)
 		if string(oldData) == content {
-			logSkip(filename)
+			clioutput.Item("SKIP", "%s", filename)
 		} else {
-			logUpdate(filename)
+			clioutput.Status(clioutput.StyleWarn, clioutput.SymbolSuccess, "UPDATE", "%s", filename)
 			checkErr(os.WriteFile(filename, []byte(content), 0o600))
 		}
 	} else {
-		logCreate(filename)
+		clioutput.Success("CREATE", "%s", filename)
 		checkErr(ensureParentDir(filename))
 		checkErr(os.WriteFile(filename, []byte(content), 0o600))
 	}

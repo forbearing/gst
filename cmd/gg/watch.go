@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/forbearing/gst/internal/codegen/constants"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
@@ -40,33 +41,34 @@ func init() {
 func watchRun() {
 	// Validate model directory exists
 	if !fileExists(modelDir) {
-		logError(fmt.Sprintf("model directory not found: %s", modelDir))
+		clioutput.Error("", "model directory not found: %s", modelDir)
 		os.Exit(1)
 	}
 
 	// Create file system watcher
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		logError(fmt.Sprintf("failed to create watcher: %v", err))
+		clioutput.Error("", "failed to create watcher: %v", err)
 		os.Exit(1)
 	}
 	defer watcher.Close()
 
 	// Add model directory to watcher
 	if err := addDirRecursive(watcher, modelDir); err != nil {
-		logError(fmt.Sprintf("failed to watch directory: %v", err))
+		clioutput.Error("", "failed to watch directory: %v", err)
 		os.Exit(1)
 	}
 
-	fmt.Println(cyan("👀 Watch mode started"))
-	fmt.Printf("   %s %s\n", gray("Watching directory:"), cyan(modelDir))
-	fmt.Printf("   %s %v\n", gray("Debounce duration:"), cyan(debounce))
-	fmt.Println(gray("   Press Ctrl+C to stop\n"))
+	clioutput.Section("Watch")
+	clioutput.Success("", "Watch mode started")
+	clioutput.Item("", "Watching directory: %s", modelDir)
+	clioutput.Item("", "Debounce duration: %v", debounce)
+	clioutput.Line(clioutput.StyleMuted, "Press Ctrl+C to stop")
 
 	// Run initial generation
-	fmt.Println(yellow("🔄 Running initial code generation..."))
+	clioutput.Info("", "Running initial code generation...")
 	genRun()
-	fmt.Println(green("✔ Initial generation completed\n"))
+	clioutput.Success("", "Initial generation completed")
 
 	// Debounce timer to avoid multiple regenerations
 	var timer *time.Timer
@@ -93,10 +95,12 @@ func watchRun() {
 			// Handle different event types
 			switch {
 			case event.Has(fsnotify.Write), event.Has(fsnotify.Create):
-				fmt.Printf("%s %s %s\n",
-					gray(time.Now().Format("15:04:05")),
-					yellow("File changed:"),
-					filepath.Base(event.Name))
+				fmt.Printf(
+					"%s %s %s\n",
+					clioutput.Text(clioutput.StyleMuted, "%s", time.Now().Format("15:04:05")),
+					clioutput.Text(clioutput.StyleWarn, "File changed:"),
+					filepath.Base(event.Name),
+				)
 
 				// Reset or create debounce timer
 				if timer != nil {
@@ -105,9 +109,10 @@ func watchRun() {
 				pendingRegeneration = true
 				timer = time.AfterFunc(debounce, func() {
 					if pendingRegeneration {
-						fmt.Println(yellow("\n🔄 Regenerating code..."))
+						fmt.Println()
+						clioutput.Info("", "Regenerating code...")
 						genRun()
-						fmt.Println(green("✔ Regeneration completed\n"))
+						clioutput.Success("", "Regeneration completed")
 						pendingRegeneration = false
 					}
 				})
@@ -115,10 +120,12 @@ func watchRun() {
 			case event.Has(fsnotify.Remove):
 				// If a directory is removed, we may need to remove it from watcher
 				// But fsnotify will handle this automatically
-				fmt.Printf("%s %s %s\n",
-					gray(time.Now().Format("15:04:05")),
-					red("File removed:"),
-					filepath.Base(event.Name))
+				fmt.Printf(
+					"%s %s %s\n",
+					clioutput.Text(clioutput.StyleMuted, "%s", time.Now().Format("15:04:05")),
+					clioutput.Text(clioutput.StyleError, "File removed:"),
+					filepath.Base(event.Name),
+				)
 
 				// Trigger regeneration for removal too
 				if timer != nil {
@@ -127,25 +134,28 @@ func watchRun() {
 				pendingRegeneration = true
 				timer = time.AfterFunc(debounce, func() {
 					if pendingRegeneration {
-						fmt.Println(yellow("\n🔄 Regenerating code..."))
+						fmt.Println()
+						clioutput.Info("", "Regenerating code...")
 						genRun()
-						fmt.Println(green("✔ Regeneration completed\n"))
+						clioutput.Success("", "Regeneration completed")
 						pendingRegeneration = false
 					}
 				})
 
 			case event.Has(fsnotify.Rename):
-				fmt.Printf("%s %s %s\n",
-					gray(time.Now().Format("15:04:05")),
-					yellow("File renamed:"),
-					filepath.Base(event.Name))
+				fmt.Printf(
+					"%s %s %s\n",
+					clioutput.Text(clioutput.StyleMuted, "%s", time.Now().Format("15:04:05")),
+					clioutput.Text(clioutput.StyleWarn, "File renamed:"),
+					filepath.Base(event.Name),
+				)
 			}
 
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
-			logError(fmt.Sprintf("watcher error: %v", err))
+			clioutput.Error("", "watcher error: %v", err)
 		}
 	}
 }
