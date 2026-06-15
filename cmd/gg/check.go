@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/gertd/go-pluralize"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
@@ -30,45 +31,73 @@ var checkCmd = &cobra.Command{
 6. Model struct json tags should use snake_case naming
 7. Model package names must match their directory names
 8. Explicit DSL Payload types should end with Req and Result types should end with Rsp
-9. Only allowed directories are enforced for gst framework projects`,
+9. Model files should contain at most one model struct
+10. Service files should contain at most one service struct
+11. Only allowed directories are enforced for gst framework projects`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkRun()
 	},
 }
 
 func checkRun() {
-	var totalViolations int
+	totalViolations := runProjectChecks()
 
-	// Architecture Dependency Check
-	totalViolations += CheckArchitectureDependency()
-
-	// Model Singular Naming Check
-	totalViolations += CheckModelSingularNaming()
-
-	// Model JSON Tag Naming Check
-	totalViolations += CheckModelJSONTagNaming()
-
-	// Model Action Type Naming Check
-	totalViolations += CheckModelActionTypeNaming()
-
-	// Model Package Naming Check
-	totalViolations += CheckModelPackageNaming()
-
-	// Directory Restriction Check
-	totalViolations += CheckAllowedDirectories()
-
-	// Summary
-	logSection("Summary")
+	clioutput.Section("Summary")
 	if totalViolations > 0 {
-		fmt.Printf("  %s %d violations found\n", red("✘"), totalViolations)
+		clioutput.Error("", "%d violations found", totalViolations)
 		os.Exit(1)
 	} else {
-		fmt.Printf("  %s All checks passed\n", green("✔"))
+		clioutput.Success("", "All checks passed")
 	}
 }
 
+type projectCheckResult struct {
+	Name       string
+	Violations []string
+}
+
+// runProjectChecks runs all project checks shared by gg check and gg gen.
+func runProjectChecks() int {
+	results := []projectCheckResult{
+		{Name: "Architecture dependencies", Violations: CheckArchitectureDependency()},
+		{Name: "Model singular naming", Violations: CheckModelSingularNaming()},
+		{Name: "Model JSON tag naming", Violations: CheckModelJSONTagNaming()},
+		{Name: "Model action type naming", Violations: CheckModelActionTypeNaming()},
+		{Name: "Model file boundaries", Violations: CheckModelFileBoundary()},
+		{Name: "Service file boundaries", Violations: CheckServiceFileBoundary()},
+		{Name: "Model package naming", Violations: CheckModelPackageNaming()},
+		{Name: "Directory restrictions", Violations: CheckAllowedDirectories()},
+	}
+
+	printProjectCheckResults(results)
+	return totalProjectCheckViolations(results)
+}
+
+func printProjectCheckResults(results []projectCheckResult) {
+	clioutput.Section("Project Checks")
+	for _, result := range results {
+		if len(result.Violations) == 0 {
+			clioutput.Success("", "%s", result.Name)
+			continue
+		}
+
+		clioutput.Error("", "%s (%d)", result.Name, len(result.Violations))
+		for _, violation := range result.Violations {
+			clioutput.Item("", "%s", violation)
+		}
+	}
+}
+
+func totalProjectCheckViolations(results []projectCheckResult) int {
+	var total int
+	for _, result := range results {
+		total += len(result.Violations)
+	}
+	return total
+}
+
 // CheckArchitectureDependency performs architecture dependency checks.
-func CheckArchitectureDependency() int {
+func CheckArchitectureDependency() []string {
 	//nolint:prealloc
 	var violations []string
 
@@ -84,16 +113,7 @@ func CheckArchitectureDependency() int {
 	modelViolations := checkModelDependencies()
 	violations = append(violations, modelViolations...)
 
-	logSection("Architecture Dependency Check")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			fmt.Printf("  %s %s\n", red("→"), violation)
-		}
-	} else {
-		fmt.Printf("  %s No architecture violations found\n", green("✔"))
-	}
-
-	return len(violations)
+	return violations
 }
 
 // checkServiceDependencies checks if service code calls other service code
@@ -124,7 +144,7 @@ func checkServiceDependencies() []string {
 		return nil
 	})
 	if err != nil {
-		logError(fmt.Sprintf("walking service directory: %v", err))
+		violations = append(violations, fmt.Sprintf("walking service directory: %v", err))
 	}
 
 	return violations
@@ -153,7 +173,7 @@ func checkDAODependencies() []string {
 		return nil
 	})
 	if err != nil {
-		logError(fmt.Sprintf("walking dao directory: %v", err))
+		violations = append(violations, fmt.Sprintf("walking dao directory: %v", err))
 	}
 
 	return violations
@@ -187,7 +207,7 @@ func checkModelDependencies() []string {
 		return nil
 	})
 	if err != nil {
-		logError(fmt.Sprintf("walking model directory: %v", err))
+		violations = append(violations, fmt.Sprintf("walking model directory: %v", err))
 	}
 
 	return violations
@@ -223,11 +243,11 @@ func checkFileForServiceImports(filePath, layerType string) []string {
 }
 
 // CheckModelSingularNaming checks if model directories and files use singular names
-func CheckModelSingularNaming() int {
+func CheckModelSingularNaming() []string {
 	var violations []string
 
 	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
-		return 0
+		return violations
 	}
 
 	// Common plural file names that are allowed in Go projects
@@ -312,19 +332,10 @@ func CheckModelSingularNaming() int {
 		return nil
 	})
 	if err != nil {
-		logError(fmt.Sprintf("walking model directory: %v", err))
+		violations = append(violations, fmt.Sprintf("walking model directory: %v", err))
 	}
 
-	logSection("Model Singular Naming Check")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			fmt.Printf("  %s %s\n", red("→"), violation)
-		}
-	} else {
-		fmt.Printf("  %s No singular naming violations found\n", green("✔"))
-	}
-
-	return len(violations)
+	return violations
 }
 
 // containsServiceImport checks if an import path contains service code
@@ -358,11 +369,11 @@ func containsServiceImport(importPath, layerType string) bool {
 }
 
 // CheckModelJSONTagNaming checks if model struct json tags use camelCase naming
-func CheckModelJSONTagNaming() int {
+func CheckModelJSONTagNaming() []string {
 	var violations []string
 
 	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
-		return 0
+		return violations
 	}
 
 	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
@@ -386,19 +397,10 @@ func CheckModelJSONTagNaming() int {
 		return nil
 	})
 	if err != nil {
-		logError(fmt.Sprintf("walking model directory: %v", err))
+		violations = append(violations, fmt.Sprintf("walking model directory: %v", err))
 	}
 
-	logSection("Model JSON Tag Naming Check")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			fmt.Printf("  %s %s\n", red("→"), violation)
-		}
-	} else {
-		fmt.Printf("  %s No JSON tag naming violations found\n", green("✔"))
-	}
-
-	return len(violations)
+	return violations
 }
 
 // checkFileJSONTagNaming checks json tag naming in a single file
@@ -535,11 +537,11 @@ func toSnakeCase(s string) string {
 }
 
 // CheckModelActionTypeNaming checks explicit DSL Payload and Result type names.
-func CheckModelActionTypeNaming() int {
+func CheckModelActionTypeNaming() []string {
 	var violations []string
 
 	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
-		return 0
+		return violations
 	}
 
 	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
@@ -561,19 +563,10 @@ func CheckModelActionTypeNaming() int {
 		return nil
 	})
 	if err != nil {
-		logError(fmt.Sprintf("walking model directory: %v", err))
+		violations = append(violations, fmt.Sprintf("walking model directory: %v", err))
 	}
 
-	logSection("Model Action Type Naming Check")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			fmt.Printf("  %s %s\n", red("→"), violation)
-		}
-	} else {
-		fmt.Printf("  %s No action type naming violations found\n", green("✔"))
-	}
-
-	return len(violations)
+	return violations
 }
 
 // checkFileActionTypeNaming checks explicit Payload and Result types in Design methods.
@@ -691,12 +684,229 @@ func actionTypeBaseName(expr ast.Expr) (string, bool) {
 	return "", false
 }
 
-// CheckModelPackageNaming checks if model package names match their directory names
-func CheckModelPackageNaming() int {
+// CheckModelFileBoundary checks that each model file contains at most one model struct.
+func CheckModelFileBoundary() []string {
 	var violations []string
 
 	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
-		return 0
+		return violations
+	}
+
+	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.Contains(path, "_test.go") {
+			return nil
+		}
+
+		if strings.HasSuffix(path, "model.go") {
+			return nil
+		}
+
+		fileViolations := checkFileModelBoundary(path)
+		violations = append(violations, fileViolations...)
+
+		return nil
+	})
+	if err != nil {
+		violations = append(violations, fmt.Sprintf("walking model directory: %v", err))
+	}
+
+	return violations
+}
+
+// checkFileModelBoundary checks the number of model structs in one model file.
+func checkFileModelBoundary(filePath string) []string {
+	violations := make([]string, 0, 1)
+
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+	if err != nil {
+		return violations
+	}
+
+	modelNames := modelStructNames(node)
+	if len(modelNames) <= 1 {
+		return violations
+	}
+
+	relPath := relativePath(filePath)
+	violations = append(violations, fmt.Sprintf("Model file '%s' should contain at most one model struct (found: %s)", relPath, strings.Join(modelNames, ", ")))
+
+	return violations
+}
+
+// modelStructNames returns structs that embed model.Base or model.Empty.
+func modelStructNames(node *ast.File) []string {
+	var names []string
+
+	for _, name := range dsl.FindAllModelBase(node) {
+		if !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	for _, name := range dsl.FindAllModelEmpty(node) {
+		if !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+
+	return names
+}
+
+// CheckServiceFileBoundary checks that each service file contains at most one service struct.
+func CheckServiceFileBoundary() []string {
+	var violations []string
+
+	if _, err := os.Stat(serviceDir); os.IsNotExist(err) {
+		return violations
+	}
+
+	err := filepath.Walk(serviceDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.Contains(path, "_test.go") {
+			return nil
+		}
+
+		if strings.HasSuffix(path, "service.go") {
+			return nil
+		}
+
+		fileViolations := checkFileServiceBoundary(path)
+		violations = append(violations, fileViolations...)
+
+		return nil
+	})
+	if err != nil {
+		violations = append(violations, fmt.Sprintf("walking service directory: %v", err))
+	}
+
+	return violations
+}
+
+// checkFileServiceBoundary checks the number of service structs in one service file.
+func checkFileServiceBoundary(filePath string) []string {
+	violations := make([]string, 0, 1)
+
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+	if err != nil {
+		return violations
+	}
+
+	serviceNames := serviceStructNames(node)
+	if len(serviceNames) <= 1 {
+		return violations
+	}
+
+	relPath := relativePath(filePath)
+	violations = append(violations, fmt.Sprintf("Service file '%s' should contain at most one service struct (found: %s)", relPath, strings.Join(serviceNames, ", ")))
+
+	return violations
+}
+
+// serviceStructNames returns structs that embed service.Base with three type parameters.
+func serviceStructNames(node *ast.File) []string {
+	var names []string
+
+	for _, decl := range node.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+
+			structType, ok := typeSpec.Type.(*ast.StructType)
+			if !ok || structType.Fields == nil {
+				continue
+			}
+
+			for _, field := range structType.Fields.List {
+				if isServiceBase(node, field) {
+					names = append(names, typeSpec.Name.Name)
+					break
+				}
+			}
+		}
+	}
+
+	return names
+}
+
+// isServiceBase reports whether the field anonymously embeds service.Base[M, REQ, RSP].
+func isServiceBase(file *ast.File, field *ast.Field) bool {
+	if file == nil || field == nil || len(field.Names) != 0 {
+		return false
+	}
+
+	indexListExpr, ok := field.Type.(*ast.IndexListExpr)
+	if !ok || len(indexListExpr.Indices) != 3 {
+		return false
+	}
+
+	return isServiceBaseName(file, indexListExpr.X)
+}
+
+// isServiceBaseName checks whether expr names the gst service.Base type.
+func isServiceBaseName(file *ast.File, expr ast.Expr) bool {
+	aliasNames := []string{"service"}
+	var dotImport bool
+
+	for _, imp := range file.Imports {
+		if imp.Path == nil || imp.Path.Value != `"github.com/forbearing/gst/service"` {
+			continue
+		}
+		if imp.Name == nil {
+			continue
+		}
+		if imp.Name.Name == "." {
+			dotImport = true
+			continue
+		}
+		if !slices.Contains(aliasNames, imp.Name.Name) {
+			aliasNames = append(aliasNames, imp.Name.Name)
+		}
+	}
+
+	switch x := expr.(type) {
+	case *ast.SelectorExpr:
+		ident, ok := x.X.(*ast.Ident)
+		return ok && x.Sel != nil && x.Sel.Name == "Base" && slices.Contains(aliasNames, ident.Name)
+	case *ast.Ident:
+		return dotImport && x.Name == "Base"
+	}
+
+	return false
+}
+
+// relativePath returns filePath relative to the current working directory when possible.
+func relativePath(filePath string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return filePath
+	}
+	relPath, err := filepath.Rel(cwd, filePath)
+	if err != nil {
+		return filePath
+	}
+	return relPath
+}
+
+// CheckModelPackageNaming checks if model package names match their directory names
+func CheckModelPackageNaming() []string {
+	var violations []string
+
+	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
+		return violations
 	}
 
 	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
@@ -740,37 +950,27 @@ func CheckModelPackageNaming() int {
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("Error walking model directory: %v\n", err)
+		violations = append(violations, fmt.Sprintf("walking model directory: %v", err))
 	}
 
-	// Model Package Naming Check
-	logSection("Model Package Naming Check")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			fmt.Printf("  %s %s\n", red("→"), violation)
-		}
-	} else {
-		fmt.Printf("  %s No package naming violations found\n", green("✔"))
-	}
-
-	return len(violations)
+	return violations
 }
 
 // CheckAllowedDirectories checks if only allowed directories exist in the project
-func CheckAllowedDirectories() int {
+func CheckAllowedDirectories() []string {
 	projectDir := "."
 	var violations []string
 
 	// Check if this is a gst framework project by reading go.mod
 	if isGstFrameworkProject(projectDir) {
 		// Skip directory restriction check for gst framework itself
-		return 0
+		return violations
 	}
 
 	// Check if this project uses gst framework
 	if !usesGstFramework(projectDir) {
 		// Skip directory restriction check for projects not using gst framework
-		return 0
+		return violations
 	}
 
 	// Define allowed directories for gst framework projects
@@ -809,7 +1009,7 @@ func CheckAllowedDirectories() int {
 	// Read directory contents
 	entries, err := os.ReadDir(projectDir)
 	if err != nil {
-		return 0
+		return violations
 	}
 
 	for _, entry := range entries {
@@ -830,17 +1030,7 @@ func CheckAllowedDirectories() int {
 		}
 	}
 
-	// Directory Restriction Check
-	logSection("Directory Restriction Check")
-	if len(violations) > 0 {
-		for _, violation := range violations {
-			fmt.Printf("  %s %s\n", red("→"), violation)
-		}
-	} else {
-		fmt.Printf("  %s No directory restriction violations found\n", green("✔"))
-	}
-
-	return len(violations)
+	return violations
 }
 
 // isGstFrameworkProject checks if this is the gst framework project itself

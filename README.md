@@ -350,6 +350,9 @@ func init() {
 - `dao` 和 `model` 不能调用业务 service。
 - `model` 目录和模型文件应使用单数命名，文件名不要使用连字符。
 - 模型结构体的 `json` tag 应使用 `snake_case`。
+- 显式声明的 DSL `Payload` 类型应以 `Req` 结尾，`Result` 类型应以 `Rsp` 结尾。
+- 单个 model 代码文件最多包含一个 model 结构体。
+- 单个 service 代码文件最多包含一个 service 结构体。
 - 子目录中的 model package 名称应与目录名一致。
 - gst 业务项目根目录只允许约定目录结构。
 
