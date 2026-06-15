@@ -205,6 +205,11 @@ func SpanFromContext(ctx context.Context) trace.Span {
 	return trace.SpanFromContext(ctx)
 }
 
+// IsSpanRecording reports whether span is active and records telemetry data.
+func IsSpanRecording(span trace.Span) bool {
+	return span != nil && span.IsRecording()
+}
+
 // ContextWithRequestRootSpan marks the current span as the root span for one HTTP request.
 func ContextWithRequestRootSpan(ctx context.Context) context.Context {
 	span := trace.SpanFromContext(ctx)
@@ -387,31 +392,33 @@ func newBatchSpanProcessorOptions(cfg config.OTEL) []sdktrace.BatchSpanProcessor
 
 // AddSpanTags adds tags to the current span
 func AddSpanTags(span trace.Span, tags map[string]any) {
-	if span == nil || !span.IsRecording() {
+	if !IsSpanRecording(span) || len(tags) == 0 {
 		return
 	}
 
+	attrs := make([]attribute.KeyValue, 0, len(tags))
 	for key, value := range tags {
 		switch v := value.(type) {
 		case string:
-			span.SetAttributes(attribute.String(key, v))
+			attrs = append(attrs, attribute.String(key, v))
 		case int:
-			span.SetAttributes(attribute.Int(key, v))
+			attrs = append(attrs, attribute.Int(key, v))
 		case int64:
-			span.SetAttributes(attribute.Int64(key, v))
+			attrs = append(attrs, attribute.Int64(key, v))
 		case float64:
-			span.SetAttributes(attribute.Float64(key, v))
+			attrs = append(attrs, attribute.Float64(key, v))
 		case bool:
-			span.SetAttributes(attribute.Bool(key, v))
+			attrs = append(attrs, attribute.Bool(key, v))
 		default:
-			span.SetAttributes(attribute.String(key, "unsupported_type"))
+			attrs = append(attrs, attribute.String(key, "unsupported_type"))
 		}
 	}
+	span.SetAttributes(attrs...)
 }
 
 // AddSpanEvent adds an event to the current span
 func AddSpanEvent(span trace.Span, name string, attrs ...attribute.KeyValue) {
-	if span == nil || !span.IsRecording() {
+	if !IsSpanRecording(span) {
 		return
 	}
 	span.AddEvent(name, trace.WithAttributes(attrs...))
@@ -419,7 +426,7 @@ func AddSpanEvent(span trace.Span, name string, attrs ...attribute.KeyValue) {
 
 // RecordError records an error in the current span
 func RecordError(span trace.Span, err error) {
-	if span == nil || !span.IsRecording() || err == nil {
+	if !IsSpanRecording(span) || err == nil {
 		return
 	}
 	span.RecordError(err)

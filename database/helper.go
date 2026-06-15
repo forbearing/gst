@@ -87,30 +87,32 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 		// Update GORM database context with new span context
 		db.ins = db.ins.WithContext(ctx)
 
-		// Add database-specific attributes
-		span.SetAttributes(
-			attribute.String("component", "database"),
-			attribute.String("database.operation", op),
-			attribute.String("database.model", modelName),
-			attribute.String("database.table", modelName),
-		)
-
-		if _batch > 0 {
-			span.SetAttributes(attribute.Int("database.batch_size", _batch))
+		if gstotel.IsSpanRecording(span) {
+			attrs := []attribute.KeyValue{
+				attribute.String("component", "database"),
+				attribute.String("database.operation", op),
+				attribute.String("database.model", modelName),
+				attribute.String("database.table", modelName),
+				attribute.Bool("database.cache_enabled", db.enableCache),
+				attribute.Bool("database.dry_run", db.dryRun),
+			}
+			if _batch > 0 {
+				attrs = append(attrs, attribute.Int("database.batch_size", _batch))
+			}
+			span.SetAttributes(attrs...)
 		}
-
-		span.SetAttributes(
-			attribute.Bool("database.cache_enabled", db.enableCache),
-			attribute.Bool("database.dry_run", db.dryRun),
-		)
 	}
 
 	return func(err error) {
+		if span != nil {
+			defer span.End()
+		}
+
 		// Record duration
 		duration := time.Since(begin)
 
 		// Update span with results if available
-		if span != nil && span.IsRecording() {
+		if gstotel.IsSpanRecording(span) {
 			span.SetAttributes(attribute.Int64("database.duration_ms", duration.Milliseconds()))
 
 			if err != nil {
@@ -120,8 +122,6 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 			} else {
 				span.SetStatus(codes.Ok, "")
 			}
-
-			span.End()
 		}
 
 		// Log operation results
@@ -419,32 +419,38 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 	childCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
-	// Add hook-specific attributes
-	span.SetAttributes(
-		attribute.String("component", "model"),
-		attribute.String("model.model", modelName),
-		attribute.String("model.phase", phase.MethodName()),
-	)
+	recording := gstotel.IsSpanRecording(span)
+	var start time.Time
+	if recording {
+		// Add hook-specific attributes
+		span.SetAttributes(
+			attribute.String("component", "model"),
+			attribute.String("model.model", modelName),
+			attribute.String("model.phase", phase.MethodName()),
+		)
 
-	// Record start time
-	start := time.Now()
+		// Record start time
+		start = time.Now()
+	}
 
 	// Execute hook function
 	err := fn(childCtx)
 
-	// Record execution results
-	duration := time.Since(start)
-	span.SetAttributes(
-		attribute.Int64("model.duration_ms", duration.Milliseconds()),
-		attribute.Bool("model.success", err == nil),
-	)
+	if recording {
+		// Record execution results
+		duration := time.Since(start)
+		span.SetAttributes(
+			attribute.Int64("model.duration_ms", duration.Milliseconds()),
+			attribute.Bool("model.success", err == nil),
+		)
 
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		gstotel.RecordError(span, err)
-		span.SetAttributes(attribute.Bool("error", true))
-	} else {
-		span.SetStatus(codes.Ok, "")
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			gstotel.RecordError(span, err)
+			span.SetAttributes(attribute.Bool("error", true))
+		} else {
+			span.SetStatus(codes.Ok, "")
+		}
 	}
 
 	return err

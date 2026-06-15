@@ -49,47 +49,53 @@ func middlewareWrapper(name string, middleware gin.HandlerFunc) gin.HandlerFunc 
 			c.Request = c.Request.WithContext(originalCtx)
 		}()
 
-		// Set span attributes
-		span.SetAttributes(
-			attribute.String("middleware.name", name),
-			attribute.String("http.method", c.Request.Method),
-			attribute.String("http.path", c.Request.URL.Path),
-			attribute.String("http.route", c.FullPath()),
-		)
+		recording := gstotel.IsSpanRecording(span)
+		var start time.Time
+		if recording {
+			// Set span attributes
+			span.SetAttributes(
+				attribute.String("middleware.name", name),
+				attribute.String("http.method", c.Request.Method),
+				attribute.String("http.path", c.Request.URL.Path),
+				attribute.String("http.route", c.FullPath()),
+			)
 
-		// Record start time
-		start := time.Now()
+			// Record start time
+			start = time.Now()
+		}
 
 		// Execute the wrapped middleware
 		middleware(c)
 
-		// Record execution duration
-		duration := time.Since(start)
-		span.SetAttributes(
-			attribute.Int64("middleware.duration_ms", duration.Milliseconds()),
-			attribute.Int64("middleware.duration_ns", duration.Nanoseconds()),
-		)
+		if recording {
+			// Record execution duration
+			duration := time.Since(start)
+			span.SetAttributes(
+				attribute.Int64("middleware.duration_ms", duration.Milliseconds()),
+				attribute.Int64("middleware.duration_ns", duration.Nanoseconds()),
+			)
 
-		// Check if middleware caused any errors (based on response status)
-		if c.Writer.Status() >= 400 {
-			span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", c.Writer.Status()))
-			span.SetAttributes(
-				attribute.Int("http.status_code", c.Writer.Status()),
-				attribute.Bool("middleware.error", true),
-			)
-		} else {
-			span.SetStatus(codes.Ok, "")
-			span.SetAttributes(
-				attribute.Int("http.status_code", c.Writer.Status()),
-				attribute.Bool("middleware.error", false),
-			)
-		}
+			// Check if middleware caused any errors (based on response status)
+			if c.Writer.Status() >= 400 {
+				span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", c.Writer.Status()))
+				span.SetAttributes(
+					attribute.Int("http.status_code", c.Writer.Status()),
+					attribute.Bool("middleware.error", true),
+				)
+			} else {
+				span.SetStatus(codes.Ok, "")
+				span.SetAttributes(
+					attribute.Int("http.status_code", c.Writer.Status()),
+					attribute.Bool("middleware.error", false),
+				)
+			}
 
-		// Add service name as attribute
-		if config.App.OTEL.ServiceName != "" {
-			span.SetAttributes(
-				attribute.String("service.name", config.App.OTEL.ServiceName),
-			)
+			// Add service name as attribute
+			if config.App.OTEL.ServiceName != "" {
+				span.SetAttributes(
+					attribute.String("service.name", config.App.OTEL.ServiceName),
+				)
+			}
 		}
 	}
 }

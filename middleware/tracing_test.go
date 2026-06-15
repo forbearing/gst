@@ -67,6 +67,66 @@ func TestTracingUsesIncomingTraceIDHeader(t *testing.T) {
 	require.Equal(t, incomingTraceID, w.Header().Get(consts.HEADER_TRACE_ID))
 }
 
+func TestTracingSkipsRecordingOnlyStateWhenSamplerDrops(t *testing.T) {
+	setupTracingTestWithSampler(t, config.TracesSamplerAlwaysOff)
+
+	router := gin.New()
+	router.Use(Tracing())
+	router.GET("/api/ping", func(c *gin.Context) {
+		span := oteltrace.SpanFromContext(c.Request.Context())
+		require.True(t, span.SpanContext().HasTraceID())
+		require.False(t, span.IsRecording())
+
+		_, exists := c.Get("request_start_time")
+		require.False(t, exists)
+		c.Status(http.StatusNoContent)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/ping", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	require.NotEmpty(t, w.Header().Get(consts.HEADER_TRACE_ID))
+}
+
+func TestMiddlewareWrapperKeepsMiddlewareSpanWhenSamplerDrops(t *testing.T) {
+	setupTracingTestWithSampler(t, config.TracesSamplerAlwaysOff)
+
+	var rootSpanContext oteltrace.SpanContext
+	var middlewareSpanContext oteltrace.SpanContext
+
+	router := gin.New()
+	router.Use(Tracing())
+	router.Use(middlewareWrapper("test", func(c *gin.Context) {
+		rootSpan, exists := c.Get("otel_span")
+		require.True(t, exists)
+
+		root, ok := rootSpan.(oteltrace.Span)
+		require.True(t, ok)
+		rootSpanContext = root.SpanContext()
+
+		currentSpan := oteltrace.SpanFromContext(c.Request.Context())
+		middlewareSpanContext = currentSpan.SpanContext()
+		require.False(t, currentSpan.IsRecording())
+	}))
+	router.GET("/api/ping", func(c *gin.Context) {
+		currentSpanContext := oteltrace.SpanFromContext(c.Request.Context()).SpanContext()
+		require.Equal(t, rootSpanContext.SpanID(), currentSpanContext.SpanID())
+		c.Status(http.StatusNoContent)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/ping", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	require.True(t, rootSpanContext.HasTraceID())
+	require.True(t, middlewareSpanContext.HasTraceID())
+	require.Equal(t, rootSpanContext.TraceID(), middlewareSpanContext.TraceID())
+	require.NotEqual(t, rootSpanContext.SpanID(), middlewareSpanContext.SpanID())
+}
+
 func TestTracingMarksHTTPSpanAsRequestRoot(t *testing.T) {
 	source := readMiddlewareSource(t, "tracing.go")
 	require.Contains(t, source, "ctx = gstotel.ContextWithRequestRootSpan(ctx)")
@@ -84,6 +144,16 @@ func setupTracingTest(t *testing.T) {
 }
 
 func setupTracingTestWithEndpoint(t *testing.T, endpoint string) {
+	setupTracingTestWithEndpointAndSampler(t, endpoint, config.TracesSamplerParentBasedAlwaysOn)
+}
+
+func setupTracingTestWithSampler(t *testing.T, sampler config.TracesSampler) {
+	t.Helper()
+
+	setupTracingTestWithEndpointAndSampler(t, "http://127.0.0.1:1/v1/traces", sampler)
+}
+
+func setupTracingTestWithEndpointAndSampler(t *testing.T, endpoint string, sampler config.TracesSampler) {
 	t.Helper()
 
 	gin.SetMode(gin.TestMode)
@@ -95,7 +165,7 @@ func setupTracingTestWithEndpoint(t *testing.T, endpoint string) {
 	config.App.OTEL.ExporterOTLPProtocol = config.OTLPProtocolHTTPProtobuf
 	config.App.OTEL.ExporterOTLPTracesEndpoint = endpoint
 	config.App.OTEL.ExporterOTLPCompression = config.OTLPCompressionNone
-	config.App.OTEL.TracesSampler = config.TracesSamplerParentBasedAlwaysOn
+	config.App.OTEL.TracesSampler = sampler
 	config.App.OTEL.BSPMaxQueueSize = 100
 	config.App.OTEL.BSPMaxExportBatchSize = 100
 	config.App.OTEL.BSPScheduleDelay = 10 * time.Millisecond

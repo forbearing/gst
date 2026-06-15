@@ -7,6 +7,8 @@ import (
 
 	"github.com/forbearing/gst/config"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -66,6 +68,53 @@ func TestNormalizeConfigRejectsOversizedExportBatch(t *testing.T) {
 	})
 	require.Error(t, err)
 }
+
+func TestIsSpanRecording(t *testing.T) {
+	require.False(t, IsSpanRecording(nil))
+	require.False(t, IsSpanRecording(&attributeCountingSpan{}))
+	require.True(t, IsSpanRecording(&attributeCountingSpan{recording: true}))
+}
+
+func TestAddSpanTagsSetsAttributesInOneBatch(t *testing.T) {
+	span := &attributeCountingSpan{recording: true}
+
+	AddSpanTags(span, map[string]any{
+		"bool":    true,
+		"float":   1.2,
+		"int":     1,
+		"int64":   int64(2),
+		"string":  "value",
+		"unknown": struct{}{},
+	})
+
+	require.Equal(t, 1, span.setAttributesCalls)
+	require.Len(t, span.attributes, 6)
+	require.Contains(t, span.attributes, attribute.Bool("bool", true))
+	require.Contains(t, span.attributes, attribute.Float64("float", 1.2))
+	require.Contains(t, span.attributes, attribute.Int("int", 1))
+	require.Contains(t, span.attributes, attribute.Int64("int64", 2))
+	require.Contains(t, span.attributes, attribute.String("string", "value"))
+	require.Contains(t, span.attributes, attribute.String("unknown", "unsupported_type"))
+}
+
+type attributeCountingSpan struct {
+	oteltrace.Span
+
+	recording          bool
+	setAttributesCalls int
+	attributes         []attribute.KeyValue
+}
+
+func (s *attributeCountingSpan) IsRecording() bool {
+	return s.recording
+}
+
+func (s *attributeCountingSpan) SetAttributes(kv ...attribute.KeyValue) {
+	s.setAttributesCalls++
+	s.attributes = append(s.attributes, kv...)
+}
+
+func (s *attributeCountingSpan) SetStatus(code codes.Code, description string) {}
 
 func sampleDecision(parent context.Context, t *testing.T, sampler sdktrace.Sampler) sdktrace.SamplingDecision {
 	t.Helper()

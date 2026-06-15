@@ -162,14 +162,16 @@ func startControllerSpan[M types.Model](c *gin.Context, phase consts.Phase) (con
 	// Update request context with new span context
 	c.Request = c.Request.WithContext(spanCtx)
 
-	// Add controller-specific attributes
-	gstotel.AddSpanTags(span, map[string]any{
-		"component":            "controller",
-		"controller.operation": phase.MethodName(),
-		"controller.model":     modelName,
-		"controller.method":    c.Request.Method,
-		"controller.path":      c.FullPath(),
-	})
+	if gstotel.IsSpanRecording(span) {
+		// Add controller-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":            "controller",
+			"controller.operation": phase.MethodName(),
+			"controller.model":     modelName,
+			"controller.method":    c.Request.Method,
+			"controller.path":      c.FullPath(),
+		})
+	}
 
 	return spanCtx, span
 }
@@ -190,28 +192,36 @@ func traceServiceHook[M types.Model](parentCtx context.Context, phase consts.Pha
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	gstotel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		gstotel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			gstotel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -235,29 +245,37 @@ func traceServiceOperation[M types.Model, RSP types.Response](parentCtx context.
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	gstotel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 	var rsp RSP
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		gstotel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			gstotel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -281,29 +299,37 @@ func traceServiceExport[M types.Model, T []byte](parentCtx context.Context, phas
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	gstotel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 	var data T
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		gstotel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			gstotel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -327,29 +353,37 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	gstotel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 	var ml []M
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		gstotel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			gstotel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 

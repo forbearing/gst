@@ -151,16 +151,19 @@ func (p *GormTracingPlugin) startSpan(db *gorm.DB, operation string) {
 	// Start database span
 	newCtx, span := startDatabaseSpan(ctx, operation, db.Statement.Table)
 
-	// Add GORM-specific attributes
-	gstotel.AddSpanTags(span, map[string]any{
-		"gorm.operation": operation,
-		"gorm.table":     db.Statement.Table,
-	})
+	if gstotel.IsSpanRecording(span) {
+		// Add GORM-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"gorm.operation": operation,
+			"gorm.table":     db.Statement.Table,
+		})
+
+		db.Set("tracing:start_time", time.Now())
+	}
 
 	// Store span and context in the statement
 	db.Statement.Context = newCtx
 	db.Set("tracing:span", span)
-	db.Set("tracing:start_time", time.Now())
 }
 
 // finishSpan finishes the tracing span and records the results
@@ -177,6 +180,9 @@ func (p *GormTracingPlugin) finishSpan(db *gorm.DB) {
 	}
 
 	defer span.End()
+	if !gstotel.IsSpanRecording(span) {
+		return
+	}
 
 	// Get start time
 	startTimeValue, exists := db.Get("tracing:start_time")
@@ -230,12 +236,14 @@ func startDatabaseSpan(ctx context.Context, operation, table string) (context.Co
 	spanName := fmt.Sprintf("db.%s %s", operation, table)
 	ctx, span := gstotel.StartSpan(ctx, spanName)
 
-	// Add database-specific attributes
-	span.SetAttributes(
-		attribute.String("db.operation", operation),
-		attribute.String("db.table", table),
-		attribute.String("component", "database"),
-	)
+	if gstotel.IsSpanRecording(span) {
+		// Add database-specific attributes
+		span.SetAttributes(
+			attribute.String("db.operation", operation),
+			attribute.String("db.table", table),
+			attribute.String("component", "database"),
+		)
+	}
 
 	return ctx, span
 }
