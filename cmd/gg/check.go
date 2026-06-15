@@ -29,7 +29,8 @@ var checkCmd = &cobra.Command{
 5. Model file names should not contain hyphens (use underscores instead)
 6. Model struct json tags should use snake_case naming
 7. Model package names must match their directory names
-8. Only allowed directories are enforced for gst framework projects`,
+8. Explicit DSL Payload types should end with Req and Result types should end with Rsp
+9. Only allowed directories are enforced for gst framework projects`,
 	Run: func(cmd *cobra.Command, args []string) {
 		checkRun()
 	},
@@ -46,6 +47,9 @@ func checkRun() {
 
 	// Model JSON Tag Naming Check
 	totalViolations += CheckModelJSONTagNaming()
+
+	// Model Action Type Naming Check
+	totalViolations += CheckModelActionTypeNaming()
 
 	// Model Package Naming Check
 	totalViolations += CheckModelPackageNaming()
@@ -528,6 +532,163 @@ func toSnakeCase(s string) string {
 	}
 
 	return result.String()
+}
+
+// CheckModelActionTypeNaming checks explicit DSL Payload and Result type names.
+func CheckModelActionTypeNaming() int {
+	var violations []string
+
+	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
+		return 0
+	}
+
+	err := filepath.Walk(modelDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() || !strings.HasSuffix(path, ".go") || strings.Contains(path, "_test.go") {
+			return nil
+		}
+
+		if strings.HasSuffix(path, "model.go") {
+			return nil
+		}
+
+		fileViolations := checkFileActionTypeNaming(path)
+		violations = append(violations, fileViolations...)
+
+		return nil
+	})
+	if err != nil {
+		logError(fmt.Sprintf("walking model directory: %v", err))
+	}
+
+	logSection("Model Action Type Naming Check")
+	if len(violations) > 0 {
+		for _, violation := range violations {
+			fmt.Printf("  %s %s\n", red("→"), violation)
+		}
+	} else {
+		fmt.Printf("  %s No action type naming violations found\n", green("✔"))
+	}
+
+	return len(violations)
+}
+
+// checkFileActionTypeNaming checks explicit Payload and Result types in Design methods.
+func checkFileActionTypeNaming(filePath string) []string {
+	var violations []string
+
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+	if err != nil {
+		return violations
+	}
+
+	cwd, _ := os.Getwd()
+	relPath, _ := filepath.Rel(cwd, filePath)
+
+	for _, decl := range node.Decls {
+		funcDecl, ok := decl.(*ast.FuncDecl)
+		if !ok || funcDecl.Name == nil || funcDecl.Name.Name != "Design" || funcDecl.Body == nil {
+			continue
+		}
+
+		modelName, ok := designReceiverTypeName(funcDecl)
+		if !ok {
+			continue
+		}
+
+		ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+
+			kind, typeExpr, ok := dslActionTypeCall(call.Fun)
+			if !ok {
+				return true
+			}
+
+			typeName, ok := actionTypeBaseName(typeExpr)
+			if !ok || typeName == modelName {
+				return true
+			}
+
+			switch kind {
+			case "Payload":
+				if !strings.HasSuffix(typeName, "Req") {
+					pos := fset.Position(call.Pos())
+					violations = append(violations, fmt.Sprintf("%s:%d: Payload type '%s' should end with Req", relPath, pos.Line, typeName))
+				}
+			case "Result":
+				if !strings.HasSuffix(typeName, "Rsp") {
+					pos := fset.Position(call.Pos())
+					violations = append(violations, fmt.Sprintf("%s:%d: Result type '%s' should end with Rsp", relPath, pos.Line, typeName))
+				}
+			}
+
+			return true
+		})
+	}
+
+	return violations
+}
+
+// designReceiverTypeName returns the receiver type name for a Design method.
+func designReceiverTypeName(fn *ast.FuncDecl) (string, bool) {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 {
+		return "", false
+	}
+	return actionTypeBaseName(fn.Recv.List[0].Type)
+}
+
+// dslActionTypeCall returns the kind and type argument for DSL Payload/Result calls.
+func dslActionTypeCall(expr ast.Expr) (string, ast.Expr, bool) {
+	switch x := expr.(type) {
+	case *ast.IndexExpr:
+		if kind, ok := dslActionTypeName(x.X); ok {
+			return kind, x.Index, true
+		}
+	case *ast.IndexListExpr:
+		if len(x.Indices) == 1 {
+			if kind, ok := dslActionTypeName(x.X); ok {
+				return kind, x.Indices[0], true
+			}
+		}
+	}
+	return "", nil, false
+}
+
+// dslActionTypeName returns the DSL function name for Payload or Result.
+func dslActionTypeName(expr ast.Expr) (string, bool) {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		if x.Name == "Payload" || x.Name == "Result" {
+			return x.Name, true
+		}
+	case *ast.SelectorExpr:
+		if x.Sel != nil && (x.Sel.Name == "Payload" || x.Sel.Name == "Result") {
+			return x.Sel.Name, true
+		}
+	}
+	return "", false
+}
+
+// actionTypeBaseName extracts the named type from supported DSL type arguments.
+func actionTypeBaseName(expr ast.Expr) (string, bool) {
+	switch x := expr.(type) {
+	case *ast.Ident:
+		return x.Name, true
+	case *ast.StarExpr:
+		return actionTypeBaseName(x.X)
+	case *ast.SelectorExpr:
+		if x.Sel != nil {
+			return x.Sel.Name, true
+		}
+	}
+	return "", false
 }
 
 // CheckModelPackageNaming checks if model package names match their directory names
