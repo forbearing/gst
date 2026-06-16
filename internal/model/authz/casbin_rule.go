@@ -29,8 +29,9 @@ type CasbinRule struct {
 	V4    string `json:"v4,omitempty" gorm:"size:100" schema:"v4"`
 	V5    string `json:"v5,omitempty" gorm:"size:100" schema:"v5"`
 
-	User string `json:"user,omitempty" schema:"user"` // 只是用来记录一些信息, V0 为 user_id
-	Role string `json:"role,omitempty" schema:"role"` // 只是用来记录一些信息, V1 为 role code
+	User   string  `json:"user,omitempty" schema:"user"`                       // 只是用来记录一些信息, V0 为 user_id
+	Role   string  `json:"role,omitempty" schema:"role"`                       // 只是用来记录一些信息, V1 为 role code
+	Remark *string `json:"remark,omitempty" gorm:"size:10240" schema:"remark"` // Optional policy summary.
 
 	model.Base
 }

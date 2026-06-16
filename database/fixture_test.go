@@ -117,6 +117,7 @@ type TestUser struct {
 	Age      int                         `json:"age"`
 	Addr     datatypes.JSONSlice[string] `json:"addr"`
 	IsActive *bool                       `json:"is_active"`
+	Remark   *string                     `json:"remark,omitempty" gorm:"size:10240" schema:"remark"`
 
 	model.Base
 }
@@ -133,10 +134,11 @@ func (t *TestUser) UpdateBefore(ctx *types.ModelContext) error {
 }
 
 type TestUser2 struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Age      int    `json:"age"`
-	IsActive *bool  `json:"is_active"`
+	Name     string  `json:"name"`
+	Email    string  `json:"email"`
+	Age      int     `json:"age"`
+	IsActive *bool   `json:"is_active"`
+	Remark   *string `json:"remark,omitempty" gorm:"size:10240" schema:"remark"`
 
 	model.Base
 }

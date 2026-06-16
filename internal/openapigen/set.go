@@ -1348,8 +1348,6 @@ func parseParametersFromPath(path string) []*openapi3.ParameterRef {
 //	  "id": "string",
 //	  "member_count": 0,
 //	  "name": "string",
-//	  "order": 0,
-//	  "remark": "string",
 //	  "updated_at": "2025-04-19T19:22:55.434Z",
 //	  "updated_by": "string"
 //	}
@@ -1360,8 +1358,6 @@ func parseParametersFromPath(path string) []*openapi3.ParameterRef {
 //	  "desc": "string",
 //	  "member_count": 0,
 //	  "name": "string",
-//	  "order": 0,
-//	  "remark": "string"
 //	}
 //
 // NOTE: 结构体字段必须有 json tag, 否则 schemaRef.Value.Properties 中不会带有这些字段
@@ -2159,8 +2155,6 @@ func tags(path string, _ consts.HTTPVerb, typ reflect.Type) []string {
 //	      "id": "string",
 //	      "member_count": 0,
 //	      "name": "string",
-//	      "order": 0,
-//	      "remark": "string",
 //	      "updated_at": "2025-04-19T19:22:25.166Z",
 //	      "updated_by": "string"
 //	    }
@@ -2176,8 +2170,6 @@ func tags(path string, _ consts.HTTPVerb, typ reflect.Type) []string {
 //	      "id": "string",
 //	      "member_count": 0,
 //	      "name": "string",
-//	      "order": 0,
-//	      "remark": "string"
 //	    }
 //	  ]
 //	}

@@ -25,65 +25,63 @@ func patchValue(log types.Logger, typ reflect.Type, oldVal reflect.Value, newVal
 			case "GormTime": // The underlying type of model.GormTime(type of time.Time) is struct, we should continue handle.
 
 			case "Base":
-				// 有些结构体会匿名继承其他的结构体，例如 AssetChecking 匿名继承 Asset, 所以要可以额外检查是不是某个匿名结构体.
-				// 可以自动深度查找,不需要链式查找, 例如
-				// newVal.FieldByName("Asset").FieldByName("Remark").IsValid() 可以简化为
-				// newVal.FieldByName("Remark").IsValid()
+				// Base contains framework-managed fields and should not be patched directly.
+				/*
+					Legacy Base field patching kept as reference after Remark and Order
+					were moved out of model.Base.
 
-				// Make sure the type of "Remark" is pointer to golang base type.
-				fieldRemark := "Remark"
-				if oldVal.FieldByName(fieldRemark).CanSet() {
-					if newVal.FieldByName(fieldRemark).IsValid() { // WARN: oldVal.FieldByName(fieldRemark) maybe <invalid reflect.Value>
-						if !newVal.FieldByName(fieldRemark).IsZero() {
-							// output log must before set value.
-							if newVal.FieldByName(fieldRemark).Kind() == reflect.Pointer {
-								var oldValue, newValue any
-								if !oldVal.FieldByName(fieldRemark).IsNil() {
-									oldValue = oldVal.FieldByName(fieldRemark).Elem().Interface()
+					fieldRemark := "Remark"
+					if oldVal.FieldByName(fieldRemark).CanSet() {
+						if newVal.FieldByName(fieldRemark).IsValid() {
+							if !newVal.FieldByName(fieldRemark).IsZero() {
+								if newVal.FieldByName(fieldRemark).Kind() == reflect.Pointer {
+									var oldValue, newValue any
+									if !oldVal.FieldByName(fieldRemark).IsNil() {
+										oldValue = oldVal.FieldByName(fieldRemark).Elem().Interface()
+									} else {
+										oldValue = "<nil>"
+									}
+									if !newVal.FieldByName(fieldRemark).IsNil() {
+										newValue = newVal.FieldByName(fieldRemark).Elem().Interface()
+									} else {
+										newValue = "<nil>"
+									}
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(), oldValue, newValue))
 								} else {
-									oldValue = "<nil>"
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(),
+										oldVal.FieldByName(fieldRemark).Interface(), newVal.FieldByName(fieldRemark).Interface()))
 								}
-								if !newVal.FieldByName(fieldRemark).IsNil() {
-									newValue = newVal.FieldByName(fieldRemark).Elem().Interface()
-								} else {
-									newValue = "<nil>"
-								}
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(), oldValue, newValue))
-							} else {
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(),
-									oldVal.FieldByName(fieldRemark).Interface(), newVal.FieldByName(fieldRemark).Interface()))
+								oldVal.FieldByName(fieldRemark).Set(newVal.FieldByName(fieldRemark))
 							}
-							oldVal.FieldByName(fieldRemark).Set(newVal.FieldByName(fieldRemark)) // set old value by new value
 						}
 					}
-				}
-				// Make sure the type of "Order" is pointer to golang base type.
-				fieldOrder := "Order"
-				if oldVal.FieldByName(fieldOrder).CanSet() {
-					if newVal.FieldByName(fieldOrder).IsValid() { // WARN: oldVal.FieldByName(fieldOrder) maybe <invalid reflect.Value>
-						if !newVal.FieldByName(fieldOrder).IsZero() {
-							// output log must before set value.
-							if newVal.FieldByName(fieldOrder).Kind() == reflect.Pointer {
-								var oldValue, newValue any
-								if !oldVal.FieldByName(fieldOrder).IsNil() {
-									oldValue = oldVal.FieldByName(fieldOrder).Elem().Interface()
+
+					fieldOrder := "Order"
+					if oldVal.FieldByName(fieldOrder).CanSet() {
+						if newVal.FieldByName(fieldOrder).IsValid() {
+							if !newVal.FieldByName(fieldOrder).IsZero() {
+								if newVal.FieldByName(fieldOrder).Kind() == reflect.Pointer {
+									var oldValue, newValue any
+									if !oldVal.FieldByName(fieldOrder).IsNil() {
+										oldValue = oldVal.FieldByName(fieldOrder).Elem().Interface()
+									} else {
+										oldValue = "<nil>"
+									}
+									if !newVal.FieldByName(fieldOrder).IsNil() {
+										newValue = newVal.FieldByName(fieldOrder).Elem().Interface()
+									} else {
+										newValue = "<nil>"
+									}
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(), oldValue, newValue))
 								} else {
-									oldValue = "<nil>"
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(),
+										oldVal.FieldByName(fieldOrder).Interface(), newVal.FieldByName(fieldOrder).Interface()))
 								}
-								if !newVal.FieldByName(fieldOrder).IsNil() {
-									newValue = newVal.FieldByName(fieldOrder).Elem().Interface()
-								} else {
-									newValue = "<nil>"
-								}
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(), oldValue, newValue))
-							} else {
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(),
-									oldVal.FieldByName(fieldOrder).Interface(), newVal.FieldByName(fieldOrder).Interface()))
+								oldVal.FieldByName(fieldOrder).Set(newVal.FieldByName(fieldOrder))
 							}
-							oldVal.FieldByName(fieldOrder).Set(newVal.FieldByName(fieldOrder)) // set old value by new value.
 						}
 					}
-				}
+				*/
 				continue
 
 			default:

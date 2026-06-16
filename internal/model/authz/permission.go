@@ -10,8 +10,9 @@ import (
 )
 
 type Permission struct {
-	Resource string `json:"resource,omitempty" schema:"resource"`
-	Action   string `json:"action,omitempty" schema:"action"`
+	Resource string  `json:"resource,omitempty" schema:"resource"`
+	Action   string  `json:"action,omitempty" schema:"action"`
+	Remark   *string `json:"remark,omitempty" gorm:"size:10240" schema:"remark"` // Optional permission summary.
 
 	model.Base
 }

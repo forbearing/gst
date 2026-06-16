@@ -33,6 +33,8 @@ type Role struct {
 	Menus        []*Menu `json:"menus,omitempty" gorm:"-"`
 	MenuPartials []*Menu `json:"menu_partials,omitempty" gorm:"-"`
 
+	Remark *string `json:"remark,omitempty" gorm:"size:10240" schema:"remark"` // Optional role description generated from menus.
+
 	model.Base
 }
 

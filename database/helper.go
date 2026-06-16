@@ -198,20 +198,23 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 						q["id"] = fieldVal.FieldByName("ID").Interface().(string) //nolint:errcheck
 					}
 				}
-				remarkField := fieldVal.FieldByName("Remark")
-				if remarkField.IsValid() && !remarkField.IsZero() {
-					// Not overwrite the "Remark" value set in types.Model.
-					// The "Remark" value set in types.Model has higher priority than base model.
-					if _, loaded := q["remark"]; !loaded {
-						if remarkField.Kind() == reflect.Pointer {
-							if !remarkField.IsNil() {
-								q["remark"] = remarkField.Elem().Interface().(string) //nolint:errcheck
+				/*
+					Legacy Base Remark query mapping kept as reference after Remark
+					was moved out of model.Base.
+
+					remarkField := fieldVal.FieldByName("Remark")
+					if remarkField.IsValid() && !remarkField.IsZero() {
+						if _, loaded := q["remark"]; !loaded {
+							if remarkField.Kind() == reflect.Pointer {
+								if !remarkField.IsNil() {
+									q["remark"] = remarkField.Elem().Interface().(string) //nolint:errcheck
+								}
+							} else {
+								q["remark"] = remarkField.Interface().(string) //nolint:errcheck
 							}
-						} else {
-							q["remark"] = remarkField.Interface().(string) //nolint:errcheck
 						}
 					}
-				}
+				*/
 			} else {
 				structFieldToMap(ctx, fieldTyp, fieldVal, q)
 			}

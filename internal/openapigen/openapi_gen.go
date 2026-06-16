@@ -123,8 +123,7 @@ func Set[M types.Model, REQ types.Request, RSP types.Response](path string, verb
 // 		WithProperty("updated_at", openapi3.NewStringSchema()).
 // 		WithProperty("deleted_at", openapi3.NewStringSchema()).
 // 		WithProperty("created_by", openapi3.NewStringSchema()).
-// 		WithProperty("updated_by", openapi3.NewStringSchema()).
-// 		WithProperty("remark", openapi3.NewStringSchema())
+// 		WithProperty("updated_by", openapi3.NewStringSchema())
 // 	_ = schema
 //
 // 	// userSchema := openapi3.NewObjectSchema().
