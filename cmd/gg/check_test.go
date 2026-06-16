@@ -185,6 +185,87 @@ type User struct {
 	}
 }
 
+func TestCheckRunRejectsDAOImportingUpperLayers(t *testing.T) {
+	projectDir := t.TempDir()
+	writeCheckTestFile(t, filepath.Join(projectDir, "go.mod"), "module example.com/app\n\nrequire github.com/forbearing/gst v0.0.0\n")
+	writeCheckTestFile(t, filepath.Join(projectDir, "dao", "query.go"), `package dao
+
+import (
+	"example.com/app/controller"
+	"example.com/app/middleware"
+	"example.com/app/router"
+	"example.com/app/service/user"
+)
+
+var _ = controller.Init
+var _ = middleware.Register
+var _ = router.Init
+var _ = user.Creator{}
+`)
+
+	out, err := runCheckCommandForTest(t, projectDir)
+	if err == nil {
+		t.Fatalf("expected checkRun to reject dao imports from upper layers, output:\n%s", out)
+	}
+	for _, want := range []string{
+		"Dao file 'dao/query.go' imports forbidden controller layer: example.com/app/controller",
+		"Dao file 'dao/query.go' imports forbidden middleware layer: example.com/app/middleware",
+		"Dao file 'dao/query.go' imports forbidden router layer: example.com/app/router",
+		"Dao file 'dao/query.go' imports forbidden service layer: example.com/app/service/user",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("expected dao dependency violation %q, output:\n%s", want, out)
+		}
+	}
+}
+
+func TestCheckRunRejectsModelImportingDAO(t *testing.T) {
+	projectDir := t.TempDir()
+	writeCheckTestFile(t, filepath.Join(projectDir, "go.mod"), "module example.com/app\n\nrequire github.com/forbearing/gst v0.0.0\n")
+	writeCheckTestFile(t, filepath.Join(projectDir, "model", "user.go"), `package model
+
+import "example.com/app/dao"
+
+type User struct {
+	Name string `+"`json:\"name\"`"+`
+}
+
+var _ = dao.QueryUser
+`)
+
+	out, err := runCheckCommandForTest(t, projectDir)
+	if err == nil {
+		t.Fatalf("expected checkRun to reject model importing dao, output:\n%s", out)
+	}
+	if !strings.Contains(out, "Model file 'model/user.go' imports forbidden dao layer: example.com/app/dao") {
+		t.Fatalf("expected model dao dependency violation, output:\n%s", out)
+	}
+}
+
+func TestCheckRunAllowsDAOImportingModelAndFrameworkPackages(t *testing.T) {
+	projectDir := t.TempDir()
+	writeCheckTestFile(t, filepath.Join(projectDir, "go.mod"), "module example.com/app\n\nrequire github.com/forbearing/gst v0.0.0\n")
+	writeCheckTestFile(t, filepath.Join(projectDir, "dao", "query.go"), `package dao
+
+import (
+	"example.com/app/model/user"
+
+	"github.com/forbearing/gst/database"
+	"github.com/forbearing/gst/types"
+)
+
+func QueryUser(ctx *types.DatabaseContext) error {
+	users := make([]*user.User, 0)
+	return database.Database[*user.User](ctx).List(&users)
+}
+`)
+
+	out, err := runCheckCommandForTest(t, projectDir)
+	if err != nil {
+		t.Fatalf("expected checkRun to allow dao importing model and framework packages, err=%v output:\n%s", err, out)
+	}
+}
+
 func TestCheckRunRejectsMultipleModelStructsInOneFile(t *testing.T) {
 	projectDir := t.TempDir()
 	writeCheckTestFile(t, filepath.Join(projectDir, "model", "account.go"), `package model

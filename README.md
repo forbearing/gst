@@ -348,7 +348,8 @@ func init() {
 `gg check` 会检查：
 
 - `service` 不能调用其他业务 service。
-- `dao` 和 `model` 不能调用业务 service。
+- `dao` 不能调用业务 `service`、`router`、`controller`、`middleware`。
+- `model` 不能调用业务 `service` 和 `dao`。
 - `model` 目录和模型文件应使用单数命名，文件名不要使用连字符。
 - 模型结构体的 `json` tag 应使用 `snake_case`。
 - 显式声明的 DSL `Payload` 类型应以 `Req` 结尾，`Result` 类型应以 `Rsp` 结尾。

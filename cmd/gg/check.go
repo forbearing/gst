@@ -24,8 +24,8 @@ var checkCmd = &cobra.Command{
 	Short: "check architecture dependencies in generated code",
 	Long: `Check architecture dependencies in generated code:
 1. Service code should not call other service code
-2. DAO code should not call service code
-3. Model code should not call service code
+2. DAO code should not call service, router, controller, or middleware code
+3. Model code should not call service or dao code
 4. Model directories and files must be singular
 5. Model file names should not contain hyphens (use underscores instead)
 6. Model struct json tags should use snake_case naming
@@ -100,24 +100,25 @@ func totalProjectCheckViolations(results []projectCheckResult) int {
 func CheckArchitectureDependency() []string {
 	//nolint:prealloc
 	var violations []string
+	modulePath := currentProjectModulePath()
 
 	// Check service files
-	serviceViolations := checkServiceDependencies()
+	serviceViolations := checkServiceDependencies(modulePath)
 	violations = append(violations, serviceViolations...)
 
 	// Check dao files
-	daoViolations := checkDAODependencies()
+	daoViolations := checkDAODependencies(modulePath)
 	violations = append(violations, daoViolations...)
 
 	// Check model files
-	modelViolations := checkModelDependencies()
+	modelViolations := checkModelDependencies(modulePath)
 	violations = append(violations, modelViolations...)
 
 	return violations
 }
 
 // checkServiceDependencies checks if service code calls other service code
-func checkServiceDependencies() []string {
+func checkServiceDependencies(modulePath string) []string {
 	var violations []string
 
 	if _, err := os.Stat(serviceDir); os.IsNotExist(err) {
@@ -138,7 +139,7 @@ func checkServiceDependencies() []string {
 			return nil
 		}
 
-		fileViolations := checkFileForServiceImports(path, "service")
+		fileViolations := checkFileForArchitectureImports(path, "service", modulePath)
 		violations = append(violations, fileViolations...)
 
 		return nil
@@ -150,8 +151,8 @@ func checkServiceDependencies() []string {
 	return violations
 }
 
-// checkDAODependencies checks if DAO code calls service code
-func checkDAODependencies() []string {
+// checkDAODependencies checks if DAO code calls upper-layer code.
+func checkDAODependencies(modulePath string) []string {
 	var violations []string
 
 	if _, err := os.Stat(daoDir); os.IsNotExist(err) {
@@ -167,7 +168,7 @@ func checkDAODependencies() []string {
 			return nil
 		}
 
-		fileViolations := checkFileForServiceImports(path, "dao")
+		fileViolations := checkFileForArchitectureImports(path, "dao", modulePath)
 		violations = append(violations, fileViolations...)
 
 		return nil
@@ -179,8 +180,8 @@ func checkDAODependencies() []string {
 	return violations
 }
 
-// checkModelDependencies checks if model code calls service code
-func checkModelDependencies() []string {
+// checkModelDependencies checks if model code calls upper-layer or data-access code.
+func checkModelDependencies(modulePath string) []string {
 	var violations []string
 
 	if _, err := os.Stat(modelDir); os.IsNotExist(err) {
@@ -201,7 +202,7 @@ func checkModelDependencies() []string {
 			return nil
 		}
 
-		fileViolations := checkFileForServiceImports(path, "model")
+		fileViolations := checkFileForArchitectureImports(path, "model", modulePath)
 		violations = append(violations, fileViolations...)
 
 		return nil
@@ -213,8 +214,8 @@ func checkModelDependencies() []string {
 	return violations
 }
 
-// checkFileForServiceImports checks a single file for service imports
-func checkFileForServiceImports(filePath, layerType string) []string {
+// checkFileForArchitectureImports checks a single file for forbidden project-layer imports.
+func checkFileForArchitectureImports(filePath, layerType, modulePath string) []string {
 	var violations []string
 
 	fset := token.NewFileSet()
@@ -231,10 +232,9 @@ func checkFileForServiceImports(filePath, layerType string) []string {
 	for _, imp := range node.Imports {
 		importPath := strings.Trim(imp.Path.Value, `"`)
 
-		// Check for service imports
-		if containsServiceImport(importPath, layerType) {
-			violation := fmt.Sprintf("%s file '%s' imports service code: %s",
-				cases.Title(language.English).String(layerType), filePath, importPath)
+		if forbiddenLayer := forbiddenArchitectureImportLayer(importPath, layerType, modulePath); forbiddenLayer != "" {
+			violation := fmt.Sprintf("%s file '%s' imports forbidden %s layer: %s",
+				cases.Title(language.English).String(layerType), filePath, forbiddenLayer, importPath)
 			violations = append(violations, violation)
 		}
 	}
@@ -338,34 +338,53 @@ func CheckModelSingularNaming() []string {
 	return violations
 }
 
-// containsServiceImport checks if an import path contains service code
-func containsServiceImport(importPath, layerType string) bool {
-	// Split import path by '/'
-	parts := strings.SplitSeq(importPath, "/")
+func currentProjectModulePath() string {
+	modulePath, err := getModuleName()
+	if err != nil {
+		return ""
+	}
+	return strings.Trim(modulePath, "/")
+}
 
-	for part := range parts {
-		if part == "service" {
-			// For service layer, check if it's importing other service packages
-			if layerType == "service" {
-				// Allow importing the base gst service package only
-				if strings.Contains(importPath, "github.com/forbearing/gst/service") {
-					return false
-				}
-				// Forbid importing any other service implementations
-				return true
-			}
-			// For dao and model layers, any service import is forbidden except gst service
-			if layerType == "dao" || layerType == "model" {
-				// Allow importing the base gst service package for interfaces
-				if strings.Contains(importPath, "github.com/forbearing/gst/service") {
-					return false
-				}
-				// Forbid importing service implementations
-				return true
-			}
+func forbiddenArchitectureImportLayer(importPath, layerType, modulePath string) string {
+	importLayer := projectImportLayer(importPath, modulePath)
+	if importLayer == "" {
+		return ""
+	}
+
+	switch layerType {
+	case "service":
+		if importLayer == "service" {
+			return importLayer
+		}
+	case "dao":
+		if slices.Contains([]string{"service", "router", "controller", "middleware"}, importLayer) {
+			return importLayer
+		}
+	case "model":
+		if slices.Contains([]string{"service", "dao"}, importLayer) {
+			return importLayer
 		}
 	}
-	return false
+
+	return ""
+}
+
+func projectImportLayer(importPath, modulePath string) string {
+	if len(modulePath) == 0 {
+		return ""
+	}
+	if importPath == modulePath {
+		return ""
+	}
+
+	prefix := modulePath + "/"
+	if !strings.HasPrefix(importPath, prefix) {
+		return ""
+	}
+
+	layer, _, _ := strings.Cut(strings.TrimPrefix(importPath, prefix), "/")
+	return layer
 }
 
 // CheckModelJSONTagNaming checks if model struct json tags use camelCase naming
