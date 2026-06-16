@@ -53,11 +53,6 @@ func TestPruneRunRemovesDeepEmptyServiceDirectories(t *testing.T) {
 func setupEmptyModelProject(t *testing.T) {
 	t.Helper()
 
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	oldModelDir := modelDir
 	oldServiceDir := serviceDir
 	oldRouterDir := routerDir
@@ -76,9 +71,6 @@ func setupEmptyModelProject(t *testing.T) {
 		module = oldModule
 		prune = oldPrune
 		ggConfig = oldGGConfig
-		if err := os.Chdir(wd); err != nil {
-			t.Fatal(err)
-		}
 	})
 
 	t.Chdir(t.TempDir())

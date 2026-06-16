@@ -349,9 +349,7 @@ func TestCheckRunHelperProcess(t *testing.T) {
 	if projectDir == "" {
 		t.Fatal("GG_CHECK_PROJECT_DIR is required")
 	}
-	if err := os.Chdir(projectDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(projectDir)
 
 	modelDir = "model"
 	serviceDir = "service"
@@ -370,9 +368,7 @@ func TestGenRunHelperProcess(t *testing.T) {
 	if projectDir == "" {
 		t.Fatal("GG_GEN_PROJECT_DIR is required")
 	}
-	if err := os.Chdir(projectDir); err != nil {
-		t.Fatal(err)
-	}
+	t.Chdir(projectDir)
 
 	modelDir = "model"
 	serviceDir = "service"

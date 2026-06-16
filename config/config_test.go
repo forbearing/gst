@@ -82,10 +82,10 @@ func TestRegisterStructFromEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("WECHAT_APP_SECRET", "my_app_secret")
-	os.Setenv("NATS_USERNAME", "user_from_env")
-	os.Setenv("NATS_PASSWORD", "pass_from_env")
-	os.Setenv("NATS_TIMEOUT", "60s")
+	t.Setenv("WECHAT_APP_SECRET", "my_app_secret")
+	t.Setenv("NATS_USERNAME", "user_from_env")
+	t.Setenv("NATS_PASSWORD", "pass_from_env")
+	t.Setenv("NATS_TIMEOUT", "60s")
 
 	// Register config before bootstrap
 	config.Register[Wechat]()
@@ -283,20 +283,9 @@ func clearConfigEnvForTest(t *testing.T) {
 		"REDIS_NAMESPACE",
 	}
 	for _, key := range keys {
-		value, ok := os.LookupEnv(key)
+		t.Setenv(key, "")
 		if err := os.Unsetenv(key); err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() {
-			if ok {
-				if err := os.Setenv(key, value); err != nil {
-					t.Fatal(err)
-				}
-				return
-			}
-			if err := os.Unsetenv(key); err != nil {
-				t.Fatal(err)
-			}
-		})
 	}
 }

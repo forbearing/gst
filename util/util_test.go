@@ -105,7 +105,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestFileExists(t *testing.T) {
-	tmpFile, err := os.CreateTemp("", "test")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "test")
 	defer os.RemoveAll(tmpFile.Name())
 	defer tmpFile.Close()
 

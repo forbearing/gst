@@ -1,7 +1,6 @@
 package zap_test
 
 import (
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -33,8 +32,8 @@ func init() {
 }
 
 func createLogger(b *testing.B, filename string) types.Logger {
-	os.Setenv(config.LOGGER_FILE, filename)
-	os.Setenv(config.LOGGER_DIR, "/tmp/gst")
+	b.Setenv(config.LOGGER_FILE, filename)
+	b.Setenv(config.LOGGER_DIR, "/tmp/gst")
 	if err := config.Init(); err != nil {
 		b.Fatal(err)
 	}
@@ -43,8 +42,8 @@ func createLogger(b *testing.B, filename string) types.Logger {
 }
 
 func TestLogger(b *testing.T) {
-	os.Setenv(config.LOGGER_FILE, "")
-	os.Setenv(config.LOGGER_DIR, "/tmp/gst")
+	b.Setenv(config.LOGGER_FILE, "")
+	b.Setenv(config.LOGGER_DIR, "/tmp/gst")
 	if err := config.Init(); err != nil {
 		b.Fatal(err)
 	}

@@ -9,13 +9,7 @@ import (
 )
 
 func TestCreateTeplConfigWritesEssentialConfig(t *testing.T) {
-	tmp := t.TempDir()
-	oldWd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(tmp))
-	t.Cleanup(func() {
-		require.NoError(t, os.Chdir(oldWd))
-	})
+	t.Chdir(t.TempDir())
 
 	require.NoError(t, createTeplConfig("myapp"))
 
@@ -68,13 +62,7 @@ namespace = myapp
 }
 
 func TestEnsureFileExistsReportsCreatedFiles(t *testing.T) {
-	tmp := t.TempDir()
-	oldWd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(tmp))
-	t.Cleanup(func() {
-		require.NoError(t, os.Chdir(oldWd))
-	})
+	t.Chdir(t.TempDir())
 
 	created, err := EnsureFileExists()
 	require.NoError(t, err)
