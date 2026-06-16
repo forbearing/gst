@@ -1,8 +1,12 @@
 package dbmigrate_test
 
 import (
+	"database/sql"
+	"fmt"
+	"net/url"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/pkg/dbmigrate"
@@ -37,30 +41,40 @@ func TestMigrate(t *testing.T) {
 		schema, err := dumper.Dump(config.DBPostgres, User{}, Group{})
 		require.NoError(t, err)
 
+		database := fmt.Sprintf("gst_dbmigrate_test_%d", time.Now().UnixNano())
+		adminConfig := postgresDatabaseConfig("test")
+		createPostgresDatabase(t, adminConfig, database)
+		t.Cleanup(func() {
+			dropPostgresDatabase(t, adminConfig, database)
+		})
+		databaseConfig := postgresDatabaseConfig(database)
+
 		migrated, err := dbmigrate.Migrate(
 			[]string{schema}, config.DBPostgres,
-			&dbmigrate.DatabaseConfig{
-				Host:     "127.0.0.1",
-				Port:     5432,
-				Username: "test",
-				Password: "test",
-				Database: "test",
-				SSLMode:  "disable",
-			},
+			databaseConfig,
 			&dbmigrate.MigrateOption{
 				DryRun: true,
 			},
 		)
 		require.NoError(t, err)
-		// Based on previous run, postgres showed "Nothing is modified", so it should be false.
-		// However, this might depend on the state of the DB.
-		// If the DB is clean, it should be true.
-		// Let's check if the table exists or not.
-		// Since I cannot easily check the DB state here, I will just assert based on the log output I saw.
-		// But wait, if I want to be robust, I should drop tables first or ensure clean state.
-		// For now, I'll trust the previous output which said "Nothing is modified" for Postgres.
-		// Wait, why was nothing modified? Maybe because the tables already existed from a previous run?
-		// If I run it again, it should be the same.
+		require.True(t, migrated)
+
+		migrated, err = dbmigrate.Migrate(
+			[]string{schema}, config.DBPostgres,
+			databaseConfig,
+			&dbmigrate.MigrateOption{},
+		)
+		require.NoError(t, err)
+		require.True(t, migrated)
+
+		migrated, err = dbmigrate.Migrate(
+			[]string{schema}, config.DBPostgres,
+			databaseConfig,
+			&dbmigrate.MigrateOption{
+				DryRun: true,
+			},
+		)
+		require.NoError(t, err)
 		require.False(t, migrated)
 	})
 
@@ -99,4 +113,53 @@ func TestMigrate(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, migrated)
 	})
+}
+
+func postgresDatabaseConfig(database string) *dbmigrate.DatabaseConfig {
+	return &dbmigrate.DatabaseConfig{
+		Host:     "127.0.0.1",
+		Port:     5432,
+		Username: "test",
+		Password: "test",
+		Database: database,
+		SSLMode:  "disable",
+	}
+}
+
+func createPostgresDatabase(t *testing.T, cfg *dbmigrate.DatabaseConfig, database string) {
+	t.Helper()
+
+	db, err := sql.Open("postgres", postgresDSN(cfg))
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, err = db.Exec("CREATE DATABASE " + database)
+	require.NoError(t, err)
+}
+
+func dropPostgresDatabase(t *testing.T, cfg *dbmigrate.DatabaseConfig, database string) {
+	t.Helper()
+
+	db, err := sql.Open("postgres", postgresDSN(cfg))
+	require.NoError(t, err)
+	defer db.Close()
+
+	_, _ = db.Exec("DROP DATABASE IF EXISTS " + database)
+}
+
+func postgresDSN(cfg *dbmigrate.DatabaseConfig) string {
+	dsn := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.Username, cfg.Password),
+		Host:   fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Path:   "/" + cfg.Database,
+	}
+
+	options := url.Values{}
+	if cfg.SSLMode != "" {
+		options.Set("sslmode", cfg.SSLMode)
+	}
+	dsn.RawQuery = options.Encode()
+
+	return dsn.String()
 }
