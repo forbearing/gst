@@ -192,12 +192,13 @@ func IsEnabled() bool {
 	return config.App.OTEL.Enable && initialized
 }
 
-// StartSpan starts a new span with the given name and options
+// StartSpan starts a new span with the given name and options. The caller owns
+// the returned span and must end it after the traced operation finishes.
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	if !IsEnabled() {
 		return ctx, trace.SpanFromContext(ctx)
 	}
-	return tracer.Start(ctx, name, opts...)
+	return tracer.Start(ctx, name, opts...) //nolint:spancheck // Caller receives and ends the returned span.
 }
 
 // SpanFromContext returns the span from the context

@@ -284,9 +284,10 @@ func (tw *Wrapper[T]) Clear() {
 	span.SetStatus(codes.Ok, "Cache cleared successfully")
 }
 
-// startSpan creates a new span for the given operation
+// startSpan creates a new span for the given operation. The caller owns the
+// returned span and must end it after the cache operation finishes.
 func (tw *Wrapper[T]) startSpan(operationName string) (context.Context, trace.Span) {
 	tracer := gstotel.GetTracer()
-	ctx, span := tracer.Start(tw.ctx, operationName)
-	return ctx, span
+	ctx, span := tracer.Start(tw.ctx, operationName) //nolint:spancheck // Caller receives and ends the returned span.
+	return ctx, span                                 //nolint:spancheck // Caller receives and ends the returned span.
 }
