@@ -3,7 +3,6 @@ package scylla
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -219,7 +218,7 @@ func Session() (gocqlx.Session, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return gocqlx.Session{}, fmt.Errorf("ScyllaDB session not initialized, call Init() first")
+		return gocqlx.Session{}, errors.New("ScyllaDB session not initialized, call Init() first")
 	}
 	return session, nil
 }

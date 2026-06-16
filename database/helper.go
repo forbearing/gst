@@ -254,7 +254,7 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 			// 由于 WHERE IN 语句会自动加上单引号,比如 WHERE `default` IN ('true')
 			// 但是我们想要的是 WHERE `default` IN (true),
 			// 所以没办法就只能直接转成 int 了.
-			_v = fmt.Sprintf("%d", boolToInt(v.(bool))) //nolint:errcheck
+			_v = strconv.Itoa(boolToInt(v.(bool))) //nolint:errcheck
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			_v = fmt.Sprintf("%d", v)
 		case reflect.Float32, reflect.Float64:
@@ -266,7 +266,7 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 			// switch typ.Elem().Kind() {
 			switch fieldVal.Elem().Kind() {
 			case reflect.Bool:
-				_v = fmt.Sprintf("%d", boolToInt(v.(bool))) //nolint:errcheck
+				_v = strconv.Itoa(boolToInt(v.(bool))) //nolint:errcheck
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 				_v = fmt.Sprintf("%d", v)
 			case reflect.Float32, reflect.Float64:

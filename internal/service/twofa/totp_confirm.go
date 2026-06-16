@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	"github.com/forbearing/gst/service"
@@ -32,7 +33,7 @@ func (t *TOTPConfirmService) Create(ctx *types.ServiceContext, req *modeltwofa.T
 	// 2. 验证 secret 格式（Base32 编码，通常32字符）
 	if len(req.Secret) == 0 {
 		log.Errorz("secret is empty")
-		return nil, fmt.Errorf("secret is required")
+		return nil, errors.New("secret is required")
 	}
 
 	// // 验证 secret 是否为有效的 Base32 格式
@@ -45,7 +46,7 @@ func (t *TOTPConfirmService) Create(ctx *types.ServiceContext, req *modeltwofa.T
 	valid := totp.Validate(req.Code, req.Secret)
 	if !valid {
 		log.Warnz("invalid totp code", zap.String("user_id", ctx.UserID))
-		return nil, fmt.Errorf("invalid TOTP code")
+		return nil, errors.New("invalid TOTP code")
 	}
 
 	log.Infoz("totp code validated successfully", zap.String("user_id", ctx.UserID))
@@ -61,7 +62,7 @@ func (t *TOTPConfirmService) Create(ctx *types.ServiceContext, req *modeltwofa.T
 	}
 	if len(devices) > 0 {
 		log.Warnz("device already exists", zap.String("user_id", ctx.UserID), zap.String("device_id", devices[0].ID))
-		return nil, fmt.Errorf("device already bound")
+		return nil, errors.New("device already bound")
 	}
 
 	// 5. 生成备份码

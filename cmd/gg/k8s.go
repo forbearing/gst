@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
@@ -177,7 +178,7 @@ func k8sApplyRun(cmd *cobra.Command, args []string) error {
 
 	k8sDir := "k8s"
 	if !fileExists(k8sDir) {
-		return fmt.Errorf("k8s directory not found. Run 'gg k8s gen' first")
+		return errors.New("k8s directory not found. Run 'gg k8s gen' first")
 	}
 
 	// Apply all YAML files in k8s directory
@@ -205,7 +206,7 @@ func k8sDeleteRun(cmd *cobra.Command, args []string) error {
 
 	k8sDir := "k8s"
 	if !fileExists(k8sDir) {
-		return fmt.Errorf("k8s directory not found. Nothing to delete")
+		return errors.New("k8s directory not found. Nothing to delete")
 	}
 
 	// Delete all resources defined in k8s directory
@@ -227,7 +228,7 @@ func checkKubectlInstalled() error {
 	_, err := exec.LookPath("kubectl")
 	if err != nil {
 		clioutput.Warn("", "kubectl is not installed or not in PATH")
-		return fmt.Errorf("kubectl command not found")
+		return errors.New("kubectl command not found")
 	}
 	return nil
 }
@@ -447,7 +448,7 @@ func k8sDeployRun(cmd *cobra.Command, args []string) error {
 
 	k8sDir := "k8s"
 	if !fileExists(k8sDir) {
-		return fmt.Errorf("k8s directory not found after generation")
+		return errors.New("k8s directory not found after generation")
 	}
 
 	// Apply all YAML files in k8s directory

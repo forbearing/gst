@@ -1,7 +1,6 @@
 package dsl
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"slices"
@@ -857,5 +856,5 @@ func starName(name string) string {
 		return ""
 	}
 
-	return fmt.Sprintf("*%s", strings.TrimPrefix(name, `*`))
+	return "*" + strings.TrimPrefix(name, `*`)
 }

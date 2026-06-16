@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
@@ -152,7 +153,7 @@ func checkDockerInstalled() error {
 	_, err := exec.LookPath("docker")
 	if err != nil {
 		clioutput.Warn("", "Docker is not installed or not in PATH")
-		return fmt.Errorf("docker command not found")
+		return errors.New("docker command not found")
 	}
 	return nil
 }
@@ -285,7 +286,7 @@ func getDefaultImageTag() (string, error) {
 	// Clean the image name to be Docker-compatible
 	imageName = strings.ToLower(strings.ReplaceAll(imageName, "_", "-"))
 
-	return fmt.Sprintf("%s:latest", imageName), nil
+	return imageName + ":latest", nil
 }
 
 // buildDockerImage builds the Docker image
@@ -343,5 +344,5 @@ func getModuleName() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("module name not found in go.mod")
+	return "", errors.New("module name not found in go.mod")
 }

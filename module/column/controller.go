@@ -79,7 +79,7 @@ func queryColumns(table string, columns []string, db ...*gorm.DB) (map[string][]
 				return
 			}
 			if rows == nil {
-				zap.S().Warnw(fmt.Sprintf("rows is nil for column %s", column), "sql", statement)
+				zap.S().Warnw("rows is nil for column "+column, "sql", statement)
 				return
 			}
 			defer rows.Close()
@@ -167,7 +167,7 @@ func queryColumnsWithQuery(table string, columns []string, query map[string][]st
 				return
 			}
 			if rows == nil {
-				zap.S().Warnw(fmt.Sprintf("rows is nil for column %s", column), "sql", statement)
+				zap.S().Warnw("rows is nil for column "+column, "sql", statement)
 				return
 			}
 			defer rows.Close()
@@ -246,7 +246,7 @@ func queryColumnsAndCount(table string, columns []string, db ...*gorm.DB) (colum
 				return
 			}
 			if rows == nil {
-				zap.S().Warnw(fmt.Sprintf("rows is nil for column %s", column), "sql", statement)
+				zap.S().Warnw("rows is nil for column "+column, "sql", statement)
 				return
 			}
 			defer rows.Close()

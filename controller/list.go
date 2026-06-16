@@ -147,7 +147,7 @@ func ListFactory[M types.Model, REQ types.Request, RSP types.Response](cfg ...*t
 		if err := schema.NewDecoder().Decode(m, c.Request.URL.Query()); err != nil {
 			log.Warn(fmt.Sprintf("failed to decode uri query parameter into model: %s", err))
 		}
-		log.Infoz(fmt.Sprintf("%s: list query parameter", typ.Name()), zap.Object(typ.String(), m))
+		log.Infoz(typ.Name()+": list query parameter", zap.Object(typ.String(), m))
 
 		var err error
 		var or bool

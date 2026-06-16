@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -30,7 +31,7 @@ var (
 func init() {
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
 	os.Setenv(config.SQLITE_IS_MEMORY, "true")
-	os.Setenv(config.SERVER_PORT, fmt.Sprintf("%d", port))
+	os.Setenv(config.SERVER_PORT, strconv.Itoa(port))
 	os.Setenv(config.LOGGER_DIR, "/tmp/test_module")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
 

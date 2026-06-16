@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/util"
 )
@@ -110,7 +111,7 @@ func (*document) Search(ctx context.Context, indexName string, req *SearchReques
 		return nil, fmt.Errorf("elasticsearch client check: %w", err)
 	}
 	if indexName == "" {
-		return nil, fmt.Errorf("index name cannot be empty")
+		return nil, errors.New("index name cannot be empty")
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -200,7 +201,7 @@ func parseSearchResult(esRes map[string]any) (*SearchResult, error) {
 
 	// Extract hits with type assertion safety
 	if hits, ok = esRes["hits"].(map[string]any); !ok {
-		return nil, fmt.Errorf("invalid response format: hits not found or invalid type")
+		return nil, errors.New("invalid response format: hits not found or invalid type")
 	}
 	// Process search result with safe type assertions
 	if total, err = extractTotal(hits); err != nil {
@@ -213,7 +214,7 @@ func parseSearchResult(esRes map[string]any) (*SearchResult, error) {
 	}
 	// Process hits with safe type assertions
 	if hitsList, ok = hits["hits"].([]any); !ok {
-		return nil, fmt.Errorf("invalid response format: hits list not found or invalid type")
+		return nil, errors.New("invalid response format: hits list not found or invalid type")
 	}
 	result.Hits = make([]SearchHit, len(hitsList))
 
@@ -279,11 +280,11 @@ func parseSearchResult(esRes map[string]any) (*SearchResult, error) {
 func extractTotal(hits map[string]any) (int64, error) {
 	total, ok := hits["total"].(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("invalid total format")
+		return 0, errors.New("invalid total format")
 	}
 	value, ok := total["value"].(float64)
 	if !ok {
-		return 0, fmt.Errorf("invalid total value format")
+		return 0, errors.New("invalid total value format")
 	}
 	return int64(value), nil
 }

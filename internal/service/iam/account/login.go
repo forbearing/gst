@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modeliamgroup "github.com/forbearing/gst/internal/model/iam/group"
@@ -40,10 +41,10 @@ func (s *LoginService) Create(ctx *types.ServiceContext, req *modeliamaccount.Lo
 func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccount.LoginReq) (rsp *modeliamaccount.LoginRsp, err error) {
 	// Validate input
 	if req.Username == "" {
-		return nil, fmt.Errorf("username is required")
+		return nil, errors.New("username is required")
 	}
 	if req.Password == "" {
-		return nil, fmt.Errorf("password is required")
+		return nil, errors.New("password is required")
 	}
 
 	var success bool
@@ -72,11 +73,11 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	users := make([]*modeliamuser.User, 0)
 	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliamuser.User{Username: req.Username}).List(&users); err != nil {
 		log.Errorz("failed to query user", zap.Error(err))
-		return nil, fmt.Errorf("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 	if len(users) == 0 {
 		log.Warnz("user not found", zap.String("username", req.Username))
-		return nil, fmt.Errorf("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 	user := users[0]
 
@@ -91,14 +92,14 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	// Verify password
 	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		log.Warnz("invalid password", zap.String("username", req.Username))
-		return nil, fmt.Errorf("invalid username or password")
+		return nil, errors.New("invalid username or password")
 	}
 
 	// Check if user has 2FA enabled
 	has2FA, err := checkUserHas2FA(ctx, user.ID)
 	if err != nil {
 		log.Errorz("failed to check 2FA status", zap.String("user_id", user.ID), zap.Error(err))
-		return nil, fmt.Errorf("internal server error")
+		return nil, errors.New("internal server error")
 	}
 
 	// If user has 2FA enabled, validate the 2FA code
@@ -106,21 +107,21 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 		// Check if either TOTP code or backup code is provided
 		if req.TOTPCode == "" && req.BackupCode == "" {
 			log.Infoz("2FA required but no code provided", zap.String("username", req.Username))
-			return nil, fmt.Errorf("2FA verification required")
+			return nil, errors.New("2FA verification required")
 		}
 
 		// Validate TOTP code if provided
 		if req.TOTPCode != "" {
 			if err = validateTOTPCode(ctx, user.ID, req.TOTPCode); err != nil {
 				log.Warnz("invalid TOTP code", zap.String("username", req.Username), zap.Error(err))
-				return nil, fmt.Errorf("invalid 2FA code")
+				return nil, errors.New("invalid 2FA code")
 			}
 			log.Infoz("TOTP code validated successfully", zap.String("username", req.Username))
 		} else if req.BackupCode != "" {
 			// Validate backup code if provided
 			if err = validateBackupCode(ctx, user.ID, req.BackupCode); err != nil {
 				log.Warnz("invalid backup code", zap.String("username", req.Username), zap.Error(err))
-				return nil, fmt.Errorf("invalid backup code")
+				return nil, errors.New("invalid backup code")
 			}
 			log.Infoz("backup code validated successfully", zap.String("username", req.Username))
 		}
@@ -172,11 +173,11 @@ func localLogin(ctx *types.ServiceContext, log types.Logger, req *modeliamaccoun
 	// Store session in Redis
 	if err = redis.Cache[modeliamsession.Session]().Set(prefixedSessionID, sessionData, expire); err != nil {
 		log.Errorz("failed to set session in redis", zap.Error(err))
-		return nil, fmt.Errorf("failed to set session in redis")
+		return nil, errors.New("failed to set session in redis")
 	}
 	if err = serviceiamsession.TrackUserSession(sessionData); err != nil {
 		log.Errorz("failed to track user session in redis", zap.Error(err))
-		return nil, fmt.Errorf("failed to track user session in redis")
+		return nil, errors.New("failed to track user session in redis")
 	}
 
 	// Set cookie
@@ -238,7 +239,7 @@ func checkUserHas2FA(ctx *types.ServiceContext, userID string) (bool, error) {
 // validateTOTPCode validates the provided TOTP code for the user
 func validateTOTPCode(ctx *types.ServiceContext, userID, code string) error {
 	if code == "" {
-		return fmt.Errorf("TOTP code is required")
+		return errors.New("TOTP code is required")
 	}
 
 	db := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext())
@@ -252,7 +253,7 @@ func validateTOTPCode(ctx *types.ServiceContext, userID, code string) error {
 	}
 
 	if len(devices) == 0 {
-		return fmt.Errorf("no active TOTP devices found")
+		return errors.New("no active TOTP devices found")
 	}
 
 	// Try to validate the code against all active devices
@@ -262,13 +263,13 @@ func validateTOTPCode(ctx *types.ServiceContext, userID, code string) error {
 		}
 	}
 
-	return fmt.Errorf("invalid TOTP code")
+	return errors.New("invalid TOTP code")
 }
 
 // validateBackupCode validates the provided backup code for the user
 func validateBackupCode(ctx *types.ServiceContext, userID, code string) error {
 	if code == "" {
-		return fmt.Errorf("backup code is required")
+		return errors.New("backup code is required")
 	}
 
 	db := database.Database[*modeltwofa.TOTPDevice](ctx.DatabaseContext())
@@ -282,7 +283,7 @@ func validateBackupCode(ctx *types.ServiceContext, userID, code string) error {
 	}
 
 	if len(devices) == 0 {
-		return fmt.Errorf("no active TOTP devices found")
+		return errors.New("no active TOTP devices found")
 	}
 
 	// Check backup codes for all active devices
@@ -310,7 +311,7 @@ func validateBackupCode(ctx *types.ServiceContext, userID, code string) error {
 		}
 	}
 
-	return fmt.Errorf("invalid backup code")
+	return errors.New("invalid backup code")
 }
 
 // func keycloakLogin(ctx *types.ServiceContext, log types.Logger, req *iam.LoginReq) (rsp *iam.LoginRsp, err error) {

@@ -1,7 +1,6 @@
 package rocketmq
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -224,10 +223,10 @@ func Producer() (rocketmq.Producer, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return nil, fmt.Errorf("rocketmq producer not initialized, call Init() first")
+		return nil, errors.New("rocketmq producer not initialized, call Init() first")
 	}
 	if defaultProducer == nil {
-		return nil, fmt.Errorf("rocketmq producer is nil")
+		return nil, errors.New("rocketmq producer is nil")
 	}
 	return defaultProducer, nil
 }
@@ -237,10 +236,10 @@ func Consumer() (rocketmq.PushConsumer, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return nil, fmt.Errorf("rocketmq consumer not initialized, call Init() first")
+		return nil, errors.New("rocketmq consumer not initialized, call Init() first")
 	}
 	if defaultConsumer == nil {
-		return nil, fmt.Errorf("rocketmq consumer is nil")
+		return nil, errors.New("rocketmq consumer is nil")
 	}
 	return defaultConsumer, nil
 }
@@ -250,10 +249,10 @@ func Admin() (admin.Admin, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return nil, fmt.Errorf("rocketmq admin not initialized, call Init() first")
+		return nil, errors.New("rocketmq admin not initialized, call Init() first")
 	}
 	if defaultAdmin == nil {
-		return nil, fmt.Errorf("rocketmq admin is nil")
+		return nil, errors.New("rocketmq admin is nil")
 	}
 	return defaultAdmin, nil
 }

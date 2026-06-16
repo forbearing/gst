@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"slices"
 	"time"
@@ -273,7 +272,7 @@ func (db *database[M]) Get(dest M, id string) (err error) {
 			tx := db.dryRunReadSession().Where("id = ?", id).Find(dryRunDest)
 			return db.collectSQL(tx)
 		}
-		tx := db.dryRunReadSession().Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dryRunDest)
+		tx := db.dryRunReadSession().Table(tableName).Where(db.quoteTableColumn(tableName, "id")+" = ?", id).Find(dryRunDest)
 		return db.collectSQL(tx)
 	}
 	if !db.enableCache {
@@ -384,7 +383,7 @@ QUERY:
 		_, tableName, _ = buildCacheKey(db.ins.Session(&gorm.Session{DryRun: true, Logger: glogger.Default.LogMode(glogger.Silent)}).Where("id = ?", id).Find(dest).Statement, "get", id)
 	}
 	dest.ClearID()
-	if err = db.ins.Table(tableName).Where(fmt.Sprintf("%s = ?", db.quoteTableColumn(tableName, "id")), id).Find(dest).Error; err != nil {
+	if err = db.ins.Table(tableName).Where(db.quoteTableColumn(tableName, "id")+" = ?", id).Find(dest).Error; err != nil {
 		return err
 	}
 	// Invoke model hook: GetAfter.

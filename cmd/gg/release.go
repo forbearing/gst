@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
@@ -72,7 +73,7 @@ func releaseRun(cmd *cobra.Command, args []string) error {
 		clioutput.Line(clioutput.StyleInfo, "go install github.com/goreleaser/goreleaser@latest")
 		clioutput.Line(clioutput.StyleMuted, "# Using curl (Linux/macOS)")
 		clioutput.Line(clioutput.StyleInfo, "curl -sfL https://goreleaser.com/static/run | bash")
-		return fmt.Errorf("goreleaser not found")
+		return errors.New("goreleaser not found")
 	}
 
 	clioutput.Success("", "goreleaser is installed")
@@ -223,7 +224,7 @@ func checkGoreleaserSetup() error {
 	// Check installation
 	if !isGoreleaserInstalled() {
 		clioutput.Error("", "goreleaser is not installed")
-		return fmt.Errorf("goreleaser not found")
+		return errors.New("goreleaser not found")
 	}
 	clioutput.Success("", "goreleaser is installed")
 
@@ -256,7 +257,7 @@ func checkGoreleaserSetup() error {
 	// Check git repository
 	if !isGitRepository() {
 		clioutput.Error("", "Not a git repository")
-		return fmt.Errorf("git repository required")
+		return errors.New("git repository required")
 	}
 	clioutput.Success("", "Git repository detected")
 

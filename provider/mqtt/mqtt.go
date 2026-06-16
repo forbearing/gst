@@ -110,7 +110,7 @@ func buildOptions(cfg config.Mqtt) (*mqtt.ClientOptions, error) {
 func connect(client mqtt.Client) error {
 	token := client.Connect()
 	if !token.WaitTimeout(config.App.Mqtt.ConnectTimeout) {
-		return fmt.Errorf("connect timeout")
+		return errors.New("connect timeout")
 	}
 	if err := token.Error(); err != nil {
 		return err
@@ -173,10 +173,10 @@ func Client() (mqtt.Client, error) {
 	defer mu.RUnlock()
 
 	if !initialized {
-		return nil, fmt.Errorf("mqtt client not initialized")
+		return nil, errors.New("mqtt client not initialized")
 	}
 	if client == nil {
-		return nil, fmt.Errorf("mqtt client is nil")
+		return nil, errors.New("mqtt client is nil")
 	}
 
 	return client, nil
@@ -190,7 +190,7 @@ func Health() error {
 	}
 
 	if !c.IsConnected() {
-		return fmt.Errorf("mqtt client is not connected")
+		return errors.New("mqtt client is not connected")
 	}
 
 	return nil
@@ -235,7 +235,7 @@ func Publish(topic string, payload any, opts ...PublishOption) error {
 
 	token := c.Publish(topic, opt.QoS, opt.Retain, data)
 	if !token.WaitTimeout(opt.Timeout) {
-		return fmt.Errorf("publish timeout")
+		return errors.New("publish timeout")
 	}
 	if err := token.Error(); err != nil {
 		logger.Mqtt.Errorw(
@@ -285,7 +285,7 @@ func Subscribe(topic string, handler MessageHandler, opts ...SubscribeOption) er
 
 	token := c.Subscribe(topic, opt.QoS, wrapper)
 	if !token.WaitTimeout(opt.Timeout) {
-		return fmt.Errorf("subscribe timeout")
+		return errors.New("subscribe timeout")
 	}
 	if err := token.Error(); err != nil {
 		logger.Mqtt.Errorw(
@@ -313,7 +313,7 @@ func Unsubscribe(topics ...string) error {
 
 	token := c.Unsubscribe(topics...)
 	if !token.WaitTimeout(5 * time.Second) {
-		return fmt.Errorf("unsubscribe timeout")
+		return errors.New("unsubscribe timeout")
 	}
 	if err := token.Error(); err != nil {
 		logger.Mqtt.Errorw(

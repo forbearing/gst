@@ -1,11 +1,11 @@
 package types
 
 import (
-	"fmt"
+	"github.com/cockroachdb/errors"
 )
 
 var (
-	ErrComparisonNil = fmt.Errorf("comparison function cannot be nil")
-	ErrEqualNil      = fmt.Errorf("equality function cannot be nil")
-	ErrFuncNil       = fmt.Errorf("function cannot be nil")
+	ErrComparisonNil = errors.New("comparison function cannot be nil")
+	ErrEqualNil      = errors.New("equality function cannot be nil")
+	ErrFuncNil       = errors.New("function cannot be nil")
 )

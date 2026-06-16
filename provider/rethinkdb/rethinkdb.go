@@ -2,7 +2,6 @@ package rethinkdb
 
 import (
 	"crypto/tls"
-	"fmt"
 	"sync"
 
 	"github.com/cockroachdb/errors"
@@ -104,10 +103,10 @@ func Session() (*r.Session, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return nil, fmt.Errorf("rethinkdb session not initialized, call Init() first")
+		return nil, errors.New("rethinkdb session not initialized, call Init() first")
 	}
 	if session == nil {
-		return nil, fmt.Errorf("rethinkdb session is nil")
+		return nil, errors.New("rethinkdb session is nil")
 	}
 	return session, nil
 }

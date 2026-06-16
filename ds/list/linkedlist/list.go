@@ -10,13 +10,13 @@
 package linkedlist
 
 import (
-	"fmt"
 	"slices"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/ds/types"
 )
 
-var ErrNilCmp = fmt.Errorf("nil comparator")
+var ErrNilCmp = errors.New("nil comparator")
 
 // List represents a doubly-linked list.
 type List[V any] struct {

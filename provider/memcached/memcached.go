@@ -1,7 +1,6 @@
 package memcached
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/bradfitz/gomemcache/memcache"
@@ -72,10 +71,10 @@ func Client() (*memcache.Client, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return nil, fmt.Errorf("memcached client not initialized, call Init() first")
+		return nil, errors.New("memcached client not initialized, call Init() first")
 	}
 	if client == nil {
-		return nil, fmt.Errorf("memcached client is nil")
+		return nil, errors.New("memcached client is nil")
 	}
 	return client, nil
 }

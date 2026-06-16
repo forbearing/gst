@@ -6,6 +6,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	"github.com/forbearing/gst/service"
@@ -36,7 +37,7 @@ func (t *TOTPVerifyService) Create(ctx *types.ServiceContext, req *modeltwofa.TO
 		return &modeltwofa.TOTPVerifyRsp{
 			Valid:   false,
 			Message: "verification code is required",
-		}, fmt.Errorf("verification code is required")
+		}, errors.New("verification code is required")
 	}
 
 	// 3. 查询用户的 TOTP 设备
@@ -64,7 +65,7 @@ func (t *TOTPVerifyService) Create(ctx *types.ServiceContext, req *modeltwofa.TO
 		return &modeltwofa.TOTPVerifyRsp{
 			Valid:   false,
 			Message: "no active TOTP devices found",
-		}, fmt.Errorf("no active TOTP devices found")
+		}, errors.New("no active TOTP devices found")
 	}
 
 	// 4. 验证代码

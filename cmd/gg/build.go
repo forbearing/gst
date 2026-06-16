@@ -15,6 +15,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
@@ -218,7 +219,7 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if successCount == 0 {
-		return fmt.Errorf("all builds failed")
+		return errors.New("all builds failed")
 	}
 
 	clioutput.Success("", "Build completed: %d/%d successful", successCount, len(targets))
@@ -455,7 +456,7 @@ func getBuildTargets(config *Build) ([]BuildTarget, error) {
 	}
 
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("no valid build targets found")
+		return nil, errors.New("no valid build targets found")
 	}
 
 	return targets, nil
@@ -508,8 +509,8 @@ func buildForTarget(target BuildTarget, info *BuildInfo, config *Build, buildFil
 
 	// Set environment
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("GOOS=%s", target.OS))
-	env = append(env, fmt.Sprintf("GOARCH=%s", target.Arch))
+	env = append(env, "GOOS="+target.OS)
+	env = append(env, "GOARCH="+target.Arch)
 
 	if !config.Cgo {
 		env = append(env, "CGO_ENABLED=0")

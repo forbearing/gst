@@ -1,7 +1,6 @@
 package splaytree
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 )
@@ -28,7 +27,7 @@ func WithNodeFormat[K comparable, V any](format string) Option[K, V] {
 			return r == '\n'
 		})
 		if len(format) > 0 {
-			t.nodeFormat = fmt.Sprintf("%s\n", format)
+			t.nodeFormat = format + "\n"
 		}
 		return nil
 	}

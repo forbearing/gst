@@ -356,9 +356,9 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			} else { // If the query string has only one value, using LIKE
 				// db.db = db.db.Where(fmt.Sprintf("`%s` LIKE ?", k), fmt.Sprintf("%%%v%%", v))
 				if cfg.UseOr && !isFirstCondition {
-					db.ins = db.ins.Or(fmt.Sprintf("%s LIKE ?", db.quoteIdent(k)), fmt.Sprintf("%%%v%%", v))
+					db.ins = db.ins.Or(db.quoteIdent(k)+" LIKE ?", fmt.Sprintf("%%%v%%", v))
 				} else {
-					db.ins = db.ins.Where(fmt.Sprintf("%s LIKE ?", db.quoteIdent(k)), fmt.Sprintf("%%%v%%", v))
+					db.ins = db.ins.Where(db.quoteIdent(k)+" LIKE ?", fmt.Sprintf("%%%v%%", v))
 				}
 			}
 			isFirstCondition = false
@@ -393,9 +393,9 @@ func (db *database[M]) WithQuery(query M, config ...types.QueryConfig) types.Dat
 			hasValidCondition = true
 			// db.db = db.db.Where(fmt.Sprintf("`%s` IN (?)", k), items)
 			if cfg.UseOr && !isFirstCondition {
-				db.ins = db.ins.Or(fmt.Sprintf("%s IN ?", db.quoteIdent(k)), items)
+				db.ins = db.ins.Or(db.quoteIdent(k)+" IN ?", items)
 			} else {
-				db.ins = db.ins.Where(fmt.Sprintf("%s IN ?", db.quoteIdent(k)), items)
+				db.ins = db.ins.Where(db.quoteIdent(k)+" IN ?", items)
 			}
 			isFirstCondition = false
 		}
@@ -482,14 +482,14 @@ func (db *database[M]) applyCursorPagination() {
 		// Apply cursor condition based on direction
 		if db.cursorNext {
 			// Next page: get records after the cursor
-			db.ins = db.ins.Where(fmt.Sprintf("%s > ?", db.quoteIdent(db.cursorField)), db.cursorValue)
+			db.ins = db.ins.Where(db.quoteIdent(db.cursorField)+" > ?", db.cursorValue)
 			// Order by cursor field ascending for next page
-			db.ins = db.ins.Order(fmt.Sprintf("%s ASC", db.quoteIdent(db.cursorField)))
+			db.ins = db.ins.Order(db.quoteIdent(db.cursorField) + " ASC")
 		} else {
 			// Previous page: get records before the cursor
-			db.ins = db.ins.Where(fmt.Sprintf("%s < ?", db.quoteIdent(db.cursorField)), db.cursorValue)
+			db.ins = db.ins.Where(db.quoteIdent(db.cursorField)+" < ?", db.cursorValue)
 			// Order by cursor field descending for previous page
-			db.ins = db.ins.Order(fmt.Sprintf("%s DESC", db.quoteIdent(db.cursorField)))
+			db.ins = db.ins.Order(db.quoteIdent(db.cursorField) + " DESC")
 		}
 	}
 }
@@ -533,19 +533,19 @@ func (db *database[M]) WithTimeRange(columnName string, startTime time.Time, end
 
 	// Both times provided, use BETWEEN
 	if !startIsZero && !endIsZero {
-		db.ins = db.ins.Where(fmt.Sprintf("%s BETWEEN ? AND ?", db.quoteIdent(columnName)), startTime, endTime)
+		db.ins = db.ins.Where(db.quoteIdent(columnName)+" BETWEEN ? AND ?", startTime, endTime)
 		return db
 	}
 
 	// Only start time provided, use >=
 	if !startIsZero && endIsZero {
-		db.ins = db.ins.Where(fmt.Sprintf("%s >= ?", db.quoteIdent(columnName)), startTime)
+		db.ins = db.ins.Where(db.quoteIdent(columnName)+" >= ?", startTime)
 		return db
 	}
 
 	// Only end time provided, use <=
 	if startIsZero && !endIsZero {
-		db.ins = db.ins.Where(fmt.Sprintf("%s <= ?", db.quoteIdent(columnName)), endTime)
+		db.ins = db.ins.Where(db.quoteIdent(columnName)+" <= ?", endTime)
 		return db
 	}
 

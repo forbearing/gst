@@ -35,7 +35,7 @@ func middlewareWrapper(name string, middleware gin.HandlerFunc) gin.HandlerFunc 
 		}
 
 		// Create span name with middleware prefix
-		spanName := fmt.Sprintf("middleware.%s", name)
+		spanName := "middleware." + name
 
 		// Start new span for middleware execution under the HTTP request span.
 		originalCtx := c.Request.Context()

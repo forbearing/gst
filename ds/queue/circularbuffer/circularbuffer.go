@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/ds/types"
 )
 
@@ -25,7 +26,7 @@ type CircularBuffer[E any] struct {
 // New creates a new circular buffer with the specified size.
 func New[E any](size int, ops ...Option[E]) (*CircularBuffer[E], error) {
 	if size <= 0 {
-		return nil, fmt.Errorf("size must be greater than 0")
+		return nil, errors.New("size must be greater than 0")
 	}
 	cb := &CircularBuffer[E]{maxSize: size, mu: types.FakeLocker{}}
 

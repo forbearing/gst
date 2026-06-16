@@ -219,7 +219,7 @@ func getFunctionName(fn gin.HandlerFunc) string {
 		if file != "" {
 			return fmt.Sprintf("%s_L%d", filepath.Base(strings.TrimSuffix(file, ".go")), line)
 		}
-		return fmt.Sprintf("func%s", funcName)
+		return "func" + funcName
 	}
 
 	return cleanFunctionName(funcName)

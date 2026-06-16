@@ -3,9 +3,9 @@ package servicetwofa
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"net/http"
 
+	"github.com/cockroachdb/errors"
 	modeltwofa "github.com/forbearing/gst/internal/model/twofa"
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types"
@@ -45,7 +45,7 @@ func (t *TOTPBindService) Create(ctx *types.ServiceContext, req *modeltwofa.TOTP
 	})
 	if err != nil {
 		log.Errorz("failed to generate TOTP key", zap.Error(err))
-		return nil, fmt.Errorf("failed to generate TOTP key")
+		return nil, errors.New("failed to generate TOTP key")
 	}
 
 	// 生成 QR 码 URL
@@ -56,7 +56,7 @@ func (t *TOTPBindService) Create(ctx *types.ServiceContext, req *modeltwofa.TOTP
 	qrCodeImage, err := generateQRCode(qrCodeURL)
 	if err != nil {
 		log.Errorz("failed to generate QR code image", zap.Error(err))
-		return nil, fmt.Errorf("failed to generate QR code image")
+		return nil, errors.New("failed to generate QR code image")
 	}
 
 	rsp = &modeltwofa.TOTPBindRsp{

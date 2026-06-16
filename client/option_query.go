@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +33,7 @@ func WithQuery(_keyValues ...any) Option {
 		case reflect.Float32, reflect.Float64:
 			keyValues = append(keyValues, fmt.Sprintf("%.6f", val.Float()))
 		case reflect.Bool:
-			keyValues = append(keyValues, fmt.Sprint(val.Bool()))
+			keyValues = append(keyValues, strconv.FormatBool(val.Bool()))
 		}
 	}
 

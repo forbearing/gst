@@ -166,10 +166,10 @@ func Client() (*mongo.Client, error) {
 	mu.RLock()
 	defer mu.RUnlock()
 	if !initialized {
-		return nil, fmt.Errorf("mongo client not initialized, call Init() first")
+		return nil, errors.New("mongo client not initialized, call Init() first")
 	}
 	if client == nil {
-		return nil, fmt.Errorf("mongo client is nil")
+		return nil, errors.New("mongo client is nil")
 	}
 	return client, nil
 }

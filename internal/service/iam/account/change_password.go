@@ -1,8 +1,6 @@
 package serviceiamaccount
 
 import (
-	"fmt"
-
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
@@ -26,32 +24,32 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 	sessionID, session, err := serviceiamsession.GetCurrentSession(ctx)
 	if err != nil {
 		log.Error("failed to get current session", err)
-		return nil, fmt.Errorf("invalid session")
+		return nil, errors.New("invalid session")
 	}
 
 	// Get user from database
 	users := make([]*modeliamuser.User, 0)
 	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliamuser.User{Username: session.Username}).List(&users); err != nil {
 		log.Error("failed to query user", err)
-		return nil, fmt.Errorf("database error")
+		return nil, errors.New("database error")
 	}
 	if len(users) == 0 {
 		log.Error("user not found", "username", session.Username)
-		return nil, fmt.Errorf("user not found")
+		return nil, errors.New("user not found")
 	}
 	user := users[0]
 
 	// Verify old password
 	if err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
 		log.Error("old password verification failed", "username", user.Username)
-		return nil, fmt.Errorf("old password is incorrect")
+		return nil, errors.New("old password is incorrect")
 	}
 
 	// Hash new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("failed to hash new password", err)
-		return nil, fmt.Errorf("failed to process new password")
+		return nil, errors.New("failed to process new password")
 	}
 
 	// Update password in database
@@ -59,7 +57,7 @@ func (s *ChangePasswordService) Create(ctx *types.ServiceContext, req *modeliama
 	user.MustChangePassword = false
 	if err := database.Database[*modeliamuser.User](ctx.DatabaseContext()).Update(user); err != nil {
 		log.Error("failed to update password", err)
-		return nil, fmt.Errorf("failed to update password")
+		return nil, errors.New("failed to update password")
 	}
 
 	if syncErr := serviceiamsession.UpdateSessionMustChangePassword(sessionID, false); syncErr != nil {

@@ -3,7 +3,7 @@ package splaytree_test
 import (
 	"cmp"
 	"encoding/json"
-	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/forbearing/gst/ds/tree/splaytree"
@@ -359,7 +359,7 @@ func TestSplayTree_Traversal(t *testing.T) {
 func TestSplayTree_MarshalJSON(t *testing.T) {
 	tree := newIntStringTree(t)
 	for i := range 10 {
-		tree.Put(i, fmt.Sprintf("%d", i))
+		tree.Put(i, strconv.Itoa(i))
 	}
 	jsonBytes, err := json.Marshal(tree)
 	assert.NoError(t, err)

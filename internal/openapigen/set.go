@@ -1232,7 +1232,7 @@ func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey
 			setupBatchExample(reqSchemaRef)
 			doc.Components.RequestBodies[reqKey] = &openapi3.RequestBodyRef{
 				Value: &openapi3.RequestBody{
-					Description: fmt.Sprintf("%s Payload", name),
+					Description: name + " Payload",
 					Required:    !model.IsEmpty[REQ](),
 					Content:     openapi3.NewContentWithJSONSchemaRef(reqSchemaRef),
 				},
@@ -1257,7 +1257,7 @@ func registerSchema[M types.Model, REQ types.Request, RSP types.Response](reqKey
 			processAllResponseTypes[RSP](rspSchemaRef)
 			doc.Components.Responses[rspKey] = &openapi3.ResponseRef{
 				Value: &openapi3.Response{
-					Description: new(fmt.Sprintf("%s Response", name)),
+					Description: new(name + " Response"),
 					Content:     openapi3.NewContentWithJSONSchemaRef(rspSchemaRef),
 				},
 			}

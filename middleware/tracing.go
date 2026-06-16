@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -135,9 +134,9 @@ func Tracing() gin.HandlerFunc {
 			var start time.Time
 			if recording {
 				span.SetAttributes(
-					attribute.String(fmt.Sprintf("%s.trace_id", config.App.OTEL.ServiceName), traceID),
-					attribute.String(fmt.Sprintf("%s.span_id", config.App.OTEL.ServiceName), spanID),
-					attribute.String(fmt.Sprintf("%s.request_id", config.App.OTEL.ServiceName), traceID),
+					attribute.String(config.App.OTEL.ServiceName+".trace_id", traceID),
+					attribute.String(config.App.OTEL.ServiceName+".span_id", spanID),
+					attribute.String(config.App.OTEL.ServiceName+".request_id", traceID),
 				)
 
 				// Record start time for duration calculation

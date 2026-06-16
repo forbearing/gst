@@ -201,7 +201,7 @@ func DocumentHandler() http.Handler {
 func setDocInfo(doc *openapi3.T) {
 	doc.Info = &openapi3.Info{
 		Title:       config.App.AppInfo.Name,
-		Description: fmt.Sprintf("%s Restful api docs", config.App.AppInfo.Name),
+		Description: config.App.AppInfo.Name + " Restful api docs",
 		Version:     config.App.AppInfo.Version,
 	}
 }

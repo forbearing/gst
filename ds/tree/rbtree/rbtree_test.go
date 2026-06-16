@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
+	"strconv"
 	"testing"
 	"time"
 
@@ -620,7 +621,7 @@ func TestRedBlackTree_RedBlackProperties(t *testing.T) {
 	// Insert some values
 	values := []int{7, 3, 18, 10, 22, 8, 11, 26, 2, 6, 13}
 	for _, v := range values {
-		tree.Put(v, fmt.Sprintf("%d", v))
+		tree.Put(v, strconv.Itoa(v))
 	}
 
 	// Test black count
@@ -648,7 +649,7 @@ func TestRedBlackTree_RedBlackProperties(t *testing.T) {
 func TestRedBlackTree_MarshalJSON(t *testing.T) {
 	tree := newIntStringTree(t)
 	for i := range 10 {
-		tree.Put(i, fmt.Sprintf("%d", i))
+		tree.Put(i, strconv.Itoa(i))
 	}
 	jsonBytes, err := json.Marshal(tree)
 	assert.NoError(t, err)

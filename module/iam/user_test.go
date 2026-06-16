@@ -88,7 +88,7 @@ func TestUserCreate(t *testing.T) {
 	cli := userNewClient(t, actor.SessionID)
 	targetUsername := fmt.Sprintf("user_create_target_%d", time.Now().UnixNano())
 	targetDisplayName := "Created By Superuser"
-	targetEmail := fmt.Sprintf("%s@example.com", targetUsername)
+	targetEmail := targetUsername + "@example.com"
 
 	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
 		_, err := cli.Create(iam.User{
@@ -144,8 +144,8 @@ func TestUserCreateMany(t *testing.T) {
 	username2 := fmt.Sprintf("user_create_many_target2_%d", time.Now().UnixNano())
 	displayName1 := "Create Many User 1"
 	displayName2 := "Create Many User 2"
-	email1 := fmt.Sprintf("%s@example.com", username1)
-	email2 := fmt.Sprintf("%s@example.com", username2)
+	email1 := username1 + "@example.com"
+	email2 := username2 + "@example.com"
 	superuserEnabled := true
 	superUsername := fmt.Sprintf("user_create_many_super_%d", time.Now().UnixNano())
 
@@ -358,7 +358,7 @@ func TestUserPatch(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				target := userSignupUser(t, fmt.Sprintf("user_patch_sensitive_%s", tc.name), "example-UserPatchSensitive-local-01")
+				target := userSignupUser(t, "user_patch_sensitive_"+tc.name, "example-UserPatchSensitive-local-01")
 				before := userLoadByID(t, target.UserID)
 
 				_, err := cli.Patch(target.UserID, []byte(tc.payload(t, target)))

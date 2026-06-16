@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/util"
@@ -29,7 +30,7 @@ func (*document) Get(ctx context.Context, indexName string, id string, req *GetR
 		return nil, fmt.Errorf("elasticsearch client check: %w", err)
 	}
 	if indexName == "" || id == "" {
-		return nil, fmt.Errorf("invalid parameters: indexName or id is empty")
+		return nil, errors.New("invalid parameters: indexName or id is empty")
 	}
 	if ctx == nil {
 		ctx = context.Background()

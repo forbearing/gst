@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -394,7 +395,7 @@ func FormatDurationSmart(d time.Duration, precisions ...int) string {
 	}
 
 	// Format string, e.g., "%.2f"
-	format := "%." + fmt.Sprintf("%d", precision) + "f%s"
+	format := "%." + strconv.Itoa(precision) + "f%s"
 
 	ns := d.Nanoseconds()
 	absNs := ns
@@ -420,9 +421,12 @@ func SafeGo(fn func(), names ...any) {
 		if len(names) <= 0 {
 			name = "unnamed goroutine"
 		}
+		var nameBuilder strings.Builder
 		for _, v := range names {
-			name += ":" + cast.ToString(v)
+			nameBuilder.WriteByte(':')
+			nameBuilder.WriteString(cast.ToString(v))
 		}
+		name += nameBuilder.String()
 
 		defer func() { Recovery(name) }()
 

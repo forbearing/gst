@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/forbearing/gst/ds/tree/avltree"
@@ -348,7 +349,7 @@ func TestAVLTree_String(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Println(tt.String())
 	tt, err = avltree.NewFromOrderedMap(m, avltree.WithNodeFormatter(func(k string, v int) string {
-		return fmt.Sprintf("%v", v)
+		return strconv.Itoa(v)
 	}))
 	assert.NoError(t, err)
 	fmt.Println(tt.String())
@@ -357,7 +358,7 @@ func TestAVLTree_String(t *testing.T) {
 func TestAVLTree_MarshalJSON(t *testing.T) {
 	tree := newIntStringTree(t)
 	for i := range 10 {
-		tree.Put(i, fmt.Sprintf("%d", i))
+		tree.Put(i, strconv.Itoa(i))
 	}
 	jsonBytes, err := json.Marshal(tree)
 	assert.NoError(t, err)
