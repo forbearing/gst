@@ -127,7 +127,7 @@ func (db *database[M]) Create(_objs ...M) (err error) {
 	}
 	// update "created_at" and "updated_at"
 	now := time.Now()
-	for i := range len(objs) {
+	for i := range objs {
 		objs[i].SetCreatedAt(now)
 		objs[i].SetUpdatedAt(now)
 	}

@@ -16,7 +16,7 @@ func (cb *CircularBuffer[E]) MarshalJSON() ([]byte, error) {
 	elements := make([]E, 0, cb.size)
 	idx := cb.head
 	size := len(cb.buf)
-	for i := 0; i < cb.size; i++ {
+	for range cb.size {
 		elements = append(elements, cb.buf[idx])
 		idx = (idx + 1) % size
 	}

@@ -209,7 +209,7 @@ func (cb *CircularBuffer[E]) Clone() *CircularBuffer[E] {
 	clone, _ := New(cb.maxSize, cb.options()...)
 	idx := cb.head
 	size := len(cb.buf)
-	for i := 0; i < cb.size; i++ {
+	for range cb.size {
 		clone.Enqueue(cb.buf[idx])
 		idx = (idx + 1) % size
 	}
@@ -241,7 +241,7 @@ func (cb *CircularBuffer[E]) Range(fn func(e E) bool) {
 
 	idx := cb.head
 	size := len(cb.buf)
-	for i := 0; i < cb.size; i++ {
+	for range cb.size {
 		if !fn(cb.buf[idx]) {
 			return
 		}
@@ -262,7 +262,7 @@ func (cb *CircularBuffer[E]) String() string {
 	values := make([]string, 0, cb.size)
 	idx := cb.head
 	size := len(cb.buf)
-	for i := 0; i < cb.size; i++ {
+	for range cb.size {
 		values = append(values, fmt.Sprintf("%v", cb.buf[idx]))
 		idx = (idx + 1) % size
 	}
