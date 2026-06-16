@@ -235,43 +235,6 @@ func BenchmarkMapSet_IsEmpty(b *testing.B) {
 	})
 }
 
-func benchmarkIsEmpty(b *testing.B, size int) {
-	b.Helper()
-	b.Run("single unset", func(b *testing.B) {
-		set := createSet(b, size, false)
-		b.ResetTimer()
-		for range b.N {
-			_ = set.IsEmpty()
-		}
-	})
-	b.Run("single safe", func(b *testing.B) {
-		set := createSet(b, size, true)
-		b.ResetTimer()
-		for range b.N {
-			_ = set.IsEmpty()
-		}
-	})
-
-	b.Run("conc unsafe", func(b *testing.B) {
-		set := createSet(b, size, false)
-		b.ResetTimer()
-		b.RunParallel(func(p *testing.PB) {
-			for p.Next() {
-				_ = set.IsEmpty()
-			}
-		})
-	})
-	b.Run("conc safe", func(b *testing.B) {
-		set := createSet(b, size, true)
-		b.ResetTimer()
-		b.RunParallel(func(p *testing.PB) {
-			for p.Next() {
-				_ = set.IsEmpty()
-			}
-		})
-	})
-}
-
 func BenchmarkMapSet_Iter(b *testing.B) {
 	benchmark(b, true, []int{10, 100}, func(set *mapset.Set[int]) {
 		for e := range set.Iter() {

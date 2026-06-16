@@ -387,11 +387,3 @@ func (l *List[E]) withinRange(index int, allowEnd bool) bool {
 	}
 	return index >= 0 && index < len(l.elements)
 }
-
-func (l *List[E]) options() []Option[E] {
-	ops := make([]Option[E], 0)
-	if l.safe {
-		ops = append(ops, WithSafe[E]())
-	}
-	return ops
-}

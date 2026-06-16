@@ -1,11 +1,9 @@
 package zap
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +14,6 @@ import (
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"go.uber.org/zap"
-	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	gorml "gorm.io/gorm/logger"
@@ -28,11 +25,11 @@ const (
 )
 
 var (
-	mode          config.Mode
+	mode          config.Mode //nolint:unused
 	logFile       string
 	logLevel      string
 	logFormat     string
-	logEncoder    string
+	logEncoder    string //nolint:unused
 	logMaxAge     int
 	logMaxSize    int
 	logMaxBackups int
@@ -376,67 +373,4 @@ func readConf() {
 	logMaxAge = config.App.Logger.MaxAge
 	logMaxSize = config.App.Logger.MaxSize
 	logMaxBackups = config.App.Logger.MaxBackups
-}
-
-// colorfulLevelEncoder encodes levels with ANSI colors.
-func colorfulLevelEncoder(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-	var color string
-	switch level {
-	case zapcore.DebugLevel:
-		color = "\033[36m" // Cyan
-	case zapcore.InfoLevel:
-		color = "\033[32m" // Green
-	case zapcore.WarnLevel:
-		color = "\033[33m" // Yellow
-	case zapcore.ErrorLevel:
-		color = "\033[31m" // Red
-	case zapcore.DPanicLevel, zapcore.PanicLevel, zapcore.FatalLevel:
-		color = "\033[35m" // Magenta
-	default:
-		color = "\033[0m" // Reset
-	}
-	enc.AppendString(color + level.String() + "\033[0m")
-}
-
-func newCustomConsoleEncoder(config zapcore.EncoderConfig) zapcore.Encoder {
-	return &customConsoleEncoder{zapcore.NewConsoleEncoder(config)}
-}
-
-type customConsoleEncoder struct {
-	zapcore.Encoder
-}
-
-func (e *customConsoleEncoder) EncodeEntry(ent zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
-	line, err := e.Encoder.EncodeEntry(ent, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// if contains extra fields, append them in key=value format
-	if len(fields) > 0 {
-		line.TrimNewline() // remove trailing newline
-		// add extra fields
-		for i, f := range fields {
-			if i > 0 {
-				line.AppendString("\t")
-			} else {
-				line.AppendString("\t")
-			}
-			line.AppendString(f.Key)
-			line.AppendString("=")
-			// according to the field type, format the value
-			switch f.Type {
-			case zapcore.StringType:
-				line.AppendString(f.String)
-			case zapcore.Int64Type, zapcore.Int32Type, zapcore.Int16Type, zapcore.Int8Type:
-				line.AppendString(strconv.FormatInt(f.Integer, 10))
-			// you can add more types here
-			default:
-				line.AppendString(fmt.Sprint(f.Interface))
-			}
-		}
-		line.AppendString("\n")
-	}
-
-	return line, nil
 }

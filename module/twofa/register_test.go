@@ -34,7 +34,6 @@ var (
 	confirmAPI = fmt.Sprintf("http://localhost:%d/api/2fa/totp/confirm", port)
 	unbindAPI  = fmt.Sprintf("http://localhost:%d/api/2fa/totp/unbind", port)
 	statusAPI  = fmt.Sprintf("http://localhost:%d/api/2fa/totp/status", port)
-	deviceAPI  = fmt.Sprintf("http://localhost:%d/api/2fa/totp/devices", port)
 )
 
 type ListResponse[T any] struct {

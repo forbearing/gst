@@ -1,7 +1,6 @@
 package arraystack_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/forbearing/gst/ds/stack/arraystack"
@@ -11,10 +10,6 @@ import (
 
 func intCmp(a, b int) int {
 	return a - b
-}
-
-func stringCmp(a, b string) int {
-	return strings.Compare(a, b)
 }
 
 func newIntStack() (*arraystack.Stack[int], error) {

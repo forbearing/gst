@@ -10,12 +10,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cockroachdb/errors"
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/logger"
 	"github.com/forbearing/gst/util"
@@ -33,9 +31,7 @@ type (
 )
 
 var (
-	initialized bool
-	client      *elasticsearch.Client
-	mu          sync.RWMutex
+	client *elasticsearch.Client
 
 	Document = new(document)
 	Index    = new(index)
@@ -270,18 +266,6 @@ func SearchTimestamp(index string, size ...int) ([]byte, error) {
 type Pagination struct {
 	Page int // page number
 	Size int // page size
-}
-
-func handleError(fn func() (*esapi.Response, error), format string) error {
-	res, err := fn()
-	if err != nil {
-		return fmt.Errorf(format, err.Error())
-	}
-	defer res.Body.Close()
-	if res.IsError() {
-		return fmt.Errorf(format, res.String())
-	}
-	return nil
 }
 
 /*

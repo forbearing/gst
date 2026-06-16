@@ -182,35 +182,6 @@ func BenchmarkArrayList_IsEmpty(b *testing.B) {
 	})
 }
 
-func benchmarkLen(b *testing.B, size int) {
-	b.Helper()
-	b.Run("unsafe", func(b *testing.B) {
-		list := createList(b, size, false)
-		b.ResetTimer()
-		for range b.N {
-			list.Len()
-		}
-	})
-
-	b.Run("safe", func(b *testing.B) {
-		list := createList(b, size, true)
-		b.ResetTimer()
-		for range b.N {
-			list.Len()
-		}
-	})
-
-	b.Run("safe-conc", func(b *testing.B) {
-		list := createList(b, size, true)
-		b.ResetTimer()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				list.Len()
-			}
-		})
-	})
-}
-
 func BenchmarkArrayList_Len(b *testing.B) {
 	benchmark(b, false, []int{100, 100000}, func(list *arraylist.List[int]) {
 		list.Len()
@@ -229,31 +200,6 @@ func BenchmarkArrayList_Swap(b *testing.B) {
 	})
 	benchmark(b, false, []int{100000}, func(list *arraylist.List[int]) {
 		list.Swap(0, 99999)
-	})
-}
-
-func benchmarkRange(b *testing.B, size int) {
-	b.Helper()
-	b.Run("unsafe", func(b *testing.B) {
-		list := createList(b, size, false)
-		b.ResetTimer()
-		for range b.N {
-			list.Range(func(v int) bool {
-				_ = v
-				return true
-			})
-		}
-	})
-
-	b.Run("safe", func(b *testing.B) {
-		l := createList(b, size, true)
-		b.ResetTimer()
-		for range b.N {
-			l.Range(func(v int) bool {
-				_ = v
-				return true
-			})
-		}
 	})
 }
 

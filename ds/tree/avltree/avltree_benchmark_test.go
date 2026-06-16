@@ -137,14 +137,6 @@ func BenchmarkAVLTreeGet(b *testing.B) {
 	})
 }
 
-func benchmarkGet(b *testing.B, t *avltree.Tree[int, int], size int) {
-	b.Helper()
-	b.ResetTimer()
-	for i := range b.N {
-		_, _ = t.Get(i % size)
-	}
-}
-
 func BenchmarkAVLTreeDelete(b *testing.B) {
 	benchmark(b, false, []int{10, 100000}, func(t *avltree.Tree[float64, float64]) {
 		t.Delete(0)

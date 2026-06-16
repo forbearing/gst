@@ -12,10 +12,6 @@ func cmp(a, b int) int {
 	return a - b
 }
 
-func intCompare(a, b int) int {
-	return a - b
-}
-
 func TestNew(t *testing.T) {
 	list, err := arraylist.New(cmp)
 	require.NoError(t, err)

@@ -594,20 +594,6 @@ func trimModelSourceRoot(source string) string {
 	return strings.TrimPrefix(source, prefix+"/")
 }
 
-func routerScopeLabel(scope string) string {
-	switch scope {
-	case "auth":
-		return "router.Auth()"
-	case "public":
-		return "router.Pub()"
-	default:
-		if scope == "" {
-			scope = "unknown"
-		}
-		return fmt.Sprintf("router.%s()", scope)
-	}
-}
-
 func sortedModelRouteSourceNodes(children map[string]*modelRouteSourceNode) []*modelRouteSourceNode {
 	nodes := make([]*modelRouteSourceNode, 0, len(children))
 	for _, child := range children {
@@ -646,25 +632,6 @@ func modelRouteScope(routes []modelRoute) string {
 		}
 	}
 	return "mixed"
-}
-
-func sortModelRoutes(routes []modelRoute) {
-	sort.SliceStable(routes, func(i, j int) bool {
-		left := routes[i]
-		right := routes[j]
-		for _, pair := range [][2]string{
-			{routeSourceSortKey(left.Source), routeSourceSortKey(right.Source)},
-			{left.Model, right.Model},
-			{left.Path, right.Path},
-			{left.Method, right.Method},
-			{left.Phase, right.Phase},
-		} {
-			if pair[0] != pair[1] {
-				return pair[0] < pair[1]
-			}
-		}
-		return false
-	})
 }
 
 func routeSourceSortKey(source string) string {

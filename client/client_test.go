@@ -55,8 +55,6 @@ var (
 	email1Modified  = email1 + "_modified"
 	avatar1Modified = avatar1 + "_modified"
 
-	name2Modified   = id2 + "_modified"
-	email2Modified  = email2 + "_modified"
 	avatar2Modified = avatar2 + "_modified"
 
 	user1 = User{Name: name1, Email: email1, Avatar: avatar1, Base: model.Base{ID: id1}}

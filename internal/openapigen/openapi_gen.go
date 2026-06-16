@@ -2,7 +2,6 @@ package openapigen
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"reflect"
@@ -218,60 +217,6 @@ func getFieldTag(field reflect.StructField, tagName string) string {
 		}
 		return ""
 	}
-}
-
-// the type must be struct or pointer to struct.
-func buildSchema(typ reflect.Type, resp *openapi3.Schema) {
-	// if len(jsonTag) > 0 {
-	// 	fmt.Printf("----- name: %s, type: %v, kind: %v, json: %q, schema: %q\n",
-	// 		field.Name, field.Type, field.Type.Kind().String(),
-	// 		getFieldTag(field, consts.TAG_JSON), getFieldTag(field, consts.TAG_SCHEMA),
-	// 	)
-	// }
-
-	for field := range typ.Fields() {
-		jsonTag := getFieldTag(field, consts.TAG_JSON)
-		switch field.Type.Kind() {
-		case reflect.Bool:
-			resp = resp.WithProperty(jsonTag, openapi3.NewBoolSchema())
-		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint8, reflect.Uint16, reflect.Uint32:
-			resp = resp.WithProperty(jsonTag, openapi3.NewInt32Schema())
-		case reflect.Int, reflect.Uint, reflect.Int64, reflect.Uint64:
-			resp = resp.WithProperty(jsonTag, openapi3.NewInt64Schema())
-		case reflect.Float32, reflect.Float64:
-			resp = resp.WithProperty(jsonTag, openapi3.NewFloat64Schema())
-		case reflect.String:
-			resp = resp.WithProperty(jsonTag, openapi3.NewStringSchema())
-		case reflect.Pointer:
-			typ := field.Type.Elem()
-			printTag(field)
-			switch typ.Kind() {
-			case reflect.Bool:
-				resp = resp.WithProperty(jsonTag, openapi3.NewBoolSchema())
-			case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint8, reflect.Uint16, reflect.Uint32:
-				resp = resp.WithProperty(jsonTag, openapi3.NewInt32Schema())
-			case reflect.Int, reflect.Uint, reflect.Int64, reflect.Uint64:
-				resp = resp.WithProperty(jsonTag, openapi3.NewInt64Schema())
-			case reflect.Float32, reflect.Float64:
-				resp = resp.WithProperty(jsonTag, openapi3.NewFloat64Schema())
-			case reflect.String:
-				resp = resp.WithProperty(jsonTag, openapi3.NewStringSchema())
-				// case reflect.Struct:
-				// 	buildSchema(typ, resp)
-			}
-
-		case reflect.Struct:
-			buildSchema(field.Type, resp)
-		case reflect.Slice:
-			// resp = resp.WithProperty(jsonTag, openapi3.NewArraySchema())
-		default:
-		}
-	}
-}
-
-func printTag(field reflect.StructField) {
-	fmt.Printf("----- [pointer] name: %s, type: %v, kind: %v, json: %q, schema: %q\n",
-		field.Name, field.Type, field.Type.Kind().String(), getFieldTag(field, consts.TAG_JSON), getFieldTag(field, consts.TAG_SCHEMA))
 }
 
 func buildVerbs(verbs ...consts.HTTPVerb) []consts.HTTPVerb {

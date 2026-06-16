@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	initialized bool
-	client      *lark.Client
-	mu          sync.RWMutex
+	client *lark.Client
+	mu     sync.RWMutex
 )
 
 func Init() (err error) {

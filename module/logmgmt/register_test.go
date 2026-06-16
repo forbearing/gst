@@ -197,7 +197,6 @@ func TestLogmgmt(t *testing.T) {
 					//   +Msg => "logout successful" #string
 					// }
 					)
-
 				})
 			})
 		})

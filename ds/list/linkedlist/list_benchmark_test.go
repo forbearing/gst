@@ -368,35 +368,6 @@ func stdListFind(list *golist.List, v any, equal func(int, int) bool) (_v any) {
 	return _v
 }
 
-func benchmarkReverse(b *testing.B, size int) {
-	b.Helper()
-	b.Run("unsafe", func(b *testing.B) {
-		l := createLinkedList(b, size, false)
-		b.ResetTimer()
-		for range b.N {
-			l.Reverse()
-		}
-	})
-
-	b.Run("safe", func(b *testing.B) {
-		l := createLinkedList(b, size, true)
-		b.ResetTimer()
-		for range b.N {
-			l.Reverse()
-		}
-	})
-
-	b.Run("safe conc", func(b *testing.B) {
-		l := createLinkedList(b, size, true)
-		b.ResetTimer()
-		b.RunParallel(func(p *testing.PB) {
-			for p.Next() {
-				l.Reverse()
-			}
-		})
-	})
-}
-
 func BenchmarkLinkedList_Reverse(b *testing.B) {
 	benchmark(b, []int{10, 10000}, func(list *linkedlist.List[int]) {
 		list.Reverse()

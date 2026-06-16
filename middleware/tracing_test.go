@@ -35,7 +35,7 @@ func TestTracingUsesIncomingTraceparent(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/ping", nil)
-	req.Header.Set("traceparent", "00-"+incomingTraceID+"-2222222222222222-01")
+	req.Header.Set("Traceparent", "00-"+incomingTraceID+"-2222222222222222-01")
 	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusNoContent, w.Code)

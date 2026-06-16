@@ -13,19 +13,7 @@ import (
 	"github.com/forbearing/gst/types"
 )
 
-var (
-	redisAddr  = "127.0.0.1:6379"
-	redisAddrs = []string{
-		"127.0.0.1:6379",
-		"127.0.0.1:6380",
-		"127.0.0.1:6381",
-		"127.0.0.1:6382",
-		"127.0.0.1:6383",
-		"127.0.0.1:6384",
-	}
-
-	ttl = 1 * time.Minute
-)
+var ttl = 1 * time.Minute
 
 func Benchmark(b *testing.B) {
 	localcache, err := dcache.NewLocalCache[string]()

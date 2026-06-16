@@ -1,21 +1,12 @@
 package linkedstack_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/forbearing/gst/ds/stack/linkedstack"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func intCmp(a, b int) int {
-	return a - b
-}
-
-func stringCmp(a, b string) int {
-	return strings.Compare(a, b)
-}
 
 func newIntStack() (*linkedstack.Stack[int], error) {
 	return linkedstack.New[int]()

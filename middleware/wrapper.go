@@ -99,28 +99,3 @@ func middlewareWrapper(name string, middleware gin.HandlerFunc) gin.HandlerFunc 
 		}
 	}
 }
-
-// wrapMiddlewares wraps multiple middlewares with tracing capabilities.
-// This is a convenience function for wrapping multiple middlewares at once.
-//
-// Parameters:
-//   - middlewares: A map where key is the middleware name and value is the gin.HandlerFunc
-//
-// Returns:
-//   - A slice of wrapped gin.HandlerFunc with tracing capabilities
-//
-// Example:
-//
-//	wrapped := wrapMiddlewares(map[string]gin.HandlerFunc{
-//	    "logger": Logger(),
-//	    "cors": Cors(),
-//	    "recovery": Recovery(),
-//	})
-//	router.Use(wrapped...)
-func wrapMiddlewares(middlewares map[string]gin.HandlerFunc) []gin.HandlerFunc {
-	wrapped := make([]gin.HandlerFunc, 0, len(middlewares))
-	for name, middleware := range middlewares {
-		wrapped = append(wrapped, middlewareWrapper(name, middleware))
-	}
-	return wrapped
-}

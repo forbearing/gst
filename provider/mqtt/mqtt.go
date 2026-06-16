@@ -2,11 +2,9 @@ package mqtt
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"math/rand"
-	"os"
 	"sync"
 	"time"
 
@@ -125,22 +123,6 @@ func loadCertificate(certFile, keyFile string) (tls.Certificate, error) {
 		return tls.Certificate{}, errors.Wrap(err, "failed to load certificate")
 	}
 	return cert, nil
-}
-
-func loadTLSConfig(caFile string) *tls.Config {
-	// load tls config
-	var tlsConfig tls.Config
-	tlsConfig.InsecureSkipVerify = false
-	if caFile != "" {
-		certpool := x509.NewCertPool()
-		ca, err := os.ReadFile(caFile)
-		if err != nil {
-			logger.Mqtt.Fatal(err.Error())
-		}
-		certpool.AppendCertsFromPEM(ca)
-		tlsConfig.RootCAs = certpool
-	}
-	return &tlsConfig
 }
 
 // defaultIfEmpty returns default value if str is empty

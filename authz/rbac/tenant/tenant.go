@@ -21,5 +21,6 @@ m = (g(r.sub, "super_admin", "*") || r.tenant == p.tenant) &&
 `)
 
 func Init() error {
+	_ = modelData
 	return nil
 }

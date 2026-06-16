@@ -9,8 +9,6 @@ import (
 
 type (
 	t1 struct{ *model.Empty }
-	t2 struct{}
-	t3 struct{ Name string }
 	t4 struct {
 		Name string
 		*model.Empty
@@ -94,15 +92,13 @@ func TestIsEmpty(t *testing.T) {
 		model.Empty
 		*model.Any
 	}
-	type t12 struct {
-		a string
-	}
+	type t12 struct{ _ string }
 	type t13 struct {
-		a string
+		_ string
 		model.Empty
 	}
 	type t14 struct {
-		a string
+		_ string
 		model.Any
 	}
 	type t15 = model.Empty

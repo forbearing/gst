@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
-	"go.uber.org/zap/zapcore"
 )
 
 func newProducer(brokers []string, topic string) (*kgo.Client, error) {
@@ -64,20 +63,6 @@ func newConsumer(brokers []string, topic string, group string) (*kgo.Client, err
 		// TCP连接优化
 		kgo.DialTimeout(300*time.Millisecond),
 	)
-}
-
-type mapMarshaler map[string]int64
-
-func (m mapMarshaler) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if m == nil {
-		return nil
-	}
-
-	for k, v := range m {
-		enc.AddInt64(k, v)
-	}
-
-	return nil
 }
 
 func calculateHitRatio(hits, misses int64) int64 {

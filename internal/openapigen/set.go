@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/forbearing/gst/model"
-	"github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gertd/go-pluralize"
@@ -20,20 +18,7 @@ import (
 
 var pluralizeCli = pluralize.NewClient()
 
-var (
-	success  = "success"
-	idFormat = "" // eg: "uuid"
-)
-
-var (
-	msgNotFound    = response.CodeNotFound.Msg()
-	codeNotFound   = response.CodeNotFound.Code()
-	statusNotFound = strconv.Itoa(response.CodeNotFound.Status())
-
-	msgBadRequest    = response.CodeBadRequest.Msg()
-	codeBadRequest   = response.CodeBadRequest.Code()
-	statusBadRequest = strconv.Itoa(response.CodeBadRequest.Status())
-)
+var idFormat = "" // eg: "uuid"
 
 var removeFieldMap = map[string]bool{
 	"id":         true,
@@ -43,22 +28,6 @@ var removeFieldMap = map[string]bool{
 	"updated_by": true,
 	"deleted_at": true,
 	"deleted_by": true,
-}
-
-var idParameters []*openapi3.ParameterRef = []*openapi3.ParameterRef{
-	{
-		Value: &openapi3.Parameter{
-			In:       "path",
-			Name:     "id",
-			Required: true,
-			Schema: &openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type:   &openapi3.Types{openapi3.TypeString},
-					Format: idFormat,
-				},
-			},
-		},
-	},
 }
 
 func setCreate[M types.Model, REQ types.Request, RSP types.Response](path string, pathItem *openapi3.PathItem) {
@@ -1690,40 +1659,6 @@ func removeFieldsFromBatchRequestBody(op *openapi3.Operation, fieldsToRemove ...
 	}
 }
 
-// 辅助函数：直接处理 schema，可以被上面两个函数调用
-func removeFieldsFromSchema(schema *openapi3.Schema, fieldsToRemove map[string]bool) {
-	if schema == nil {
-		return
-	}
-
-	// 移除 properties
-	if schema.Properties != nil {
-		for field := range fieldsToRemove {
-			delete(schema.Properties, field)
-		}
-	}
-
-	// 移除 required
-	if len(schema.Required) > 0 {
-		newRequired := []string{}
-		for _, req := range schema.Required {
-			if !fieldsToRemove[req] {
-				newRequired = append(newRequired, req)
-			}
-		}
-		schema.Required = newRequired
-	}
-
-	// 处理 example
-	if schema.Example != nil {
-		if exampleMap, ok := schema.Example.(map[string]any); ok {
-			for field := range fieldsToRemove {
-				delete(exampleMap, field)
-			}
-		}
-	}
-}
-
 // func setupBatchExample(schemaRef *openapi3.SchemaRef) {
 // 	if schemaRef == nil {
 // 		return
@@ -2118,7 +2053,7 @@ func operationID(op consts.HTTPVerb, typ reflect.Type) string {
 	return fmt.Sprintf("%s%s", op, typ.Elem().Name())
 }
 
-func summary(path string, op consts.HTTPVerb, typ reflect.Type) string {
+func summary(path string, op consts.HTTPVerb, _ reflect.Type) string {
 	path = strings.TrimPrefix(path, `/api/`)
 	path = strings.TrimSuffix(path, `/{id}`)
 	items := strings.Split(path, `/`)
@@ -2198,7 +2133,7 @@ func description(op consts.HTTPVerb, typ reflect.Type) string {
 	return fmt.Sprintf("%s %s", op, typ.Elem().Name())
 }
 
-func tags(path string, op consts.HTTPVerb, typ reflect.Type) []string {
+func tags(path string, _ consts.HTTPVerb, typ reflect.Type) []string {
 	// return []string{typ.Elem().Name()}
 	tag := strings.TrimPrefix(path, `/api/`)
 	tag = strings.TrimSuffix(tag, `/batch`)
@@ -2209,15 +2144,6 @@ func tags(path string, op consts.HTTPVerb, typ reflect.Type) []string {
 		tag = typ.Elem().Name()
 	}
 	return []string{tag}
-}
-
-func exampleValue(code response.Code) map[string]any {
-	return map[string]any{
-		"code":       code.Code(),
-		"data":       "null",
-		"msg":        code.Msg(),
-		"request_id": "string",
-	}
 }
 
 // setupBatchExample will remove field "created_at", "created_by", "updated_at", "updated_by"
@@ -2317,25 +2243,6 @@ type apiResponse[T any] struct {
 	RequestID string `json:"request_id"`
 }
 
-// newAPIResponseRefWithData generate a openapi3.SchemaRef with custom data.
-func newAPIResponseRefWithData(data any) *openapi3.SchemaRef {
-	dataSchemaRef, err := openapi3gen.NewSchemaRefForValue(data, nil)
-	if err != nil {
-		zap.S().Error(err)
-		dataSchemaRef = new(openapi3.SchemaRef)
-	}
-	schema := &openapi3.Schema{
-		Type: &openapi3.Types{openapi3.TypeObject},
-		Properties: map[string]*openapi3.SchemaRef{
-			"code":       {Value: &openapi3.Schema{Type: &openapi3.Types{openapi3.TypeInteger}}},
-			"msg":        {Value: &openapi3.Schema{Type: &openapi3.Types{openapi3.TypeString}}},
-			"request_id": {Value: &openapi3.Schema{Type: &openapi3.Types{openapi3.TypeString}}},
-			"data":       dataSchemaRef, // ✅ Use dynamically generated type
-		},
-	}
-	return &openapi3.SchemaRef{Value: schema}
-}
-
 type apiListResponse[T any] struct {
 	Code      int         `json:"code"`
 	Data      listData[T] `json:"data"`
@@ -2363,491 +2270,6 @@ type batchData[T any] struct {
 	Items   []T            `json:"items"`
 	Options map[string]any `json:"options"`
 	Summary listSummary    `json:"summary"`
-}
-
-func registerCommonResponses() {
-	if doc.Components.Responses == nil {
-		doc.Components.Responses = openapi3.ResponseBodies{}
-	}
-
-	// 400 Bad Request
-	doc.Components.Responses["BadRequest"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Bad Request - The request was invalid or cannot be served"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 400,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Invalid request parameters",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       400,
-						"msg":        "Invalid request parameters",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 401 Unauthorized
-	doc.Components.Responses["Unauthorized"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Unauthorized - Authentication credentials were missing or incorrect"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 401,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Authentication required",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       401,
-						"msg":        "Authentication required",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 403 Forbidden
-	doc.Components.Responses["Forbidden"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Forbidden - The request is understood, but access is not allowed"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 403,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Access denied",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       403,
-						"msg":        "Access denied",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 404 Not Found
-	doc.Components.Responses["NotFound"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Not Found - The requested resource could not be found"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 404,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Resource not found",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       404,
-						"msg":        "Resource not found",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 409 Conflict
-	doc.Components.Responses["Conflict"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Conflict - The request could not be completed due to a conflict with the current state"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 409,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Resource already exists",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       409,
-						"msg":        "Resource already exists",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 422 Unprocessable Entity
-	doc.Components.Responses["UnprocessableEntity"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Unprocessable Entity - The request was well-formed but contains semantic errors"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 422,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Validation failed",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:        &openapi3.Types{openapi3.TypeObject},
-								Nullable:    true,
-								Description: "Validation errors detail",
-								Example: map[string]any{
-									"errors": []map[string]any{
-										{
-											"field":   "name",
-											"message": "Name is required",
-										},
-									},
-								},
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       422,
-						"msg":        "Validation failed",
-						"request_id": "req_123456789",
-						"data": map[string]any{
-							"errors": []map[string]any{
-								{
-									"field":   "name",
-									"message": "Name is required",
-								},
-							},
-						},
-					},
-				},
-			}),
-		},
-	}
-
-	// 429 Too Many Requests
-	doc.Components.Responses["TooManyRequests"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Too Many Requests - Rate limit exceeded"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 429,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Rate limit exceeded. Please try again later",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       429,
-						"msg":        "Rate limit exceeded. Please try again later",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 500 Internal Server Error
-	doc.Components.Responses["InternalServerError"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Internal Server Error - An unexpected error occurred"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 500,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Internal server error",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-					Example: map[string]any{
-						"code":       500,
-						"msg":        "Internal server error",
-						"request_id": "req_123456789",
-						"data":       nil,
-					},
-				},
-			}),
-		},
-	}
-
-	// 502 Bad Gateway
-	doc.Components.Responses["BadGateway"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Bad Gateway - Invalid response from upstream server"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 502,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Bad gateway",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-				},
-			}),
-		},
-	}
-
-	// 503 Service Unavailable
-	doc.Components.Responses["ServiceUnavailable"] = &openapi3.ResponseRef{
-		Value: &openapi3.Response{
-			Description: new("Service Unavailable - The server is currently unable to handle the request"),
-			Content: openapi3.NewContentWithJSONSchemaRef(&openapi3.SchemaRef{
-				Value: &openapi3.Schema{
-					Type: &openapi3.Types{openapi3.TypeObject},
-					Properties: map[string]*openapi3.SchemaRef{
-						"code": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeInteger},
-								Example: 503,
-							},
-						},
-						"msg": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "Service temporarily unavailable",
-							},
-						},
-						"request_id": {
-							Value: &openapi3.Schema{
-								Type:    &openapi3.Types{openapi3.TypeString},
-								Example: "req_123456789",
-							},
-						},
-						"data": {
-							Value: &openapi3.Schema{
-								Type:     &openapi3.Types{openapi3.TypeNull},
-								Nullable: true,
-							},
-						},
-					},
-				},
-			}),
-		},
-	}
-}
-
-func registerSecuritySchemes() {
-	if doc.Components.SecuritySchemes == nil {
-		doc.Components.SecuritySchemes = openapi3.SecuritySchemes{}
-	}
-
-	// Bearer Token
-	doc.Components.SecuritySchemes["bearerAuth"] = &openapi3.SecuritySchemeRef{
-		Value: &openapi3.SecurityScheme{
-			Type:         "http",
-			Scheme:       "bearer",
-			BearerFormat: "JWT",
-			Description:  "Enter JWT Bearer token",
-		},
-	}
-
-	// API Key
-	doc.Components.SecuritySchemes["apiKey"] = &openapi3.SecuritySchemeRef{
-		Value: &openapi3.SecurityScheme{
-			Type:        "apiKey",
-			In:          "header",
-			Name:        "X-API-Key",
-			Description: "API Key authentication",
-		},
-	}
-}
-
-// 在文档级别应用安全要求
-func applyGlobalSecurity() {
-	doc.Security = openapi3.SecurityRequirements{
-		{
-			"bearerAuth": []string{},
-		},
-	}
 }
 
 // parameters:

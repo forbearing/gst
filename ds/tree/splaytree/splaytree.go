@@ -666,38 +666,6 @@ func output2[K comparable, V any](node *Node[K, V], prefix string, isTail bool, 
 	}
 }
 
-func output[K comparable, V any](node *Node[K, V], prefix string, isTail bool, str *string, format string) {
-	if node.Children[1] != nil {
-		newPrefix := prefix
-		if isTail {
-			newPrefix += "│   "
-		} else {
-			newPrefix += "    "
-		}
-		output(node.Children[1], newPrefix, false, str, format)
-	}
-	*str += prefix
-	if isTail {
-		*str += "╰── "
-	} else {
-		*str += "╭── "
-	}
-	if len(format) > 0 {
-		*str += fmt.Sprintf(format, node.Key, node.Value)
-	} else {
-		*str += fmt.Sprintf("%v\n", node.String())
-	}
-	if node.Children[0] != nil {
-		newPrefix := prefix
-		if isTail {
-			newPrefix += "    "
-		} else {
-			newPrefix += "│   "
-		}
-		output(node.Children[0], newPrefix, true, str, format)
-	}
-}
-
 func (t *Tree[K, V]) splay(x *Node[K, V]) {
 	for x.Parent != nil {
 		p := x.Parent

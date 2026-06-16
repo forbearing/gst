@@ -460,14 +460,3 @@ func (l *List[V]) Clear() {
 	l.Tail = nil
 	l.count = 0
 }
-
-func (l *List[V]) options() []Option[V] {
-	ops := make([]Option[V], 0)
-	if l.safe {
-		ops = append(ops, WithSafe[V]())
-	}
-	if l.sorted {
-		ops = append(ops, WithSorted(l.cmp))
-	}
-	return ops
-}

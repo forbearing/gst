@@ -689,7 +689,9 @@ func (m *distributedMetrics) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return nil
 }
 
-// trace operation "op" costed time.
+// trace
+//
+//nolint:unused
 func (dc *distributedCache[T]) trace(op string) func(error) {
 	if !dc.traceEnabled {
 		return func(error) {}
