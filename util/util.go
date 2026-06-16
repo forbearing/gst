@@ -168,16 +168,16 @@ func GetFunctionName(x any) string {
 }
 
 func ParseScheme(req *http.Request) string {
-	if scheme := req.Header.Get("x-forwarded-proto"); len(scheme) != 0 {
+	if scheme := req.Header.Get("X-Forwarded-Proto"); len(scheme) != 0 {
 		return scheme
 	}
-	if scheme := req.Header.Get("x-forwarded-protocol"); len(scheme) != 0 {
+	if scheme := req.Header.Get("X-Forwarded-Protocol"); len(scheme) != 0 {
 		return scheme
 	}
-	if ssl := req.Header.Get("x-forwarded-ssl"); ssl == "on" {
+	if ssl := req.Header.Get("X-Forwarded-Ssl"); ssl == "on" {
 		return "https"
 	}
-	if scheme := req.Header.Get("x-url-scheme"); len(scheme) != 0 {
+	if scheme := req.Header.Get("X-Url-Scheme"); len(scheme) != 0 {
 		return scheme
 	}
 	if req.TLS != nil {
