@@ -14,6 +14,7 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/helper"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/module/iam"
@@ -279,6 +280,8 @@ func TestLogmgmt(t *testing.T) {
 		})
 
 		t.Run("create-group", func(t *testing.T) {
+			logmgmtSetSuperuser(t, username, true)
+
 			cli, err := client.New(groupAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: sessionID,
@@ -369,4 +372,15 @@ func TestLogmgmt(t *testing.T) {
 			})
 		})
 	})
+}
+
+func logmgmtSetSuperuser(t *testing.T, username string, enabled bool) {
+	t.Helper()
+
+	users := make([]*iam.User, 0)
+	require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&users))
+	require.Len(t, users, 1)
+
+	users[0].IsSuperuser = &enabled
+	require.NoError(t, database.Database[*iam.User](nil).Update(users[0]))
 }
