@@ -81,8 +81,10 @@ func (s *ChangeConfirmService) Create(ctx *types.ServiceContext, req *modeliamem
 
 	existingUser, err := changeLookupUserByEmail(ctx, normalizeEmailScope(flow.NewEmail))
 	if err != nil {
-		log.Error("failed to lookup target email for confirmation", err)
-		return nil, errors.Wrap(err, "failed to lookup target email for confirmation")
+		if !errors.Is(err, errEmailUserNotFound) {
+			log.Error("failed to lookup target email for confirmation", err)
+			return nil, errors.Wrap(err, "failed to lookup target email for confirmation")
+		}
 	}
 	if existingUser != nil && existingUser.ID != user.ID {
 		return &modeliamemail.ChangeConfirmRsp{

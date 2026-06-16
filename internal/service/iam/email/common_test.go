@@ -316,6 +316,37 @@ func TestVerificationRequestCreateVerifiedUser(t *testing.T) {
 	require.Equal(t, "", sender.last.To)
 }
 
+func TestVerificationRequestCreateUnknownUser(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 47, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{15}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	previousLookup := verificationLookupUserByEmail
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
+		require.Equal(t, "user@example.com", email)
+		return nil, errEmailUserNotFound
+	}
+	t.Cleanup(func() {
+		verificationLookupUserByEmail = previousLookup
+	})
+
+	svc := &VerificationRequestService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationRequestReq{Email: "user@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
+	require.Equal(t, 0, flowCache.Len())
+	require.Empty(t, sender.deliveries)
+}
+
 func TestVerificationResendCreate(t *testing.T) {
 	flowCache := newTestCache[iamEmailFlowState]()
 	throttleCache := newTestCache[emailThrottleRecord]()
@@ -353,6 +384,37 @@ func TestVerificationResendCreate(t *testing.T) {
 	require.Equal(t, "user@example.com", sender.last.To)
 	require.Equal(t, "Email verification", sender.last.Subject)
 	require.Equal(t, 1, flowCache.Len())
+}
+
+func TestVerificationResendCreateUnknownUser(t *testing.T) {
+	flowCache := newTestCache[iamEmailFlowState]()
+	throttleCache := newTestCache[emailThrottleRecord]()
+	now := time.Date(2026, 3, 31, 13, 52, 0, 0, time.UTC)
+	restore := stubEmailGlobals(flowCache, throttleCache, now, bytes.NewReader(bytes.Repeat([]byte{16}, 64)))
+	t.Cleanup(restore)
+
+	sender := new(testEmailSender)
+	setEmailSender(sender)
+
+	previousLookup := verificationLookupUserByEmail
+	verificationLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
+		require.Equal(t, "user@example.com", email)
+		return nil, errEmailUserNotFound
+	}
+	t.Cleanup(func() {
+		verificationLookupUserByEmail = previousLookup
+	})
+
+	svc := &VerificationResendService{}
+	svc.Logger = loggerzap.New("")
+	ctx := new(types.ServiceContext)
+	ctx.SetPhase(consts.PHASE_CREATE)
+
+	rsp, err := svc.Create(ctx, &modeliamemail.VerificationResendReq{Email: "user@example.com"})
+	require.NoError(t, err)
+	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
+	require.Equal(t, 0, flowCache.Len())
+	require.Empty(t, sender.deliveries)
 }
 
 func TestVerificationResendCreateThrottled(t *testing.T) {
@@ -558,7 +620,7 @@ func TestChangeRequestCreate(t *testing.T) {
 	}
 	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "new@example.com", email)
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	t.Cleanup(func() {
 		changeLoadUserByID = previousLoad
@@ -664,7 +726,7 @@ func TestChangeResendCreate(t *testing.T) {
 	}
 	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "new@example.com", email)
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	t.Cleanup(func() {
 		changeLoadUserByID = previousLoad
@@ -709,7 +771,7 @@ func TestChangeResendCreateThrottled(t *testing.T) {
 		return user, nil
 	}
 	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	t.Cleanup(func() {
 		changeLoadUserByID = previousLoad
@@ -776,7 +838,7 @@ func TestChangeConfirmCreate(t *testing.T) {
 	}
 	changeLookupUserByEmail = func(_ *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		require.Equal(t, "new@example.com", email)
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	changeUpdateUser = func(_ *types.ServiceContext, updated *modeliamuser.User) error {
 		user = updated
@@ -834,11 +896,11 @@ func TestChangeConfirmCreateCanceled(t *testing.T) {
 	previousUpdate := changeUpdateUser
 	changeLoadUserByID = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		t.Fatalf("changeLoadUserByID should not be called for canceled flow")
-		return nil, nil
+		return nil, errors.New("unexpected changeLoadUserByID call")
 	}
 	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
 		t.Fatalf("changeLookupUserByEmail should not be called for canceled flow")
-		return nil, nil
+		return nil, errors.New("unexpected changeLookupUserByEmail call")
 	}
 	changeUpdateUser = func(_ *types.ServiceContext, _ *modeliamuser.User) error {
 		t.Fatalf("changeUpdateUser should not be called for canceled flow")
@@ -947,7 +1009,7 @@ func TestChangeRequestCreateClearsCancellationMarker(t *testing.T) {
 		return user, nil
 	}
 	changeLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	t.Cleanup(func() {
 		changeLoadUserByID = previousLoad
@@ -1022,7 +1084,9 @@ func TestPasswordResetRequestCreateUnknownUser(t *testing.T) {
 	setEmailSender(sender)
 
 	previousLookup := passwordResetLookupUserByEmail
-	passwordResetLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) { return nil, nil }
+	passwordResetLookupUserByEmail = func(_ *types.ServiceContext, _ string) (*modeliamuser.User, error) {
+		return nil, errEmailUserNotFound
+	}
 	t.Cleanup(func() {
 		passwordResetLookupUserByEmail = previousLookup
 	})

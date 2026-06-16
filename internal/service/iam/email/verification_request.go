@@ -16,8 +16,9 @@ type VerificationRequestService struct {
 	service.Base[*model.Empty, *modeliamemail.VerificationRequestReq, *modeliamemail.VerificationRequestRsp]
 }
 
-// verificationLookupUserByEmail resolves the user bound to the requested email.
-// Tests can replace this function to avoid database fixtures.
+// verificationLookupUserByEmail resolves the user bound to the requested email
+// and returns errEmailUserNotFound when no account uses it. Tests can replace
+// this function to avoid database fixtures.
 var verificationLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliamuser.User, error) {
 	users := make([]*modeliamuser.User, 0, 1)
 	queryEmail := email
@@ -28,7 +29,7 @@ var verificationLookupUserByEmail = func(ctx *types.ServiceContext, email string
 		return nil, err
 	}
 	if len(users) == 0 {
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	return users[0], nil
 }
@@ -54,6 +55,9 @@ func (s *VerificationRequestService) Create(ctx *types.ServiceContext, req *mode
 
 	user, err := verificationLookupUserByEmail(ctx, email)
 	if err != nil {
+		if errors.Is(err, errEmailUserNotFound) {
+			return rsp, nil
+		}
 		log.Error("failed to load verification user", err)
 		return nil, errors.Wrap(err, "failed to load verification user")
 	}
