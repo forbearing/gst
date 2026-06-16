@@ -14,12 +14,12 @@ import (
 
 func TestWrappedRequest(t *testing.T) {
 	body := []byte("hello world")
-	req, err := http.NewRequest("POST", "http://example.com", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, "http://example.com", bytes.NewReader(body))
 	assert.NoError(t, err)
 	testWrappedRequest(t, req, body)
 
 	body = []byte{}
-	req, err = http.NewRequest("POST", "http://example.com", bytes.NewReader(body))
+	req, err = http.NewRequest(http.MethodPost, "http://example.com", bytes.NewReader(body))
 	require.NoError(t, err)
 	testWrappedRequest(t, req, body)
 }
