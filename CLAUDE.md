@@ -94,6 +94,10 @@ repomix \
   --force
 ```
 
+### README.md
+
+README.md 面向使用 gst 框架的后端开发者，应保持简洁并聚焦实际使用流程；不要写入内部实现、维护者决策或开发者不需要关心的细节，但必须保留会影响正确使用的关键信息、命令顺序和风险提醒。
+
 ### 如何使用当前框架
 
 可以结合 `examples/demo` 理解框架用法。这里描述的是后端项目如何使用 gst，不是 gst 框架源码本身的开发流程。
@@ -105,7 +109,7 @@ repomix \
 3. 在业务项目中修改或新增 `model` 文件，例如 `model/user.go`、`model/config/file.go`。
 4. 修改 model 的 DSL 后执行 `gg gen` 生成 `main.go`、`model/model.go`、`service/service.go`、`router/router.go` 等注册代码。
 5. 在对应的 `service` 文件中实现业务逻辑和复杂 hook。
-6. 如果 model 的 `Design()` 中声明了 `Migrate(true)`，该 model 也是数据库模型；数据库字段变化后使用 `gg migrate` 生成或执行 schema 迁移。
+6. 如果 model 的 `Design()` 中声明了 `Migrate(true)`，该 model 也是数据库模型；数据库字段变化后使用 `gg migrate --dry-run` 预览迁移，再用 `gg migrate` 按确认执行 schema 迁移。
 7. 服务启动后会自动生成 Swagger 文档，访问路径是 `/docs/index.html`。
 
 #### 生成文件和手写文件的边界
@@ -145,7 +149,7 @@ repomix \
 
 - 在后端项目根目录执行 `gg gen`、`gg migrate` 等命令，不要在 gst 框架仓库根目录对业务项目执行生成命令。
 - 修改 model 的 DSL、接口路径、REQ/RSP、service 开关后，需要重新执行 `gg gen`，并检查生成的 router 和 service 注册是否符合预期。
-- 修改声明了 `Migrate(true)` 的数据库模型字段后，需要执行 `gg migrate` 处理 schema 变化。
+- 修改声明了 `Migrate(true)` 的数据库模型字段后，需要执行 `gg migrate --dry-run` 检查 `generated/migrate/<dbtype>/schema.sql` 和迁移计划，再用 `gg migrate` 按确认处理 schema 变化。
 - 不要手写覆盖生成文件；如果生成结果不符合预期，优先修正 model DSL 或框架生成逻辑。
 - 后端服务启动后，通过 `/docs/index.html` 检查生成的 Swagger 文档和接口路径。
 - 后端项目自身如果已有测试，修改业务逻辑后需要运行对应测试；涉及框架仓库改动时仍按 gst 仓库要求执行 `make check`。

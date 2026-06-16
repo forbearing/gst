@@ -13,20 +13,19 @@ model 注册和 service 注册，再在 `service` 中补充业务逻辑。
 
 ### 安装 gg
 
-外部项目直接安装发布版：
+业务项目直接安装发布版：
 
 ```bash
 go install github.com/forbearing/gst/cmd/gg@latest
 ```
 
-如果你正在当前 gst 源码仓库中验证本地改动，优先安装当前工作区版本：
+需要验证当前仓库源码时，在 gst 源码仓库安装本地版本：
 
 ```bash
 make install
 ```
 
-如果生成的业务项目也需要引用当前本地 gst 源码，而不是最新发布版，在业务项目中
-加 `replace`：
+业务项目需要引用这份本地源码时，在业务项目目录添加 `replace`：
 
 ```bash
 go mod edit -replace github.com/forbearing/gst=/path/to/gst
@@ -71,7 +70,7 @@ git init
 | `main.go` | 由 `gg gen` 生成的应用入口 |
 
 通常只手写 `model/**/*.go`、`service/**/*.go` 和扩展目录中的业务代码。生成文件
-不要手改；如果生成结果不符合预期，优先修改 model DSL 或生成器逻辑。
+不要手改；如果生成结果不符合预期，先检查 model DSL，再重新执行 `gg gen`。
 
 ## 开发主线
 
@@ -82,9 +81,10 @@ git init
 3. 在生成的 `service/**` 文件中实现业务逻辑或 hook。
 4. 使用 `gg routes` 检查生成的 model 和接口层级关系。
 5. 使用 `gg check` 检查项目结构和依赖边界。
-6. 删除 model、关闭 action 或调整 `Filename(...)` 后，运行 `gg prune` 或
-   `gg gen --prune` 清理废弃 service 文件。
-7. 修改 `Migrate(true)` 的数据库模型字段后，再根据配置运行 `gg migrate`。
+6. 删除 model 或关闭 action 后，运行 `gg prune` 或 `gg gen --prune` 清理废弃
+   service 文件。
+7. 修改 `Migrate(true)` 的数据库模型字段后，先运行 `gg migrate --dry-run`，
+   确认无误后再运行 `gg migrate`。
 
 开发时也可以用 `gg watch` 监听 `model` 目录并自动执行 `gg gen`。
 
@@ -281,9 +281,8 @@ database.Database[*appmodel.Conversation](ctx.DatabaseContext())
 ```
 
 并按需要组合 `WithQuery`、`WithSelect`、`WithPagination`、`WithOrder`、
-`WithLimit`、`WithBuildSQL` 等选项。每个独立操作都应从新的
-`database.Database[T](...)` 调用开始，并以 `Create`、`List`、`Get`、`Count`、
-`Transaction` 等终止操作结束，不要在无关操作之间复用同一个 database 句柄。
+`WithLimit` 等选项。一次查询或写入使用一个新的 `database.Database[T](...)`
+链式调用，不要在无关操作之间复用同一个 database 句柄。
 
 ## 配置和迁移
 
@@ -299,14 +298,20 @@ gg config defaults server --format yaml
 gg config convert config.ini config.yaml
 ```
 
-模型声明 `Migrate(true)` 后，表示这个 model 是数据库模型。字段变化后运行：
+模型声明 `Migrate(true)` 后，字段变化先预览迁移计划：
+
+```bash
+gg migrate --dry-run
+```
+
+确认无误后执行：
 
 ```bash
 gg migrate
 ```
 
-`gg migrate` 依赖当前项目的数据库配置。执行前先确认 `config.ini` 指向的是目标
-环境，避免把开发中的模型变化迁移到错误数据库。
+命令会生成 `generated/migrate/<dbtype>/schema.sql`，并在执行前要求确认。
+执行前先确认 `config.ini` 指向目标环境，避免把开发中的模型变化迁移到错误数据库。
 
 ## 内置模块
 
@@ -342,24 +347,12 @@ func init() {
 | `gg routes` | 按 model 层级打印当前生成的接口路径 |
 | `gg route-tree` | 按 URL 层级打印当前生成的路由树 |
 | `gg watch` | 监听 `model` 目录并自动执行 `gg gen` |
-| `gg migrate` | 根据当前模型和数据库配置执行迁移 |
+| `gg migrate` | 生成当前数据库方言的 schema，预览并按确认执行数据库迁移 |
 | `gg run` | 使用热重载方式启动业务项目 |
 
-`gg check` 会检查：
-
-- `service` 不能调用其他业务 service。
-- `dao` 不能调用业务 `service`、`router`、`controller`、`middleware`。
-- `model` 不能调用业务 `service` 和 `dao`。
-- `model` 目录和模型文件应使用单数命名，文件名不要使用连字符。
-- 模型结构体的 `json` tag 应使用 `snake_case`。
-- 显式声明的 DSL `Payload` 类型应以 `Req` 结尾，`Result` 类型应以 `Rsp` 结尾。
-- 单个 model 代码文件最多包含一个 model 结构体。
-- 单个 service 代码文件最多包含一个 service 结构体。
-- 子目录中的 model package 名称应与目录名一致。
-- gst 业务项目根目录只允许约定目录结构。
-
-`gg gen` 内部也会执行这些检查；如果检查失败，会停止生成，避免继续写入不一致的
-注册代码。
+`gg check` 会检查依赖边界、model/service 文件边界、命名规范、`json` tag、
+REQ/RSP 命名和业务项目根目录结构。`gg gen` 生成前也会执行这些检查；检查失败会
+停止生成。
 
 ## 示例
 
