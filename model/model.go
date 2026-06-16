@@ -184,13 +184,10 @@ type Base struct {
 	Index      string  `json:"-" gorm:"-" schema:"_index" url:"_index,omitempty"`             // Query parameter: index name for search (e.g., _index=name)
 	Select     string  `json:"-" gorm:"-" schema:"_select" url:"_select,omitempty"`           // Query parameter: specific fields to select (e.g., _select=field1,field2)
 	Nototal    bool    `json:"-" gorm:"-" schema:"_nototal" url:"_nototal,omitempty"`         // Query parameter: skip total count calculation (e.g., _nototal=true)
-
-	// cursor pagination
+	// Cursor pagination
 	CursorValue  *string `json:"-" gorm:"-" schema:"_cursor_value" url:"_cursor_value,omitempty"`   // Query parameter: cursor value for pagination (e.g., _cursor_value=0196a0b3-c9d1-713c-870e-adc76af9f857)
 	CursorFields string  `json:"-" gorm:"-" schema:"_cursor_fields" url:"_cursor_fields,omitempty"` // Query parameter: fields used for cursor pagination (e.g., _cursor_fields=field1,field2)
 	CursorNext   bool    `json:"-" gorm:"-" schema:"_cursor_next" url:"_cursor_next,omitempty"`     // Query parameter: direction for cursor pagination (e.g., _cursor_next=true)
-
-	// gorm.Model `json:"-" schema:"-" url:"-"`
 }
 
 func (b *Base) GetTableName() string       { return "" }
