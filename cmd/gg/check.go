@@ -1020,9 +1020,10 @@ func CheckAllowedDirectories() []string {
 	}
 
 	whitelistDirs := map[string]bool{
-		"tmp":  true,
-		"logs": true,
-		"dist": true,
+		"tmp":       true,
+		"logs":      true,
+		"dist":      true,
+		"generated": true,
 	}
 
 	// Read directory contents
