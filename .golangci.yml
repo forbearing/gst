@@ -15,44 +15,61 @@ linters:
   # v2 config does not support `disable-all`; use `default: none` instead
   default: none
   enable:
-    # Essential linters for code quality
+    # Core quality gate.
     - errcheck
     - govet
     - ineffassign
     - staticcheck
+    - unused
 
-    # Security and bug detection
-    - gosec
+    # Error handling.
+    - errorlint
+    - errname
+    - nilerr
+    - nilnil
+    - nilnesserr
+
+    # Resource safety and security.
     - bodyclose
+    - gosec
     - rowserrcheck
     - sqlclosecheck
 
-    # Code style (less strict)
+    # Code hygiene.
     - misspell
+    - nolintlint
+    - predeclared
+    - revive
     - unconvert
 
-    # Performance
-    - prealloc
+    # Go modernization.
+    - exptostd
+    - intrange
+    - perfsprint
+    - usestdlibvars
 
-    # Import management
+    # Test quality.
+    - testifylint
+    - thelper
+    - usetesting
+
+    # Project constraints.
     - depguard
+    - gomoddirectives
+    - gomodguard_v2
 
-    # Documentation
+    # Project-specific checks.
+    - canonicalheader
+    - loggercheck
+    - spancheck
+
+    # Documentation.
     - godoclint
 
-    # Additional useful linters (less noisy)
+    # Additional low-noise safeguards.
     - asciicheck
     - durationcheck
-    - errname
-    - errorlint
-    - nilerr
-    - predeclared
     - wastedassign
-
-    - copyloopvar
-    - importas
-    - nolintlint
-    - revive
 
   # Linter-specific settings (moved under linters.settings for v2)
   settings:
@@ -66,13 +83,11 @@ linters:
     errcheck:
       check-type-assertions: true
       exclude-functions:
-        - io/ioutil.ReadFile
         - io.Copy(*bytes.Buffer)
         - io.Copy(os.Stdout)
 
     revive:
       rules:
-        - name: exported
         - name: dot-imports
           arguments:
             - allowedPackages:
@@ -86,7 +101,6 @@ linters:
         - name: error-strings
         - name: errorf
         - name: indent-error-flow
-        - name: package-comments
         - name: range
         - name: receiver-naming
         - name: time-naming
@@ -110,16 +124,8 @@ linters:
         # Check deprecated symbols have proper deprecation notice.
         - deprecated
 
-    lll:
-      line-length: 120
-
     misspell:
       locale: US
-
-    prealloc:
-      simple: true
-      range-loops: true
-      for-loops: false
 
     staticcheck:
       checks: ["all", "-QF1008", "-ST1001"]
@@ -133,10 +139,6 @@ linters:
       - common-false-positives
       - legacy
     rules:
-      # Exclude lll issues for long lines with go:generate
-      - linters:
-          - lll
-        source: "^//go:generate "
       # Relax complexity in tests
       - path: _test\.go
         linters:
