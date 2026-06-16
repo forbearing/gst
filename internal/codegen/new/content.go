@@ -206,4 +206,8 @@ temp/
 
 # Build output
 dist/
-build/`
+build/
+
+# Generated files
+generated/
+`
