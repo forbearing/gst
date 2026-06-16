@@ -48,6 +48,7 @@ func TestTenantCreate(t *testing.T) {
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.Tenant) {
+			t.Helper()
 			require.NotEmpty(t, rsp.ID)
 			require.Equal(t, tenantName, rsp.Name)
 		})
@@ -123,6 +124,7 @@ func TestTenantList(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.Tenant]) {
+			t.Helper()
 			require.GreaterOrEqual(t, rsp.Total, int64(1))
 			require.NotNil(t, tenantFindByName(rsp.Items, tenantName))
 		})
@@ -159,6 +161,7 @@ func TestTenantUpdate(t *testing.T) {
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.Tenant) {
+			t.Helper()
 			require.Equal(t, target.ID, rsp.ID)
 			require.Equal(t, updatedName, rsp.Name)
 		})
@@ -204,6 +207,7 @@ func TestTenantCreateMany(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp tenantBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)
@@ -256,6 +260,7 @@ func TestTenantPatch(t *testing.T) {
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.Tenant) {
+			t.Helper()
 			require.Equal(t, target.ID, rsp.ID)
 			require.Equal(t, patchedName, rsp.Name)
 		})
@@ -304,6 +309,7 @@ func TestTenantUpdateMany(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp tenantBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)
@@ -350,6 +356,7 @@ func TestTenantPatchMany(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp tenantBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)

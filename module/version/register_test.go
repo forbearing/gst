@@ -70,6 +70,7 @@ func TestVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	helper.TestResp(t, resp, func(t *testing.T, rsp *versionmod.VersionRsp) {
+		t.Helper(
 		// #*version.VersionRsp {
 		//   +Version     => "" #string
 		//   +BuildTime   => 1772694405 #int64
@@ -80,6 +81,7 @@ func TestVersion(t *testing.T) {
 		//   +Uptime      => 1 #int64
 		//   +Timestamp   => 1772694406 #int64
 		// }
+		)
 
 		require.NotEmpty(t, rsp)
 		require.NotEmpty(t, rsp.BuildTime)

@@ -26,6 +26,7 @@ func init() {
 }
 
 func createTrie1(b *testing.B, safe bool) *trie.Trie[rune, int] {
+	b.Helper()
 	var t *trie.Trie[rune, int]
 	var err error
 	if safe {
@@ -40,6 +41,7 @@ func createTrie1(b *testing.B, safe bool) *trie.Trie[rune, int] {
 }
 
 func createTrie2(b *testing.B, size int, safe bool) *trie.Trie[rune, int] {
+	b.Helper()
 	var t *trie.Trie[rune, int]
 	var err error
 	if safe {
@@ -57,6 +59,7 @@ func createTrie2(b *testing.B, size int, safe bool) *trie.Trie[rune, int] {
 }
 
 func benchmark(b *testing.B, sizes []int, do func(t *trie.Trie[rune, int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

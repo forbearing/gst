@@ -8,6 +8,7 @@ import (
 )
 
 func createList(b *testing.B, size int, safe bool) *arraylist.List[int] {
+	b.Helper()
 	var list *arraylist.List[int]
 	var err error
 
@@ -27,6 +28,7 @@ func createList(b *testing.B, size int, safe bool) *arraylist.List[int] {
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, fn func(list *arraylist.List[int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {
@@ -181,6 +183,7 @@ func BenchmarkArrayList_IsEmpty(b *testing.B) {
 }
 
 func benchmarkLen(b *testing.B, size int) {
+	b.Helper()
 	b.Run("unsafe", func(b *testing.B) {
 		list := createList(b, size, false)
 		b.ResetTimer()
@@ -230,6 +233,7 @@ func BenchmarkArrayList_Swap(b *testing.B) {
 }
 
 func benchmarkRange(b *testing.B, size int) {
+	b.Helper()
 	b.Run("unsafe", func(b *testing.B) {
 		list := createList(b, size, false)
 		b.ResetTimer()

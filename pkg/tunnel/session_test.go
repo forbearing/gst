@@ -42,6 +42,7 @@ func TestSession(t *testing.T) {
 }
 
 func server(t *testing.T) {
+	t.Helper()
 	l, err := net.Listen("tcp", addr)
 	assert.NoError(t, err)
 	defer l.Close()
@@ -77,6 +78,7 @@ func server(t *testing.T) {
 }
 
 func client(t *testing.T) {
+	t.Helper()
 	<-doneCh
 
 	conn, err := net.Dial("tcp", addr)

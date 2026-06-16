@@ -48,6 +48,7 @@ func TestGroupCreate(t *testing.T) {
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.Group) {
+			t.Helper()
 			require.NotEmpty(t, rsp.ID)
 			require.Equal(t, groupName, rsp.Name)
 		})
@@ -157,6 +158,7 @@ func TestGroupList(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
+			t.Helper()
 			require.GreaterOrEqual(t, rsp.Total, int64(1))
 			require.NotNil(t, groupFindByName(rsp.Items, groupName))
 		})
@@ -193,6 +195,7 @@ func TestGroupUpdate(t *testing.T) {
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.Group) {
+			t.Helper()
 			require.Equal(t, target.ID, rsp.ID)
 			require.Equal(t, updatedName, rsp.Name)
 		})
@@ -275,6 +278,7 @@ func TestGroupCreateMany(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp groupBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)
@@ -364,6 +368,7 @@ func TestGroupUpdateMany(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp groupBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)
@@ -445,6 +450,7 @@ func TestGroupPatch(t *testing.T) {
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.Group) {
+			t.Helper()
 			require.Equal(t, target.ID, rsp.ID)
 			require.Equal(t, patchedName, rsp.Name)
 		})
@@ -491,6 +497,7 @@ func TestGroupPatchMany(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp groupBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)

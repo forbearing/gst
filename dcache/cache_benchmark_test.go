@@ -110,6 +110,7 @@ func Benchmark(b *testing.B) {
 }
 
 func benchmark(b *testing.B, cache any) {
+	b.Helper()
 	count := 10000
 	keys := make([]string, count)
 	values := make([]string, count)
@@ -230,6 +231,7 @@ func benchmark(b *testing.B, cache any) {
 }
 
 func benchmarkParallel(b *testing.B, cm types.Cache[string]) {
+	b.Helper()
 	count := 10000
 	keys := make([]string, count)
 	values := make([]string, count)

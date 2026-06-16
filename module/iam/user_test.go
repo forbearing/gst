@@ -61,6 +61,7 @@ func TestUserList(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
+			t.Helper()
 			actorItem := userFindByUsername(rsp.Items, actor.Username)
 			require.NotNil(t, actorItem)
 			require.Equal(t, actor.Username, actorItem.Username)
@@ -115,6 +116,7 @@ func TestUserCreate(t *testing.T) {
 		})
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			t.Helper()
 			require.NotEmpty(t, rsp.ID)
 			require.Equal(t, targetUsername, rsp.Username)
 			require.Empty(t, rsp.Password)
@@ -184,6 +186,7 @@ func TestUserCreateMany(t *testing.T) {
 		})
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)
@@ -288,6 +291,7 @@ func TestUserPatch(t *testing.T) {
 		require.NotNil(t, resp)
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			t.Helper()
 			require.Equal(t, victim.UserID, rsp.ID)
 			require.Empty(t, rsp.Password)
 			require.Empty(t, rsp.PasswordHash)
@@ -543,6 +547,7 @@ func TestUserSuperuserTargetProtection(t *testing.T) {
 		})
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			t.Helper()
 			require.Equal(t, adminCreatedUsername, rsp.Username)
 			require.True(t, rsp.IsSuperuser != nil && *rsp.IsSuperuser)
 		})
@@ -602,6 +607,7 @@ func userSignupUser(t *testing.T, prefix, password string) userTestAccount {
 	require.NoError(t, err)
 
 	helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+		t.Helper()
 		require.Equal(t, user.Username, rsp.Username)
 		require.NotEmpty(t, rsp.UserID)
 		require.NotEmpty(t, rsp.Message)
@@ -672,6 +678,7 @@ func userLoginUser(t *testing.T, user *userTestAccount, password string) string 
 
 	sessionID := ""
 	helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+		t.Helper()
 		require.NotEmpty(t, rsp.SessionID)
 		sessionID = rsp.SessionID
 	})

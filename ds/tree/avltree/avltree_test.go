@@ -11,6 +11,7 @@ import (
 )
 
 func newIntStringTree(t *testing.T) *avltree.Tree[int, string] {
+	t.Helper()
 	tree, err := avltree.NewOrderedKeys(avltree.WithSafe[int, string]())
 	assert.NoError(t, err)
 	return tree

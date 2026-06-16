@@ -144,6 +144,7 @@ func setupTracingTest(t *testing.T) {
 }
 
 func setupTracingTestWithEndpoint(t *testing.T, endpoint string) {
+	t.Helper()
 	setupTracingTestWithEndpointAndSampler(t, endpoint, config.TracesSamplerParentBasedAlwaysOn)
 }
 

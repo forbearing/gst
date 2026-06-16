@@ -44,6 +44,7 @@ func accountSignupUser(t *testing.T, prefix, password string) accountTestUser {
 	require.NoError(t, err)
 
 	helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+		t.Helper()
 		require.Equal(t, user.Username, rsp.Username)
 		require.NotEmpty(t, rsp.UserID)
 		require.NotEmpty(t, rsp.Message)
@@ -83,6 +84,7 @@ func accountLoginUser(t *testing.T, user *accountTestUser, password string) stri
 
 	sessionID := ""
 	helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+		t.Helper()
 		require.NotEmpty(t, rsp.SessionID)
 		sessionID = rsp.SessionID
 	})
@@ -156,6 +158,7 @@ func TestAccountLogout(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp[*iam.LogoutRsp](t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
+			t.Helper()
 			require.NotEmpty(t, rsp.Msg)
 		})
 
@@ -201,6 +204,7 @@ func TestAccountChangePassword(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.ChangePasswordRsp) {
+			t.Helper()
 			require.NotEmpty(t, rsp.Msg)
 		})
 	})
@@ -252,6 +256,7 @@ func TestAccountGroups(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
+			t.Helper()
 			require.Len(t, rsp.Items, 0)
 		})
 	})
@@ -306,6 +311,7 @@ func TestAccountResetPassword(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.ResetPasswordRsp) {
+			t.Helper()
 			require.NotEmpty(t, rsp.Msg)
 		})
 	})
@@ -360,6 +366,7 @@ func TestAccountResetPassword(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.ChangePasswordRsp) {
+			t.Helper()
 			require.NotEmpty(t, rsp.Msg)
 		})
 	})
@@ -426,6 +433,7 @@ func TestAccountStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+			t.Helper()
 			require.Contains(t, rsp.Msg, "success")
 		})
 	})
@@ -461,6 +469,7 @@ func TestAccountStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+			t.Helper()
 			require.Contains(t, rsp.Msg, "unchanged")
 		})
 	})
@@ -493,6 +502,7 @@ func TestAccountStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+			t.Helper()
 			require.Contains(t, rsp.Msg, "success")
 		})
 	})
@@ -584,6 +594,7 @@ func TestAccountStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+			t.Helper()
 			require.Contains(t, rsp.Msg, "success")
 		})
 	})
@@ -633,6 +644,7 @@ func TestAccountStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+			t.Helper()
 			require.Contains(t, rsp.Msg, "success")
 		})
 	})
@@ -651,6 +663,7 @@ func TestAccountStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.AccountStatusRsp) {
+			t.Helper()
 			require.Contains(t, rsp.Msg, "unchanged")
 		})
 	})

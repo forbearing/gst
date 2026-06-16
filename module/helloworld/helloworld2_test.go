@@ -165,6 +165,7 @@ func check1(t *testing.T, tt struct {
 },
 	resp *client.Resp,
 ) {
+	t.Helper()
 	hw := new(helloworld.Helloworld2)
 	pretty.Println(string(resp.Data))
 	if len(resp.Data) > 0 {
@@ -183,7 +184,10 @@ func check2(t *testing.T, tt struct {
 },
 	resp *client.Resp,
 ) {
+	t.Helper(
 	// CreateMany returns a structured response with data, options, and summary fields
+	)
+
 	var batchResp struct {
 		Data    []*helloworld.Helloworld2 `json:"data"`
 		Options map[string]any            `json:"options"`

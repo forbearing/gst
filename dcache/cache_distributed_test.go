@@ -32,6 +32,7 @@ func init() {
 }
 
 func setupTestDistributedCache[T any](t *testing.T) types.DistributedCache[T] {
+	t.Helper(
 	// redisCli, err := redis.New(config.App.Redis)
 	// if err != nil {
 	// 	t.Fatal(err)
@@ -44,6 +45,7 @@ func setupTestDistributedCache[T any](t *testing.T) types.DistributedCache[T] {
 	// 	dcache.WithKafkaBrokers[T]([]string{"127.0.0.1:9092"}),
 	// 	dcache.WithRedisCache[T](redisCache),
 	// )
+	)
 
 	distributed, err := dcache.NewDistributedCache[T]()
 	if err != nil {

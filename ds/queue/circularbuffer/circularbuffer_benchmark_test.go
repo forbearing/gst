@@ -9,6 +9,7 @@ import (
 )
 
 func createCircularBuffer(b *testing.B, size int, safe bool, drop bool) *cb.CircularBuffer[int] {
+	b.Helper()
 	ops := make([]cb.Option[int], 0)
 	if safe {
 		ops = append(ops, cb.WithSafe[int]())
@@ -30,6 +31,7 @@ func createCircularBuffer(b *testing.B, size int, safe bool, drop bool) *cb.Circ
 }
 
 func createCircularBuffer2(b *testing.B, size int, safe bool) *cb.CircularBuffer[int] {
+	b.Helper()
 	ops := make([]cb.Option[int], 0)
 	if safe {
 		ops = append(ops, cb.WithSafe[int]())
@@ -48,6 +50,7 @@ func createCircularBuffer2(b *testing.B, size int, safe bool) *cb.CircularBuffer
 }
 
 func benchmark(b *testing.B, sizes []int, do func(cb *cb.CircularBuffer[int])) {
+	b.Helper()
 	b.Run("overwrite", func(b *testing.B) {
 		for _, size := range sizes {
 			b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
@@ -109,6 +112,7 @@ func benchmark(b *testing.B, sizes []int, do func(cb *cb.CircularBuffer[int])) {
 }
 
 func benchmark2(b *testing.B, sizes []int, do func(cb *cb.CircularBuffer[int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

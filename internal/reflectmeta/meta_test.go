@@ -70,6 +70,7 @@ func TestUserGetStructMeta(t *testing.T) {
 }
 
 func test(t *testing.T, meta *reflectmeta.StructMeta, typ reflect.Type) {
+	t.Helper()
 	t.Run("NumField", func(t *testing.T) {
 		if typ.NumField() != meta.NumField() {
 			t.Fatalf("NumField got %d, want %d", meta.NumField(), typ.NumField())

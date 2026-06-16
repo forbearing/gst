@@ -11,6 +11,7 @@ import (
 )
 
 func createHeap(t *testing.T) *binaryheap.Heap[int] {
+	t.Helper()
 	h, err := binaryheap.NewOrdered[int](binaryheap.WithSafe[int]())
 	if err != nil {
 		t.Fatal(err)

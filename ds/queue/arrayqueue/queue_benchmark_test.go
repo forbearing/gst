@@ -8,6 +8,7 @@ import (
 )
 
 func createQueue(b *testing.B, size int, safe bool) *arrayqueue.Queue[int] {
+	b.Helper()
 	var q *arrayqueue.Queue[int]
 	var err error
 	if safe {
@@ -25,6 +26,7 @@ func createQueue(b *testing.B, size int, safe bool) *arrayqueue.Queue[int] {
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(q *arrayqueue.Queue[int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

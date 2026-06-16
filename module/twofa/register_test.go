@@ -102,11 +102,14 @@ func Test2fa(t *testing.T) {
 		})
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+			t.Helper(
 			// #modeliam.SignupRsp {
 			//   +UserID   => "019cbc8e-0659-7989-b112-12e889ef4f21" #string
 			//   +Username => "user01" #string
 			//   +Message  => "User created successfully" #string
 			// }
+			)
+
 			require.Equal(t, rsp.Username, username)
 			require.NotEmpty(t, rsp.UserID)
 			require.NotEmpty(t, rsp.Message)
@@ -125,9 +128,12 @@ func Test2fa(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			t.Helper(
 			// #*modeliam.LoginRsp {
 			//   +SessionID => "019cbc8c-98d5-72ee-813c-c2a098780bfc" #string
 			// }
+			)
+
 			require.NotEmpty(t, rsp.SessionID)
 			sessionID = rsp.SessionID
 		})
@@ -143,11 +149,14 @@ func Test2fa(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, nil)
 		require.NoError(t, err)
 		helper.TestResp[*twofa.TOTPStatusRsp](t, resp, func(t *testing.T, rsp *twofa.TOTPStatusRsp) {
+			t.Helper(
 			// #*modeltwofa.TOTPStatusRsp {
 			//   +Enabled     => false #bool
 			//   +DeviceCount => 0 #int
 			//   +Devices     => []modeltwofa.TOTPDeviceInfo(nil)
 			// }
+			)
+
 			require.Equal(t, 0, rsp.DeviceCount)
 			require.Len(t, rsp.Devices, 0)
 			require.False(t, rsp.Enabled)
@@ -168,6 +177,7 @@ func Test2fa(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp[*twofa.TOTPCheckRsp](t, resp, func(t *testing.T, rsp *twofa.TOTPCheckRsp) {
+			t.Helper(
 			// *modeltwofa.TOTPStatusRsp {
 			//   +Enabled     => true #bool
 			//   +DeviceCount => 1 #int
@@ -181,6 +191,8 @@ func Test2fa(t *testing.T) {
 			//     }
 			//   ]
 			// }
+			)
+
 			require.False(t, rsp.Requires2FA)
 			require.NotEmpty(t, rsp.Message)
 		})
@@ -196,6 +208,7 @@ func Test2fa(t *testing.T) {
 		resp, err := cli.Create(nil)
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPBindRsp) {
+			t.Helper()
 			require.NotNil(t, rsp)
 			require.NotEmpty(t, rsp.Secret)
 			require.NotEmpty(t, rsp.OtpauthURL)
@@ -224,6 +237,7 @@ func Test2fa(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPConfirmRsp) {
+				t.Helper(
 				// #*modeltwofa.TOTPConfirmRsp {
 				//   +DeviceID    => "019cbc8d-857e-7e29-b2dc-ff983097a2e9" #string
 				//   +Message     => "TOTP device confirmed and activated successfully" #string
@@ -238,6 +252,8 @@ func Test2fa(t *testing.T) {
 				//     7 => "26604878" #string
 				//   ]
 				// }
+				)
+
 				require.NotEmpty(t, rsp.DeviceID)
 				require.NotEmpty(t, rsp.Message)
 				require.NotEmpty(t, rsp.BackupCodes)
@@ -296,6 +312,7 @@ func Test2fa(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, nil)
 		require.NoError(t, err)
 		helper.TestResp[*twofa.TOTPStatusRsp](t, resp, func(t *testing.T, rsp *twofa.TOTPStatusRsp) {
+			t.Helper(
 			// #*modeltwofa.TOTPStatusRsp {
 			//   +Enabled     => true #bool
 			//   +DeviceCount => 1 #int
@@ -309,6 +326,8 @@ func Test2fa(t *testing.T) {
 			//     }
 			//   ]
 			// }
+			)
+
 			require.True(t, rsp.Enabled)
 			require.NotEmpty(t, rsp.DeviceCount)
 			for _, d := range rsp.Devices {
@@ -334,10 +353,13 @@ func Test2fa(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp[*twofa.TOTPCheckRsp](t, resp, func(t *testing.T, rsp *twofa.TOTPCheckRsp) {
+			t.Helper(
 			// #*modeltwofa.TOTPCheckRsp {
 			//   +Requires2FA => true #bool
 			//   +Message     => "2FA is enabled" #string
 			// }
+			)
+
 			require.True(t, rsp.Requires2FA)
 			require.NotEmpty(t, rsp.Message)
 		})
@@ -359,10 +381,13 @@ func Test2fa(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPVerifyRsp) {
+				t.Helper(
 				// #*modeltwofa.TOTPVerifyRsp {
 				//   +Valid   => true #bool
 				//   +Message => "verification successful" #string
 				// }
+				)
+
 				require.True(t, rsp.Valid)
 				require.NotEmpty(t, rsp.Message)
 			})
@@ -380,10 +405,13 @@ func Test2fa(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPVerifyRsp) {
+				t.Helper(
 				// #*modeltwofa.TOTPVerifyRsp {
 				//   +Valid   => false #bool
 				//   +Message => "invalid verification code" #string
 				// }
+				)
+
 				require.False(t, rsp.Valid)
 				require.NotEmpty(t, rsp.Message)
 			})
@@ -405,10 +433,13 @@ func Test2fa(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPVerifyRsp) {
+				t.Helper(
 				// #*modeltwofa.TOTPVerifyRsp {
 				//   +Valid   => true #bool
 				//   +Message => "verification successful" #string
 				// }
+				)
+
 				require.True(t, rsp.Valid)
 				require.NotEmpty(t, rsp.Message)
 			})
@@ -429,11 +460,14 @@ func Test2fa(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPUnbindRsp) {
+				t.Helper(
 				// #*modeltwofa.TOTPUnbindRsp {
 				//   +Success     => false #bool
 				//   +Message     => "Invalid TOTP code" #string
 				//   +DeviceCount => 0 #int
 				// }
+				)
+
 				require.False(t, rsp.Success)
 				require.NotEmpty(t, rsp.Message)
 			})
@@ -455,11 +489,14 @@ func Test2fa(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp *twofa.TOTPUnbindRsp) {
+				t.Helper(
 				// #*modeltwofa.TOTPUnbindRsp {
 				//   +Success     => true #bool
 				//   +Message     => "Device 'test-device' unbound successfully" #string
 				//   +DeviceCount => 0 #int
 				// }
+				)
+
 				require.True(t, rsp.Success)
 				require.Equal(t, 0, rsp.DeviceCount)
 				require.NotEmpty(t, rsp.Message)
@@ -477,11 +514,14 @@ func Test2fa(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, nil)
 		require.NoError(t, err)
 		helper.TestResp[*twofa.TOTPStatusRsp](t, resp, func(t *testing.T, rsp *twofa.TOTPStatusRsp) {
+			t.Helper(
 			// #*modeltwofa.TOTPStatusRsp {
 			//   +Enabled     => false #bool
 			//   +DeviceCount => 0 #int
 			//   +Devices     => []modeltwofa.TOTPDeviceInfo(nil)
 			// }
+			)
+
 			require.False(t, rsp.Enabled)
 			require.Equal(t, 0, rsp.DeviceCount)
 		})

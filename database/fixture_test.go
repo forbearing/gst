@@ -90,6 +90,7 @@ func cleanupTestData() {
 // setupTestData deletes existing test data and creates all test users (ul).
 // This is a common setup pattern used in most test cases.
 func setupTestData(t *testing.T) {
+	t.Helper()
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 }

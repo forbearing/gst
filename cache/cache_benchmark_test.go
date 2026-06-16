@@ -287,6 +287,7 @@ func BenchmarkUserParallel(b *testing.B) {
 }
 
 func benchInt(b *testing.B, cache types.Cache[int]) {
+	b.Helper()
 	b.Run("Set", func(b *testing.B) {
 		for i := range b.N {
 			_ = cache.Set(fmt.Sprintf("key%d", i), i, 0)
@@ -300,6 +301,7 @@ func benchInt(b *testing.B, cache types.Cache[int]) {
 }
 
 func benchIntParallel(b *testing.B, cache types.Cache[int]) {
+	b.Helper()
 	b.Run("Set Parallel", func(b *testing.B) {
 		b.RunParallel(func(p *testing.PB) {
 			i := 0
@@ -321,6 +323,7 @@ func benchIntParallel(b *testing.B, cache types.Cache[int]) {
 }
 
 func benchString(b *testing.B, cache types.Cache[string]) {
+	b.Helper()
 	b.Run("Set", func(b *testing.B) {
 		for i := range b.N {
 			_ = cache.Set(fmt.Sprintf("key%d", i), strconv.Itoa(i), 0)
@@ -334,6 +337,7 @@ func benchString(b *testing.B, cache types.Cache[string]) {
 }
 
 func benchStringParallel(b *testing.B, cache types.Cache[string]) {
+	b.Helper()
 	b.Run("Set Parallel", func(b *testing.B) {
 		b.RunParallel(func(p *testing.PB) {
 			i := 0
@@ -355,6 +359,7 @@ func benchStringParallel(b *testing.B, cache types.Cache[string]) {
 }
 
 func benchUser(b *testing.B, cache types.Cache[User]) {
+	b.Helper()
 	b.Run("Set", func(b *testing.B) {
 		for i := range b.N {
 			_ = cache.Set(fmt.Sprintf("key%d", i), User{Name: fmt.Sprintf("user%d", i)}, 0)
@@ -368,6 +373,7 @@ func benchUser(b *testing.B, cache types.Cache[User]) {
 }
 
 func benchUserParallel(b *testing.B, cache types.Cache[User]) {
+	b.Helper()
 	b.Run("Set Parallel", func(b *testing.B) {
 		b.RunParallel(func(p *testing.PB) {
 			i := 0

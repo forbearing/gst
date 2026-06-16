@@ -96,11 +96,14 @@ func TestLogmgmt(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+				t.Helper(
 				// #modeliam.SignupRsp {
 				//   +UserID   => "019cbcc0-d2dd-7399-a4be-fc4ba2cd6775" #string
 				//   +Username => "user01" #string
 				//   +Message  => "User created successfully" #string
 				// }
+				)
+
 				require.Equal(t, rsp.Username, username)
 				require.NotEmpty(t, rsp.UserID)
 				userID = rsp.UserID
@@ -120,9 +123,12 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				t.Helper(
 				// #*modeliam.LoginRsp {
 				//   +SessionID => "019cbcc0-d312-7b46-a67d-57877893c929" #string
 				// }
+				)
+
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -142,6 +148,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+				t.Helper(
 				// #logmgmt_test.ListResponse[*github.com/forbearing/gst/internal/model/logmgmt.LoginLog] {
 				//   +Items => #[]*modellogmgmt.LoginLog [
 				//     0 => #*modellogmgmt.LoginLog {
@@ -160,6 +167,8 @@ func TestLogmgmt(t *testing.T) {
 				//   ]
 				//   +Total => 1 #int64
 				// }
+				)
+
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.Equal(t, l.UserID, userID)
@@ -181,9 +190,12 @@ func TestLogmgmt(t *testing.T) {
 				require.NoError(t, err)
 
 				helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
+					t.Helper(
 					// #*modeliam.LogoutRsp {
 					//   +Msg => "logout successful" #string
 					// }
+					)
+
 				})
 			})
 		})
@@ -200,9 +212,12 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				t.Helper(
 				// #*modeliam.LoginRsp {
 				//   +SessionID => "019cbcc0-d34d-7e0d-9b9e-89d08c3ada3c" #string
 				// }
+				)
+
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -222,6 +237,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+				t.Helper()
 				require.Len(t, rsp.Items, 3)
 				l1, l2, l3 := rsp.Items[0], rsp.Items[1], rsp.Items[2]
 
@@ -256,6 +272,7 @@ func TestLogmgmt(t *testing.T) {
 
 			// operation log count is 0
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+				t.Helper()
 				require.Len(t, rsp.Items, 0)
 			})
 		})
@@ -273,6 +290,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.Group) {
+				t.Helper(
 				// #*modeliamgroup.Group {
 				//   +Name        => "g1" #string
 				//   +Type        => "regular" #modeliamgroup.GroupType
@@ -287,6 +305,8 @@ func TestLogmgmt(t *testing.T) {
 				//     +CreatedBy => "user01" #string
 				//   }
 				// }
+				)
+
 				require.NotNil(t, rsp)
 				require.Equal(t, rsp.Name, "g1")
 			})
@@ -309,6 +329,7 @@ func TestLogmgmt(t *testing.T) {
 
 			// operation log count is 1
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+				t.Helper(
 				// #logmgmt_test.ListResponse[*github.com/forbearing/gst/internal/model/logmgmt.OperationLog] {
 				//   +Items => #[]*modellogmgmt.OperationLog [
 				//     0 => #*modellogmgmt.OperationLog {
@@ -335,6 +356,8 @@ func TestLogmgmt(t *testing.T) {
 				//   ]
 				//   +Total => 1 #int64
 				// }
+				)
+
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.NotNil(t, l)

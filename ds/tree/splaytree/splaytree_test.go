@@ -11,6 +11,7 @@ import (
 )
 
 func newIntStringTree(t *testing.T) *splaytree.Tree[int, string] {
+	t.Helper()
 	tree, err := splaytree.NewOrderedKeys(splaytree.WithSafe[int, string]())
 	assert.NoError(t, err)
 	return tree

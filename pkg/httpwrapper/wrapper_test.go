@@ -25,6 +25,7 @@ func TestWrappedRequest(t *testing.T) {
 }
 
 func testWrappedRequest(t *testing.T, req *http.Request, body []byte) {
+	t.Helper()
 	reqWrapper := &WrappedRequest{Request: req}
 	data, err := json.Marshal(reqWrapper)
 	assert.NoError(t, err)
@@ -60,6 +61,7 @@ func TestWrappedResponse(t *testing.T) {
 }
 
 func testWrappedResponse(t *testing.T, resp *http.Response, body []byte) {
+	t.Helper()
 	respWrapper := &WrappedResponse{Response: resp}
 	data, err := json.Marshal(respWrapper)
 	assert.NoError(t, err)

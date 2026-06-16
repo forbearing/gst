@@ -577,12 +577,14 @@ func TestDatabaseWithSelect(t *testing.T) {
 
 func TestDatabaseWithOrder(t *testing.T) {
 	assertNameOrder := func(t *testing.T, users []*TestUser, expected []string) {
+		t.Helper()
 		require.Equal(t, len(expected), len(users))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].Name)
 		}
 	}
 	assertIDOrder := func(t *testing.T, users []*TestUser, expected []string) {
+		t.Helper()
 		require.Equal(t, len(expected), len(users))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].ID)

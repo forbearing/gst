@@ -333,6 +333,7 @@ import (
 // }
 
 func newIntStringTree(t *testing.T) *rbtree.Tree[int, string] {
+	t.Helper()
 	tree, err := rbtree.NewOrderedKeys(rbtree.WithSafe[int, string]())
 	assert.NoError(t, err)
 	return tree

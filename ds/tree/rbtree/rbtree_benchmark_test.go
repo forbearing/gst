@@ -8,6 +8,7 @@ import (
 )
 
 func createTree(b *testing.B, size int, safe bool) *rbtree.Tree[float64, float64] {
+	b.Helper()
 	var t *rbtree.Tree[float64, float64]
 	var err error
 	if safe {
@@ -25,6 +26,7 @@ func createTree(b *testing.B, size int, safe bool) *rbtree.Tree[float64, float64
 }
 
 func createTreeInt(b *testing.B, size int, safe bool) *rbtree.Tree[int, int] {
+	b.Helper()
 	var t *rbtree.Tree[int, int]
 	var err error
 	if safe {
@@ -42,6 +44,7 @@ func createTreeInt(b *testing.B, size int, safe bool) *rbtree.Tree[int, int] {
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(t *rbtree.Tree[float64, float64])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {
@@ -84,6 +87,7 @@ func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(t *rbtree.
 }
 
 func benchmarkIndex(b *testing.B, sizes []int, do func(t *rbtree.Tree[int, int], i int)) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

@@ -32,6 +32,7 @@ func init() {
 }
 
 func createLogger(b *testing.B, filename string) types.Logger {
+	b.Helper()
 	b.Setenv(config.LOGGER_FILE, filename)
 	b.Setenv(config.LOGGER_DIR, "/tmp/gst")
 	if err := config.Init(); err != nil {
