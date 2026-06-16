@@ -9,6 +9,7 @@ import (
 
 	"github.com/forbearing/gst/ds/list/skiplist"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func intCmp(a, b int) int {
@@ -24,7 +25,7 @@ func intCmp(a, b int) int {
 func TestSkipList_New(t *testing.T) {
 	t.Run("valid creation", func(t *testing.T) {
 		sl, err := skiplist.New[int, string](intCmp)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, sl)
 		assert.True(t, sl.IsEmpty())
 		assert.Equal(t, 0, sl.Len())
@@ -32,7 +33,7 @@ func TestSkipList_New(t *testing.T) {
 
 	t.Run("nil comparison function", func(t *testing.T) {
 		sl, err := skiplist.New[int, string](nil)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Nil(t, sl)
 	})
 
@@ -45,7 +46,7 @@ func TestSkipList_New(t *testing.T) {
 		expectedKeys := []int{1, 2, 3}
 		expectedValues := []string{"one", "two", "three"}
 		sl, err := skiplist.NewFromOrderedMap(m)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, sl)
 		assert.Equal(t, expectedKeys, sl.Keys())
 		assert.Equal(t, expectedValues, sl.Values())

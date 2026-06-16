@@ -21,6 +21,7 @@ import (
 	"github.com/forbearing/gst/router"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -151,7 +152,7 @@ func Test_Client(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.NotEmpty(t, resp.RequestID)
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		require.Equal(t, int64(5), *total)
 	})
 	// test Get
@@ -279,7 +280,7 @@ func Test_Client(t *testing.T) {
 		// 2.check the number of resources after create.
 		_, err = cli.List(&items, &total)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(items))
+		require.Empty(t, items)
 		require.Equal(t, int64(0), total)
 
 		// 3.create resources.
@@ -291,7 +292,7 @@ func Test_Client(t *testing.T) {
 		// 4.check the number of resources after create.
 		_, err = cli.List(&items, &total)
 		require.NoError(t, err)
-		require.Equal(t, 5, len(items))
+		require.Len(t, items, 5)
 		require.Equal(t, int64(5), total)
 	})
 
@@ -309,7 +310,7 @@ func Test_Client(t *testing.T) {
 		// 2.check the number of resources after create.
 		_, err = cli.List(&items, &total)
 		require.NoError(t, err)
-		require.Equal(t, 5, len(items))
+		require.Len(t, items, 5)
 		require.Equal(t, int64(5), total)
 
 		// 3.delete resources
@@ -324,7 +325,7 @@ func Test_Client(t *testing.T) {
 		// 4.check the number of resources after delete
 		_, err = cli.List(&items, &total)
 		require.NoError(t, err)
-		require.Equal(t, 0, len(items))
+		require.Empty(t, items)
 		require.Equal(t, int64(0), total)
 	})
 
@@ -454,7 +455,6 @@ func Test_Client_WithAPI(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.NotEmpty(t, resp.RequestID)
-		require.GreaterOrEqual(t, len(users), 0)
 		require.GreaterOrEqual(t, *total, int64(0))
 	})
 
@@ -638,7 +638,7 @@ func (u *User) GetTableName() string {
 
 func Test_Client_WithCookie(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "session=abc123", r.Header.Get("Cookie"))
+		assert.Equal(t, "session=abc123", r.Header.Get("Cookie"))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"code":0,"msg":"","data":null,"request_id":"test"}`))
 	}))

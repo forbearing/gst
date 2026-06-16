@@ -15,6 +15,7 @@ import (
 	"github.com/forbearing/gst/provider/elastic"
 	"github.com/forbearing/gst/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const Index = "test"
@@ -53,23 +54,23 @@ func TestIndex(t *testing.T) {
 	idx1 := "my_index"
 	idx2 := "my_index2"
 
-	assert.NoError(t, elastic.Index.Create(idx1, &elastic.IndexOption{settings, mappings}))
-	assert.NoError(t, elastic.Index.Create(idx2))
+	require.NoError(t, elastic.Index.Create(idx1, &elastic.IndexOption{settings, mappings}))
+	require.NoError(t, elastic.Index.Create(idx2))
 	exists, err := elastic.Index.Exists(idx1)
-	assert.Equal(t, true, exists)
-	assert.NoError(t, err)
+	assert.True(t, exists)
+	require.NoError(t, err)
 
 	exists, err = elastic.Index.Exists(idx2)
-	assert.Equal(t, true, exists)
-	assert.NoError(t, err)
+	assert.True(t, exists)
+	require.NoError(t, err)
 
-	assert.NoError(t, elastic.Index.Delete(idx1))
-	assert.NoError(t, elastic.Index.Delete(idx2))
+	require.NoError(t, elastic.Index.Delete(idx1))
+	require.NoError(t, elastic.Index.Delete(idx2))
 }
 
 func TestDocumentGet(t *testing.T) {
 	doc, err := elastic.Document.Get(context.TODO(), Index, "message_recv_7143038995084115996_7274598307442327556_7424788642731753476", nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(doc)
 }
 
@@ -156,7 +157,7 @@ func TestDocumentSearch(t *testing.T) {
 	}
 
 	resp, err := elastic.Document.Search(context.Background(), Index, req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(resp.Total, len(resp.Hits))
 
 	formatHit := func(hit elastic.SearchHit) {
@@ -177,7 +178,7 @@ func TestDocumentSearch(t *testing.T) {
 			// 如果是安装 created_at 进行排序，则传入 created_at 值
 
 			resp, err = elastic.Document.Search(context.Background(), Index, req)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			for i := range resp.Hits {
 				formatHit(resp.Hits[i])
 			}
@@ -208,7 +209,7 @@ func TestDocumentSearchNormal(t *testing.T) {
 	// 执行搜索
 
 	result, err := elastic.Document.Search(context.TODO(), Index, req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// 打印搜索结果
 	for _, hit := range result.Hits {
 		fmt.Println(hit.ID)
@@ -247,7 +248,7 @@ func TestDocumentSearchTimeRange(t *testing.T) {
 	}
 
 	result, err := elastic.Document.Search(context.TODO(), Index, req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, hit := range result.Hits {
 		fmt.Println(hit.ID)
 	}
@@ -257,10 +258,10 @@ func TestDocumentSearchTimeRange(t *testing.T) {
 		Size(size).
 		Sort("created_at", elastic.Desc)
 	req2, err := query.Build()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	result2, err := elastic.Document.Search(context.TODO(), Index, req2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, hit := range result2.Hits {
 		fmt.Println(hit.ID)
 	}
@@ -298,7 +299,7 @@ func TestDocumentSearchAfter(t *testing.T) {
 	// 执行搜索
 
 	result, err := elastic.Document.Search(context.TODO(), Index, req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, hit := range result.Hits {
 		fmt.Println(hit.ID)
 	}
@@ -310,10 +311,10 @@ func TestDocumentSearchAfter(t *testing.T) {
 		Size(size).
 		Source("created_at", "type", "chat_type")
 	req2, err := query.Build()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	result2, err := elastic.Document.Search(context.TODO(), Index, req2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, hit := range result2.Hits {
 		fmt.Println(hit)
 	}
@@ -394,7 +395,7 @@ func TestDocumentSearchAsc(t *testing.T) {
 		SearchAfter(date)
 
 	res, err := elastic.Document.Search(context.Background(), Index, query.BuildForce())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(res)
@@ -414,7 +415,7 @@ func TestDocumentSearchDesc(t *testing.T) {
 		SearchAfter(date)
 
 	res, err := elastic.Document.Search(context.Background(), Index, query.BuildForce())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(res)
@@ -435,7 +436,7 @@ func TestDocumentSearchNext(t *testing.T) {
 
 	// fmt.Println(query)
 	res, err := elastic.Document.SearchNext(context.Background(), Index, query.BuildForce(), 3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(res)
@@ -456,7 +457,7 @@ func TestDocumentSearchPrev(t *testing.T) {
 
 	fmt.Println(query)
 	res, err := elastic.Document.SearchPrev(context.Background(), Index, query.BuildForce(), 4)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(res)
@@ -479,7 +480,7 @@ func TestDocumentQueryBuilderMatchPharseOptions(t *testing.T) {
 		})
 	fmt.Println(query.String())
 	res, err := elastic.Document.Search(context.Background(), Index, query.BuildForce())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_ = res
 	// enc := json.NewEncoder(os.Stdout)
 	// enc.SetIndent("", "  ")
@@ -522,7 +523,7 @@ func TestDocumentQueryBuilderAggs(t *testing.T) {
 	fmt.Println(query4.String())
 	fmt.Println(query5.String())
 	res, err := elastic.Document.Search(context.Background(), Index, query5.BuildForce())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(res)

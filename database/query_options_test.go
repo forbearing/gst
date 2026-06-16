@@ -25,7 +25,7 @@ func TestDatabaseWithIndex(t *testing.T) {
 	// Test WithIndex with default hint (USE INDEX)
 	// Note: Index hints only work on MySQL. On SQLite/PostgreSQL, it will skip silently.
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex(existsIndex).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 	// Verify returned data integrity
 	var foundU1, foundU2, foundU3 bool
 	for _, u := range users {
@@ -63,27 +63,27 @@ func TestDatabaseWithIndex(t *testing.T) {
 	// Test WithIndex with explicit USE hint
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex(existsIndex, consts.IndexHintUse).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 
 	// Test WithIndex with FORCE hint
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex(existsIndex, consts.IndexHintForce).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 
 	// Test WithIndex with IGNORE hint
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex(existsIndex, consts.IndexHintIgnore).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 
 	// Test WithIndex with empty index name (should be ignored)
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex("").List(&users))
-	require.Equal(t, 3, len(users), "empty index name should be ignored and query should work normally")
+	require.Len(t, users, 3, "empty index name should be ignored and query should work normally")
 
 	// Test WithIndex with whitespace-only index name (should be ignored)
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex("   ").List(&users))
-	require.Equal(t, 3, len(users), "whitespace-only index name should be ignored and query should work normally")
+	require.Len(t, users, 3, "whitespace-only index name should be ignored and query should work normally")
 
 	// Test WithIndex combined with WithQuery
 	users = make([]*TestUser, 0)
@@ -91,7 +91,7 @@ func TestDatabaseWithIndex(t *testing.T) {
 		WithIndex(existsIndex).
 		WithQuery(&TestUser{Name: u1.Name}).
 		List(&users))
-	require.Equal(t, 1, len(users))
+	require.Len(t, users, 1)
 	require.Equal(t, u1.ID, users[0].ID)
 	require.Equal(t, u1.Name, users[0].Name)
 
@@ -109,7 +109,7 @@ func TestDatabaseWithIndex(t *testing.T) {
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithIndex(existsIndex).List(&users))
-	require.Equal(t, 0, len(users), "should return empty result when no records exist")
+	require.Empty(t, users, "should return empty result when no records exist")
 
 	// Test WithIndex with Get method (single record)
 	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
@@ -166,7 +166,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 				WithLimit(1).
 				WithCursor(cursorValue, true).
 				List(&users))
-			require.Equal(t, 1, len(users), "should return 1 record per page")
+			require.Len(t, users, 1, "should return 1 record per page")
 			expectedID := fmt.Sprintf("user%05d", i+1)
 			require.Equal(t, expectedID, users[0].ID, "should fetch next record in ascending order")
 			cursorValue = users[0].ID
@@ -197,7 +197,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 				WithLimit(1).
 				WithCursor(cursorValue, false).
 				List(&users))
-			require.Equal(t, 1, len(users), "should return 1 record per page")
+			require.Len(t, users, 1, "should return 1 record per page")
 			expectedID := fmt.Sprintf("user%05d", count-2-i)
 			require.Equal(t, expectedID, users[0].ID, "should fetch previous record in descending order")
 			cursorValue = users[0].ID
@@ -211,7 +211,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 		// Test cursor pagination with custom field (created_at)
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 
 		// Get first record's created_at as cursor
 		// Format time to match database format (YYYY-MM-DD HH:MM:SS.ffffff)
@@ -244,7 +244,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 			WithLimit(10).
 			WithCursor("", true).
 			List(&users))
-		require.Equal(t, 3, len(users), "empty cursor should be ignored, return all records")
+		require.Len(t, users, 3, "empty cursor should be ignored, return all records")
 	})
 
 	t.Run("Combined", func(t *testing.T) {
@@ -256,7 +256,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 
 		cursorValue := users[0].ID
 		nextUsers := make([]*TestUser, 0)
@@ -265,7 +265,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 			WithLimit(1).
 			WithCursor(cursorValue, true).
 			List(&nextUsers))
-		require.Equal(t, 0, len(nextUsers), "no more records after cursor with query condition")
+		require.Empty(t, nextUsers, "no more records after cursor with query condition")
 	})
 
 	t.Run("MultiplePages", func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestDatabaseWithCursor(t *testing.T) {
 			cursorValue = users[len(users)-1].ID
 		}
 
-		require.Greater(t, len(allFetched), 0, "should fetch at least some records")
+		require.NotEmpty(t, allFetched, "should fetch at least some records")
 		// Verify no duplicates
 		seen := make(map[string]bool)
 		for _, id := range allFetched {
@@ -341,7 +341,7 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("name").Delete(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Len(t, users, 0)
+			require.Empty(t, users)
 		})
 		t.Run("with non-existing column", func(t *testing.T) {
 			defer cleanupTestData()
@@ -349,7 +349,7 @@ func TestDatabaseWithSelect(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithSelect("notexists").Delete(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Len(t, users, 0)
+			require.Empty(t, users)
 		})
 	})
 
@@ -578,14 +578,14 @@ func TestDatabaseWithSelect(t *testing.T) {
 func TestDatabaseWithOrder(t *testing.T) {
 	assertNameOrder := func(t *testing.T, users []*TestUser, expected []string) {
 		t.Helper()
-		require.Equal(t, len(expected), len(users))
+		require.Len(t, users, len(expected))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].Name)
 		}
 	}
 	assertIDOrder := func(t *testing.T, users []*TestUser, expected []string) {
 		t.Helper()
-		require.Equal(t, len(expected), len(users))
+		require.Len(t, users, len(expected))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].ID)
 		}
@@ -677,7 +677,7 @@ func TestDatabaseWithPagination(t *testing.T) {
 	}
 	assertIDs := func(t *testing.T, users []*TestUser, expected []string) {
 		t.Helper()
-		require.Equal(t, len(expected), len(users))
+		require.Len(t, users, len(expected))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].ID)
 		}
@@ -776,7 +776,7 @@ func TestDatabaseWithOffset(t *testing.T) {
 	}
 	assertIDs := func(t *testing.T, users []*TestUser, expected []string) {
 		t.Helper()
-		require.Equal(t, len(expected), len(users))
+		require.Len(t, users, len(expected))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].ID)
 		}
@@ -862,7 +862,7 @@ func TestDatabaseWithLimit(t *testing.T) {
 	}
 	assertIDs := func(t *testing.T, users []*TestUser, expected []string) {
 		t.Helper()
-		require.Equal(t, len(expected), len(users))
+		require.Len(t, users, len(expected))
 		for i := range expected {
 			require.Equal(t, expected[i], users[i].ID)
 		}
@@ -963,7 +963,7 @@ func TestDatabaseWithLimit(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithLimit(3).WithOrder("id desc").List(&users2))
 
 		// Both should produce the same result
-		require.Equal(t, len(users1), len(users2))
+		require.Len(t, users2, len(users1))
 		require.Equal(t, users1[0].ID, users2[0].ID)
 		require.Equal(t, users1[1].ID, users2[1].ID)
 		require.Equal(t, users1[2].ID, users2[2].ID)
@@ -1119,7 +1119,7 @@ func TestDatabaseWithExpand(t *testing.T) {
 
 		c := new(TestCategory)
 		require.NoError(t, database.Database[*TestCategory](nil).Get(c, categoryRootID))
-		require.Len(t, c.Children, 0)
+		require.Empty(t, c.Children)
 
 		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Children.Children"}).Get(c, categoryRootID))
 		require.Len(t, c.Children, 2)
@@ -1161,7 +1161,7 @@ func TestDatabaseWithExpand(t *testing.T) {
 
 		c := new(TestCategory)
 		require.NoError(t, database.Database[*TestCategory](nil).Get(c, categoryRootID))
-		require.Len(t, c.Children, 0)
+		require.Empty(t, c.Children)
 
 		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Children.Children.Children.Children"}).Get(c, categoryRootID))
 		require.Len(t, c.Children, 2)
@@ -1212,7 +1212,7 @@ func TestDatabaseWithExpand(t *testing.T) {
 
 		c := new(TestCategory)
 		require.NoError(t, database.Database[*TestCategory](nil).Get(c, categoryParentID))
-		require.Len(t, c.Children, 0)
+		require.Empty(t, c.Children)
 		require.Nil(t, c.Parent)
 
 		require.NoError(t, database.Database[*TestCategory](nil).WithExpand([]string{"Parent", "Children"}).Get(c, categoryParentID))
@@ -1307,7 +1307,7 @@ func TestDatabaseWithExclude(t *testing.T) {
 			"id": {u1.ID, u2.ID, u3.ID},
 		}).List(&users))
 
-		require.Len(t, users, 0, "all users should be excluded")
+		require.Empty(t, users, "all users should be excluded")
 	})
 
 	t.Run("ExcludeEmptyMap", func(t *testing.T) {

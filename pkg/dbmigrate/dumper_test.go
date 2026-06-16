@@ -72,8 +72,8 @@ func TestDumpOrder(t *testing.T) {
 		idxGroup := strings.Index(schema, "CREATE TABLE `groups`")
 		idxUser := strings.Index(schema, "CREATE TABLE `users`")
 
-		require.True(t, idxGroup != -1)
-		require.True(t, idxUser != -1)
-		require.True(t, idxGroup < idxUser, "Group should appear before User because *...Group < *...User")
+		require.NotEqual(t, -1, idxGroup)
+		require.NotEqual(t, -1, idxUser)
+		require.Less(t, idxGroup, idxUser, "Group should appear before User because *...Group < *...User")
 	})
 }

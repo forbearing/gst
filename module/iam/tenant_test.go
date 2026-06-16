@@ -474,7 +474,7 @@ func tenantRequireMissingByName(t *testing.T, name string) {
 
 	tenants := make([]*iam.Tenant, 0)
 	require.NoError(t, database.Database[*iam.Tenant](nil).WithQuery(&iam.Tenant{Name: name}).List(&tenants))
-	require.Len(t, tenants, 0)
+	require.Empty(t, tenants)
 }
 
 func tenantFindByName(items []*iam.Tenant, name string) *iam.Tenant {

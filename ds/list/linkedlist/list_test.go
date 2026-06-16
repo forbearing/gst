@@ -8,11 +8,12 @@ import (
 
 	"github.com/forbearing/gst/ds/list/linkedlist"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
 	l, err := linkedlist.New[int]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, l)
 	assert.Zero(t, l.Len())
 	assert.True(t, l.IsEmpty())
@@ -33,7 +34,7 @@ func TestNewFromSlice(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l, err := linkedlist.NewFromSlice(tt.input)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantLen, l.Len())
 			assert.Equal(t, tt.wantEmpty, l.IsEmpty())
 			assert.Equal(t, tt.input, l.Slice())
@@ -44,7 +45,7 @@ func TestNewFromSlice(t *testing.T) {
 func TestList_PushOperations(t *testing.T) {
 	t.Run("PushBack", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		n := l.PushBack(1)
 		assert.Equal(t, 1, n.Value)
 		assert.Equal(t, 1, l.Len())
@@ -58,7 +59,7 @@ func TestList_PushOperations(t *testing.T) {
 
 	t.Run("PushFront", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		n := l.PushFront(1)
 		assert.Equal(t, 1, n.Value)
 		assert.Equal(t, 1, l.Len())
@@ -74,7 +75,7 @@ func TestList_PushOperations(t *testing.T) {
 func TestList_InsertOperations(t *testing.T) {
 	t.Run("InsertAfter", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Insert after nil node
 		inserted := l.InsertAfter(nil, 1)
@@ -90,7 +91,7 @@ func TestList_InsertOperations(t *testing.T) {
 
 	t.Run("InsertBefore", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Insert before nil node
 		inserted := l.InsertBefore(nil, 1)
@@ -108,7 +109,7 @@ func TestList_InsertOperations(t *testing.T) {
 func TestList_RemoveOperations(t *testing.T) {
 	t.Run("Remove", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Remove from empty list
 		l.Remove(nil)
@@ -133,7 +134,7 @@ func TestList_RemoveOperations(t *testing.T) {
 
 	t.Run("PopFront", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Pop from empty list
 		assert.Zero(t, l.PopFront())
@@ -155,7 +156,7 @@ func TestList_RemoveOperations(t *testing.T) {
 
 	t.Run("PopBack", func(t *testing.T) {
 		l, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Pop from empty list
 		assert.Zero(t, l.PopBack())
@@ -178,7 +179,7 @@ func TestList_RemoveOperations(t *testing.T) {
 
 func TestList_Find(t *testing.T) {
 	l, err := linkedlist.New[int]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Find in empty list
 	node := l.Find(1, func(a, b int) bool { return a == b })
@@ -212,7 +213,7 @@ func TestList_Reverse(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			l, err := linkedlist.NewFromSlice(tt.input)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			l.Reverse()
 			assert.Equal(t, tt.want, l.Slice())
 		})
@@ -222,27 +223,27 @@ func TestList_Reverse(t *testing.T) {
 func TestList_Merge(t *testing.T) {
 	t.Run("merge with empty list", func(t *testing.T) {
 		l1, err := linkedlist.NewFromSlice([]int{1, 3, 5})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.Merge(l2)
 		assert.Equal(t, []int{1, 3, 5}, l1.Slice())
 	})
 
 	t.Run("merge empty list", func(t *testing.T) {
 		l1, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.NewFromSlice([]int{1, 3, 5})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.Merge(l2)
 		assert.Equal(t, []int{1, 3, 5}, l1.Slice())
 	})
 
 	t.Run("merge lists", func(t *testing.T) {
 		l1, err := linkedlist.NewFromSlice([]int{1, 3, 5})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.NewFromSlice([]int{2, 4, 6})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.Merge(l2)
 		assert.Equal(t, []int{1, 3, 5, 2, 4, 6}, l1.Slice())
 	})
@@ -262,27 +263,27 @@ func TestList_MergeSorted(t *testing.T) {
 
 	t.Run("merge with empty list", func(t *testing.T) {
 		l1, err := linkedlist.NewFromSlice([]int{1, 3, 5})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.MergeSorted(l2, cmp)
 		assert.Equal(t, []int{1, 3, 5}, l1.Slice())
 	})
 
 	t.Run("merge empty list", func(t *testing.T) {
 		l1, err := linkedlist.New[int]()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.NewFromSlice([]int{1, 3, 5})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.MergeSorted(l2, cmp)
 		assert.Equal(t, []int{1, 3, 5}, l1.Slice())
 	})
 
 	t.Run("merge lists", func(t *testing.T) {
 		l1, err := linkedlist.NewFromSlice([]int{1, 3, 5})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.NewFromSlice([]int{2, 4, 6})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.MergeSorted(l2, cmp)
 		assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, l1.Slice())
 	})
@@ -302,9 +303,9 @@ func TestList_MergeSorted(t *testing.T) {
 		}
 
 		l1, err := linkedlist.NewFromSlice(s1)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l2, err := linkedlist.NewFromSlice(s2)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		l1.MergeSorted(l2, cmp)
 		assert.True(t, slices.IsSorted(l1.Slice()))
 	})
@@ -312,9 +313,9 @@ func TestList_MergeSorted(t *testing.T) {
 
 func TestList_Clone(t *testing.T) {
 	original, err := linkedlist.NewFromSlice([]int{1, 2, 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cloned, err := original.Clone()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify content is same
 	assert.Equal(t, original.Slice(), cloned.Slice())
@@ -326,7 +327,7 @@ func TestList_Clone(t *testing.T) {
 
 func TestList_Range(t *testing.T) {
 	l, err := linkedlist.NewFromSlice([]int{1, 2, 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var values []int
 	l.Range(func(v int) bool {
 		values = append(values, v)
@@ -336,7 +337,7 @@ func TestList_Range(t *testing.T) {
 
 	values = make([]int, 0)
 	l, err = linkedlist.NewFromSlice([]int{1, 2, 3})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	l.Range(func(v int) bool {
 		values = append(values, v)
 		return false

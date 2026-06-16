@@ -6,6 +6,7 @@ import (
 
 	"github.com/forbearing/gst/ds/stack/linkedstack"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func intCmp(a, b int) int {
@@ -22,7 +23,7 @@ func newIntStack() (*linkedstack.Stack[int], error) {
 
 func TestNew(t *testing.T) {
 	s, err := linkedstack.New[int]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	assert.Equal(t, 0, s.Len())
 	assert.True(t, s.IsEmpty())
@@ -30,7 +31,7 @@ func TestNew(t *testing.T) {
 
 func TestNewFromSlice(t *testing.T) {
 	s, err := linkedstack.NewFromSlice([]int{1, 2, 3}, linkedstack.WithSafe[int]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	assert.Equal(t, 3, s.Len())
 	assert.False(t, s.IsEmpty())
@@ -43,7 +44,7 @@ func TestNewFromMapKeys(t *testing.T) {
 
 	stack, err := linkedstack.NewFromMapKeys(m)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.ElementsMatch(t, []int{1, 2, 3}, stack.Values())
 }
 
@@ -59,13 +60,13 @@ func TestNewFromMapValues(t *testing.T) {
 		return 0
 	}, m)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.ElementsMatch(t, []string{"a", "b", "c"}, stack.Values())
 }
 
 func TestPushPop(t *testing.T) {
 	stack, err := newIntStack()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stack.Push(10)
 	stack.Push(20)
@@ -92,7 +93,7 @@ func TestPushPop(t *testing.T) {
 
 func TestPeek(t *testing.T) {
 	stack, err := newIntStack()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, ok := stack.Peek()
 	assert.False(t, ok)
@@ -110,7 +111,7 @@ func TestPeek(t *testing.T) {
 
 func TestLen(t *testing.T) {
 	stack, err := newIntStack()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, 0, stack.Len())
 
@@ -126,7 +127,7 @@ func TestLen(t *testing.T) {
 
 func TestValues(t *testing.T) {
 	stack, err := newIntStack()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Values on an empty stack
 	values := stack.Values()
@@ -143,7 +144,7 @@ func TestValues(t *testing.T) {
 
 func TestClear(t *testing.T) {
 	stack, err := newIntStack()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Push elements
 	stack.Push(10)
@@ -160,7 +161,7 @@ func TestClear(t *testing.T) {
 
 func TestClone(t *testing.T) {
 	stack, err := newIntStack()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Push elements to the original stack
 	stack.Push(10)
@@ -186,9 +187,9 @@ func TestMarshalJSON(t *testing.T) {
 	stack.Push(3)
 	stack.Push(2)
 	stack.Push(1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	b, err := stack.MarshalJSON()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.JSONEq(t, "[1,2,3]", string(b))
 }
@@ -196,8 +197,8 @@ func TestMarshalJSON(t *testing.T) {
 func TestUnmarshalJSON(t *testing.T) {
 	data := []byte("[1,2,3]")
 	stack, err := linkedstack.New[int]()
-	assert.NoError(t, err)
-	assert.NoError(t, stack.UnmarshalJSON(data))
+	require.NoError(t, err)
+	require.NoError(t, stack.UnmarshalJSON(data))
 	assert.Equal(t, []int{3, 2, 1}, stack.Values())
 	assert.Equal(t, "stack:{3, 2, 1}", stack.String())
 }

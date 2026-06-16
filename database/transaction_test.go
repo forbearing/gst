@@ -28,7 +28,7 @@ func TestDatabaseTransaction(t *testing.T) {
 	})
 	require.NoError(t, err, "transaction should succeed")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records after successful transaction")
+	require.Len(t, users, 3, "should have 3 records after successful transaction")
 
 	// Verify created data integrity
 	var foundU1, foundU2, foundU3 bool
@@ -60,7 +60,7 @@ func TestDatabaseTransaction(t *testing.T) {
 	require.ErrorIs(t, err, errTest)
 	require.Contains(t, err.Error(), "test error", "error should contain test error message")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "should have 0 records after rollback")
+	require.Empty(t, users, "should have 0 records after rollback")
 
 	// Test Transaction - multiple operations in transaction
 	err = database.Database[*TestUser](nil).Transaction(func(txDB types.Database[*TestUser]) error {
@@ -95,7 +95,7 @@ func TestDatabaseTransaction(t *testing.T) {
 	})
 	require.NoError(t, err, "transaction should succeed")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records after successful transaction")
+	require.Len(t, users, 3, "should have 3 records after successful transaction")
 	require.Equal(t, 0, flag, "rollback function should not be called on success")
 
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
@@ -110,7 +110,7 @@ func TestDatabaseTransaction(t *testing.T) {
 	})
 	require.Error(t, err, "transaction should fail")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "should have 0 records after rollback")
+	require.Empty(t, users, "should have 0 records after rollback")
 	require.Equal(t, 1, flag, "rollback function should be called on failure")
 
 	// Test Transaction - with query options (WithLock, WithQuery, etc.)
@@ -149,7 +149,7 @@ func TestDatabaseTransactionFunc(t *testing.T) {
 	})
 	require.NoError(t, err, "transaction should succeed")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records after successful transaction")
+	require.Len(t, users, 3, "should have 3 records after successful transaction")
 	require.Equal(t, 0, flag, "rollback function should not be called on success")
 
 	// Verify created data integrity
@@ -182,7 +182,7 @@ func TestDatabaseTransactionFunc(t *testing.T) {
 	require.ErrorIs(t, err, errTest)
 	require.Contains(t, err.Error(), "test error", "error should contain test error message")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "should have 0 records after rollback")
+	require.Empty(t, users, "should have 0 records after rollback")
 	require.Equal(t, 0, flag, "rollback function should not be called without WithRollback")
 
 	// Test TransactionFunc - incorrect use (not using WithTx)
@@ -193,7 +193,7 @@ func TestDatabaseTransactionFunc(t *testing.T) {
 	})
 	require.Error(t, err, "transaction should fail")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records because Create was not in transaction")
+	require.Len(t, users, 3, "should have 3 records because Create was not in transaction")
 	require.Equal(t, 0, flag, "rollback function should not be called")
 
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
@@ -208,7 +208,7 @@ func TestDatabaseTransactionFunc(t *testing.T) {
 	})
 	require.NoError(t, err, "transaction should succeed")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records after successful transaction")
+	require.Len(t, users, 3, "should have 3 records after successful transaction")
 	require.Equal(t, 0, flag, "rollback function should not be called on success")
 
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
@@ -223,7 +223,7 @@ func TestDatabaseTransactionFunc(t *testing.T) {
 	})
 	require.Error(t, err, "transaction should fail")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "should have 0 records after rollback")
+	require.Empty(t, users, "should have 0 records after rollback")
 	require.Equal(t, 1, flag, "rollback function should be called on failure")
 }
 
@@ -241,7 +241,7 @@ func TestDatabaseWithTx(t *testing.T) {
 	require.NoError(t, err)
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 	// Verify data integrity
 	var foundU1, foundU2, foundU3 bool
 	for _, u := range users {
@@ -288,7 +288,7 @@ func TestDatabaseWithTx(t *testing.T) {
 	require.NoError(t, database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
 		txUsers := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithTx(tx).List(&txUsers))
-		require.Greater(t, len(txUsers), 0, "should find users within transaction")
+		require.NotEmpty(t, txUsers, "should find users within transaction")
 		return nil
 	}))
 
@@ -301,7 +301,7 @@ func TestDatabaseWithTx(t *testing.T) {
 	require.Error(t, err)
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "transaction should be rolled back, no users created")
+	require.Empty(t, users, "transaction should be rolled back, no users created")
 
 	// Transaction with chainable methods
 	require.NoError(t, database.Database[*TestUser](nil).TransactionFunc(func(tx any) error {
@@ -353,7 +353,7 @@ func TestDatabaseWithRollback(t *testing.T) {
 			require.ErrorIs(t, err, errTest)
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Len(t, users, 0, "should have 0 records after rollback")
+			require.Empty(t, users, "should have 0 records after rollback")
 			// Transaction failure, rollback function should be called.
 			require.Equal(t, 1, flag, "rollback function should be called when transaction fails")
 		})
@@ -393,7 +393,7 @@ func TestDatabaseWithRollback(t *testing.T) {
 			require.ErrorIs(t, err, errTest)
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Len(t, users, 0, "should have 0 records after rollback")
+			require.Empty(t, users, "should have 0 records after rollback")
 			// Transaction failure, rollback function should be called.
 			require.Equal(t, 1, flag, "rollback function should be called when transaction fails")
 		})

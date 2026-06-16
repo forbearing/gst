@@ -5,6 +5,7 @@ import (
 
 	"github.com/forbearing/gst/ds/multimap"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func intCmp(a, b int) int {
@@ -34,10 +35,10 @@ func TestMultiMap_Creation(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				mm, err := multimap.New[string, int](tt.cmp)
 				if tt.wantErr {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Nil(t, mm)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, mm)
 				}
 			})
@@ -75,10 +76,10 @@ func TestMultiMap_Creation(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				mm, err := multimap.NewFromMap(tt.input, tt.cmp)
 				if tt.wantErr {
-					assert.Error(t, err)
+					require.Error(t, err)
 					assert.Nil(t, mm)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 					assert.NotNil(t, mm)
 				}
 			})

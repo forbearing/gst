@@ -166,7 +166,7 @@ func TestTrie(t *testing.T) {
 		assert.Equal(t, len(wordsC), tt.PrefixCount([]rune("c")))
 		assert.Equal(t, len(wordsA)+len(wordsB)+len(wordsC), tt.Size())
 		assert.False(t, tt.IsEmpty())
-		assert.Zero(t, val)
+		assert.Empty(t, val)
 		assert.False(t, ok)
 
 		val, ok = tt.Delete([]rune("cat"))

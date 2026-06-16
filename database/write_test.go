@@ -48,7 +48,7 @@ func TestDatabaseCreate(t *testing.T) {
 	// Verify created data in the database
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records")
+	require.Len(t, users, 3, "should have 3 records")
 	var u11, u22, u33 *TestUser
 	for _, u := range users {
 		switch u.ID {
@@ -125,7 +125,7 @@ func TestDatabaseDelete(t *testing.T) {
 	// Verify soft-deleted record is not visible in List
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 2, len(users), "should have 2 records in List after soft delete")
+	require.Len(t, users, 2, "should have 2 records in List after soft delete")
 	var foundU1 bool
 	for _, u := range users {
 		if u.ID == u1.ID {
@@ -147,7 +147,7 @@ func TestDatabaseDelete(t *testing.T) {
 	// Verify all records are soft-deleted
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "should have 0 records in List after all soft deleted")
+	require.Empty(t, users, "should have 0 records in List after all soft deleted")
 
 	// Recreate data for next test
 	setupTestData(t)
@@ -213,7 +213,7 @@ func TestDatabaseUpdate(t *testing.T) {
 	// Verify updated data in the database
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records")
+	require.Len(t, users, 3, "should have 3 records")
 	var u11, u22, u33 *TestUser
 	for _, u := range users {
 		switch u.ID {

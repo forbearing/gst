@@ -16,7 +16,7 @@ func TestDatabaseList(t *testing.T) {
 	// Test basic List - should return all records
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users), "should have 3 records")
+	require.Len(t, users, 3, "should have 3 records")
 
 	// Verify all records are returned correctly
 	var u11, u22, u33 *TestUser
@@ -58,7 +58,7 @@ func TestDatabaseList(t *testing.T) {
 	// Test List with query conditions
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{Name: u1.Name}).List(&users))
-	require.Equal(t, 1, len(users), "should have 1 record matching name")
+	require.Len(t, users, 1, "should have 1 record matching name")
 	require.Equal(t, u1.Name, users[0].Name)
 
 	// Test List with Remark field query condition using TestUser2 (no hooks)
@@ -109,29 +109,28 @@ func TestDatabaseList(t *testing.T) {
 	require.NoError(t, database.Database[*TestUser](nil).Delete(u1))
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 2, len(users), "should have 2 records after soft delete")
+	require.Len(t, users, 2, "should have 2 records after soft delete")
 
 	// Test List with empty result - should overwrite existing slice
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 	users = make([]*TestUser, 0, len(ul))
 	users = append(users, u1, u2, u3) // Pre-populate with data
-	require.Equal(t, 3, len(users), "slice should have 3 items before List")
+	require.Len(t, users, 3, "slice should have 3 items before List")
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users), "slice should be empty after List with no records")
+	require.Empty(t, users, "slice should be empty after List with no records")
 
 	// Test List multiple times - should be idempotent
 	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 	users = make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 	users3 := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users3))
-	require.Equal(t, 3, len(users3))
+	require.Len(t, users3, 3)
 
 	// Test List with different model types
 	products := make([]*TestProduct, 0)
 	require.NoError(t, database.Database[*TestProduct](nil).List(&products))
-	require.GreaterOrEqual(t, len(products), 0, "product list should be non-negative")
 
 	// Test List with nil dest - should return error
 	err := database.Database[*TestUser](nil).List(nil)
@@ -153,7 +152,7 @@ func TestDatabaseListWithJSONString(t *testing.T) {
 	require.NoError(t, database.Database[*TestUser](nil).
 		WithQuery(&TestUser{Addr: []string{"shanghai"}}, types.QueryConfig{FuzzyMatch: false}).
 		List(&res))
-	require.Len(t, res, 0)
+	require.Empty(t, res)
 
 	// Test query JSON field with fuzzy match
 	require.NoError(t, database.Database[*TestUser](nil).

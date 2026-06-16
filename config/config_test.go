@@ -40,14 +40,14 @@ func TestRegisterStruct(t *testing.T) {
 	wechat := config.Get[*Wechat]()
 	assert.Equal(t, "wx123456789", wechat.AppID)
 	assert.Equal(t, "myappsecret", wechat.AppSecret)
-	assert.Equal(t, false, wechat.Enable)
+	assert.False(t, wechat.Enable)
 
 	nats := config.Get[Nats]()
 	assert.Equal(t, "nats://127.0.0.1:4222", nats.URL)
 	assert.Equal(t, "nuser", nats.Username)
 	assert.Equal(t, "npass", nats.Password)
 	assert.Equal(t, 5*time.Second, nats.Timeout)
-	assert.Equal(t, true, nats.Enable)
+	assert.True(t, nats.Enable)
 }
 
 func TestRegisterStructPointer(t *testing.T) {
@@ -67,14 +67,14 @@ func TestRegisterStructPointer(t *testing.T) {
 
 	assert.Equal(t, "wx123456789", wechat.AppID)
 	assert.Equal(t, "myappsecret", wechat.AppSecret)
-	assert.Equal(t, false, wechat.Enable)
+	assert.False(t, wechat.Enable)
 
 	nats := config.Get[Nats]()
 	assert.Equal(t, "nats://127.0.0.1:4222", nats.URL)
 	assert.Equal(t, "nuser", nats.Username)
 	assert.Equal(t, "npass", nats.Password)
 	assert.Equal(t, 5*time.Second, nats.Timeout)
-	assert.Equal(t, true, nats.Enable)
+	assert.True(t, nats.Enable)
 }
 
 func TestRegisterStructFromEnv(t *testing.T) {
@@ -100,14 +100,14 @@ func TestRegisterStructFromEnv(t *testing.T) {
 
 	assert.Equal(t, "wx123456789", wechat.AppID)
 	assert.Equal(t, "my_app_secret", wechat.AppSecret)
-	assert.Equal(t, false, wechat.Enable)
+	assert.False(t, wechat.Enable)
 
 	nats := config.Get[Nats]()
 	assert.Equal(t, "nats://127.0.0.1:4222", nats.URL)
 	assert.Equal(t, "user_from_env", nats.Username)
 	assert.Equal(t, "pass_from_env", nats.Password)
 	assert.Equal(t, 60*time.Second, nats.Timeout)
-	assert.Equal(t, true, nats.Enable)
+	assert.True(t, nats.Enable)
 }
 
 func TestRegisterNonStructType(t *testing.T) {
@@ -125,7 +125,7 @@ func TestRegisterNonStructType(t *testing.T) {
 	}
 	// Getting non-registered configs should return zero values
 	strVal := config.Get[string]()
-	assert.Equal(t, "", strVal)
+	assert.Empty(t, strVal)
 
 	intVal := config.Get[int]()
 	assert.Equal(t, 0, intVal)
@@ -151,7 +151,7 @@ redis:
 
 	assert.Equal(t, 8091, config.App.Server.Port)
 	assert.Equal(t, config.Mode("test"), config.App.Server.Mode)
-	assert.Equal(t, true, config.App.Redis.Enable)
+	assert.True(t, config.App.Redis.Enable)
 	assert.Equal(t, "yamlapp", config.App.Redis.Namespace)
 }
 
@@ -177,7 +177,7 @@ func TestInitReadsJSONConfigFile(t *testing.T) {
 
 	assert.Equal(t, 8092, config.App.Server.Port)
 	assert.Equal(t, config.Mode("local"), config.App.Server.Mode)
-	assert.Equal(t, true, config.App.Redis.Enable)
+	assert.True(t, config.App.Redis.Enable)
 	assert.Equal(t, "jsonapp", config.App.Redis.Namespace)
 }
 
@@ -202,7 +202,7 @@ namespace = "tomlapp"
 
 	assert.Equal(t, 8095, config.App.Server.Port)
 	assert.Equal(t, config.Mode("stg"), config.App.Server.Mode)
-	assert.Equal(t, true, config.App.Redis.Enable)
+	assert.True(t, config.App.Redis.Enable)
 	assert.Equal(t, "tomlapp", config.App.Redis.Namespace)
 }
 

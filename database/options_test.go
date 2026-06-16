@@ -27,10 +27,10 @@ func TestDatabaseWithDB(t *testing.T) {
 
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).Create(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 
 	db2, err := sqlite.New(config.Sqlite{
 		Enable:   true,
@@ -50,14 +50,14 @@ func TestDatabaseWithDB(t *testing.T) {
 
 	// List from the custom sqlite. the new sqlite db is always empty.
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 
 	// Create resources in db2
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Create(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 	// Verify data integrity
 	var foundU1, foundU2, foundU3 bool
 	for _, u := range users {
@@ -77,7 +77,7 @@ func TestDatabaseWithDB(t *testing.T) {
 	}
 	require.True(t, foundU1 && foundU2 && foundU3, "all users should be found in db2")
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-	require.Equal(t, 0, len(users), "db3 should be empty")
+	require.Empty(t, users, "db3 should be empty")
 
 	// Get operation with custom DB
 	user := new(TestUser)
@@ -97,36 +97,36 @@ func TestDatabaseWithDB(t *testing.T) {
 	// Create resources in db3
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).Create(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-	require.Equal(t, 3, len(users), "db2 should still have 3 users")
+	require.Len(t, users, 3, "db2 should still have 3 users")
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-	require.Equal(t, 3, len(users), "db3 should have 3 users")
+	require.Len(t, users, 3, "db3 should have 3 users")
 
 	// Delete resources in default db
 	require.NoError(t, database.Database[*TestUser](nil).Delete(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-	require.Equal(t, 3, len(users), "db2 should still have users")
+	require.Len(t, users, 3, "db2 should still have users")
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-	require.Equal(t, 3, len(users), "db3 should still have users")
+	require.Len(t, users, 3, "db3 should still have users")
 
 	// Delete resources in db2
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).Delete(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-	require.Equal(t, 3, len(users), "db3 should still have users")
+	require.Len(t, users, 3, "db3 should still have users")
 
 	// Delete resources in db3
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).Delete(ul...))
 	require.NoError(t, database.Database[*TestUser](nil).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).List(&users))
-	require.Equal(t, 0, len(users))
+	require.Empty(t, users)
 
 	// Chainable with other methods
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithQuery(&TestUser{Name: u1.Name}).Create(u1))
@@ -167,7 +167,7 @@ func TestDatabaseWithTable(t *testing.T) {
 
 	users := make([]*TestUser, 0)
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 	// Verify data integrity
 	var foundU1, foundU2, foundU3 bool
 	for _, u := range users {
@@ -188,7 +188,7 @@ func TestDatabaseWithTable(t *testing.T) {
 	require.True(t, foundU1 && foundU2 && foundU3, "all users should be found")
 
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db3).WithTable("test_users").List(&users))
-	require.Equal(t, 3, len(users))
+	require.Len(t, users, 3)
 
 	// Get operation with custom table
 	user := new(TestUser)
@@ -207,7 +207,7 @@ func TestDatabaseWithTable(t *testing.T) {
 	// Delete operation with custom table
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").Delete(u1))
 	require.NoError(t, database.Database[*TestUser](nil).WithDB(db2).WithTable("test_users").List(&users))
-	require.Equal(t, 2, len(users), "should have 2 users after deleting u1")
+	require.Len(t, users, 2, "should have 2 users after deleting u1")
 
 	// Chainable with other methods
 	require.NoError(t, database.Database[*TestUser](nil).
@@ -228,7 +228,7 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1).Create(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			// Verify data integrity
 			var foundU1, foundU2, foundU3 bool
 			for _, u := range users {
@@ -254,7 +254,7 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(2).Create(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 		})
 
 		t.Run("batch_size_1000", func(t *testing.T) {
@@ -262,7 +262,7 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1000).Create(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 		})
 
 		t.Run("batch_size_0", func(t *testing.T) {
@@ -270,7 +270,7 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(0).Create(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users), "should use default batch size when set to 0")
+			require.Len(t, users, 3, "should use default batch size when set to 0")
 		})
 
 		t.Run("batch_size_negative", func(t *testing.T) {
@@ -278,7 +278,7 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(-1).Create(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users), "should use default batch size when set to negative")
+			require.Len(t, users, 3, "should use default batch size when set to negative")
 		})
 	})
 
@@ -289,14 +289,14 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 		t.Run("batch_size_1", func(t *testing.T) {
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			users[0].Age = 25
 			users[1].Age = 26
 			users[2].Age = 27
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1).Update(users...))
 			users = make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			require.Equal(t, 25, users[0].Age)
 			require.Equal(t, 26, users[1].Age)
 			require.Equal(t, 27, users[2].Age)
@@ -305,14 +305,14 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 		t.Run("batch_size_2", func(t *testing.T) {
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			users[0].Age = 30
 			users[1].Age = 31
 			users[2].Age = 32
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(2).Update(users...))
 			users = make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			require.Equal(t, 30, users[0].Age)
 			require.Equal(t, 31, users[1].Age)
 			require.Equal(t, 32, users[2].Age)
@@ -325,11 +325,11 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			setupTestData(t)
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(1).Delete(users[0]))
 			users = make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 2, len(users))
+			require.Len(t, users, 2)
 		})
 
 		t.Run("batch_size_2", func(t *testing.T) {
@@ -337,11 +337,11 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			setupTestData(t)
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(2).Delete(users...))
 			users = make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 0, len(users))
+			require.Empty(t, users)
 		})
 
 		t.Run("batch_size_large", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestDatabaseWithBatchSize(t *testing.T) {
 			require.NoError(t, database.Database[*TestUser](nil).WithBatchSize(10000).Delete(ul...))
 			users := make([]*TestUser, 0)
 			require.NoError(t, database.Database[*TestUser](nil).List(&users))
-			require.Equal(t, 0, len(users))
+			require.Empty(t, users)
 		})
 	})
 
@@ -374,7 +374,7 @@ func TestDatabaseWithDebug(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithDebug().Create(ul...))
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		// Verify data integrity
 		var foundU1, foundU2, foundU3 bool
 		for _, u := range users {
@@ -400,7 +400,7 @@ func TestDatabaseWithDebug(t *testing.T) {
 		setupTestData(t)
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithDebug().List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 	})
 
 	t.Run("Get", func(t *testing.T) {
@@ -424,7 +424,7 @@ func TestDatabaseWithDebug(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithDebug().Update(user))
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		for _, u := range users {
 			if u.ID == u1.ID {
 				require.Equal(t, 25, u.Age, "user age should be updated")
@@ -438,7 +438,7 @@ func TestDatabaseWithDebug(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).WithDebug().Delete(ul...))
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Equal(t, 0, len(users))
+		require.Empty(t, users)
 	})
 
 	t.Run("Count", func(t *testing.T) {
@@ -482,7 +482,7 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		require.Nil(t, u3.Remark, "Create should not run model hooks in dry-run mode")
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).List(&users))
-		require.Len(t, users, 0, "records should not be created in dry-run mode")
+		require.Empty(t, users, "records should not be created in dry-run mode")
 
 		dryRunUser := &TestUser{Name: "dry-run-create", Email: "dry-run-create@example.com"}
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().Create(dryRunUser))
@@ -610,7 +610,7 @@ func TestDatabaseWithDryRun(t *testing.T) {
 		// WithDryRun should only build the SELECT statement without executing it.
 		users := make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).WithDryRun().List(&users))
-		require.Len(t, users, 0, "List should not return results in dry-run mode")
+		require.Empty(t, users, "List should not return results in dry-run mode")
 	})
 
 	t.Run("Get", func(t *testing.T) {
@@ -712,7 +712,7 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		requireSQLContains(t, stmts[0], "SELECT", "FROM", "test_users", "WHERE", "ORDER BY")
 		require.Contains(t, stmts[0].Args, u1.Name)
 		require.Contains(t, stmts[0].RenderedSQL, u1.Name)
-		require.Len(t, users, 0, "WithBuildSQL should not execute the query or fill the destination")
+		require.Empty(t, users, "WithBuildSQL should not execute the query or fill the destination")
 	})
 
 	t.Run("CreateDoesNotExecute", func(t *testing.T) {
@@ -736,7 +736,7 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: user.Name}).
 			List(&users))
-		require.Len(t, users, 0, "WithBuildSQL should not create database rows")
+		require.Empty(t, users, "WithBuildSQL should not create database rows")
 	})
 
 	t.Run("BatchCreate", func(t *testing.T) {
@@ -770,7 +770,7 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		})
 
 		require.ErrorIs(t, err, database.ErrBuildSQLTransaction)
-		require.Len(t, stmts, 0)
+		require.Empty(t, stmts)
 	})
 
 	t.Run("TransactionFuncUnsupported", func(t *testing.T) {
@@ -780,7 +780,7 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		})
 
 		require.ErrorIs(t, err, database.ErrBuildSQLTransaction)
-		require.Len(t, stmts, 0)
+		require.Empty(t, stmts)
 	})
 
 	t.Run("GetIgnoresDestinationID", func(t *testing.T) {
@@ -843,7 +843,7 @@ func TestDatabaseWithBuildSQL(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: user.Name}).
 			List(&users))
-		require.Len(t, users, 0, "WithBuildSQL should not create database rows")
+		require.Empty(t, users, "WithBuildSQL should not create database rows")
 	})
 
 	t.Run("ResetsAfterAction", func(t *testing.T) {

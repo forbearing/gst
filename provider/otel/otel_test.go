@@ -21,7 +21,7 @@ func TestNormalizeConfigUsesOTELDefaults(t *testing.T) {
 	require.Equal(t, "http://localhost:4318/v1/traces", cfg.ExporterOTLPTracesEndpoint)
 	require.Equal(t, config.OTLPCompressionNone, cfg.ExporterOTLPCompression)
 	require.Equal(t, config.TracesSamplerParentBasedAlwaysOn, cfg.TracesSampler)
-	require.Equal(t, "", cfg.TracesSamplerArg)
+	require.Empty(t, cfg.TracesSamplerArg)
 	require.Equal(t, sdktrace.DefaultMaxQueueSize, cfg.BSPMaxQueueSize)
 	require.Equal(t, sdktrace.DefaultMaxExportBatchSize, cfg.BSPMaxExportBatchSize)
 	require.Equal(t, time.Duration(sdktrace.DefaultScheduleDelay)*time.Millisecond, cfg.BSPScheduleDelay)

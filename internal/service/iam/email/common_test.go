@@ -313,7 +313,7 @@ func TestVerificationRequestCreateVerifiedUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
 	require.Equal(t, 0, flowCache.Len())
-	require.Equal(t, "", sender.last.To)
+	require.Empty(t, sender.last.To)
 }
 
 func TestVerificationRequestCreateUnknownUser(t *testing.T) {
@@ -460,7 +460,7 @@ func TestVerificationResendCreateThrottled(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindVerification), rsp.Msg)
 	require.Equal(t, 0, flowCache.Len())
-	require.Equal(t, "", sender.last.To)
+	require.Empty(t, sender.last.To)
 }
 
 func TestVerificationConfirmCreate(t *testing.T) {
@@ -1100,7 +1100,7 @@ func TestPasswordResetRequestCreateUnknownUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, publicAcceptedMessage(iamEmailFlowKindPasswordReset), rsp.Msg)
 	require.Equal(t, 0, flowCache.Len())
-	require.Equal(t, "", sender.last.To)
+	require.Empty(t, sender.last.To)
 }
 
 func TestPasswordResetConfirmCreate(t *testing.T) {

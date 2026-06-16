@@ -175,7 +175,7 @@ func TestLogmgmt(t *testing.T) {
 				l := rsp.Items[0]
 				require.Equal(t, l.UserID, userID)
 				require.Equal(t, l.Username, username)
-				require.Equal(t, string(l.Status), modellogmgmt.LoginStatusSuccess)
+				require.Equal(t, modellogmgmt.LoginStatusSuccess, string(l.Status))
 			})
 		})
 
@@ -245,15 +245,15 @@ func TestLogmgmt(t *testing.T) {
 
 				require.Equal(t, l1.UserID, userID)
 				require.Equal(t, l1.Username, username)
-				require.Equal(t, string(l1.Status), modellogmgmt.LoginStatusSuccess)
+				require.Equal(t, modellogmgmt.LoginStatusSuccess, string(l1.Status))
 
 				require.Equal(t, l2.UserID, userID)
 				require.Equal(t, l2.Username, username)
-				require.Equal(t, string(l2.Status), modellogmgmt.LoginStatusLogout)
+				require.Equal(t, modellogmgmt.LoginStatusLogout, string(l2.Status))
 
 				require.Equal(t, l3.UserID, userID)
 				require.Equal(t, l3.Username, username)
-				require.Equal(t, string(l3.Status), modellogmgmt.LoginStatusSuccess)
+				require.Equal(t, modellogmgmt.LoginStatusSuccess, string(l3.Status))
 			})
 		})
 	})
@@ -275,7 +275,7 @@ func TestLogmgmt(t *testing.T) {
 			// operation log count is 0
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
 				t.Helper()
-				require.Len(t, rsp.Items, 0)
+				require.Empty(t, rsp.Items)
 			})
 		})
 
@@ -312,7 +312,7 @@ func TestLogmgmt(t *testing.T) {
 				)
 
 				require.NotNil(t, rsp)
-				require.Equal(t, rsp.Name, "g1")
+				require.Equal(t, "g1", rsp.Name)
 			})
 		})
 
@@ -366,9 +366,9 @@ func TestLogmgmt(t *testing.T) {
 				l := rsp.Items[0]
 				require.NotNil(t, l)
 				require.Equal(t, l.User, username)
-				require.Equal(t, l.OP, consts.OP_CREATE)
-				require.Equal(t, l.Table, "groups")
-				require.Equal(t, l.Model, "Group")
+				require.Equal(t, consts.OP_CREATE, l.OP)
+				require.Equal(t, "groups", l.Table)
+				require.Equal(t, "Group", l.Model)
 			})
 		})
 	})

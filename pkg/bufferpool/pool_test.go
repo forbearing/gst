@@ -20,7 +20,7 @@ func TestBuffers(t *testing.T) {
 				assert.NotZero(t, buf.Cap(), "Expected non-zero capacity")
 
 				buf.AppendString(dummyData)
-				assert.Equal(t, buf.Len(), len(dummyData), "Expected buffer to contain dummy data")
+				assert.Len(t, dummyData, buf.Len(), "Expected buffer to contain dummy data")
 
 				buf.Free()
 			}

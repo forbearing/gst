@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUtil(t *testing.T) {
@@ -109,12 +110,12 @@ func TestFileExists(t *testing.T) {
 	defer os.RemoveAll(tmpFile.Name())
 	defer tmpFile.Close()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, true, FileExists("/tmp"))
-	assert.Equal(t, true, FileExists("/tmp/"))
-	assert.Equal(t, true, FileExists(tmpFile.Name()))
-	assert.Equal(t, false, FileExists(tmpFile.Name()+"---"))
+	assert.True(t, FileExists("/tmp"))
+	assert.True(t, FileExists("/tmp/"))
+	assert.True(t, FileExists(tmpFile.Name()))
+	assert.False(t, FileExists(tmpFile.Name()+"---"))
 }
 
 func TestRound(t *testing.T) {

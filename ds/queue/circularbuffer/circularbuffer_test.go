@@ -6,6 +6,7 @@ import (
 
 	"github.com/forbearing/gst/ds/queue/circularbuffer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCircularBuffer_New(t *testing.T) {
@@ -42,10 +43,10 @@ func TestCircularBuffer_New(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cb, err := circularbuffer.New(tt.size, tt.ops...)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, cb)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, cb)
 			}
 		})
@@ -55,7 +56,7 @@ func TestCircularBuffer_New(t *testing.T) {
 func TestCircularBuffer_EnqueueDequeue(t *testing.T) {
 	t.Run("basic enqueue dequeue", func(t *testing.T) {
 		cb, err := circularbuffer.New[int](3)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Test Enqueue
 		assert.True(t, cb.Enqueue(1))
@@ -72,7 +73,7 @@ func TestCircularBuffer_EnqueueDequeue(t *testing.T) {
 
 	t.Run("drop mode when full", func(t *testing.T) {
 		cb, err := circularbuffer.New(2, circularbuffer.WithDrop[int]())
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.True(t, cb.Enqueue(1))
 		assert.True(t, cb.Enqueue(2))
@@ -85,7 +86,7 @@ func TestCircularBuffer_EnqueueDequeue(t *testing.T) {
 
 	t.Run("overwrite mode when full", func(t *testing.T) {
 		cb, err := circularbuffer.New[int](2)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		assert.True(t, cb.Enqueue(1))
 		assert.True(t, cb.Enqueue(2))
@@ -98,7 +99,7 @@ func TestCircularBuffer_EnqueueDequeue(t *testing.T) {
 
 	t.Run("dequeue empty buffer", func(t *testing.T) {
 		cb, err := circularbuffer.New[int](3)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		val, ok := cb.Dequeue()
 		assert.False(t, ok)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/forbearing/gst/ds/tree/rbtree"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //
@@ -336,7 +337,7 @@ import (
 func newIntStringTree(t *testing.T) *rbtree.Tree[int, string] {
 	t.Helper()
 	tree, err := rbtree.NewOrderedKeys(rbtree.WithSafe[int, string]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return tree
 }
 
@@ -362,10 +363,10 @@ func TestRedBlackTree_New(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tree, err := rbtree.New[int, int](tt.cmp)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, tree)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, tree)
 			}
 		})
@@ -394,7 +395,7 @@ func TestRedBlackTree_Put(t *testing.T) {
 	assert.Equal(t, 3, tree.Size())
 
 	// Verify red-black properties
-	assert.True(t, tree.BlackCount() > 0, "Should have black nodes")
+	assert.Positive(t, tree.BlackCount(), "Should have black nodes")
 	// Additional color property checks can be added here
 }
 
@@ -480,7 +481,7 @@ func TestRedBlackTree_Delete(t *testing.T) {
 
 func TestRedBlackTree_Clear(t *testing.T) {
 	tree, err := rbtree.NewOrderedKeys[int, string]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tree.Put(1, "one")
 	tree.Put(2, "two")
@@ -495,7 +496,7 @@ func TestRedBlackTree_Clear(t *testing.T) {
 
 func TestRedBlackTree_KeysValues(t *testing.T) {
 	tree, err := rbtree.NewOrderedKeys[int, string]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tree.Put(3, "three")
 	tree.Put(1, "one")
 	tree.Put(2, "two")
@@ -626,24 +627,24 @@ func TestRedBlackTree_RedBlackProperties(t *testing.T) {
 
 	// Test black count
 	blackCount := tree.BlackCount()
-	assert.True(t, blackCount > 0, "Should have black nodes")
+	assert.Positive(t, blackCount, "Should have black nodes")
 
 	// Test red count
 	redCount := tree.RedCount()
-	assert.True(t, redCount >= 0, "Red count should be non-negative")
+	assert.GreaterOrEqual(t, redCount, 0, "Red count should be non-negative")
 
 	// Test leaf count
 	leafCount := tree.LeafCount()
-	assert.True(t, leafCount > 0, "Should have leaf nodes")
+	assert.Positive(t, leafCount, "Should have leaf nodes")
 
 	// Test max depth
 	maxDepth := tree.MaxDepth()
-	assert.True(t, maxDepth > 0, "Should have positive depth")
+	assert.Positive(t, maxDepth, "Should have positive depth")
 
 	// Test min depth
 	minDepth := tree.MinDepth()
-	assert.True(t, minDepth > 0, "Should have positive min depth")
-	assert.True(t, minDepth <= maxDepth, "Min depth should not exceed max depth")
+	assert.Positive(t, minDepth, "Should have positive min depth")
+	assert.LessOrEqual(t, minDepth, maxDepth, "Min depth should not exceed max depth")
 }
 
 func TestRedBlackTree_MarshalJSON(t *testing.T) {
@@ -652,18 +653,18 @@ func TestRedBlackTree_MarshalJSON(t *testing.T) {
 		tree.Put(i, strconv.Itoa(i))
 	}
 	jsonBytes, err := json.Marshal(tree)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tree2 := newIntStringTree(t)
 	err = json.Unmarshal(jsonBytes, tree2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tree.Keys(), tree2.Keys())
 	assert.Equal(t, tree.Values(), tree2.Values())
 }
 
 func TestRedBlackTree_Traversals(t *testing.T) {
 	tree, err := rbtree.NewOrderedKeys[int, string]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tree.Put(10, "ten")
 	tree.Put(5, "five")
 	tree.Put(15, "fifteen")
@@ -736,7 +737,7 @@ func TestRedBlackTree_String(t *testing.T) {
 
 	// 1️⃣ 创建一个 int -> string 的红黑树
 	tree, err := rbtree.NewOrderedKeys(rbtree.WithColorfulString[int, string]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tree.Put(10, "ten")
 	tree.Put(20, "twenty")
 	tree.Put(30, "thirty")
@@ -755,7 +756,7 @@ func TestRedBlackTree_String(t *testing.T) {
 	treeStr, err := rbtree.NewOrderedKeys(rbtree.WithColorfulString[string, int](), rbtree.WithNodeFormatter(func(k string, v int) string {
 		return fmt.Sprintf("%s:%d ", k, v)
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	treeStr.Put("banana", 10)
 	treeStr.Put("apple", 5)
 	treeStr.Put("cherry", 20)
@@ -771,7 +772,7 @@ func TestRedBlackTree_String(t *testing.T) {
 	treeFloat, err := rbtree.NewOrderedKeys(rbtree.WithColorfulString[float64, string](), rbtree.WithNodeFormatter(func(k float64, v string) string {
 		return fmt.Sprintf("%.2f:%s ", k, v)
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	treeFloat.Put(3.14, "pi")
 	treeFloat.Put(2.71, "e")

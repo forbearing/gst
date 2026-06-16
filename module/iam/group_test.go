@@ -615,7 +615,7 @@ func groupRequireMissingByName(t *testing.T, name string) {
 
 	groups := make([]*iam.Group, 0)
 	require.NoError(t, database.Database[*iam.Group](nil).WithQuery(&iam.Group{Name: name}).List(&groups))
-	require.Len(t, groups, 0)
+	require.Empty(t, groups)
 }
 
 func groupFindByName(items []*iam.Group, name string) *iam.Group {

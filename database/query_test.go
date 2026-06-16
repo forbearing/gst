@@ -32,7 +32,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				require.NoError(t, database.Database[*TestUser](nil).
 					WithQuery(tc.query).
 					List(&users))
-				require.Equal(t, 1, len(users))
+				require.Len(t, users, 1)
 				u := users[0]
 				require.NotNil(t, u)
 				require.NotEmpty(t, u.ID)
@@ -63,7 +63,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				require.NoError(t, database.Database[*TestUser](nil).
 					WithQuery(tc.query).
 					List(&users))
-				require.Equal(t, 1, len(users))
+				require.Len(t, users, 1)
 				u := users[0]
 				require.NotNil(t, u)
 				require.NotEmpty(t, u.ID)
@@ -94,7 +94,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				require.NoError(t, database.Database[*TestUser](nil).
 					WithQuery(tc.query).
 					List(&users))
-				require.Equal(t, 1, len(users))
+				require.Len(t, users, 1)
 				u := users[0]
 				require.NotNil(t, u)
 				require.NotEmpty(t, u.ID)
@@ -114,7 +114,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Age: u1.Age}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 		require.Equal(t, u1.Age, users[0].Age)
@@ -126,7 +126,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Age: u2.Age}).
 			List(&users))
-		require.Equal(t, 0, len(users), "multiple fields with AND logic should match all conditions")
+		require.Empty(t, users, "multiple fields with AND logic should match all conditions")
 
 		// Test exact match with three fields: Name, Age, and Email
 		// Query: Name="user1" AND Age=18 AND Email="user1@example.com" should return u1
@@ -134,7 +134,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Age: u1.Age, Email: u1.Email}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 		require.Equal(t, u1.Age, users[0].Age)
@@ -145,14 +145,14 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: "nonexistent"}).
 			List(&users))
-		require.Equal(t, 0, len(users), "non-existent value should return 0 records")
+		require.Empty(t, users, "non-existent value should return 0 records")
 
 		// Test exact match with non-existent age: should return 0 records
 		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Age: 999}).
 			List(&users))
-		require.Equal(t, 0, len(users), "non-existent age should return 0 records")
+		require.Empty(t, users, "non-existent age should return 0 records")
 	})
 
 	t.Run("MultipleValues", func(t *testing.T) {
@@ -167,7 +167,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			ids := []string{u1.ID, u2.ID}
 			query.ID = strings.Join(ids, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 2, len(users))
+			require.Len(t, users, 2)
 
 			var u11, u22 *TestUser
 			for _, u := range users {
@@ -202,7 +202,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			ids = []string{u1.ID, u2.ID, u3.ID}
 			query.ID = strings.Join(ids, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			var foundU1, foundU2, foundU3 bool
 			for _, u := range users {
 				switch u.ID {
@@ -234,7 +234,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			ids = []string{u1.ID, "nonexistent-id"}
 			query.ID = strings.Join(ids, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 1, len(users))
+			require.Len(t, users, 1)
 			require.Equal(t, u1.ID, users[0].ID)
 			require.Equal(t, u1.Name, users[0].Name)
 
@@ -244,7 +244,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			query = new(TestUser)
 			query.ID = u1.ID
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 1, len(users))
+			require.Len(t, users, 1)
 			require.Equal(t, u1.ID, users[0].ID)
 			require.Equal(t, u1.Name, users[0].Name)
 		})
@@ -260,7 +260,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			names := []string{u2.Name, u3.Name}
 			query.Name = strings.Join(names, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 2, len(users))
+			require.Len(t, users, 2)
 
 			var u22, u33 *TestUser
 			for _, u := range users {
@@ -295,7 +295,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			names = []string{u1.Name, u2.Name, u3.Name}
 			query.Name = strings.Join(names, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			var foundU1, foundU2, foundU3 bool
 			for _, u := range users {
 				switch u.ID {
@@ -324,7 +324,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			names = []string{u1.Name, "nonexistent"}
 			query.Name = strings.Join(names, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 1, len(users))
+			require.Len(t, users, 1)
 			require.Equal(t, u1.ID, users[0].ID)
 			require.Equal(t, u1.Name, users[0].Name)
 
@@ -334,7 +334,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			query = new(TestUser)
 			query.Name = u1.Name
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 1, len(users))
+			require.Len(t, users, 1)
 			require.Equal(t, u1.ID, users[0].ID)
 			require.Equal(t, u1.Name, users[0].Name)
 		})
@@ -350,7 +350,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			emails := []string{u1.Email, u2.Email}
 			query.Email = strings.Join(emails, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 2, len(users))
+			require.Len(t, users, 2)
 
 			var u11, u22 *TestUser
 			for _, u := range users {
@@ -384,7 +384,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			emails = []string{u1.Email, u2.Email, u3.Email}
 			query.Email = strings.Join(emails, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 3, len(users))
+			require.Len(t, users, 3)
 			var foundU1, foundU2, foundU3 bool
 			for _, u := range users {
 				switch u.ID {
@@ -414,7 +414,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 			query.Name = strings.Join(names, ",")
 			query.Email = strings.Join(emails, ",")
 			require.NoError(t, database.Database[*TestUser](nil).WithQuery(query).List(&users))
-			require.Equal(t, 2, len(users))
+			require.Len(t, users, 2)
 			var foundU1, foundU2 bool
 			for _, u := range users {
 				switch u.ID {
@@ -444,7 +444,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: false,
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users), "FuzzyMatch=false should not match partial strings")
+		require.Empty(t, users, "FuzzyMatch=false should not match partial strings")
 
 		// Test FuzzyMatch=true with single value (LIKE): query "name" with partial match
 		// Should return all 3 records (user1, user2, user3 all contain "user")
@@ -454,7 +454,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		var u11, u22, u33 *TestUser
 		for _, u := range users {
 			switch u.ID {
@@ -499,7 +499,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		u11, u22, u33 = nil, nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -544,7 +544,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		u := users[0]
 		require.NotNil(t, u)
 		require.NotEmpty(t, u.CreatedAt)
@@ -563,7 +563,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		u11, u22 = nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -590,7 +590,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		u11, u22, u33 = nil, nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -613,7 +613,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users))
+		require.Empty(t, users)
 
 		// Test FuzzyMatch=true with empty string: should return 0 records (empty query blocked)
 		users = make([]*TestUser, 0)
@@ -622,7 +622,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users), "empty query should be blocked by default")
+		require.Empty(t, users, "empty query should be blocked by default")
 
 		// Test FuzzyMatch=true with multiple fields: Name and Email
 		// Query: Name="user" AND Email="example" should return all 3 records
@@ -632,7 +632,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		u11, u22, u33 = nil, nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -656,7 +656,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users), "empty strings in comma-separated values should be ignored")
+		require.Len(t, users, 2, "empty strings in comma-separated values should be ignored")
 		u11, u22 = nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -682,7 +682,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users), "should match partial string at end")
+		require.Len(t, users, 1, "should match partial string at end")
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 
@@ -693,7 +693,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "should match partial string in middle")
+		require.Len(t, users, 3, "should match partial string in middle")
 		foundU1, foundU2, foundU3 := false, false, false
 		for _, u := range users {
 			switch u.ID {
@@ -716,7 +716,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "should match partial string at start")
+		require.Len(t, users, 3, "should match partial string at start")
 
 		// Test FuzzyMatch=true with email partial match: Email="@example" (matches all emails)
 		users = make([]*TestUser, 0)
@@ -725,7 +725,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "should match email partial string")
+		require.Len(t, users, 3, "should match email partial string")
 		foundU1, foundU2, foundU3 = false, false, false
 		for _, u := range users {
 			switch u.ID {
@@ -749,7 +749,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users), "REGEXP special characters should be escaped")
+		require.Len(t, users, 2, "REGEXP special characters should be escaped")
 		u11, u22 = nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -770,7 +770,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		u11, u33 = nil, nil
 		for _, u := range users {
 			switch u.ID {
@@ -795,7 +795,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				AllowEmpty: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "FuzzyMatch with AllowEmpty should return all records")
+		require.Len(t, users, 3, "FuzzyMatch with AllowEmpty should return all records")
 
 		// Test FuzzyMatch=true with UseOr: Name="user1" OR Email="user2@example.com"
 		// Should return u1 (matches Name) and u2 (matches Email)
@@ -806,7 +806,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				UseOr:      true,
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users), "FuzzyMatch with UseOr should work correctly")
+		require.Len(t, users, 2, "FuzzyMatch with UseOr should work correctly")
 		foundU1, foundU2 = false, false
 		for _, u := range users {
 			if u.ID == u1.ID {
@@ -830,7 +830,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "query with some non-empty fields should work even with empty strings")
+		require.Len(t, users, 3, "query with some non-empty fields should work even with empty strings")
 
 		// Test FuzzyMatch=false explicitly (should be same as default)
 		users = make([]*TestUser, 0)
@@ -839,7 +839,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: false,
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users), "FuzzyMatch=false should not match partial strings")
+		require.Empty(t, users, "FuzzyMatch=false should not match partial strings")
 	})
 
 	t.Run("AllowEmpty", func(t *testing.T) {
@@ -849,25 +849,25 @@ func TestDatabaseWithQuery(t *testing.T) {
 
 		// Test nil query without AllowEmpty (should return no records, blocked for safety)
 		require.NoError(t, database.Database[*TestUser](nil).WithQuery(nil).List(&users))
-		require.Equal(t, 0, len(users), "nil query should be blocked by default")
+		require.Empty(t, users, "nil query should be blocked by default")
 
 		// Test empty struct without AllowEmpty (should return no records, blocked for safety)
 		require.NoError(t, database.Database[*TestUser](nil).WithQuery(&TestUser{}).List(&users))
-		require.Equal(t, 0, len(users), "empty struct should be blocked by default")
+		require.Empty(t, users, "empty struct should be blocked by default")
 
 		// Test query with all empty string fields without AllowEmpty (should return no records)
 		// This tests the second check point where all field values are empty strings
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: "", Email: ""}).
 			List(&users))
-		require.Equal(t, 0, len(users), "query with all empty string fields should be blocked by default")
+		require.Empty(t, users, "query with all empty string fields should be blocked by default")
 
 		// Test nil query with AllowEmpty=true (should return all records)
 		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(nil, types.QueryConfig{AllowEmpty: true}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		var foundU1, foundU2, foundU3 bool
 		for _, u := range users {
 			switch u.ID {
@@ -909,7 +909,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{}, types.QueryConfig{AllowEmpty: true}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		foundU1, foundU2, foundU3 = false, false, false
 		for _, u := range users {
 			switch u.ID {
@@ -931,7 +931,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: "", Email: ""}, types.QueryConfig{AllowEmpty: true}).
 			List(&users))
-		require.Equal(t, 3, len(users), "query with all empty string fields should return all records when AllowEmpty=true")
+		require.Len(t, users, 3, "query with all empty string fields should return all records when AllowEmpty=true")
 		foundU1, foundU2, foundU3 = false, false, false
 		for _, u := range users {
 			switch u.ID {
@@ -954,7 +954,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Email: ""}).
 			List(&users))
-		require.Equal(t, 1, len(users), "query with some non-empty fields should work normally")
+		require.Len(t, users, 1, "query with some non-empty fields should work normally")
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 		require.Equal(t, u1.Email, users[0].Email)
@@ -967,7 +967,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "AllowEmpty should work with FuzzyMatch")
+		require.Len(t, users, 3, "AllowEmpty should work with FuzzyMatch")
 
 		// Test AllowEmpty with UseOr: should allow empty query when both are enabled
 		users = make([]*TestUser, 0)
@@ -977,14 +977,14 @@ func TestDatabaseWithQuery(t *testing.T) {
 				UseOr:      true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users), "AllowEmpty should work with UseOr")
+		require.Len(t, users, 3, "AllowEmpty should work with UseOr")
 
 		// Test AllowEmpty=false explicitly (should be same as default)
 		users = make([]*TestUser, 0)
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(nil, types.QueryConfig{AllowEmpty: false}).
 			List(&users))
-		require.Equal(t, 0, len(users), "AllowEmpty=false should block empty queries")
+		require.Empty(t, users, "AllowEmpty=false should block empty queries")
 	})
 
 	t.Run("UseOr", func(t *testing.T) {
@@ -1000,7 +1000,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Age: u2.Age}, types.QueryConfig{UseOr: false}).
 			List(&users))
-		require.Equal(t, 0, len(users))
+		require.Empty(t, users)
 
 		// Test UseOr=false (default, AND logic): query with multiple fields matching same record
 		// Query: Name="user1" AND Age=18 should return 1 record (u1 matches both)
@@ -1008,7 +1008,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Age: u1.Age}, types.QueryConfig{UseOr: false}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 		require.Equal(t, u1.Age, users[0].Age)
@@ -1019,7 +1019,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Age: u2.Age}, types.QueryConfig{UseOr: true}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		var foundU1, foundU2 bool
 		for _, u := range users {
 			if u.ID == u1.ID {
@@ -1042,7 +1042,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name, Email: u2.Email, Age: u3.Age}, types.QueryConfig{UseOr: true}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		var foundU1_2, foundU2_2, foundU3 bool
 		for _, u := range users {
 			switch u.ID {
@@ -1072,7 +1072,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 		require.NoError(t, database.Database[*TestUser](nil).
 			WithQuery(&TestUser{Name: u1.Name}, types.QueryConfig{UseOr: true}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 
@@ -1085,7 +1085,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				FuzzyMatch: true,
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		foundU1_2, foundU2_2, foundU3 = false, false, false
 		for _, u := range users {
 			switch u.ID {
@@ -1124,7 +1124,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{18},
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		var foundU2, foundU3 bool
 		for _, u := range users {
 			if u.ID == u2.ID {
@@ -1160,7 +1160,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{19},
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		foundU2, foundU3 = false, false
 		for _, u := range users {
 			if u.ID == u2.ID {
@@ -1194,7 +1194,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{19, 19},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].ID)
 		require.NotEmpty(t, users[0].CreatedAt)
 		require.NotEmpty(t, users[0].UpdatedAt)
@@ -1213,7 +1213,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{u1.Name},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.NotEmpty(t, users[0].ID)
 		require.NotEmpty(t, users[0].CreatedAt)
 		require.NotEmpty(t, users[0].UpdatedAt)
@@ -1232,7 +1232,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{u1.Name, u2.Age},
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		foundU1, foundU2 := false, false
 		for _, u := range users {
 			if u.ID == u1.ID {
@@ -1268,7 +1268,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{[]int{18, 20}},
 			}).
 			List(&users))
-		require.Equal(t, 2, len(users))
+		require.Len(t, users, 2)
 		var foundU1_2, foundU3_2 bool
 		for _, u := range users {
 			if u.ID == u1.ID {
@@ -1304,7 +1304,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{u1.Name, u1.Age},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 		require.Equal(t, u1.Age, users[0].Age)
@@ -1318,7 +1318,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{u1.Name, u2.Age},
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users))
+		require.Empty(t, users)
 
 		// Test RawQuery with no matching condition: age > 100
 		// Should return 0 records
@@ -1329,7 +1329,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{100},
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users))
+		require.Empty(t, users)
 
 		// Test RawQuery with empty RawQueryArgs (should work when query has no placeholders)
 		// Query: age = 18 (hardcoded value, no placeholders)
@@ -1340,7 +1340,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: nil,
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Age, users[0].Age)
 
@@ -1352,7 +1352,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Age, users[0].Age)
 
@@ -1366,7 +1366,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{18},
 			}).
 			List(&users))
-		require.Equal(t, 0, len(users), "RawQuery and model fields should be combined with AND logic")
+		require.Empty(t, users, "RawQuery and model fields should be combined with AND logic")
 
 		// Test RawQuery combined with model fields: both conditions match
 		// RawQuery: age >= 18, Query: Name="user1"
@@ -1378,7 +1378,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{18},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users), "RawQuery and model fields should be combined with AND logic")
+		require.Len(t, users, 1, "RawQuery and model fields should be combined with AND logic")
 		require.Equal(t, u1.ID, users[0].ID)
 		require.Equal(t, u1.Name, users[0].Name)
 		require.Equal(t, u1.Age, users[0].Age)
@@ -1393,7 +1393,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{18},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users), "RawQuery and multiple model fields should be combined with AND logic")
+		require.Len(t, users, 1, "RawQuery and multiple model fields should be combined with AND logic")
 		require.Equal(t, u2.ID, users[0].ID)
 		require.Equal(t, u2.Name, users[0].Name)
 		require.Equal(t, u2.Age, users[0].Age)
@@ -1408,7 +1408,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{u2.Name, u2.Email, 19},
 			}).
 			List(&users))
-		require.Equal(t, 1, len(users))
+		require.Len(t, users, 1)
 		require.Equal(t, u2.ID, users[0].ID)
 		require.Equal(t, u2.Name, users[0].Name)
 		require.Equal(t, u2.Age, users[0].Age)
@@ -1423,7 +1423,7 @@ func TestDatabaseWithQuery(t *testing.T) {
 				RawQueryArgs: []any{"%user%"},
 			}).
 			List(&users))
-		require.Equal(t, 3, len(users))
+		require.Len(t, users, 3)
 		var foundU1_3, foundU2_3, foundU3_3 bool
 		for _, u := range users {
 			switch u.ID {

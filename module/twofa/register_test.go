@@ -159,7 +159,7 @@ func Test2fa(t *testing.T) {
 			)
 
 			require.Equal(t, 0, rsp.DeviceCount)
-			require.Len(t, rsp.Devices, 0)
+			require.Empty(t, rsp.Devices)
 			require.False(t, rsp.Enabled)
 		})
 	})

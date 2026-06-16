@@ -710,7 +710,7 @@ func userRequireDeleted(t *testing.T, username string) {
 
 	users := make([]*iam.User, 0)
 	require.NoError(t, database.Database[*iam.User](nil).WithQuery(&iam.User{Username: username}).List(&users))
-	require.Len(t, users, 0)
+	require.Empty(t, users)
 }
 
 func userRequireSessionNotFound(t *testing.T, sessionID string) {
@@ -766,7 +766,7 @@ func userRequireMissingByUsername(t *testing.T, username string) {
 
 	users := make([]*iam.User, 0)
 	require.NoError(t, database.Database[*iam.User](nil).WithQuery(&iam.User{Username: username}).List(&users))
-	require.Len(t, users, 0)
+	require.Empty(t, users)
 }
 
 func userFindByUsername(items []*iam.User, username string) *iam.User {

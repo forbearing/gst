@@ -257,7 +257,7 @@ func TestAccountGroups(t *testing.T) {
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.Group]) {
 			t.Helper()
-			require.Len(t, rsp.Items, 0)
+			require.Empty(t, rsp.Items)
 		})
 	})
 }

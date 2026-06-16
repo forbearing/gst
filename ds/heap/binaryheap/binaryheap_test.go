@@ -21,7 +21,7 @@ func createHeap(t *testing.T) *binaryheap.Heap[int] {
 
 func TestBinaryHeap_New(t *testing.T) {
 	h, err := binaryheap.NewOrdered(binaryheap.WithSafe[int]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, h)
 
 	// Test empty heap
@@ -34,7 +34,7 @@ func TestBinaryHeap_New(t *testing.T) {
 
 	slice := []int{6, 5, 4, 3, 2, 1}
 	h, err = binaryheap.NewFromOrderedSlice(slice)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, len(slice), h.Size())
 	assert.False(t, h.IsEmpty())
 	assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, h.Values())
@@ -50,13 +50,13 @@ func TestBinaryHeap_New(t *testing.T) {
 	}
 
 	h, err = binaryheap.NewFromOrderedMapKeys(m, binaryheap.WithSafe[int]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 6, h.Size())
 	assert.False(t, h.IsEmpty())
 	assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, h.Values())
 
 	h2, err := binaryheap.NewFromOrderedMapValues(m, binaryheap.WithSafe[string]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 6, h2.Size())
 	assert.False(t, h2.IsEmpty())
 	assert.Equal(t, []string{"a", "b", "c", "d", "e", "f"}, h2.Values())
@@ -65,7 +65,7 @@ func TestBinaryHeap_New(t *testing.T) {
 func TestBinaryHeap_MaxHeap(t *testing.T) {
 	slice := []int{5, 1, 3, 2, 4, 6}
 	h, err := binaryheap.NewFromOrderedSlice(slice)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, h.Values())
 
 	h, err = binaryheap.NewFromOrderedSlice(slice, binaryheap.WithMaxHeap[int]())
@@ -81,11 +81,11 @@ func TestBinaryHeap_MaxHeap(t *testing.T) {
 		6: "f",
 	}
 	h, err = binaryheap.NewFromOrderedMapKeys(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []int{1, 2, 3, 4, 5, 6}, h.Values())
 
 	h2, err := binaryheap.NewFromOrderedMapValues(m, binaryheap.WithMaxHeap[string]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []string{"f", "e", "d", "c", "b", "a"}, h2.Values())
 }
 
@@ -125,7 +125,7 @@ func TestBinaryHeap_Values(t *testing.T) {
 	}
 
 	values := h.Values()
-	assert.Equal(t, len(input), len(values))
+	assert.Len(t, values, len(input))
 
 	// Verify that Values() returns a copy
 	originalValues := h.Values()
@@ -164,32 +164,32 @@ func TestBinaryHeap_Range(t *testing.T) {
 func TestBinaryHeap_ErrorCases(t *testing.T) {
 	// Test nil comparison function
 	h, err := binaryheap.New[int](nil)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, h)
 
 	// Test nil options
 	h, err = binaryheap.New(func(a, b int) int { return a - b }, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, h)
 }
 
 func TestBinaryHeap_String(t *testing.T) {
 	h, err := binaryheap.NewFromOrderedSlice([]int{5, 3, 7, 1, 4, 8, 9, 2}, binaryheap.WithSafe[int]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(h)
 	fmt.Println(h.Values())
 }
 
 func TestBInaryHeap_Encoding(t *testing.T) {
 	h, err := binaryheap.NewFromOrderedSlice([]int{5, 3, 7, 1, 4, 8, 9, 2}, binaryheap.WithSafe[int]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	bytesData, err := json.Marshal(h)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	h2, err := binaryheap.NewOrdered[int]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = json.Unmarshal(bytesData, &h2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, h.Values(), h2.Values())
 }

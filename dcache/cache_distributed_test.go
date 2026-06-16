@@ -101,8 +101,8 @@ func TestDistributedCacheWithSync(t *testing.T) {
 	// 自动过期拿不到
 	time.Sleep(localTTL + 50*time.Millisecond) // 增加一些缓冲时间确保过期
 	val, err = dc.Get("test-key")
-	require.Error(t, err, types.ErrEntryNotFound)
-	require.Equal(t, "", val)
+	require.ErrorIs(t, err, types.ErrEntryNotFound)
+	require.Empty(t, val)
 
 	// 由于测试环境没有真实的 Redis，GetWithSync 会失败
 	// 这里我们先设置一个值到 Redis 模拟的场景
@@ -120,8 +120,8 @@ func TestDistributedCacheWithSync(t *testing.T) {
 	err = dc.Delete(key)
 	require.NoError(t, err)
 	val, err = dc.Get(key)
-	require.Error(t, err, types.ErrEntryNotFound)
-	require.Equal(t, "", val)
+	require.ErrorIs(t, err, types.ErrEntryNotFound)
+	require.Empty(t, val)
 
 	// 重新设置值用于后续测试
 	err = dc.SetWithSync(key, value, localTTL, remoteTTL)
@@ -138,14 +138,14 @@ func TestDistributedCacheWithSync(t *testing.T) {
 	err = dc.DeleteWithSync(key)
 	require.NoError(t, err)
 	val, err = dc.Get(key)
-	require.Error(t, err, types.ErrEntryNotFound)
-	require.Equal(t, "", val)
+	require.ErrorIs(t, err, types.ErrEntryNotFound)
+	require.Empty(t, val)
 
 	// 等状态节点删除 redis 中的 key
 	time.Sleep(500 * time.Millisecond)
 	val, err = dc.GetWithSync(key, localTTL)
-	require.Error(t, err, types.ErrEntryNotFound)
-	require.Equal(t, "", val)
+	require.ErrorIs(t, err, types.ErrEntryNotFound)
+	require.Empty(t, val)
 }
 
 // TestDistributedCacheTTL 测试TTL功能
@@ -185,6 +185,7 @@ func TestDistributedCacheConcurrency(t *testing.T) {
 	// 创建等待组来同步goroutines
 	var wg sync.WaitGroup
 	const numGoroutines = 100
+	errCh := make(chan error, numGoroutines)
 
 	// 启动多个goroutines同时进行读写操作
 	for i := range numGoroutines {
@@ -197,21 +198,38 @@ func TestDistributedCacheConcurrency(t *testing.T) {
 
 			// 设置值
 			err := dc.Set(key, value, 1*time.Minute)
-			require.NoError(t, err)
+			if err != nil {
+				errCh <- err
+				return
+			}
 
 			// 读取值
 			val, err := dc.Get(key)
-			require.NoError(t, err)
-			require.Equal(t, value, val)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if value != val {
+				errCh <- errors.Errorf("expected %q, got %q", value, val)
+				return
+			}
 
 			// 删除值
 			err = dc.Delete(key)
-			require.NoError(t, err)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			errCh <- nil
 		}(i)
 	}
 
 	// 等待所有goroutines完成
 	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		require.NoError(t, err)
+	}
 }
 
 // TestDistributedCacheDifferentTypes 测试不同类型的缓存

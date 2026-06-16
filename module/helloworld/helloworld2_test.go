@@ -113,7 +113,7 @@ func TestHelloworld2Module(t *testing.T) {
 				_, err = cli.List(&items, total)
 				require.NoError(t, err)
 
-				require.Equal(t, len(items), 1)
+				require.Len(t, items, 1)
 				var data []byte
 				data, err = json.Marshal(items[0])
 				require.NoError(t, err)
