@@ -4,6 +4,7 @@ package new
 import (
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,11 +14,7 @@ import (
 	"github.com/forbearing/gst/internal/clioutput"
 )
 
-// ============================================================
-// 文件模板映射
-// ============================================================
-
-var fileContentMap = map[string]string{
+var requiredFileContentMap = map[string]string{
 	"configx/configx.go":       configxContent,
 	"cronjob/cronjob.go":       cronjobContent,
 	"middleware/middleware.go": middlewareContent,
@@ -27,6 +24,15 @@ var fileContentMap = map[string]string{
 	"router/router.go":         routerContent,
 	"dao/.gitkeep":             "",
 	"provider/.gitkeep":        "",
+}
+
+var projectFileContentMap = newProjectFileContentMap()
+
+func newProjectFileContentMap() map[string]string {
+	files := make(map[string]string, len(requiredFileContentMap)+1)
+	maps.Copy(files, requiredFileContentMap)
+	files[".golangci.yml"] = golangciLintContent
+	return files
 }
 
 // ============================================================
@@ -63,7 +69,7 @@ func Run(projectName string) error {
 
 	// 生成项目文件
 	clioutput.Section("Generate Project Files")
-	for file, content := range fileContentMap {
+	for file, content := range projectFileContentMap {
 		if err := createFile(file, content); err != nil {
 			clioutput.Error("", "Failed to create %s", file)
 			return err
@@ -128,15 +134,15 @@ func Run(projectName string) error {
 // ============================================================
 
 func EnsureFileExists() ([]string, error) {
-	files := make([]string, 0, len(fileContentMap))
-	for file := range fileContentMap {
+	files := make([]string, 0, len(requiredFileContentMap))
+	for file := range requiredFileContentMap {
 		files = append(files, file)
 	}
 	sort.Strings(files)
 
 	var created []string
 	for _, file := range files {
-		content := fileContentMap[file]
+		content := requiredFileContentMap[file]
 		if _, err := os.Stat(file); err != nil && errors.Is(err, os.ErrNotExist) {
 			if err := createFile(file, content); err != nil {
 				return created, err

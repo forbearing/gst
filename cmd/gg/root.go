@@ -31,6 +31,7 @@ func init() {
 		astCmd,
 		pruneCmd,
 		checkCmd,
+		lintCmd,
 		routesCmd,
 		routeTreeCmd,
 		buildCmd,
