@@ -14,6 +14,8 @@ import (
 	"github.com/forbearing/gst/dsl"
 	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/gertd/go-pluralize"
+	"github.com/go-git/go-billy/v5/osfs"
+	gitignore "github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/spf13/cobra"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -1025,6 +1027,7 @@ func CheckAllowedDirectories() []string {
 		"dist":      true,
 		"generated": true,
 	}
+	ignoreMatcher := newProjectIgnoreMatcher(projectDir)
 
 	// Read directory contents
 	entries, err := os.ReadDir(projectDir)
@@ -1043,6 +1046,9 @@ func CheckAllowedDirectories() []string {
 		if strings.HasPrefix(dirName, ".") {
 			continue
 		}
+		if isIgnoredProjectDirectory(ignoreMatcher, dirName) {
+			continue
+		}
 
 		// Check if directory is allowed
 		if !allowedDirs[dirName] && !whitelistDirs[dirName] {
@@ -1051,6 +1057,23 @@ func CheckAllowedDirectories() []string {
 	}
 
 	return violations
+}
+
+// newProjectIgnoreMatcher loads Git ignore rules for the project root.
+func newProjectIgnoreMatcher(projectDir string) gitignore.Matcher {
+	patterns, err := gitignore.ReadPatterns(osfs.New(projectDir), nil)
+	if err != nil || len(patterns) == 0 {
+		return nil
+	}
+	return gitignore.NewMatcher(patterns)
+}
+
+// isIgnoredProjectDirectory reports whether a root-level project directory is ignored by Git rules.
+func isIgnoredProjectDirectory(matcher gitignore.Matcher, dirName string) bool {
+	if matcher == nil {
+		return false
+	}
+	return matcher.Match([]string{dirName}, true)
 }
 
 // isGstFrameworkProject checks if this is the gst framework project itself
