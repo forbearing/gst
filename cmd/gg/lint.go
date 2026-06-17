@@ -40,7 +40,6 @@ func (osGolangciLintRunner) LookPath(file string) (string, error) {
 }
 
 func (osGolangciLintRunner) Run(name string, args ...string) error {
-	//nolint:gosec // gg lint only runs fixed go/golangci-lint commands built by this package.
 	cmd := exec.Command(name, args...)
 	if cwd, err := os.Getwd(); err == nil {
 		cmd.Dir = cwd
