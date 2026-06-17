@@ -13,6 +13,7 @@ import (
 
 	"github.com/forbearing/gst/ds/tree/trie"
 	"github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/forbearing/gst/internal/codegen"
 	"github.com/forbearing/gst/internal/codegen/gen"
 	pkgnew "github.com/forbearing/gst/internal/codegen/new"
@@ -33,7 +34,7 @@ var tsCmd = &cobra.Command{
 	Use:   "ts",
 	Short: "generate typescript interface code",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("not implemented")
+		clioutput.Warn("", "TypeScript generation is not implemented yet")
 	},
 }
 
@@ -48,53 +49,45 @@ func genRun() {
 		checkErr(err)
 	}
 
-	// Architecture dependency check
-	if CheckArchitectureDependency() > 0 {
-		os.Exit(1)
-	}
-	// Model Singular Naming Check
-	if CheckModelSingularNaming() > 0 {
-		os.Exit(1)
-	}
-	// Model JSON Tag Naming Check
-	if CheckModelJSONTagNaming() > 0 {
-		os.Exit(1)
-	}
-	// Model Package Naming Check
-	if CheckModelPackageNaming() > 0 {
-		os.Exit(1)
-	}
-	// Directory Restriction Check
-	if CheckAllowedDirectories() > 0 {
+	if runProjectChecks() > 0 {
 		os.Exit(1)
 	}
 
 	// Ensure required files exist
-	logSection("Ensure Required Files")
-	_ = pkgnew.EnsureFileExists()
+	clioutput.Section("Ensure Required Files")
+	createdFiles, err := pkgnew.EnsureFileExists()
+	checkErr(err)
+	if len(createdFiles) == 0 {
+		clioutput.Success("", "Required files are present")
+	} else {
+		for _, file := range createdFiles {
+			clioutput.Success("CREATE", "%s", file)
+		}
+	}
 
 	if !fileExists(modelDir) {
-		logError(fmt.Sprintf("model dir not found: %s", modelDir))
+		clioutput.Error("", "model dir not found: %s", modelDir)
 		os.Exit(1)
 	}
 
 	// Scan all models
-	logSection("Scan Models")
+	clioutput.Section("Scan Models")
 	allModels, err := codegen.FindModels(module, modelDir, serviceDir, excludes)
 	buildHierarchicalEndpoints(allModels)
 	propagateParentParams(allModels)
 
 	checkErr(err)
-	if len(allModels) == 0 {
-		fmt.Println(gray("  No models found, nothing to do"))
-		return
-	}
-	fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 
 	// Record old service files list (if prune option is enabled)
 	var oldServiceFiles []string
 	if prune {
 		oldServiceFiles = scanExistingServiceFiles(serviceDir)
+	}
+
+	if len(allModels) == 0 {
+		clioutput.Item("", "No models found, generating empty registration files")
+	} else {
+		clioutput.Success("", "%d models found", len(allModels))
 	}
 
 	modelStmts := make([]ast.Stmt, 0)
@@ -182,49 +175,12 @@ func genRun() {
 				routerStmts = append(routerStmts, gen.StmtRouterRegister(m.ModelPkgName, m.ModelName, act.Payload, act.Result, base, route, "", act.Phase.MethodName()))
 			}
 		})
-
-		// for key, actions := range m.Design.Routes {
-		// 	for _, act := range actions {
-		// 		route := key
-		// 		base := "Auth"
-		// 		if act.Public {
-		// 			base = "Pub"
-		// 		}
-		// 		// If the phase is matched, the model endpoint will append the param, eg:
-		// 		// Endpoint: tenant, param is ":tenant", new endpoint is "tenant/:tenant"
-		// 		// Endpoint: tenant, param is ":id", new endpoint is "tenant/:id"
-		// 		switch act.Phase {
-		// 		case consts.PHASE_DELETE, consts.PHASE_UPDATE, consts.PHASE_PATCH, consts.PHASE_GET:
-		// 			if len(m.Design.Param) == 0 {
-		// 				route = filepath.Join(route, ":id") // empty param will append default ":id" to endpoint.
-		// 			} else {
-		// 				route = filepath.Join(route, m.Design.Param)
-		// 			}
-		// 		case consts.PHASE_CREATE_MANY, consts.PHASE_DELETE_MANY, consts.PHASE_UPDATE_MANY, consts.PHASE_PATCH_MANY:
-		// 			route = filepath.Join(route, "batch")
-		// 		case consts.PHASE_IMPORT:
-		// 			route = filepath.Join(route, "import")
-		// 		case consts.PHASE_EXPORT:
-		// 			route = filepath.Join(route, "export")
-		//
-		// 		}
-		//
-		// 		switch act.Phase {
-		// 		case consts.PHASE_DELETE, consts.PHASE_UPDATE, consts.PHASE_PATCH, consts.PHASE_GET:
-		// 			items := strings.Split(route, "/")
-		// 			lastSegment := strings.TrimLeft(items[len(items)-1], ":")
-		// 			routerStmts = append(routerStmts, gen.StmtRouterRegister(m.ModelPkgName, m.ModelName, act.Payload, act.Result, base, route, lastSegment, act.Phase.MethodName()))
-		// 		default:
-		// 			routerStmts = append(routerStmts, gen.StmtRouterRegister(m.ModelPkgName, m.ModelName, act.Payload, act.Result, base, route, "", act.Phase.MethodName()))
-		// 		}
-		// 	}
-		// }
 	}
 
 	// ============================================================
 	// Generate model/service/router/main files
 	// ============================================================
-	logSection("Generate Files")
+	clioutput.Section("Generate Files")
 
 	modelImports := lo.Keys(modelImportMap)
 	sort.Strings(modelImports)
@@ -256,7 +212,7 @@ func genRun() {
 	// ============================================================
 	// Apply actions to services
 	// ============================================================
-	logSection("Apply Actions To Services")
+	clioutput.Section("Apply Actions To Services")
 
 	fset := token.NewFileSet()
 	applyFile := func(filename string, code string, action *dsl.Action, servicePkgName string, modelInfo *gen.ModelInfo) {
@@ -282,15 +238,15 @@ func genRun() {
 				// Use original FileSet to preserve comment positions
 				code, err = gen.FormatNodeExtraWithFileSet(f, fset)
 				checkErr(err)
-				logUpdate(safePath)
+				clioutput.Status(clioutput.StyleWarn, clioutput.SymbolSuccess, "UPDATE", "%s", safePath)
 				checkErr(ensureParentDir(safePath))
 				// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
 				checkErr(os.WriteFile(safePath, []byte(code), 0o600))
 			} else {
-				logSkip(safePath)
+				clioutput.Item("SKIP", "%s", safePath)
 			}
 		} else {
-			logCreate(safePath)
+			clioutput.Success("CREATE", "%s", safePath)
 			checkErr(ensureParentDir(safePath))
 			// #nosec G703 -- safePath validated under serviceDir by pathUnderRoot
 			checkErr(os.WriteFile(safePath, []byte(code), 0o600))
@@ -326,8 +282,8 @@ func genRun() {
 	// ============================================================
 	// Completion message
 	// ============================================================
-	logSection("Done")
-	fmt.Printf("\n%s Code generation completed successfully!\n", green("🎉"))
+	clioutput.Section("Done")
+	clioutput.Done("Code generation completed successfully!")
 }
 
 // scanExistingServiceFiles scans existing service files in the service directory.
@@ -378,7 +334,7 @@ func scanExistingServiceFiles(serviceDir string) []string {
 		return nil
 	})
 	if err != nil {
-		fmt.Printf("Warning: failed to scan existing service files: %v\n", err)
+		clioutput.Warn("", "failed to scan existing service files: %v", err)
 	}
 	return files
 }
@@ -448,17 +404,17 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 
 	// Display ignored files if any
 	if len(ignoredFiles) > 0 {
-		fmt.Printf("\n%s Files ignored by config:\n", gray("→"))
+		clioutput.Section("Files Ignored By Config")
 		for _, file := range ignoredFiles {
-			fmt.Printf("  %s %s\n", gray("→ IGNORE"), file)
+			clioutput.Item("", "ignore %s", file)
 		}
 	}
 
 	if len(filesToDelete) == 0 {
 		if len(ignoredFiles) > 0 {
-			fmt.Printf("\n  %s No disabled service files to prune (all files are ignored)\n", green("✔"))
+			clioutput.Success("", "No disabled service files to prune (all files are ignored)")
 		} else {
-			fmt.Printf("  %s No disabled service files to prune\n", green("✔"))
+			clioutput.Success("", "No disabled service files to prune")
 		}
 		// Still check for empty directories even if no files to delete
 		removeEmptyDirectories(serviceDir)
@@ -466,28 +422,28 @@ func pruneServiceFiles(oldServiceFiles []string, allModels []*gen.ModelInfo) {
 	}
 
 	// Display list of files to be deleted
-	fmt.Printf("\n%s Files to be deleted:\n", yellow("⚠"))
+	clioutput.Section("Files To Be Deleted")
 	for _, file := range filesToDelete {
-		fmt.Printf("  %s %s\n", red("✘"), file)
+		clioutput.Error("", "%s", file)
 	}
 
 	// Ask user for confirmation
-	fmt.Printf("\n%s Do you want to delete these files? (y/N): ", cyan("?"))
+	clioutput.Prompt("Do you want to delete these files? (y/N): ")
 	var response string
 	_, _ = fmt.Scanln(&response)
 
 	response = strings.ToLower(strings.TrimSpace(response))
 	if response != "y" && response != "yes" {
-		fmt.Printf("  %s Deletion canceled\n", gray("→"))
+		clioutput.Item("", "Deletion canceled")
 		return
 	}
 
 	// Execute deletion operation
 	for _, file := range filesToDelete {
 		if err := os.Remove(file); err != nil {
-			fmt.Printf("  %s Failed to delete %s: %v\n", red("✘"), file, err)
+			clioutput.Error("", "Failed to delete %s: %v", file, err)
 		} else {
-			fmt.Printf("  %s Deleted %s\n", green("✔"), file)
+			clioutput.Success("", "Deleted %s", file)
 		}
 	}
 
@@ -517,74 +473,48 @@ func pathUnderRoot(path, root string) (string, error) {
 	return path, nil
 }
 
-// removeEmptyDirectories recursively removes empty directories starting from the given root directory
+// removeEmptyDirectories removes empty child directories below the given root directory.
 func removeEmptyDirectories(rootDir string) {
+	dirs := make([]string, 0)
 	_ = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			//nolint:nilerr
 			return nil // Continue walking even if there's an error
 		}
 
-		// Skip the root directory itself
-		if path == rootDir {
+		if path == rootDir || !info.IsDir() {
 			return nil
 		}
 
-		// Only process directories
-		if !info.IsDir() {
-			return nil
-		}
-
-		// Check if directory is empty
-		entries, err := os.ReadDir(path)
-		if err != nil {
-			//nolint:nilerr
-			return nil // Continue if we can't read the directory
-		}
-
-		// If directory is empty, remove it
-		if len(entries) == 0 {
-			// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
-			if err := os.Remove(path); err == nil {
-				fmt.Printf("  %s Removed empty directory %s\n", green("✔"), path)
-			}
-		}
-
+		dirs = append(dirs, path)
 		return nil
 	})
 
-	// Run multiple passes to handle nested empty directories
-	// After removing a directory, its parent might become empty
-	for range 3 {
-		emptyDirsFound := false
-		_ = filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || path == rootDir || !info.IsDir() {
-				//nolint:nilerr
-				return nil
+	sort.Slice(dirs, func(i, j int) bool {
+		return directoryDepth(rootDir, dirs[i]) > directoryDepth(rootDir, dirs[j])
+	})
+
+	for _, dir := range dirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		if len(entries) == 0 {
+			// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
+			if err := os.Remove(dir); err == nil {
+				clioutput.Success("", "Removed empty directory %s", dir)
 			}
-
-			entries, err := os.ReadDir(path)
-			if err != nil {
-				//nolint:nilerr
-				return nil
-			}
-
-			if len(entries) == 0 {
-				// #nosec G122 -- path is under known project root (rootDir); we only remove empty dirs in codegen
-				if err := os.Remove(path); err == nil {
-					fmt.Printf("  %s Removed empty directory %s\n", green("✔"), path)
-					emptyDirsFound = true
-				}
-			}
-
-			return nil
-		})
-
-		// If no empty directories were found in this pass, we're done
-		if !emptyDirsFound {
-			break
 		}
 	}
+}
+
+func directoryDepth(rootDir, path string) int {
+	rel, err := filepath.Rel(rootDir, path)
+	if err != nil || rel == "." {
+		return 0
+	}
+	return strings.Count(rel, string(filepath.Separator)) + 1
 }
 
 // buildHierarchicalEndpoints constructs complete hierarchical endpoint paths for all models.
@@ -660,111 +590,6 @@ func buildHierarchicalEndpoints(allModels []*gen.ModelInfo) {
 		for i := range pathParts {
 			currentPath := strings.Join(pathParts[:i+1], "/")
 			if mappedEndpoint, exists := dirEndpointMap[currentPath]; exists {
-				// Use the mapped endpoint for this directory
-				endpointParts = append(endpointParts, mappedEndpoint)
-			} else {
-				// No mapping found, use directory name
-				endpointParts = append(endpointParts, pathParts[i])
-			}
-		}
-
-		// Add the current model's original endpoint
-		endpointParts = append(endpointParts, originalEndpoint)
-
-		// Join all parts to form the complete endpoint
-		m.Design.Endpoint = strings.Join(endpointParts, "/")
-	}
-
-	// for _, m := range allModels {
-	// 	fmt.Println("-----", m.ModelFilePath, "=>", m.Design.Endpoint)
-	// }
-}
-
-// buildHierarchicalEndpointsV2 constructs complete hierarchical endpoint paths for all models using a trie data structure.
-// This is an optimized version of buildHierarchicalEndpoints that leverages trie for efficient path management.
-// It maps directory structures to their corresponding endpoint names and builds full endpoint paths
-// by replacing directory names with their custom endpoint names (if defined).
-//
-// The trie structure provides several advantages:
-// - Efficient prefix-based lookups for directory-to-endpoint mappings
-// - Natural hierarchical organization that mirrors the directory structure
-// - Better performance for deep directory hierarchies
-// - Simplified path traversal and reconstruction
-//
-// For example:
-//   - model/config/namespace.go with Endpoint("namespaces") -> config/namespaces
-//   - model/config/namespace/app.go with Endpoint("apps") -> config/namespaces/apps
-//   - model/config/namespace/app/env.go with Endpoint("envs") -> config/namespaces/apps/envs
-func buildHierarchicalEndpointsV2(allModels []*gen.ModelInfo) {
-	// Create a trie to store directory-to-endpoint mappings
-	// The trie key is the directory path (as runes), and the value is the endpoint name
-	dirEndpointTrie, err := trie.New[rune, string]()
-	if err != nil {
-		panic(err)
-	}
-
-	// First pass: build directory-to-endpoint mapping using trie
-	for _, m := range allModels {
-		if m.Design == nil {
-			continue
-		}
-
-		// Extract directory from model file path
-		modelFilePath := strings.TrimPrefix(m.ModelFilePath, "model/")
-		modelDir_ := filepath.Dir(modelFilePath)
-		if modelDir_ == "." {
-			modelDir_ = ""
-		}
-
-		// Get the filename without extension
-		fileName := strings.TrimSuffix(filepath.Base(modelFilePath), ".go")
-
-		// Determine the directory path that this model defines endpoint for
-		// The rule is: model file defines endpoint for the directory path formed by modelDir + fileName
-		var targetDir string
-		if modelDir_ == "" {
-			targetDir = fileName
-		} else {
-			targetDir = filepath.Join(modelDir_, fileName)
-		}
-
-		// Store the endpoint mapping in the trie
-		if m.Design.Endpoint != "" {
-			// Convert directory path to runes for trie key
-			dirEndpointTrie.Put([]rune(targetDir), m.Design.Endpoint)
-		}
-	}
-
-	// Second pass: build complete endpoints by replacing directory names with mapped endpoints
-	for _, m := range allModels {
-		if m.Design == nil {
-			continue
-		}
-
-		// Extract directory from model file path
-		modelFilePath := strings.TrimPrefix(m.ModelFilePath, "model/")
-		modelDir_ := filepath.Dir(modelFilePath)
-		if modelDir_ == "." {
-			modelDir_ = ""
-		}
-
-		// Store the original endpoint from DSL
-		originalEndpoint := m.Design.Endpoint
-
-		if modelDir_ == "" {
-			// Model is in root model directory, keep original endpoint
-			continue
-		}
-
-		// Build the complete endpoint path by replacing directory names with mapped endpoints
-		var endpointParts []string
-		pathParts := strings.Split(modelDir_, "/")
-
-		// For each directory level, use trie to lookup mapped endpoint or directory name
-		for i := range pathParts {
-			currentPath := strings.Join(pathParts[:i+1], "/")
-			// Use trie to lookup the mapped endpoint for this directory
-			if mappedEndpoint, exists := dirEndpointTrie.Get([]rune(currentPath)); exists {
 				// Use the mapped endpoint for this directory
 				endpointParts = append(endpointParts, mappedEndpoint)
 			} else {

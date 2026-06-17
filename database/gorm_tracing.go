@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 )
 
-// GormTracingPlugin is a GORM plugin that adds distributed tracing to database operations
+// GormTracingPlugin is a GORM plugin that adds distributed tracing to database operations.
 type GormTracingPlugin struct{}
 
-// Name returns the plugin name
+// Name returns the plugin name.
 func (p *GormTracingPlugin) Name() string {
 	return "gorm:tracing"
 }
 
-// Initialize initializes the plugin
+// Initialize initializes the plugin.
 func (p *GormTracingPlugin) Initialize(db *gorm.DB) error {
 	// Register callbacks for different operations
 	if err := p.registerCallbacks(db); err != nil {
@@ -151,16 +151,19 @@ func (p *GormTracingPlugin) startSpan(db *gorm.DB, operation string) {
 	// Start database span
 	newCtx, span := startDatabaseSpan(ctx, operation, db.Statement.Table)
 
-	// Add GORM-specific attributes
-	otel.AddSpanTags(span, map[string]any{
-		"gorm.operation": operation,
-		"gorm.table":     db.Statement.Table,
-	})
+	if gstotel.IsSpanRecording(span) {
+		// Add GORM-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"gorm.operation": operation,
+			"gorm.table":     db.Statement.Table,
+		})
+
+		db.Set("tracing:start_time", time.Now())
+	}
 
 	// Store span and context in the statement
 	db.Statement.Context = newCtx
 	db.Set("tracing:span", span)
-	db.Set("tracing:start_time", time.Now())
 }
 
 // finishSpan finishes the tracing span and records the results
@@ -177,13 +180,16 @@ func (p *GormTracingPlugin) finishSpan(db *gorm.DB) {
 	}
 
 	defer span.End()
+	if !gstotel.IsSpanRecording(span) {
+		return
+	}
 
 	// Get start time
 	startTimeValue, exists := db.Get("tracing:start_time")
 	if exists {
 		if startTime, ok := startTimeValue.(time.Time); ok {
 			duration := time.Since(startTime)
-			otel.AddSpanTags(span, map[string]any{
+			gstotel.AddSpanTags(span, map[string]any{
 				"gorm.duration_ms": duration.Milliseconds(),
 			})
 		}
@@ -191,35 +197,35 @@ func (p *GormTracingPlugin) finishSpan(db *gorm.DB) {
 
 	// Add SQL information if available
 	if db.Statement.SQL.String() != "" {
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"gorm.sql": db.Statement.SQL.String(),
 		})
 	}
 
 	// Add affected rows count
 	if db.Statement.RowsAffected >= 0 {
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"gorm.rows_affected": db.Statement.RowsAffected,
 		})
 	}
 
 	// Record error if any
 	if db.Error != nil {
-		otel.RecordError(span, db.Error)
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.RecordError(span, db.Error)
+		gstotel.AddSpanTags(span, map[string]any{
 			"gorm.error": db.Error.Error(),
 		})
 	}
 
 	// Add database connection info
 	if db.Statement.ConnPool != nil {
-		otel.AddSpanTags(span, map[string]any{
+		gstotel.AddSpanTags(span, map[string]any{
 			"gorm.connection_pool": fmt.Sprintf("%T", db.Statement.ConnPool),
 		})
 	}
 }
 
-// InstallGormTracingPlugin installs the GORM tracing plugin to the given database instance
+// InstallGormTracingPlugin installs the GORM tracing plugin to the given database instance.
 func InstallGormTracingPlugin(db *gorm.DB) error {
 	plugin := &GormTracingPlugin{}
 	return db.Use(plugin)
@@ -228,14 +234,16 @@ func InstallGormTracingPlugin(db *gorm.DB) error {
 // startDatabaseSpan starts a span for database operations
 func startDatabaseSpan(ctx context.Context, operation, table string) (context.Context, trace.Span) {
 	spanName := fmt.Sprintf("db.%s %s", operation, table)
-	ctx, span := otel.StartSpan(ctx, spanName)
+	ctx, span := gstotel.StartSpan(ctx, spanName)
 
-	// Add database-specific attributes
-	span.SetAttributes(
-		attribute.String("db.operation", operation),
-		attribute.String("db.table", table),
-		attribute.String("component", "database"),
-	)
+	if gstotel.IsSpanRecording(span) {
+		// Add database-specific attributes
+		span.SetAttributes(
+			attribute.String("db.operation", operation),
+			attribute.String("db.table", table),
+			attribute.String("component", "database"),
+		)
+	}
 
 	return ctx, span
 }

@@ -48,6 +48,7 @@ func Init() error {
 	root.Use(
 		middleware.Tracing(),
 		middleware.Logger("api.log"),
+		middleware.BodyLogger(),
 		middleware.Recovery("recovery.log"),
 		middleware.Cors(),
 		middleware.RouteParams(),

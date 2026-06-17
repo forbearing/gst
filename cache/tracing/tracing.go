@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cockroachdb/errors"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"github.com/forbearing/gst/types"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -284,9 +284,10 @@ func (tw *Wrapper[T]) Clear() {
 	span.SetStatus(codes.Ok, "Cache cleared successfully")
 }
 
-// startSpan creates a new span for the given operation
+// startSpan creates a new span for the given operation. The caller owns the
+// returned span and must end it after the cache operation finishes.
 func (tw *Wrapper[T]) startSpan(operationName string) (context.Context, trace.Span) {
-	tracer := otel.GetTracer()
-	ctx, span := tracer.Start(tw.ctx, operationName)
-	return ctx, span
+	tracer := gstotel.GetTracer()
+	ctx, span := tracer.Start(tw.ctx, operationName) //nolint:spancheck // Caller receives and ends the returned span.
+	return ctx, span                                 //nolint:spancheck // Caller receives and ends the returned span.
 }

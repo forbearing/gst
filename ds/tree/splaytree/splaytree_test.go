@@ -3,16 +3,18 @@ package splaytree_test
 import (
 	"cmp"
 	"encoding/json"
-	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/forbearing/gst/ds/tree/splaytree"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newIntStringTree(t *testing.T) *splaytree.Tree[int, string] {
+	t.Helper()
 	tree, err := splaytree.NewOrderedKeys(splaytree.WithSafe[int, string]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return tree
 }
 
@@ -38,10 +40,10 @@ func TestSplayTree_New(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tree, err := splaytree.New[int, int](tt.cmp)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, tree)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, tree)
 			}
 		})
@@ -358,15 +360,15 @@ func TestSplayTree_Traversal(t *testing.T) {
 func TestSplayTree_MarshalJSON(t *testing.T) {
 	tree := newIntStringTree(t)
 	for i := range 10 {
-		tree.Put(i, fmt.Sprintf("%d", i))
+		tree.Put(i, strconv.Itoa(i))
 	}
 	jsonBytes, err := json.Marshal(tree)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// fmt.Println(string(jsonBytes))
 
 	tree2 := newIntStringTree(t)
 	err = json.Unmarshal(jsonBytes, tree2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tree.Keys(), tree2.Keys())
 	assert.Equal(t, tree.Values(), tree2.Values())
 }

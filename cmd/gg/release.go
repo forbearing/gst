@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cockroachdb/errors"
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +51,7 @@ func init() {
 }
 
 func releaseRun(cmd *cobra.Command, args []string) error {
-	logSection("Release Management")
+	clioutput.Section("Release Management")
 
 	// Handle init flag
 	if releaseInit {
@@ -63,39 +65,39 @@ func releaseRun(cmd *cobra.Command, args []string) error {
 
 	// Check goreleaser installation
 	if !isGoreleaserInstalled() {
-		fmt.Printf("%s goreleaser is not installed\n", red("✘"))
-		fmt.Printf("%s Install goreleaser:\n", gray("→"))
-		fmt.Printf("  %s\n", gray("# Using Homebrew (macOS/Linux)"))
-		fmt.Printf("  %s\n", cyan("brew install goreleaser"))
-		fmt.Printf("  %s\n", gray("# Using Go install"))
-		fmt.Printf("  %s\n", cyan("go install github.com/goreleaser/goreleaser@latest"))
-		fmt.Printf("  %s\n", gray("# Using curl (Linux/macOS)"))
-		fmt.Printf("  %s\n", cyan("curl -sfL https://goreleaser.com/static/run | bash"))
-		return fmt.Errorf("goreleaser not found")
+		clioutput.Error("", "goreleaser is not installed")
+		clioutput.Item("", "Install goreleaser:")
+		clioutput.Line(clioutput.StyleMuted, "# Using Homebrew (macOS/Linux)")
+		clioutput.Line(clioutput.StyleInfo, "brew install goreleaser")
+		clioutput.Line(clioutput.StyleMuted, "# Using Go install")
+		clioutput.Line(clioutput.StyleInfo, "go install github.com/goreleaser/goreleaser@latest")
+		clioutput.Line(clioutput.StyleMuted, "# Using curl (Linux/macOS)")
+		clioutput.Line(clioutput.StyleInfo, "curl -sfL https://goreleaser.com/static/run | bash")
+		return errors.New("goreleaser not found")
 	}
 
-	fmt.Printf("%s goreleaser is installed\n", green("✔"))
+	clioutput.Success("", "goreleaser is installed")
 
 	// Check configuration file and auto-create if not exists
 	configFile := ".goreleaser.yml"
 	if !fileExists(configFile) {
 		configFile = ".goreleaser.yaml"
 		if !fileExists(configFile) {
-			fmt.Printf("%s No .goreleaser.yml found, creating default configuration\n", gray("→"))
+			clioutput.Item("", "No .goreleaser.yml found, creating default configuration")
 			if err := initGoreleaserConfig(); err != nil {
 				return fmt.Errorf("failed to generate config: %w", err)
 			}
-			fmt.Printf("%s Configuration file created automatically\n", green("✔"))
+			clioutput.Success("", "Configuration file created automatically")
 			configFile = ".goreleaser.yml"
 		}
 	}
 
-	fmt.Printf("%s Using configuration: %s\n", green("✔"), configFile)
+	clioutput.Success("", "Using configuration: %s", configFile)
 
 	// Clean dist directory if requested
 	if releaseClean {
 		if err := cleanDistDirectory(); err != nil {
-			fmt.Printf("%s Failed to clean dist directory: %v\n", yellow("⚠"), err)
+			clioutput.Warn("", "Failed to clean dist directory: %v", err)
 		}
 	}
 
@@ -115,7 +117,7 @@ func isGoreleaserInstalled() bool {
 
 // initGoreleaserConfig generates a default .goreleaser.yml configuration
 func initGoreleaserConfig() error {
-	fmt.Printf("%s Generating .goreleaser.yml configuration\n", gray("→"))
+	clioutput.Item("", "Generating .goreleaser.yml configuration")
 
 	// Get module name for binary name
 	moduleName, err := getModuleName()
@@ -209,31 +211,31 @@ changelog:
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	fmt.Printf("%s Generated .goreleaser.yml configuration\n", green("✔"))
-	fmt.Printf("%s Edit the configuration file to customize your release settings\n", gray("→"))
+	clioutput.Success("", "Generated .goreleaser.yml configuration")
+	clioutput.Item("", "Edit the configuration file to customize your release settings")
 
 	return nil
 }
 
 // checkGoreleaserSetup checks goreleaser installation and configuration
 func checkGoreleaserSetup() error {
-	fmt.Printf("%s Checking goreleaser setup\n", gray("→"))
+	clioutput.Item("", "Checking goreleaser setup")
 
 	// Check installation
 	if !isGoreleaserInstalled() {
-		fmt.Printf("%s goreleaser is not installed\n", red("✘"))
-		return fmt.Errorf("goreleaser not found")
+		clioutput.Error("", "goreleaser is not installed")
+		return errors.New("goreleaser not found")
 	}
-	fmt.Printf("%s goreleaser is installed\n", green("✔"))
+	clioutput.Success("", "goreleaser is installed")
 
 	// Get version
 	cmd := exec.Command("goreleaser", "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("%s Failed to get goreleaser version: %v\n", yellow("⚠"), err)
+		clioutput.Warn("", "Failed to get goreleaser version: %v", err)
 	} else {
 		version := strings.TrimSpace(string(output))
-		fmt.Printf("%s Version: %s\n", gray("→"), version)
+		clioutput.Item("", "Version: %s", version)
 	}
 
 	// Check configuration
@@ -241,41 +243,41 @@ func checkGoreleaserSetup() error {
 	configFound := false
 	for _, configFile := range configFiles {
 		if fileExists(configFile) {
-			fmt.Printf("%s Configuration found: %s\n", green("✔"), configFile)
+			clioutput.Success("", "Configuration found: %s", configFile)
 			configFound = true
 			break
 		}
 	}
 
 	if !configFound {
-		fmt.Printf("%s No configuration file found\n", yellow("⚠"))
-		fmt.Printf("%s Run 'gg release --init' to generate default configuration\n", gray("→"))
+		clioutput.Warn("", "No configuration file found")
+		clioutput.Item("", "Run 'gg release --init' to generate default configuration")
 	}
 
 	// Check git repository
 	if !isGitRepository() {
-		fmt.Printf("%s Not a git repository\n", red("✘"))
-		return fmt.Errorf("git repository required")
+		clioutput.Error("", "Not a git repository")
+		return errors.New("git repository required")
 	}
-	fmt.Printf("%s Git repository detected\n", green("✔"))
+	clioutput.Success("", "Git repository detected")
 
 	// Check for uncommitted changes
 	if hasUncommittedChanges() {
-		fmt.Printf("%s Uncommitted changes detected\n", yellow("⚠"))
-		fmt.Printf("%s Commit changes before creating a release\n", gray("→"))
+		clioutput.Warn("", "Uncommitted changes detected")
+		clioutput.Item("", "Commit changes before creating a release")
 	} else {
-		fmt.Printf("%s Working directory is clean\n", green("✔"))
+		clioutput.Success("", "Working directory is clean")
 	}
 
 	// Check GITHUB_TOKEN for publishing
 	if os.Getenv("GITHUB_TOKEN") != "" {
-		fmt.Printf("%s GITHUB_TOKEN is set\n", green("✔"))
+		clioutput.Success("", "GITHUB_TOKEN is set")
 	} else {
-		fmt.Printf("%s GITHUB_TOKEN not set (required for publishing)\n", yellow("⚠"))
-		fmt.Printf("%s Set GITHUB_TOKEN environment variable for GitHub releases\n", gray("→"))
+		clioutput.Warn("", "GITHUB_TOKEN not set (required for publishing)")
+		clioutput.Item("", "Set GITHUB_TOKEN environment variable for GitHub releases")
 	}
 
-	fmt.Printf("%s Setup check completed\n", green("✔"))
+	clioutput.Success("", "Setup check completed")
 	return nil
 }
 
@@ -284,10 +286,10 @@ func buildRelease(snapshot bool) error {
 	var args []string
 
 	if snapshot {
-		fmt.Printf("%s Building snapshot release\n", gray("→"))
+		clioutput.Item("", "Building snapshot release")
 		args = append(args, "release", "--snapshot")
 	} else {
-		fmt.Printf("%s Building and publishing release\n", gray("→"))
+		clioutput.Item("", "Building and publishing release")
 		args = append(args, "release")
 	}
 
@@ -301,15 +303,15 @@ func buildRelease(snapshot bool) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("%s Release build failed: %v\n", red("✘"), err)
+		clioutput.Error("", "Release build failed: %v", err)
 		return fmt.Errorf("goreleaser failed: %w", err)
 	}
 
 	if snapshot {
-		fmt.Printf("%s Snapshot release completed\n", green("✔"))
-		fmt.Printf("%s Artifacts available in ./dist directory\n", gray("→"))
+		clioutput.Success("", "Snapshot release completed")
+		clioutput.Item("", "Artifacts available in ./dist directory")
 	} else {
-		fmt.Printf("%s Release published successfully\n", green("✔"))
+		clioutput.Success("", "Release published successfully")
 	}
 
 	return nil
@@ -317,11 +319,11 @@ func buildRelease(snapshot bool) error {
 
 // cleanDistDirectory removes the dist directory
 func cleanDistDirectory() error {
-	fmt.Printf("%s Cleaning dist directory\n", gray("→"))
+	clioutput.Item("", "Cleaning dist directory")
 	if err := os.RemoveAll("./dist"); err != nil {
 		return fmt.Errorf("failed to remove dist directory: %w", err)
 	}
-	fmt.Printf("%s Dist directory cleaned\n", green("✔"))
+	clioutput.Success("", "Dist directory cleaned")
 	return nil
 }
 

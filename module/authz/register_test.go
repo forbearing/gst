@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -45,7 +46,7 @@ type ListResponse[T any] struct {
 func init() {
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
 	os.Setenv(config.SQLITE_IS_MEMORY, "true")
-	os.Setenv(config.SERVER_PORT, fmt.Sprintf("%d", port))
+	os.Setenv(config.SERVER_PORT, strconv.Itoa(port))
 	os.Setenv(config.REDIS_ENABLE, "true")
 	os.Setenv(config.LOGGER_DIR, "./logs")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
@@ -105,11 +106,14 @@ func TestAuthz(t *testing.T) {
 		})
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+			t.Helper(
 			// #modeliam.SignupRsp {
 			//   +UserID   => "019cbca0-19d4-7971-8be5-65b148027a27" #string
 			//   +Username => "user01" #string
 			//   +Message  => "User created successfully" #string
 			// }
+			)
+
 			require.Equal(t, rsp.Username, username)
 			require.NotEmpty(t, rsp.UserID)
 			require.NotEmpty(t, rsp.Message)
@@ -132,9 +136,12 @@ func TestAuthz(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			t.Helper(
 			// #*modeliam.LoginRsp {
 			//   +SessionID => "019cbca0-1a0b-7a12-8264-4c0525076cd6" #string
 			// }
+			)
+
 			require.NotEmpty(t, rsp.SessionID)
 		})
 	})
@@ -149,6 +156,7 @@ func TestAuthz(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+			t.Helper()
 			require.NotEmpty(t, rsp.SessionID)
 			adminSessionID = rsp.SessionID
 		})
@@ -163,6 +171,7 @@ func TestAuthz(t *testing.T) {
 		resp, err := cli.Request(http.MethodGet, nil)
 		require.NoError(t, err)
 		helper.TestResp(t, resp, func(t *testing.T, rsp []string) {
+			t.Helper(
 			// #[]string [
 			//   0 => "/api/iam/session/heartbeat" #string
 			//   1 => "/api/signup" #string
@@ -187,6 +196,8 @@ func TestAuthz(t *testing.T) {
 			//   20 => "/api/menus" #string
 			//   21 => "/api/authz/roles" #string
 			// ]
+			)
+
 			require.NotEmpty(t, rsp, "apis list should not be empty")
 		})
 	})
@@ -203,6 +214,7 @@ func TestAuthz(t *testing.T) {
 		resp, err := cli.List(&items, total)
 		require.NoError(t, err)
 		helper.TestResp[ListResponse[*authz.Permission]](t, resp, func(t *testing.T, rsp ListResponse[*authz.Permission]) {
+			t.Helper()
 			require.NotNil(t, rsp.Items)
 			require.GreaterOrEqual(t, rsp.Total, int64(0))
 		})
@@ -224,6 +236,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.List(&items, total)
 			require.NoError(t, err)
 			helper.TestResp[ListResponse[*authz.Menu]](t, resp, func(t *testing.T, rsp ListResponse[*authz.Menu]) {
+				t.Helper()
 				require.NotNil(t, rsp.Items)
 				require.GreaterOrEqual(t, rsp.Total, int64(0))
 			})
@@ -239,6 +252,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Create(createReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Menu](t, resp, func(t *testing.T, rsp *authz.Menu) {
+				t.Helper()
 				require.NotEmpty(t, rsp.ID)
 				require.Equal(t, createReq.Label, rsp.Label)
 				require.Equal(t, createReq.Path, rsp.Path)
@@ -252,6 +266,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Get(menuID, got)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Menu](t, resp, func(t *testing.T, rsp *authz.Menu) {
+				t.Helper()
 				require.Equal(t, menuID, rsp.ID)
 				require.Equal(t, "Test Menu", rsp.Label)
 				require.Equal(t, "/test", rsp.Path)
@@ -268,6 +283,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Update(menuID, updateReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Menu](t, resp, func(t *testing.T, rsp *authz.Menu) {
+				t.Helper()
 				require.Equal(t, menuID, rsp.ID)
 				require.Equal(t, updateReq.Label, rsp.Label)
 				require.Equal(t, updateReq.Path, rsp.Path)
@@ -279,6 +295,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Patch(menuID, patchReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Menu](t, resp, func(t *testing.T, rsp *authz.Menu) {
+				t.Helper()
 				require.Equal(t, menuID, rsp.ID)
 				require.Equal(t, patchReq.Label, rsp.Label)
 				require.Equal(t, "/test-updated", rsp.Path)
@@ -296,6 +313,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cliExpand.List(&items, total)
 			require.NoError(t, err)
 			helper.TestResp[ListResponse[*authz.Menu]](t, resp, func(t *testing.T, rsp ListResponse[*authz.Menu]) {
+				t.Helper()
 				require.NotNil(t, rsp.Items)
 				require.GreaterOrEqual(t, rsp.Total, int64(0))
 			})
@@ -324,6 +342,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.List(&items, total)
 			require.NoError(t, err)
 			helper.TestResp[ListResponse[*authz.Role]](t, resp, func(t *testing.T, rsp ListResponse[*authz.Role]) {
+				t.Helper()
 				require.NotNil(t, rsp.Items)
 				require.GreaterOrEqual(t, rsp.Total, int64(0))
 			})
@@ -337,6 +356,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Create(createReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Role](t, resp, func(t *testing.T, rsp *authz.Role) {
+				t.Helper()
 				require.NotEmpty(t, rsp.ID)
 				require.Equal(t, createReq.Name, rsp.Name)
 				require.Equal(t, createReq.Code, rsp.Code)
@@ -349,6 +369,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Get(roleID, got)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Role](t, resp, func(t *testing.T, rsp *authz.Role) {
+				t.Helper()
 				require.Equal(t, roleID, rsp.ID)
 				require.Equal(t, "Test Role", rsp.Name)
 				require.Equal(t, "test_role", rsp.Code)
@@ -363,6 +384,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Update(roleID, updateReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Role](t, resp, func(t *testing.T, rsp *authz.Role) {
+				t.Helper()
 				require.Equal(t, roleID, rsp.ID)
 				require.Equal(t, updateReq.Name, rsp.Name)
 				require.Equal(t, updateReq.Code, rsp.Code)
@@ -374,6 +396,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Patch(roleID, patchReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.Role](t, resp, func(t *testing.T, rsp *authz.Role) {
+				t.Helper()
 				require.Equal(t, roleID, rsp.ID)
 				require.Equal(t, patchReq.Name, rsp.Name)
 				require.Equal(t, "test_role_updated", rsp.Code)
@@ -386,6 +409,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.List(&items, total)
 			require.NoError(t, err)
 			helper.TestResp[ListResponse[*authz.Role]](t, resp, func(t *testing.T, rsp ListResponse[*authz.Role]) {
+				t.Helper()
 				require.NotNil(t, rsp.Items)
 				require.GreaterOrEqual(t, rsp.Total, int64(0))
 			})
@@ -418,6 +442,7 @@ func TestAuthz(t *testing.T) {
 		resp, err = cliRole.Create(&authz.Role{Name: "UserRole Test Role", Code: "userrole_test_role"})
 		require.NoError(t, err)
 		helper.TestResp[*authz.Role](t, resp, func(t *testing.T, rsp *authz.Role) {
+			t.Helper()
 			require.NotEmpty(t, rsp.ID)
 			roleID = rsp.ID
 		})
@@ -428,6 +453,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.List(&items, total)
 			require.NoError(t, err)
 			helper.TestResp[ListResponse[*authz.UserRole]](t, resp, func(t *testing.T, rsp ListResponse[*authz.UserRole]) {
+				t.Helper()
 				require.NotNil(t, rsp.Items)
 				require.GreaterOrEqual(t, rsp.Total, int64(0))
 			})
@@ -441,6 +467,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Create(createReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.UserRole](t, resp, func(t *testing.T, rsp *authz.UserRole) {
+				t.Helper()
 				require.NotEmpty(t, rsp.ID)
 				require.Equal(t, userID, rsp.UserID)
 				require.Equal(t, roleID, rsp.RoleID)
@@ -455,6 +482,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Get(userRoleID, got)
 			require.NoError(t, err)
 			helper.TestResp[*authz.UserRole](t, resp, func(t *testing.T, rsp *authz.UserRole) {
+				t.Helper()
 				require.Equal(t, userRoleID, rsp.ID)
 				require.Equal(t, userID, rsp.UserID)
 				require.Equal(t, roleID, rsp.RoleID)
@@ -469,6 +497,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Update(userRoleID, updateReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.UserRole](t, resp, func(t *testing.T, rsp *authz.UserRole) {
+				t.Helper()
 				require.Equal(t, userRoleID, rsp.ID)
 				require.Equal(t, userID, rsp.UserID)
 				require.Equal(t, roleID, rsp.RoleID)
@@ -480,6 +509,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.Patch(userRoleID, patchReq)
 			require.NoError(t, err)
 			helper.TestResp[*authz.UserRole](t, resp, func(t *testing.T, rsp *authz.UserRole) {
+				t.Helper()
 				require.Equal(t, userRoleID, rsp.ID)
 				require.Equal(t, userID, rsp.UserID)
 				require.Equal(t, roleID, rsp.RoleID)
@@ -492,6 +522,7 @@ func TestAuthz(t *testing.T) {
 			resp, err = cli.List(&items, total)
 			require.NoError(t, err)
 			helper.TestResp[ListResponse[*authz.UserRole]](t, resp, func(t *testing.T, rsp ListResponse[*authz.UserRole]) {
+				t.Helper()
 				require.NotNil(t, rsp.Items)
 				require.GreaterOrEqual(t, rsp.Total, int64(0))
 			})

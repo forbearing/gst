@@ -59,7 +59,7 @@ var users = []*User{
 
 func TestPriorityQueue_CustomStruct(t *testing.T) {
 	q, err := pq.New(userCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	for _, u := range users {
 		q.Enqueue(u)
 	}
@@ -126,10 +126,10 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			q, err := pq.New(tt.cmp, tt.opts...)
 			if tt.wantError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, q)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, q)
 			}
 		})
@@ -138,7 +138,7 @@ func TestNew(t *testing.T) {
 
 func TestPriorityQueue_Basic(t *testing.T) {
 	q, err := pq.New(intCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.True(t, q.IsEmpty())
 	assert.Equal(t, 0, q.Len())
@@ -167,7 +167,7 @@ func TestPriorityQueue_Basic(t *testing.T) {
 
 func TestPriorityQueue_MaxPriority(t *testing.T) {
 	q, err := pq.New(intCmp, pq.WithMaxPriority[int]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	nums := []int{3, 1, 4, 1, 5, 9, 2, 6}
 	for _, num := range nums {
@@ -184,7 +184,7 @@ func TestPriorityQueue_MaxPriority(t *testing.T) {
 
 func TestPriorityQueue_EmptyOperations(t *testing.T) {
 	q, err := pq.New(intCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	val, ok := q.Peek()
 	assert.False(t, ok)
@@ -199,7 +199,7 @@ func TestPriorityQueue_EmptyOperations(t *testing.T) {
 
 func TestPriorityQueue_Clone(t *testing.T) {
 	q, err := pq.New(intCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	nums := []int{3, 1, 4, 1, 5}
 	for _, num := range nums {
@@ -217,7 +217,7 @@ func TestPriorityQueue_Clone(t *testing.T) {
 
 func TestPriorityQueue_String(t *testing.T) {
 	q, err := pq.New(intCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Empty queue
 	assert.Equal(t, "queue:{}", q.String())
@@ -233,18 +233,18 @@ func TestPriorityQueue_String(t *testing.T) {
 
 func TestPriorityQueue_Encoding(t *testing.T) {
 	q, err := pq.New(intCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	q.Enqueue(1)
 	q.Enqueue(2)
 	q.Enqueue(3)
 
 	bytesData, err := json.Marshal(q)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	q2, err := pq.New(intCmp)
-	assert.NoError(t, err)
-	assert.NoError(t, json.Unmarshal(bytesData, q2))
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(bytesData, q2))
 
 	assert.Equal(t, q.Len(), q2.Len())
 	assert.ElementsMatch(t, q.Values(), q2.Values())
@@ -252,7 +252,7 @@ func TestPriorityQueue_Encoding(t *testing.T) {
 
 func TestPriorityQueue_EdgeCases(t *testing.T) {
 	q, err := pq.New(intCmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	q.Enqueue(1)
 	q.Enqueue(1)

@@ -8,6 +8,7 @@ import (
 )
 
 func createTree(b *testing.B, size int, safe bool) *avltree.Tree[float64, float64] {
+	b.Helper()
 	var t *avltree.Tree[float64, float64]
 	var err error
 	if safe {
@@ -25,6 +26,7 @@ func createTree(b *testing.B, size int, safe bool) *avltree.Tree[float64, float6
 }
 
 func createTreeInt(b *testing.B, size int, safe bool) *avltree.Tree[int, int] {
+	b.Helper()
 	var t *avltree.Tree[int, int]
 	var err error
 	if safe {
@@ -42,6 +44,7 @@ func createTreeInt(b *testing.B, size int, safe bool) *avltree.Tree[int, int] {
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(t *avltree.Tree[float64, float64])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {
@@ -84,6 +87,7 @@ func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(t *avltree
 }
 
 func benchmarkIndex(b *testing.B, sizes []int, do func(t *avltree.Tree[int, int], i int)) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {
@@ -131,13 +135,6 @@ func BenchmarkAVLTreeGet(b *testing.B) {
 	benchmarkIndex(b, []int{1000000}, func(t *avltree.Tree[int, int], i int) {
 		_, _ = t.Get(i % 1000000)
 	})
-}
-
-func benchmarkGet(b *testing.B, t *avltree.Tree[int, int], size int) {
-	b.ResetTimer()
-	for i := range b.N {
-		_, _ = t.Get(i % size)
-	}
 }
 
 func BenchmarkAVLTreeDelete(b *testing.B) {

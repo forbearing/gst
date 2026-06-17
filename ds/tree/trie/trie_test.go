@@ -28,38 +28,6 @@ var (
 		"car", "card", "cardboard",
 		"care", "careful", "carefully",
 	}
-	wordsD = []string{
-		"do", "dog", "doing", "done",
-		"data", "database", "datagram",
-		"day", "daylight", "daytime",
-	}
-	wordsE = []string{
-		"eat", "eating", "eaten",
-		"easy", "easily", "easier",
-		"echo", "ecology", "economic",
-	}
-	wordsF = []string{
-		"face", "facial", "facility",
-		"fact", "factory", "factorial",
-		"food", "fool", "foolish",
-	}
-	wordsP = []string{
-		"program", "programmer", "programming",
-		"process", "processor", "processing",
-		"phone", "photograph", "photographer",
-	}
-	wordsS = []string{
-		"system", "systematic", "systematically",
-		"student", "study", "studying",
-		"stream", "streaming", "streamline",
-	}
-
-	wordsT = []string{
-		"tea", "teacher", "teaching",
-		"team", "teammate", "teamwork",
-		"tech", "technical", "technology",
-		"time", "timer", "timestamp",
-	}
 )
 
 func TestTrie(t *testing.T) {
@@ -166,7 +134,7 @@ func TestTrie(t *testing.T) {
 		assert.Equal(t, len(wordsC), tt.PrefixCount([]rune("c")))
 		assert.Equal(t, len(wordsA)+len(wordsB)+len(wordsC), tt.Size())
 		assert.False(t, tt.IsEmpty())
-		assert.Zero(t, val)
+		assert.Empty(t, val)
 		assert.False(t, ok)
 
 		val, ok = tt.Delete([]rune("cat"))

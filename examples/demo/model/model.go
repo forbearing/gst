@@ -2,14 +2,14 @@
 package model
 
 import (
-	"demo/model/setting"
+	"demo/model/config"
+	"demo/model/conversation"
 
 	"github.com/forbearing/gst/model"
 )
 
 func init() {
-	model.Register[*setting.Project]()
-	model.Register[*setting.Region]()
-	model.Register[*setting.Tenant]()
-	model.Register[*setting.Vendor]()
+	model.Register[*config.File]()
+	model.Register[*conversation.Message]()
+	model.Register[*Conversation]()
 }

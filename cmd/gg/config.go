@@ -4,317 +4,573 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/config"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/ini.v1"
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	listConfigs  bool
-	outputFormat string
+type configFileFormat string
+
+const (
+	configFormatINI  configFileFormat = "ini"
+	configFormatJSON configFileFormat = "json"
+	configFormatTOML configFileFormat = "toml"
+	configFormatYAML configFileFormat = "yaml"
 )
 
-var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Configuration management commands",
-	Long:  "Configuration management commands for gst framework",
+type configDefaultsOptions struct {
+	format string
+	output string
+	force  bool
 }
 
-var dumpCmd = &cobra.Command{
-	Use:   "dump [config-name]",
-	Short: "Dump default configuration",
-	Long: `Dump default configuration to stdout.
-
-Examples:
-  gg config dump                    # Dump all default configurations (JSON format)
-  gg config dump --list             # List available configuration names
-  gg config dump --format yaml     # Dump all configurations in YAML format
-  gg config dump --format ini      # Dump all configurations in INI format
-  gg config dump redis             # Dump redis configuration only (JSON format)
-  gg config dump redis --format yaml  # Dump redis configuration in YAML format`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runDump,
+type configConvertOptions struct {
+	from   string
+	to     string
+	output string
+	force  bool
 }
 
-func init() {
-	dumpCmd.Flags().BoolVar(&listConfigs, "list", false, "List available configuration names")
-	dumpCmd.Flags().StringVarP(&outputFormat, "format", "f", "json", "Output format (json, yaml, ini)")
-	configCmd.AddCommand(dumpCmd)
-}
+var configCmd = newConfigCmd()
 
-// getAvailableConfigs returns a map of available configuration names and their types
-func getAvailableConfigs() map[string]reflect.Type {
-	configs := make(map[string]reflect.Type)
+func newConfigCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Manage gst configuration files",
+		Long: `Manage gst configuration files.
 
-	// Get the Config struct type
-	configType := reflect.TypeFor[config.Config]()
-
-	// Iterate through all fields in the Config struct
-	for i := 0; i < configType.NumField(); i++ {
-		field := configType.Field(i)
-
-		// Get the json tag name as the config name
-		jsonTag := field.Tag.Get("json")
-		if jsonTag != "" && jsonTag != "-" {
-			// Remove omitempty and other options from tag
-			configName, _, _ := strings.Cut(jsonTag, ",")
-			configs[configName] = field.Type
-		}
+Use this command to inspect framework default configuration and convert
+configuration files between INI, JSON, TOML, and YAML formats.`,
 	}
 
-	return configs
+	cmd.AddCommand(
+		newConfigListCmd(),
+		newConfigDefaultsCmd(),
+		newConfigConvertCmd(),
+	)
+	return cmd
 }
 
-func runDump(cmd *cobra.Command, args []string) error {
-	availableConfigs := getAvailableConfigs()
+func newConfigListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List framework configuration sections",
+		Long:  "List the top-level framework configuration sections supported by gst.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			for _, name := range configSectionNames() {
+				fmt.Fprintln(cmd.OutOrStdout(), name)
+			}
+			return nil
+		},
+	}
+}
 
-	// If --list flag is provided, list all available configurations
-	if listConfigs {
-		fmt.Println("Available configurations:")
+func newConfigDefaultsCmd() *cobra.Command {
+	opts := &configDefaultsOptions{format: string(configFormatINI)}
+	cmd := &cobra.Command{
+		Use:   "defaults [section]",
+		Short: "Print framework default configuration",
+		Long: `Print framework default configuration.
 
-		// Sort config names for consistent output
-		names := make([]string, 0, len(availableConfigs))
-		for name := range availableConfigs {
+When section is provided, only that top-level configuration section is printed.
+The default output format is INI, matching the default gst config file format.`,
+		Example: `  gg config defaults
+  gg config defaults server --format yaml
+  gg config defaults server --format toml
+  gg config defaults redis --format json --output redis.json
+  gg config defaults --format yaml --output config.yaml --force`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigDefaults(cmd, args, opts)
+		},
+	}
+
+	cmd.Flags().StringVarP(&opts.format, "format", "f", string(configFormatINI), "output format: ini, json, toml, yaml")
+	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "write output to file instead of stdout")
+	cmd.Flags().BoolVar(&opts.force, "force", false, "overwrite output file if it exists")
+	return cmd
+}
+
+func newConfigConvertCmd() *cobra.Command {
+	opts := new(configConvertOptions)
+	cmd := &cobra.Command{
+		Use:   "convert <input> [output]",
+		Short: "Convert configuration files between formats",
+		Long: `Convert configuration files between INI, JSON, TOML, and YAML formats.
+
+Input and output formats are inferred from file extensions unless --from or --to
+is provided. If no output file is provided, --to is required and converted
+content is written to stdout.`,
+		Example: `  gg config convert config.ini config.yaml
+  gg config convert config.yaml config.json
+  gg config convert config.json config.toml
+  gg config convert config.json config.ini --force
+  gg config convert config.ini --to yaml`,
+		Args: cobra.RangeArgs(1, 2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runConfigConvert(cmd, args, opts)
+		},
+	}
+
+	cmd.Flags().StringVar(&opts.from, "from", "", "input format override: ini, json, toml, yaml")
+	cmd.Flags().StringVar(&opts.to, "to", "", "output format override: ini, json, toml, yaml")
+	cmd.Flags().StringVarP(&opts.output, "output", "o", "", "write output to file instead of stdout")
+	cmd.Flags().BoolVar(&opts.force, "force", false, "overwrite output file if it exists")
+	return cmd
+}
+
+func runConfigDefaults(cmd *cobra.Command, args []string, opts *configDefaultsOptions) error {
+	format, err := normalizeConfigFormat(opts.format)
+	if err != nil {
+		return err
+	}
+
+	data, err := defaultConfigData()
+	if err != nil {
+		return err
+	}
+	if len(args) == 1 {
+		section := strings.ToLower(args[0])
+		value, ok := data[section]
+		if !ok {
+			return fmt.Errorf("unknown configuration section %q; run 'gg config list' to see available sections", args[0])
+		}
+		data = map[string]any{section: value}
+	}
+
+	content, err := encodeConfigData(data, format)
+	if err != nil {
+		return err
+	}
+	return writeConfigOutput(cmd.OutOrStdout(), opts.output, opts.force, content)
+}
+
+func runConfigConvert(cmd *cobra.Command, args []string, opts *configConvertOptions) error {
+	input := args[0]
+	output := opts.output
+	if len(args) == 2 {
+		if output != "" {
+			return errors.New("output file specified twice; use either positional output or --output")
+		}
+		output = args[1]
+	}
+
+	from, err := resolveInputFormat(input, opts.from)
+	if err != nil {
+		return err
+	}
+	to, err := resolveOutputFormat(output, opts.to)
+	if err != nil {
+		return err
+	}
+
+	raw, err := os.ReadFile(input)
+	if err != nil {
+		return errors.Wrapf(err, "failed to read input file %s", input)
+	}
+	data, err := decodeConfigData(raw, from)
+	if err != nil {
+		return errors.Wrapf(err, "failed to decode %s as %s", input, from)
+	}
+	content, err := encodeConfigData(data, to)
+	if err != nil {
+		return err
+	}
+	return writeConfigOutput(cmd.OutOrStdout(), output, opts.force, content)
+}
+
+func configSectionNames() []string {
+	configType := reflect.TypeFor[config.Config]()
+	names := make([]string, 0, configType.NumField())
+	for field := range configType.Fields() {
+		name := configTagName(field.Tag.Get("mapstructure"))
+		if name == "" {
+			name = configTagName(field.Tag.Get("json"))
+		}
+		if name != "" {
 			names = append(names, name)
 		}
-		sort.Strings(names)
-
-		for _, name := range names {
-			fmt.Printf("  %s\n", name)
-		}
-		return nil
 	}
-
-	// Validate output format
-	if outputFormat != "json" && outputFormat != "yaml" && outputFormat != "ini" {
-		return fmt.Errorf("unsupported format: %s. Supported formats: json, yaml, ini", outputFormat)
-	}
-
-	// If a specific config name is provided
-	if len(args) == 1 {
-		configName := args[0]
-
-		// Check if the config exists
-		if _, exists := availableConfigs[configName]; !exists {
-			return fmt.Errorf("configuration '%s' not found. Use 'gg config dump --list' to see available configurations", configName)
-		}
-
-		// Initialize config to get default values
-		if err := config.Init(); err != nil {
-			return fmt.Errorf("failed to initialize config: %w", err)
-		}
-		defer config.Clean()
-
-		// Get the specific configuration value using reflection
-		configValue := reflect.ValueOf(config.App).Elem()
-		configType := reflect.TypeFor[config.Config]()
-
-		var specificConfig any
-		for i := 0; i < configType.NumField(); i++ {
-			field := configType.Field(i)
-			jsonTag := field.Tag.Get("json")
-			if jsonTag != "" && jsonTag != "-" {
-				name, _, _ := strings.Cut(jsonTag, ",")
-				if name == configName {
-					specificConfig = configValue.Field(i).Interface()
-					break
-				}
-			}
-		}
-
-		if specificConfig == nil {
-			return fmt.Errorf("configuration '%s' not found", configName)
-		}
-
-		// Create a map with the specific config for consistent output format
-		configMap := map[string]any{
-			configName: specificConfig,
-		}
-
-		// Create temporary file with appropriate extension
-		tempFile := fmt.Sprintf("temp_config_%s.%s", configName, outputFormat)
-		defer os.Remove(tempFile)
-
-		// Format and output the specific configuration
-		switch outputFormat {
-		case "json":
-			content, err := json.MarshalIndent(configMap, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal JSON: %w", err)
-			}
-			fmt.Print(string(content))
-		case "yaml":
-			content, err := yaml.Marshal(configMap)
-			if err != nil {
-				return fmt.Errorf("failed to marshal YAML: %w", err)
-			}
-			fmt.Print(string(content))
-		case "ini":
-			// For INI format, we need to handle it specially
-			cfg := ini.Empty()
-			section, err := cfg.NewSection(configName)
-			if err != nil {
-				return fmt.Errorf("failed to create INI section: %w", err)
-			}
-
-			// Convert the config struct to key-value pairs
-			if err := convertStructToINI(section, specificConfig); err != nil {
-				return fmt.Errorf("failed to convert config to INI: %w", err)
-			}
-
-			var buf bytes.Buffer
-			if _, err := cfg.WriteTo(&buf); err != nil {
-				return fmt.Errorf("failed to write INI: %w", err)
-			}
-			fmt.Print(buf.String())
-		}
-
-		return nil
-	}
-
-	// Save stdout and redirect to capture output
-	oldStdout := os.Stdout
-	defer func() { os.Stdout = oldStdout }()
-
-	// Create a pipe to capture output
-	r, w, err := os.Pipe()
-	if err != nil {
-		return fmt.Errorf("failed to create pipe: %w", err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	// Redirect stdout to pipe
-	os.Stdout = w
-
-	// Initialize config
-	if err = config.Init(); err != nil {
-		return fmt.Errorf("failed to initialize config: %w", err)
-	}
-	defer config.Clean()
-
-	// Create temporary file with appropriate extension
-	tempFile, err := os.CreateTemp("", fmt.Sprintf("temp_config.*.%s", outputFormat))
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	defer tempFile.Close()
-	defer os.Remove(tempFile.Name())
-
-	// Save config to temporary file
-	if err = config.Save(tempFile); err != nil {
-		return fmt.Errorf("failed to save config: %w", err)
-	}
-
-	// Restore stdout
-	w.Close()
-	os.Stdout = oldStdout
-
-	// Read the generated file and output to stdout
-	content, err := os.ReadFile(tempFile.Name())
-	if err != nil {
-		return fmt.Errorf("failed to read generated config file: %w", err)
-	}
-
-	fmt.Print(string(content))
-	return nil
+	sort.Strings(names)
+	return names
 }
 
-// convertStructToINI converts a struct to INI key-value pairs
-func convertStructToINI(section *ini.Section, value any) error {
-	val := reflect.ValueOf(value)
-	if val.Kind() == reflect.Pointer {
-		if val.IsNil() {
-			return nil
-		}
-		val = val.Elem()
+func defaultConfigData() (map[string]any, error) {
+	var content bytes.Buffer
+	err := withCleanConfigEnvironment(func() error {
+		return inTemporaryDirectory(func() error {
+			return withStdoutDiscarded(func() error {
+				if err := config.Init(); err != nil {
+					return errors.Wrap(err, "failed to initialize default config")
+				}
+				defer config.Clean()
+				if err := config.Save(&content); err != nil {
+					return errors.Wrap(err, "failed to collect default config")
+				}
+				return nil
+			})
+		})
+	})
+	if err != nil {
+		return nil, err
 	}
+	return decodeINIConfig(content.Bytes())
+}
 
-	if val.Kind() != reflect.Struct {
-		// For non-struct values, convert directly to string
-		section.Key("value").SetValue(fmt.Sprintf("%v", value))
+func withCleanConfigEnvironment(fn func() error) error {
+	keys := configEnvKeys(reflect.TypeFor[config.Config](), nil)
+	saved := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if value, ok := os.LookupEnv(key); ok {
+			saved[key] = value
+			if err := os.Unsetenv(key); err != nil {
+				return errors.Wrapf(err, "failed to unset environment variable %s", key)
+			}
+		}
+	}
+	defer func() {
+		for _, key := range keys {
+			if value, ok := saved[key]; ok {
+				_ = os.Setenv(key, value)
+			}
+		}
+	}()
+	return fn()
+}
+
+func configEnvKeys(typ reflect.Type, prefix []string) []string {
+	for typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	if typ.Kind() != reflect.Struct {
 		return nil
 	}
 
-	typ := val.Type()
-	for i := 0; i < val.NumField(); i++ {
-		field := typ.Field(i)
-		fieldValue := val.Field(i)
-
-		if !fieldValue.CanInterface() {
+	keys := make([]string, 0)
+	for field := range typ.Fields() {
+		name := configTagName(field.Tag.Get("mapstructure"))
+		if name == "" {
+			name = configTagName(field.Tag.Get("json"))
+		}
+		if name == "" {
 			continue
 		}
 
-		// Use field name or json tag as key
-		keyName := field.Name
-		if jsonTag := field.Tag.Get("json"); jsonTag != "" && jsonTag != "-" {
-			keyName = strings.Split(jsonTag, ",")[0]
+		fieldPath := append(append([]string{}, prefix...), name)
+		fieldType := field.Type
+		for fieldType.Kind() == reflect.Pointer {
+			fieldType = fieldType.Elem()
 		}
-
-		// Convert field value to string
-		switch fieldValue.Kind() {
-		case reflect.String:
-			section.Key(keyName).SetValue(fieldValue.String())
-		case reflect.Bool:
-			section.Key(keyName).SetValue(fmt.Sprintf("%t", fieldValue.Bool()))
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			section.Key(keyName).SetValue(fmt.Sprintf("%d", fieldValue.Int()))
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			section.Key(keyName).SetValue(fmt.Sprintf("%d", fieldValue.Uint()))
-		case reflect.Float32, reflect.Float64:
-			section.Key(keyName).SetValue(fmt.Sprintf("%g", fieldValue.Float()))
-		case reflect.Slice, reflect.Array:
-			// Handle slices by joining with commas
-			var strValues []string
-			for j := 0; j < fieldValue.Len(); j++ {
-				strValues = append(strValues, fmt.Sprintf("%v", fieldValue.Index(j).Interface()))
-			}
-			section.Key(keyName).SetValue(strings.Join(strValues, ","))
-		default:
-			section.Key(keyName).SetValue(fmt.Sprintf("%v", fieldValue.Interface()))
+		if fieldType.Kind() == reflect.Struct && fieldType.PkgPath() != "time" {
+			keys = append(keys, configEnvKeys(fieldType, fieldPath)...)
+			continue
 		}
+		keys = append(keys, strings.ToUpper(strings.Join(fieldPath, "_")))
 	}
-
-	return nil
+	return keys
 }
 
-// GGConfig represents the configuration for gg command
+func inTemporaryDirectory(fn func() error) error {
+	oldWD, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	tmp, err := os.MkdirTemp("", "gst-config-defaults-*")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+
+	if err := os.Chdir(tmp); err != nil {
+		return err
+	}
+	defer func() {
+		_ = os.Chdir(oldWD)
+	}()
+	return fn()
+}
+
+func withStdoutDiscarded(fn func() error) error {
+	oldStdout := os.Stdout
+	null, err := os.Open(os.DevNull)
+	if err != nil {
+		return err
+	}
+	defer null.Close()
+	os.Stdout = null
+	defer func() {
+		os.Stdout = oldStdout
+	}()
+	return fn()
+}
+
+func decodeConfigData(content []byte, format configFileFormat) (map[string]any, error) {
+	switch format {
+	case configFormatINI:
+		return decodeINIConfig(content)
+	case configFormatJSON:
+		var data map[string]any
+		decoder := json.NewDecoder(bytes.NewReader(content))
+		decoder.UseNumber()
+		if err := decoder.Decode(&data); err != nil {
+			return nil, err
+		}
+		return data, nil
+	case configFormatTOML:
+		var data map[string]any
+		if err := toml.Unmarshal(content, &data); err != nil {
+			return nil, err
+		}
+		return data, nil
+	case configFormatYAML:
+		var data map[string]any
+		if err := yaml.Unmarshal(content, &data); err != nil {
+			return nil, err
+		}
+		return data, nil
+	default:
+		return nil, fmt.Errorf("unsupported config format %q", format)
+	}
+}
+
+func encodeConfigData(data map[string]any, format configFileFormat) ([]byte, error) {
+	switch format {
+	case configFormatINI:
+		return encodeINIConfig(data), nil
+	case configFormatJSON:
+		content, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to encode JSON")
+		}
+		return append(content, '\n'), nil
+	case configFormatTOML:
+		content, err := toml.Marshal(data)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to encode TOML")
+		}
+		return content, nil
+	case configFormatYAML:
+		content, err := yaml.Marshal(data)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to encode YAML")
+		}
+		return content, nil
+	default:
+		return nil, fmt.Errorf("unsupported config format %q", format)
+	}
+}
+
+func decodeINIConfig(content []byte) (map[string]any, error) {
+	cfg, err := ini.Load(content)
+	if err != nil {
+		return nil, err
+	}
+
+	data := make(map[string]any)
+	for _, section := range cfg.Sections() {
+		if section.Name() == ini.DefaultSection {
+			continue
+		}
+		values := make(map[string]any)
+		for _, key := range section.Keys() {
+			values[key.Name()] = key.Value()
+		}
+		setConfigSection(data, section.Name(), values)
+	}
+	return data, nil
+}
+
+func encodeINIConfig(data map[string]any) []byte {
+	sections := make(map[string]map[string]any)
+	flattenConfigSections("", data, sections)
+
+	names := make([]string, 0, len(sections))
+	for name := range sections {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var buf bytes.Buffer
+	for i, name := range names {
+		if i > 0 {
+			buf.WriteByte('\n')
+		}
+		fmt.Fprintf(&buf, "[%s]\n", name)
+
+		keys := make([]string, 0, len(sections[name]))
+		for key := range sections[name] {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			fmt.Fprintf(&buf, "%s = %s\n", key, configScalarString(sections[name][key]))
+		}
+	}
+	return buf.Bytes()
+}
+
+func setConfigSection(data map[string]any, section string, values map[string]any) {
+	parts := strings.Split(section, ".")
+	current := data
+	for _, part := range parts[:len(parts)-1] {
+		next, ok := current[part].(map[string]any)
+		if !ok {
+			next = make(map[string]any)
+			current[part] = next
+		}
+		current = next
+	}
+	current[parts[len(parts)-1]] = values
+}
+
+func flattenConfigSections(prefix string, value map[string]any, sections map[string]map[string]any) {
+	scalars := make(map[string]any)
+	for key, val := range value {
+		if child, ok := asConfigMap(val); ok {
+			name := key
+			if prefix != "" {
+				name = prefix + "." + key
+			}
+			flattenConfigSections(name, child, sections)
+			continue
+		}
+		scalars[key] = val
+	}
+	if prefix != "" && len(scalars) > 0 {
+		sections[prefix] = scalars
+	}
+}
+
+func asConfigMap(value any) (map[string]any, bool) {
+	switch typed := value.(type) {
+	case map[string]any:
+		return typed, true
+	default:
+		return nil, false
+	}
+}
+
+func configScalarString(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		return ""
+	case json.Number:
+		return typed.String()
+	case fmt.Stringer:
+		return typed.String()
+	case []any:
+		values := make([]string, 0, len(typed))
+		for _, item := range typed {
+			values = append(values, configScalarString(item))
+		}
+		return strings.Join(values, ",")
+	default:
+		return fmt.Sprint(typed)
+	}
+}
+
+func writeConfigOutput(stdout io.Writer, output string, force bool, content []byte) error {
+	if output == "" {
+		_, err := stdout.Write(content)
+		return err
+	}
+	if _, err := os.Stat(output); err == nil && !force {
+		return fmt.Errorf("output file %s already exists; use --force to overwrite it", output)
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return errors.Wrapf(err, "failed to inspect output file %s", output)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
+		return errors.Wrapf(err, "failed to create output directory for %s", output)
+	}
+	// The output path is explicitly provided by the CLI caller.
+	return os.WriteFile(output, content, 0o600) //nolint:gosec
+}
+
+func resolveInputFormat(input, override string) (configFileFormat, error) {
+	if override != "" {
+		return normalizeConfigFormat(override)
+	}
+	return inferConfigFormat(input)
+}
+
+func resolveOutputFormat(output, override string) (configFileFormat, error) {
+	if override != "" {
+		return normalizeConfigFormat(override)
+	}
+	if output == "" {
+		return "", errors.New("output file or --to format is required")
+	}
+	return inferConfigFormat(output)
+}
+
+func inferConfigFormat(filename string) (configFileFormat, error) {
+	ext := strings.TrimPrefix(filepath.Ext(filename), ".")
+	if ext == "" {
+		return "", fmt.Errorf("cannot infer config format from %s; use --from or --to", filename)
+	}
+	return normalizeConfigFormat(ext)
+}
+
+func normalizeConfigFormat(format string) (configFileFormat, error) {
+	switch strings.ToLower(strings.TrimPrefix(format, ".")) {
+	case "ini":
+		return configFormatINI, nil
+	case "json":
+		return configFormatJSON, nil
+	case "toml":
+		return configFormatTOML, nil
+	case "yaml", "yml":
+		return configFormatYAML, nil
+	default:
+		return "", fmt.Errorf("unsupported config format %q; supported formats: ini, json, toml, yaml", format)
+	}
+}
+
+func configTagName(tag string) string {
+	name, _, _ := strings.Cut(tag, ",")
+	if name == "-" {
+		return ""
+	}
+	return name
+}
+
+// GGConfig is the local configuration used by gg commands.
 type GGConfig struct {
 	Prune PruneConfig `mapstructure:"prune" yaml:"prune"`
 }
 
-// PruneConfig represents the prune configuration
+// PruneConfig contains service pruning options for gg.
 type PruneConfig struct {
 	Ignore []string `mapstructure:"ignore" yaml:"ignore"`
 }
 
 var ggConfig *GGConfig
 
-// loadGGConfig loads the .gg.yaml configuration file
+// loadGGConfig reads .gg.yaml from the current project directory.
 func loadGGConfig() (*GGConfig, error) {
 	if ggConfig != nil {
 		return ggConfig, nil
 	}
 
-	// Initialize viper
 	v := viper.New()
 	v.SetConfigName(".gg")
 	v.SetConfigType("yaml")
-
-	// Look for config file in current directory
 	v.AddConfigPath(".")
 
-	// Try to read the config file
 	if err := v.ReadInConfig(); err != nil {
-		// Config file not found is not an error, return default config
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configFileNotFoundError) {
 			ggConfig = &GGConfig{
@@ -324,12 +580,10 @@ func loadGGConfig() (*GGConfig, error) {
 			}
 			return ggConfig, nil
 		}
-		// Other errors should be returned
 		return nil, errors.Wrap(err, "failed to read config file")
 	}
 
-	// Unmarshal config
-	cfg := &GGConfig{}
+	cfg := new(GGConfig)
 	if err := v.Unmarshal(cfg); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal config")
 	}
@@ -338,11 +592,10 @@ func loadGGConfig() (*GGConfig, error) {
 	return ggConfig, nil
 }
 
-// getPruneIgnorePatterns returns the list of ignore patterns from config
+// getPruneIgnorePatterns returns service files ignored by gg prune.
 func getPruneIgnorePatterns() []string {
 	cfg, err := loadGGConfig()
 	if err != nil {
-		// If config loading fails, return empty list
 		return []string{}
 	}
 	return cfg.Prune.Ignore

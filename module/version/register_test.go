@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ var (
 func init() {
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
 	os.Setenv(config.SQLITE_IS_MEMORY, "true")
-	os.Setenv(config.SERVER_PORT, fmt.Sprintf("%d", port))
+	os.Setenv(config.SERVER_PORT, strconv.Itoa(port))
 	os.Setenv(config.LOGGER_DIR, "./logs")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
 	// Enable audit and sync write before Bootstrap so operationlog test can list logs immediately.
@@ -70,6 +71,7 @@ func TestVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	helper.TestResp(t, resp, func(t *testing.T, rsp *versionmod.VersionRsp) {
+		t.Helper(
 		// #*version.VersionRsp {
 		//   +Version     => "" #string
 		//   +BuildTime   => 1772694405 #int64
@@ -80,6 +82,7 @@ func TestVersion(t *testing.T) {
 		//   +Uptime      => 1 #int64
 		//   +Timestamp   => 1772694406 #int64
 		// }
+		)
 
 		require.NotEmpty(t, rsp)
 		require.NotEmpty(t, rsp.BuildTime)

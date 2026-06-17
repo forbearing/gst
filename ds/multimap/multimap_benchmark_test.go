@@ -15,7 +15,7 @@ func BenchmarkMultiMap_Get(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Get(fmt.Sprintf("key%d", i%100))
 		}
 	})
@@ -27,7 +27,7 @@ func BenchmarkMultiMap_Get(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Get(fmt.Sprintf("key%d", i%100))
 		}
 	})
@@ -41,7 +41,7 @@ func BenchmarkMultiMap_GetOne(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.GetOne(fmt.Sprintf("key%d", i%100))
 		}
 	})
@@ -53,7 +53,7 @@ func BenchmarkMultiMap_GetOne(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.GetOne(fmt.Sprintf("key%d", i%100))
 		}
 	})
@@ -64,7 +64,7 @@ func BenchmarkMultiMap_Set(b *testing.B) {
 		mm, _ := multimap.New[string, int](intCmp)
 		b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Set(fmt.Sprintf("key%d", i%100), i)
 		}
 	})
@@ -73,7 +73,7 @@ func BenchmarkMultiMap_Set(b *testing.B) {
 		mm, _ := multimap.New[string, int](intCmp, multimap.WithSafe[string, int]())
 		b.ResetTimer()
 
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Set(fmt.Sprintf("key%d", i%100), i)
 		}
 	})
@@ -88,7 +88,7 @@ func BenchmarkMultiMap_SetAll(b *testing.B) {
 	b.Run("unsafe", func(b *testing.B) {
 		mm, _ := multimap.New[string, int](intCmp)
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.SetAll(fmt.Sprintf("key%d", i%100), values)
 		}
 	})
@@ -96,7 +96,7 @@ func BenchmarkMultiMap_SetAll(b *testing.B) {
 	b.Run("safe", func(b *testing.B) {
 		mm, _ := multimap.New[string, int](intCmp, multimap.WithSafe[string, int]())
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.SetAll(fmt.Sprintf("key%d", i%100), values)
 		}
 	})
@@ -115,7 +115,7 @@ func BenchmarkMultiMap_Delete(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Delete(keys[i%100])
 		}
 	})
@@ -123,7 +123,7 @@ func BenchmarkMultiMap_Delete(b *testing.B) {
 	b.Run("unsafe_not_exists", func(b *testing.B) {
 		mm, _ := multimap.New[string, int](intCmp)
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Delete(fmt.Sprintf("not_exists_key%d", i))
 		}
 	})
@@ -140,7 +140,7 @@ func BenchmarkMultiMap_Delete(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Delete(keys[i%100])
 		}
 	})
@@ -148,7 +148,7 @@ func BenchmarkMultiMap_Delete(b *testing.B) {
 	b.Run("safe_not_exists", func(b *testing.B) {
 		mm, _ := multimap.New[string, int](intCmp, multimap.WithSafe[string, int]())
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Delete(fmt.Sprintf("not_exists_key%d", i))
 		}
 	})
@@ -163,7 +163,7 @@ func BenchmarkMultiMap_DeleteValue(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.DeleteValue(key, i%100)
 		}
 	})
@@ -176,7 +176,7 @@ func BenchmarkMultiMap_DeleteValue(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.DeleteValue(key, i%100)
 		}
 	})
@@ -190,7 +190,7 @@ func BenchmarkMultiMap_Has(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Has(fmt.Sprintf("key%d", i%100))
 		}
 	})
@@ -202,7 +202,7 @@ func BenchmarkMultiMap_Has(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Has(fmt.Sprintf("key%d", i%100))
 		}
 	})
@@ -217,7 +217,7 @@ func BenchmarkMultiMap_Count(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Count(key)
 		}
 	})
@@ -230,7 +230,7 @@ func BenchmarkMultiMap_Count(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Count(key)
 		}
 	})
@@ -244,7 +244,7 @@ func BenchmarkMultiMap_Contains(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Contains("key", i%100)
 		}
 	})
@@ -256,7 +256,7 @@ func BenchmarkMultiMap_Contains(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			mm.Contains("key", i%100)
 		}
 	})
@@ -270,7 +270,7 @@ func BenchmarkMultiMap_Size(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Size()
 		}
 	})
@@ -282,7 +282,7 @@ func BenchmarkMultiMap_Size(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Size()
 		}
 	})
@@ -296,7 +296,7 @@ func BenchmarkMultiMap_IsEmpty(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.IsEmpty()
 		}
 	})
@@ -308,7 +308,7 @@ func BenchmarkMultiMap_IsEmpty(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.IsEmpty()
 		}
 	})
@@ -322,7 +322,7 @@ func BenchmarkMultiMap_Keys(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Keys()
 		}
 	})
@@ -334,7 +334,7 @@ func BenchmarkMultiMap_Keys(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Keys()
 		}
 	})
@@ -346,7 +346,7 @@ func BenchmarkMultiMap_Keys(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Keys()
 		}
 	})
@@ -358,7 +358,7 @@ func BenchmarkMultiMap_Keys(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Keys()
 		}
 	})
@@ -374,7 +374,7 @@ func BenchmarkMultiMap_Values(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Values()
 		}
 	})
@@ -388,7 +388,7 @@ func BenchmarkMultiMap_Values(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Values()
 		}
 	})
@@ -402,7 +402,7 @@ func BenchmarkMultiMap_Values(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Values()
 		}
 	})
@@ -416,7 +416,7 @@ func BenchmarkMultiMap_Values(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Values()
 		}
 	})
@@ -433,7 +433,7 @@ func BenchmarkMultiMap_Clear(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			// 使用 Clone 来获取新的副本进行清理
 			clone := mm.Clone()
 			clone.Clear()
@@ -450,7 +450,7 @@ func BenchmarkMultiMap_Clear(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			clone := mm.Clone()
 			clone.Clear()
 		}
@@ -465,7 +465,7 @@ func BenchmarkMultiMap_Clear(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			clone := mm.Clone()
 			clone.Clear()
 		}
@@ -480,7 +480,7 @@ func BenchmarkMultiMap_Clear(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			clone := mm.Clone()
 			clone.Clear()
 		}
@@ -495,7 +495,7 @@ func BenchmarkMultiMap_Clone(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Clone()
 		}
 	})
@@ -507,7 +507,7 @@ func BenchmarkMultiMap_Clone(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Clone()
 		}
 	})
@@ -521,7 +521,7 @@ func BenchmarkMultiMap_Map(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Map()
 		}
 	})
@@ -533,7 +533,7 @@ func BenchmarkMultiMap_Map(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Map()
 		}
 	})
@@ -547,7 +547,7 @@ func BenchmarkMultiMap_Range(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Range(func(key string, values []int) bool {
 				return true
 			})
@@ -561,7 +561,7 @@ func BenchmarkMultiMap_Range(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			mm.Range(func(key string, values []int) bool {
 				return true
 			})

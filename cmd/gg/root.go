@@ -26,14 +26,13 @@ func init() {
 
 	rootCmd.AddCommand(
 		genCmd,
-		watchCmd,
 		newCmd,
 		astCmd,
 		pruneCmd,
 		checkCmd,
+		lintCmd,
 		routesCmd,
-		dockerCmd,
-		k8sCmd,
+		routeTreeCmd,
 		buildCmd,
 		releaseCmd,
 		configCmd,

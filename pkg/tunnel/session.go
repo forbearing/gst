@@ -26,7 +26,7 @@ type connMapVal struct {
 
 	// rmu used by Read function to ensure read binary data and data size
 	// is an atomic operation, otherwise dirty data will be generated.
-	rmu sync.Mutex
+	rmu sync.Mutex //nolint:unused
 	// wmu used by Write function to write binary data and data size
 	// is an atomic operation, otherwise dirty data will be generated.
 	wmu sync.Mutex
@@ -47,7 +47,7 @@ func List() map[any]any {
 
 type Session struct {
 	tcpconn net.Conn
-	wsconn  *websocket.Conn
+	wsconn  *websocket.Conn //nolint:unused
 
 	locker *connMapVal
 }

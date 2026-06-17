@@ -10,7 +10,7 @@ import (
 
 	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/logger"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/forbearing/gst/util"
@@ -38,7 +38,7 @@ import (
 //   - Comprehensive span attributes including operation metadata
 //   - Error-aware logging and span status management
 //   - Batch operation support with size tracking
-//   - Cache and try-run mode status recording
+//   - Cache and dry-run mode status recording
 //   - Smart duration formatting for readability
 //   - Context propagation to GORM operations
 //
@@ -61,7 +61,7 @@ import (
 //	HTTP → Controller → Service → Database → GORM
 //
 // Note: Must be called after `defer db.reset()` to ensure proper cleanup order.
-// Jaeger tracing is automatically enabled when otel.IsEnabled() returns true.
+// Jaeger tracing is automatically enabled when gstotel.IsEnabled() returns true.
 func (db *database[M]) trace(op string, batch ...int) (func(error), context.Context, trace.Span) {
 	begin := time.Now()
 	var _batch int
@@ -72,10 +72,10 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 	// Create database operation span if Jaeger is enabled
 	var ctx context.Context
 	var span trace.Span
-	if otel.IsEnabled() && db.ctx != nil {
+	if gstotel.IsEnabled() && db.ctx != nil {
 		modelName := reflect.TypeOf(*new(M)).Elem().Name()
 		spanName := "Database." + op + " " + modelName
-		ctx, span = otel.StartSpan(db.ctx.Context(), spanName)
+		ctx, span = gstotel.StartSpan(db.ctx.Context(), spanName)
 
 		// Propagate OTEL trace ID to DatabaseContext so database logs carry trace_id
 		if len(db.ctx.TraceID) == 0 {
@@ -87,41 +87,41 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 		// Update GORM database context with new span context
 		db.ins = db.ins.WithContext(ctx)
 
-		// Add database-specific attributes
-		span.SetAttributes(
-			attribute.String("component", "database"),
-			attribute.String("database.operation", op),
-			attribute.String("database.model", modelName),
-			attribute.String("database.table", modelName),
-		)
-
-		if _batch > 0 {
-			span.SetAttributes(attribute.Int("database.batch_size", _batch))
+		if gstotel.IsSpanRecording(span) {
+			attrs := []attribute.KeyValue{
+				attribute.String("component", "database"),
+				attribute.String("database.operation", op),
+				attribute.String("database.model", modelName),
+				attribute.String("database.table", modelName),
+				attribute.Bool("database.cache_enabled", db.enableCache),
+				attribute.Bool("database.dry_run", db.dryRun),
+			}
+			if _batch > 0 {
+				attrs = append(attrs, attribute.Int("database.batch_size", _batch))
+			}
+			span.SetAttributes(attrs...)
 		}
-
-		span.SetAttributes(
-			attribute.Bool("database.cache_enabled", db.enableCache),
-			attribute.Bool("database.dry_run", db.dryRun),
-		)
 	}
 
 	return func(err error) {
+		if span != nil {
+			defer span.End()
+		}
+
 		// Record duration
 		duration := time.Since(begin)
 
 		// Update span with results if available
-		if span != nil && span.IsRecording() {
+		if gstotel.IsSpanRecording(span) {
 			span.SetAttributes(attribute.Int64("database.duration_ms", duration.Milliseconds()))
 
 			if err != nil {
 				span.SetStatus(codes.Error, err.Error())
-				otel.RecordError(span, err)
+				gstotel.RecordError(span, err)
 				span.SetAttributes(attribute.Bool("error", true))
 			} else {
 				span.SetStatus(codes.Ok, "")
 			}
-
-			span.End()
 		}
 
 		// Log operation results
@@ -150,7 +150,7 @@ func (db *database[M]) trace(op string, batch ...int) (func(error), context.Cont
 
 // structFieldToMap extracts the field tags from a struct and writes them into a map.
 // This map can then be used to build SQL query conditions.
-// FIXME: if the field type is boolean or ineger, disable the fuzzy matching.
+// FIXME: if the field type is boolean or integer, disable the fuzzy matching.
 func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.Value, q map[string]string) {
 	if q == nil {
 		q = make(map[string]string)
@@ -198,20 +198,23 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 						q["id"] = fieldVal.FieldByName("ID").Interface().(string) //nolint:errcheck
 					}
 				}
-				remarkField := fieldVal.FieldByName("Remark")
-				if remarkField.IsValid() && !remarkField.IsZero() {
-					// Not overwrite the "Remark" value set in types.Model.
-					// The "Remark" value set in types.Model has higher priority than base model.
-					if _, loaded := q["remark"]; !loaded {
-						if remarkField.Kind() == reflect.Pointer {
-							if !remarkField.IsNil() {
-								q["remark"] = remarkField.Elem().Interface().(string) //nolint:errcheck
+				/*
+					Legacy Base Remark query mapping kept as reference after Remark
+					was moved out of model.Base.
+
+					remarkField := fieldVal.FieldByName("Remark")
+					if remarkField.IsValid() && !remarkField.IsZero() {
+						if _, loaded := q["remark"]; !loaded {
+							if remarkField.Kind() == reflect.Pointer {
+								if !remarkField.IsNil() {
+									q["remark"] = remarkField.Elem().Interface().(string) //nolint:errcheck
+								}
+							} else {
+								q["remark"] = remarkField.Interface().(string) //nolint:errcheck
 							}
-						} else {
-							q["remark"] = remarkField.Interface().(string) //nolint:errcheck
 						}
 					}
-				}
+				*/
 			} else {
 				structFieldToMap(ctx, fieldTyp, fieldVal, q)
 			}
@@ -254,7 +257,7 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 			// 由于 WHERE IN 语句会自动加上单引号,比如 WHERE `default` IN ('true')
 			// 但是我们想要的是 WHERE `default` IN (true),
 			// 所以没办法就只能直接转成 int 了.
-			_v = fmt.Sprintf("%d", boolToInt(v.(bool))) //nolint:errcheck
+			_v = strconv.Itoa(boolToInt(v.(bool))) //nolint:errcheck
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			_v = fmt.Sprintf("%d", v)
 		case reflect.Float32, reflect.Float64:
@@ -266,7 +269,7 @@ func structFieldToMap(ctx *types.DatabaseContext, typ reflect.Type, val reflect.
 			// switch typ.Elem().Kind() {
 			switch fieldVal.Elem().Kind() {
 			case reflect.Bool:
-				_v = fmt.Sprintf("%d", boolToInt(v.(bool))) //nolint:errcheck
+				_v = strconv.Itoa(boolToInt(v.(bool))) //nolint:errcheck
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 				_v = fmt.Sprintf("%d", v)
 			case reflect.Float32, reflect.Float64:
@@ -404,50 +407,60 @@ func boolToInt(b bool) int {
 //		return obj.CreateBefore()
 //	})
 func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phase, parentSpan trace.Span, fn func(ctx context.Context) error) error {
-	if !otel.IsEnabled() || ctx == nil || parentSpan == nil {
-		return fn(context.Background())
+	hookCtx := context.Background()
+	if ctx != nil {
+		hookCtx = ctx.Context()
+	}
+	if !gstotel.IsEnabled() || ctx == nil || parentSpan == nil {
+		return fn(hookCtx)
 	}
 
 	modelName := reflect.TypeOf(*new(M)).Elem().Name()
 	// Create child span under database span for hook execution
 	spanName := "Model." + phase.MethodName() + " " + modelName
-	parentCtx := trace.ContextWithSpan(context.Background(), parentSpan)
-	childCtx, span := otel.StartSpan(parentCtx, spanName)
+	parentCtx := trace.ContextWithSpan(hookCtx, parentSpan)
+	childCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
-	// Add hook-specific attributes
-	span.SetAttributes(
-		attribute.String("component", "model"),
-		attribute.String("model.model", modelName),
-		attribute.String("model.phase", phase.MethodName()),
-	)
+	recording := gstotel.IsSpanRecording(span)
+	var start time.Time
+	if recording {
+		// Add hook-specific attributes
+		span.SetAttributes(
+			attribute.String("component", "model"),
+			attribute.String("model.model", modelName),
+			attribute.String("model.phase", phase.MethodName()),
+		)
 
-	// Record start time
-	start := time.Now()
+		// Record start time
+		start = time.Now()
+	}
 
 	// Execute hook function
 	err := fn(childCtx)
 
-	// Record execution results
-	duration := time.Since(start)
-	span.SetAttributes(
-		attribute.Int64("model.duration_ms", duration.Milliseconds()),
-		attribute.Bool("model.success", err == nil),
-	)
+	if recording {
+		// Record execution results
+		duration := time.Since(start)
+		span.SetAttributes(
+			attribute.Int64("model.duration_ms", duration.Milliseconds()),
+			attribute.Bool("model.success", err == nil),
+		)
 
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		otel.RecordError(span, err)
-		span.SetAttributes(attribute.Bool("error", true))
-	} else {
-		span.SetStatus(codes.Ok, "")
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			gstotel.RecordError(span, err)
+			span.SetAttributes(attribute.Bool("error", true))
+		} else {
+			span.SetStatus(codes.Ok, "")
+		}
 	}
 
 	return err
 }
 
 // func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phase, parentSpan trace.Span, fn func() error) error {
-// 	if !otel.IsEnabled() || ctx == nil || parentSpan == nil {
+// 	if !gstotel.IsEnabled() || ctx == nil || parentSpan == nil {
 // 		return fn()
 // 	}
 //
@@ -455,7 +468,7 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 // 	// Create child span under database span for hook execution
 // 	spanName := "Model." + phase.MethodName() + " " + modelName
 // 	parentCtx := trace.ContextWithSpan(context.Background(), parentSpan)
-// 	_, span := otel.StartSpan(parentCtx, spanName)
+// 	_, span := gstotel.StartSpan(parentCtx, spanName)
 // 	defer span.End()
 //
 // 	// Add hook-specific attributes
@@ -480,7 +493,7 @@ func traceModelHook[M types.Model](ctx *types.DatabaseContext, phase consts.Phas
 //
 // 	if err != nil {
 // 		span.SetStatus(codes.Error, err.Error())
-// 		otel.RecordError(span, err)
+// 		gstotel.RecordError(span, err)
 // 		span.SetAttributes(attribute.Bool("error", true))
 // 	} else {
 // 		span.SetStatus(codes.Ok, "")

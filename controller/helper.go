@@ -4,20 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"time"
 
-	"github.com/forbearing/gst/config"
 	"github.com/forbearing/gst/database"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	. "github.com/forbearing/gst/response"
 	"github.com/forbearing/gst/types"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
 func patchValue(log types.Logger, typ reflect.Type, oldVal reflect.Value, newVal reflect.Value) {
@@ -29,65 +25,63 @@ func patchValue(log types.Logger, typ reflect.Type, oldVal reflect.Value, newVal
 			case "GormTime": // The underlying type of model.GormTime(type of time.Time) is struct, we should continue handle.
 
 			case "Base":
-				// 有些结构体会匿名继承其他的结构体，例如 AssetChecking 匿名继承 Asset, 所以要可以额外检查是不是某个匿名结构体.
-				// 可以自动深度查找,不需要链式查找, 例如
-				// newVal.FieldByName("Asset").FieldByName("Remark").IsValid() 可以简化为
-				// newVal.FieldByName("Remark").IsValid()
+				// Base contains framework-managed fields and should not be patched directly.
+				/*
+					Legacy Base field patching kept as reference after Remark and Order
+					were moved out of model.Base.
 
-				// Make sure the type of "Remark" is pointer to golang base type.
-				fieldRemark := "Remark"
-				if oldVal.FieldByName(fieldRemark).CanSet() {
-					if newVal.FieldByName(fieldRemark).IsValid() { // WARN: oldVal.FieldByName(fieldRemark) maybe <invalid reflect.Value>
-						if !newVal.FieldByName(fieldRemark).IsZero() {
-							// output log must before set value.
-							if newVal.FieldByName(fieldRemark).Kind() == reflect.Pointer {
-								var oldValue, newValue any
-								if !oldVal.FieldByName(fieldRemark).IsNil() {
-									oldValue = oldVal.FieldByName(fieldRemark).Elem().Interface()
+					fieldRemark := "Remark"
+					if oldVal.FieldByName(fieldRemark).CanSet() {
+						if newVal.FieldByName(fieldRemark).IsValid() {
+							if !newVal.FieldByName(fieldRemark).IsZero() {
+								if newVal.FieldByName(fieldRemark).Kind() == reflect.Pointer {
+									var oldValue, newValue any
+									if !oldVal.FieldByName(fieldRemark).IsNil() {
+										oldValue = oldVal.FieldByName(fieldRemark).Elem().Interface()
+									} else {
+										oldValue = "<nil>"
+									}
+									if !newVal.FieldByName(fieldRemark).IsNil() {
+										newValue = newVal.FieldByName(fieldRemark).Elem().Interface()
+									} else {
+										newValue = "<nil>"
+									}
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(), oldValue, newValue))
 								} else {
-									oldValue = "<nil>"
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(),
+										oldVal.FieldByName(fieldRemark).Interface(), newVal.FieldByName(fieldRemark).Interface()))
 								}
-								if !newVal.FieldByName(fieldRemark).IsNil() {
-									newValue = newVal.FieldByName(fieldRemark).Elem().Interface()
-								} else {
-									newValue = "<nil>"
-								}
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(), oldValue, newValue))
-							} else {
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldRemark, typ.Name(),
-									oldVal.FieldByName(fieldRemark).Interface(), newVal.FieldByName(fieldRemark).Interface()))
+								oldVal.FieldByName(fieldRemark).Set(newVal.FieldByName(fieldRemark))
 							}
-							oldVal.FieldByName(fieldRemark).Set(newVal.FieldByName(fieldRemark)) // set old value by new value
 						}
 					}
-				}
-				// Make sure the type of "Order" is pointer to golang base type.
-				fieldOrder := "Order"
-				if oldVal.FieldByName(fieldOrder).CanSet() {
-					if newVal.FieldByName(fieldOrder).IsValid() { // WARN: oldVal.FieldByName(fieldOrder) maybe <invalid reflect.Value>
-						if !newVal.FieldByName(fieldOrder).IsZero() {
-							// output log must before set value.
-							if newVal.FieldByName(fieldOrder).Kind() == reflect.Pointer {
-								var oldValue, newValue any
-								if !oldVal.FieldByName(fieldOrder).IsNil() {
-									oldValue = oldVal.FieldByName(fieldOrder).Elem().Interface()
+
+					fieldOrder := "Order"
+					if oldVal.FieldByName(fieldOrder).CanSet() {
+						if newVal.FieldByName(fieldOrder).IsValid() {
+							if !newVal.FieldByName(fieldOrder).IsZero() {
+								if newVal.FieldByName(fieldOrder).Kind() == reflect.Pointer {
+									var oldValue, newValue any
+									if !oldVal.FieldByName(fieldOrder).IsNil() {
+										oldValue = oldVal.FieldByName(fieldOrder).Elem().Interface()
+									} else {
+										oldValue = "<nil>"
+									}
+									if !newVal.FieldByName(fieldOrder).IsNil() {
+										newValue = newVal.FieldByName(fieldOrder).Elem().Interface()
+									} else {
+										newValue = "<nil>"
+									}
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(), oldValue, newValue))
 								} else {
-									oldValue = "<nil>"
+									log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(),
+										oldVal.FieldByName(fieldOrder).Interface(), newVal.FieldByName(fieldOrder).Interface()))
 								}
-								if !newVal.FieldByName(fieldOrder).IsNil() {
-									newValue = newVal.FieldByName(fieldOrder).Elem().Interface()
-								} else {
-									newValue = "<nil>"
-								}
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(), oldValue, newValue))
-							} else {
-								log.Info(fmt.Sprintf("[PATCH %s] field: %q: %v --> %v", fieldOrder, typ.Name(),
-									oldVal.FieldByName(fieldOrder).Interface(), newVal.FieldByName(fieldOrder).Interface()))
+								oldVal.FieldByName(fieldOrder).Set(newVal.FieldByName(fieldOrder))
 							}
-							oldVal.FieldByName(fieldOrder).Set(newVal.FieldByName(fieldOrder)) // set old value by new value.
 						}
 					}
-				}
+				*/
 				continue
 
 			default:
@@ -131,15 +125,6 @@ func patchValue(log types.Logger, typ reflect.Type, oldVal reflect.Value, newVal
 	}
 }
 
-// getCallerInfo returns the file name and line number of the caller
-func getCallerInfo(skip int) (string, int) {
-	_, file, line, ok := runtime.Caller(skip)
-	if !ok {
-		return "unknown", 0
-	}
-	return filepath.Base(file), line
-}
-
 func extractConfig[M types.Model](cfg ...*types.ControllerConfig[M]) (handler func(ctx *types.DatabaseContext) types.Database[M], db any) {
 	if len(cfg) > 0 {
 		if cfg[0] != nil {
@@ -169,19 +154,22 @@ func startControllerSpan[M types.Model](c *gin.Context, phase consts.Phase) (con
 
 	// Create child span for controller operation
 	spanName := fmt.Sprintf("Controller.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(c.Request.Context(), spanName)
+	parentCtx := gstotel.RequestRootContext(c.Request.Context())
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 
 	// Update request context with new span context
 	c.Request = c.Request.WithContext(spanCtx)
 
-	// Add controller-specific attributes
-	otel.AddSpanTags(span, map[string]any{
-		"component":            "controller",
-		"controller.operation": phase.MethodName(),
-		"controller.model":     modelName,
-		"controller.method":    c.Request.Method,
-		"controller.path":      c.FullPath(),
-	})
+	if gstotel.IsSpanRecording(span) {
+		// Add controller-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":            "controller",
+			"controller.operation": phase.MethodName(),
+			"controller.model":     modelName,
+			"controller.method":    c.Request.Method,
+			"controller.path":      c.FullPath(),
+		})
+	}
 
 	return spanCtx, span
 }
@@ -193,7 +181,7 @@ func traceServiceHook[M types.Model](parentCtx context.Context, phase consts.Pha
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -202,28 +190,36 @@ func traceServiceHook[M types.Model](parentCtx context.Context, phase consts.Pha
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			otel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -238,7 +234,7 @@ func traceServiceOperation[M types.Model, RSP types.Response](parentCtx context.
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -247,29 +243,37 @@ func traceServiceOperation[M types.Model, RSP types.Response](parentCtx context.
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 	var rsp RSP
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			otel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -284,7 +288,7 @@ func traceServiceExport[M types.Model, T []byte](parentCtx context.Context, phas
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -293,29 +297,37 @@ func traceServiceExport[M types.Model, T []byte](parentCtx context.Context, phas
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 	var data T
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			otel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -330,7 +342,7 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 
 	// Create children span for service operation
 	spanName := fmt.Sprintf("Service.%s %s", phase.MethodName(), modelName)
-	spanCtx, span := otel.StartSpan(parentCtx, spanName)
+	spanCtx, span := gstotel.StartSpan(parentCtx, spanName)
 	defer span.End()
 
 	// // Update request context
@@ -339,29 +351,37 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 	// // Get caller information
 	// file, line := getCallerInfo(2)
 
-	// Add service-specific attributes
-	otel.AddSpanTags(span, map[string]any{
-		"component":         "service",
-		"service.operation": phase.MethodName(),
-		"service.model":     modelName,
-		// "code.file":         file,
-		// "code.line":         line,
-	})
+	recording := gstotel.IsSpanRecording(span)
+	if recording {
+		// Add service-specific attributes
+		gstotel.AddSpanTags(span, map[string]any{
+			"component":         "service",
+			"service.operation": phase.MethodName(),
+			"service.model":     modelName,
+			// "code.file":         file,
+			// "code.line":         line,
+		})
+	}
 
 	// Declare error variable for use in defer
 	var err error
 	var ml []M
 
-	// Record start time and ensure duration + success recorded at the end
-	startTime := time.Now()
+	var startTime time.Time
+	if recording {
+		// Record start time and ensure duration + success recorded at the end
+		startTime = time.Now()
+	}
 	defer func() {
-		duration := time.Since(startTime)
-		otel.AddSpanTags(span, map[string]any{
-			"hook.duration_ms": duration.Milliseconds(),
-			"hook.success":     err == nil,
-		})
-		if err != nil {
-			otel.RecordError(span, err)
+		if recording {
+			duration := time.Since(startTime)
+			gstotel.AddSpanTags(span, map[string]any{
+				"hook.duration_ms": duration.Milliseconds(),
+				"hook.success":     err == nil,
+			})
+			if err != nil {
+				gstotel.RecordError(span, err)
+			}
 		}
 	}()
 
@@ -372,8 +392,7 @@ func traceServiceImport[M types.Model](parentCtx context.Context, phase consts.P
 // handleServiceError handles ServiceError
 func handleServiceError(c *gin.Context, ctx *types.ServiceContext, err error) {
 	// Check if it's a ServiceError
-	var serviceErr *types.ServiceError
-	if errors.As(err, &serviceErr) {
+	if serviceErr, ok := errors.AsType[*types.ServiceError](err); ok {
 		if serviceErr.Coder != nil {
 			// Code and CodeInstance both expose WithStatus → CodeInstance; same handling.
 			switch co := serviceErr.Coder.(type) {
@@ -409,28 +428,4 @@ func handleServiceError(c *gin.Context, ctx *types.ServiceContext, err error) {
 
 	// Default error handling
 	JSON(c, CodeFailure.WithErr(err))
-}
-
-// logRequest logs the HTTP request using zap logger if enabled in config
-func logRequest(log types.Logger, phase consts.Phase, req any) {
-	if !config.App.Logger.Controller.LogRequest {
-		return
-	}
-	if req == nil {
-		log.Infow("request", zap.String("phase", phase.MethodName()), zap.String("request", "<nil>"))
-	} else {
-		log.Infow("request", zap.String("phase", phase.MethodName()), zap.Any("request", req))
-	}
-}
-
-// logResponse logs the HTTP response using zap logger if enabled in config
-func logResponse(log types.Logger, phase consts.Phase, rsp any) {
-	if !config.App.Logger.Controller.LogResponse {
-		return
-	}
-	if rsp == nil {
-		log.Infow("response", zap.String("phase", phase.MethodName()), zap.String("response", "<nil>"))
-	} else {
-		log.Infow("response", zap.String("phase", phase.MethodName()), zap.Any("response", rsp))
-	}
 }

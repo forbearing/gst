@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	"github.com/jinzhu/copier"
 )
 
@@ -396,15 +397,15 @@ func (qb *QueryBuilder) AggsSum(name string, field string) *QueryBuilder {
 // Validate checks if the query parameters are valid
 func (qb *QueryBuilder) Validate() error {
 	if qb.size < 0 {
-		return fmt.Errorf("size cannot be negative")
+		return errors.New("size cannot be negative")
 	}
 	if qb.from < 0 {
-		return fmt.Errorf("from cannot be negative")
+		return errors.New("from cannot be negative")
 	}
 
 	// 如果使用了 search_after，from 必须为 0
 	if len(qb.searchAfter) > 0 && qb.from != 0 {
-		return fmt.Errorf("from must be 0 when using search_after")
+		return errors.New("from must be 0 when using search_after")
 	}
 
 	return nil

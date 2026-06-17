@@ -27,7 +27,8 @@ var (
 		}
 		return user, nil
 	}
-	// changeLookupUserByEmail loads the account currently bound to an email address.
+	// changeLookupUserByEmail loads the account currently bound to an email
+	// address and returns errEmailUserNotFound when no account uses it.
 	changeLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliamuser.User, error) {
 		users := make([]*modeliamuser.User, 0, 1)
 		queryEmail := email
@@ -38,7 +39,7 @@ var (
 			return nil, err
 		}
 		if len(users) == 0 {
-			return nil, nil
+			return nil, errEmailUserNotFound
 		}
 		return users[0], nil
 	}
@@ -112,6 +113,9 @@ func validateEmailChangeTarget(ctx *types.ServiceContext, user *modeliamuser.Use
 
 	existingUser, err := changeLookupUserByEmail(ctx, newEmail)
 	if err != nil {
+		if errors.Is(err, errEmailUserNotFound) {
+			return nil
+		}
 		return errors.Wrap(err, "failed to lookup target email")
 	}
 	if existingUser != nil && existingUser.ID != user.ID {

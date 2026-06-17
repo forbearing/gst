@@ -1,7 +1,6 @@
 package minio
 
 import (
-	"io"
 	"path/filepath"
 )
 
@@ -37,23 +36,4 @@ func detectContentType(filename string) string {
 		return ct
 	}
 	return "application/octet-stream"
-}
-
-// bytesReader 实现 io.Reader
-type bytesReader struct {
-	data   []byte
-	offset int
-}
-
-func newBytesReader(data []byte) *bytesReader {
-	return &bytesReader{data: data}
-}
-
-func (r *bytesReader) Read(p []byte) (n int, err error) {
-	if r.offset >= len(r.data) {
-		return 0, io.EOF
-	}
-	n = copy(p, r.data[r.offset:])
-	r.offset += n
-	return n, nil
 }

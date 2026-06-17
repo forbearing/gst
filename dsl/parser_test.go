@@ -660,6 +660,57 @@ func parseDesignFromSource(t *testing.T, src, modelName string) *Design {
 	return design
 }
 
+func TestParseDeclaredActionDefaultEnabled(t *testing.T) {
+	design := parseDesignFromSource(t, declaredActionDefaultEnabledSource, "DeclaredDefault")
+
+	if !design.List.Enabled {
+		t.Fatal("declared default-route action should be enabled by default")
+	}
+	if design.Get.Enabled {
+		t.Fatal("undeclared action should remain disabled")
+	}
+	if design.Update.Enabled {
+		t.Fatal("declared action with Enabled(false) should be disabled")
+	}
+
+	actions := design.routes["custom/defaults"]
+	if len(actions) != 2 {
+		t.Fatalf("custom route actions = %d, want 2", len(actions))
+	}
+	if !actions[0].Enabled {
+		t.Fatal("declared custom-route action should be enabled by default")
+	}
+	if actions[1].Enabled {
+		t.Fatal("declared custom-route action with Enabled(false) should be disabled")
+	}
+}
+
+const declaredActionDefaultEnabledSource = `
+package model
+
+import (
+	. "github.com/forbearing/gst/dsl"
+	"github.com/forbearing/gst/model"
+)
+
+type DeclaredDefault struct {
+	model.Base
+}
+
+func (DeclaredDefault) Design() {
+	List(func() {})
+	Update(func() {
+		Enabled(false)
+	})
+	Route("/custom/defaults", func() {
+		Create(func() {})
+		Delete(func() {
+			Enabled(false)
+		})
+	})
+}
+`
+
 func TestParse(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
@@ -715,7 +766,7 @@ func TestParse(t *testing.T) {
 					Endpoint:   "user2",
 					Param:      ":user",
 					Migrate:    false,
-					Create:     &Action{Enabled: false, Service: false, Public: false, Payload: "User2", Result: "*User3", Phase: consts.PHASE_CREATE},
+					Create:     &Action{Enabled: true, Service: false, Public: false, Payload: "User2", Result: "*User3", Phase: consts.PHASE_CREATE},
 					Delete:     &Action{Enabled: false, Service: false, Public: false, Payload: "*User2", Result: "*User2"},
 					Update:     &Action{Enabled: false, Service: false, Public: false, Payload: "*User2", Result: "*User2"},
 					Patch:      &Action{Enabled: true, Service: false, Public: false, Payload: "*User", Result: "User", Phase: consts.PHASE_PATCH},

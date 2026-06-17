@@ -136,10 +136,14 @@ func (l *Logger) WithServiceContext(ctx *types.ServiceContext, phase consts.Phas
 //
 // log := logger.Database.WithDatabaseContext(ctx, consts.PHASE_LIST_BEFORE)
 func (l *Logger) WithDatabaseContext(ctx *types.DatabaseContext, phase consts.Phase) (clone types.Logger) {
+	if ctx == nil {
+		return l.With(consts.PHASE, string(phase))
+	}
+
 	// Prefer trace ID from DatabaseContext; fall back to OTEL span context
 	traceID := ctx.TraceID
 	// Safely derive trace ID from OTEL span in context when not provided
-	if len(traceID) == 0 && ctx != nil {
+	if len(traceID) == 0 {
 		spanCtx := trace.SpanFromContext(ctx.Context()).SpanContext()
 		if spanCtx.HasTraceID() {
 			traceID = spanCtx.TraceID().String()

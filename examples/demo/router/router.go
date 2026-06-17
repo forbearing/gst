@@ -2,11 +2,12 @@
 package router
 
 import (
+	"demo/model"
+	"demo/model/auth"
+	"demo/model/common"
 	"demo/model/config"
-	"demo/model/config/namespace"
-	"demo/model/config/namespace/app"
-	"demo/model/config/namespace/app/env"
-	"demo/model/setting"
+	"demo/model/config/file"
+	"demo/model/conversation"
 
 	"github.com/forbearing/gst/router"
 	"github.com/forbearing/gst/types/consts"
@@ -15,56 +16,25 @@ import (
 )
 
 func Init() error {
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/files", &types.ControllerConfig[*env.File]{}, consts.Create)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Delete)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Update)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Patch)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/files", &types.ControllerConfig[*env.File]{}, consts.List)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Get)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/files", &types.ControllerConfig[*env.File]{}, consts.Create)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Delete)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Update)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Patch)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/files", &types.ControllerConfig[*env.File]{}, consts.List)
-	router.Register[*env.File, *env.File, *env.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*env.File]{ParamName: "file"}, consts.Get)
-	router.Register[*env.Item, *env.Item, *env.Item](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items", &types.ControllerConfig[*env.Item]{}, consts.Create)
-	router.Register[*env.Item, *env.Item, *env.Item](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items/:key", &types.ControllerConfig[*env.Item]{ParamName: "key"}, consts.Delete)
-	router.Register[*env.Item, *env.Item, *env.Item](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items/:key", &types.ControllerConfig[*env.Item]{ParamName: "key"}, consts.Update)
-	router.Register[*env.Item, *env.Item, *env.Item](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items/:key", &types.ControllerConfig[*env.Item]{ParamName: "key"}, consts.Patch)
-	router.Register[*env.Item, *env.Item, *env.ItemRsp](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items", &types.ControllerConfig[*env.Item]{}, consts.List)
-	router.Register[*env.Item, *env.Item, *env.Item](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items/:key", &types.ControllerConfig[*env.Item]{ParamName: "key"}, consts.Get)
-	router.Register[*env.ItemParse, *env.ItemParse, *env.ItemParseRsp](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env/items-parse", &types.ControllerConfig[*env.ItemParse]{}, consts.Create)
-	router.Register[*app.Env, *app.Env, *app.Env](router.Auth(), "config/namespaces/:ns/apps/:app/envs", &types.ControllerConfig[*app.Env]{}, consts.Create)
-	router.Register[*app.Env, *app.Env, *app.Env](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env", &types.ControllerConfig[*app.Env]{ParamName: "env"}, consts.Delete)
-	router.Register[*app.Env, *app.Env, *app.Env](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env", &types.ControllerConfig[*app.Env]{ParamName: "env"}, consts.Update)
-	router.Register[*app.Env, *app.Env, *app.Env](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env", &types.ControllerConfig[*app.Env]{ParamName: "env"}, consts.Patch)
-	router.Register[*app.Env, *app.Env, *app.Env](router.Auth(), "config/namespaces/:ns/apps/:app/envs", &types.ControllerConfig[*app.Env]{}, consts.List)
-	router.Register[*app.Env, *app.Env, *app.Env](router.Auth(), "config/namespaces/:ns/apps/:app/envs/:env", &types.ControllerConfig[*app.Env]{ParamName: "env"}, consts.Get)
-	router.Register[*app.FileTemplate, *app.FileTemplate, *app.FileTemplate](router.Auth(), "config/namespaces/:ns/apps/:app/file-templates", &types.ControllerConfig[*app.FileTemplate]{}, consts.Create)
-	router.Register[*app.FileTemplate, *app.FileTemplate, *app.FileTemplate](router.Auth(), "config/namespaces/:ns/apps/:app/file-templates/:id", &types.ControllerConfig[*app.FileTemplate]{ParamName: "id"}, consts.Delete)
-	router.Register[*app.FileTemplate, *app.FileTemplate, *app.FileTemplate](router.Auth(), "config/namespaces/:ns/apps/:app/file-templates/:id", &types.ControllerConfig[*app.FileTemplate]{ParamName: "id"}, consts.Update)
-	router.Register[*app.FileTemplate, *app.FileTemplate, *app.FileTemplate](router.Auth(), "config/namespaces/:ns/apps/:app/file-templates/:id", &types.ControllerConfig[*app.FileTemplate]{ParamName: "id"}, consts.Patch)
-	router.Register[*app.FileTemplate, *app.FileTemplate, *app.FileTemplate](router.Auth(), "config/namespaces/:ns/apps/:app/file-templates", &types.ControllerConfig[*app.FileTemplate]{}, consts.List)
-	router.Register[*app.FileTemplate, *app.FileTemplate, *app.FileTemplate](router.Auth(), "config/namespaces/:ns/apps/:app/file-templates/:id", &types.ControllerConfig[*app.FileTemplate]{ParamName: "id"}, consts.Get)
-	router.Register[*namespace.App, *namespace.App, *namespace.App](router.Auth(), "config/namespaces/:ns/apps", &types.ControllerConfig[*namespace.App]{}, consts.Create)
-	router.Register[*namespace.App, *namespace.App, *namespace.App](router.Auth(), "config/namespaces/:ns/apps/:app", &types.ControllerConfig[*namespace.App]{ParamName: "app"}, consts.Delete)
-	router.Register[*namespace.App, *namespace.App, *namespace.App](router.Auth(), "config/namespaces/:ns/apps/:app", &types.ControllerConfig[*namespace.App]{ParamName: "app"}, consts.Update)
-	router.Register[*namespace.App, *namespace.App, *namespace.App](router.Auth(), "config/namespaces/:ns/apps/:app", &types.ControllerConfig[*namespace.App]{ParamName: "app"}, consts.Patch)
-	router.Register[*namespace.App, *namespace.App, *namespace.AppRsp](router.Auth(), "config/namespaces/:ns/apps", &types.ControllerConfig[*namespace.App]{}, consts.List)
-	router.Register[*namespace.App, *namespace.App, *namespace.App](router.Auth(), "config/namespaces/:ns/apps/:app", &types.ControllerConfig[*namespace.App]{ParamName: "app"}, consts.Get)
-	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces", &types.ControllerConfig[*config.Namespace]{}, consts.Create)
-	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces/:ns", &types.ControllerConfig[*config.Namespace]{ParamName: "ns"}, consts.Delete)
-	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces/:ns", &types.ControllerConfig[*config.Namespace]{ParamName: "ns"}, consts.Update)
-	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces/:ns", &types.ControllerConfig[*config.Namespace]{ParamName: "ns"}, consts.Patch)
-	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces", &types.ControllerConfig[*config.Namespace]{}, consts.List)
-	router.Register[*config.Namespace, *config.Namespace, *config.Namespace](router.Auth(), "config/namespaces/:ns", &types.ControllerConfig[*config.Namespace]{ParamName: "ns"}, consts.Get)
-	router.Register[*setting.Project, *setting.Project, *setting.Project](router.Auth(), "setting/project", &types.ControllerConfig[*setting.Project]{}, consts.List)
-	router.Register[*setting.Project, *setting.Project, *setting.Project](router.Auth(), "setting/project/:id", &types.ControllerConfig[*setting.Project]{ParamName: "id"}, consts.Get)
-	router.Register[*setting.Region, *setting.Region, *setting.Region](router.Auth(), "setting/region", &types.ControllerConfig[*setting.Region]{}, consts.List)
-	router.Register[*setting.Region, *setting.Region, *setting.Region](router.Auth(), "setting/region/:id", &types.ControllerConfig[*setting.Region]{ParamName: "id"}, consts.Get)
-	router.Register[*setting.Tenant, *setting.Tenant, *setting.Tenant](router.Auth(), "setting/tenant", &types.ControllerConfig[*setting.Tenant]{}, consts.List)
-	router.Register[*setting.Tenant, *setting.Tenant, *setting.Tenant](router.Auth(), "setting/tenant/:id", &types.ControllerConfig[*setting.Tenant]{ParamName: "id"}, consts.Get)
-	router.Register[*setting.Vendor, *setting.Vendor, *setting.Vendor](router.Auth(), "setting/vendor", &types.ControllerConfig[*setting.Vendor]{}, consts.List)
-	router.Register[*setting.Vendor, *setting.Vendor, *setting.Vendor](router.Auth(), "setting/vendor/:id", &types.ControllerConfig[*setting.Vendor]{ParamName: "id"}, consts.Get)
+	router.Register[*auth.Login, *auth.Login, *auth.LoginRsp](router.Pub(), "auth/login", &types.ControllerConfig[*auth.Login]{}, consts.List)
+	router.Register[*common.Search, *common.SearchDedupReq, *common.SearchDedupRsp](router.Auth(), "search-sources/dedup", &types.ControllerConfig[*common.Search]{}, consts.Create)
+	router.Register[*file.Encrypt, *file.EncryptReq, *file.EncryptRsp](router.Auth(), "config/files/encrypt", &types.ControllerConfig[*file.Encrypt]{}, consts.Create)
+	router.Register[*config.File, *config.File, *config.File](router.Auth(), "config/files", &types.ControllerConfig[*config.File]{}, consts.Create)
+	router.Register[*config.File, *config.File, *config.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*config.File]{ParamName: "file"}, consts.Update)
+	router.Register[*config.File, *config.File, *config.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*config.File]{ParamName: "file"}, consts.Patch)
+	router.Register[*config.File, *config.File, *config.File](router.Auth(), "config/files", &types.ControllerConfig[*config.File]{}, consts.List)
+	router.Register[*config.File, *config.File, *config.File](router.Auth(), "config/files/:file", &types.ControllerConfig[*config.File]{ParamName: "file"}, consts.Get)
+	router.Register[*config.File, *config.File, *config.File](router.Auth(), "config/namespaces/:namespace/files", &types.ControllerConfig[*config.File]{}, consts.List)
+	router.Register[*conversation.Message, *conversation.Message, *conversation.Message](router.Auth(), "conversations/:conv/messages", &types.ControllerConfig[*conversation.Message]{}, consts.Create)
+	router.Register[*conversation.Message, *conversation.Message, *conversation.Message](router.Auth(), "conversations/:conv/messages/:id", &types.ControllerConfig[*conversation.Message]{ParamName: "id"}, consts.Patch)
+	router.Register[*conversation.Message, *conversation.Message, *conversation.Message](router.Auth(), "conversations/:conv/messages", &types.ControllerConfig[*conversation.Message]{}, consts.List)
+	router.Register[*conversation.Message, *conversation.Message, *conversation.Message](router.Auth(), "conversations/:conv/messages/:id", &types.ControllerConfig[*conversation.Message]{ParamName: "id"}, consts.Get)
+	router.Register[*conversation.Message, *conversation.Message, *conversation.Message](router.Auth(), "messages/batch", &types.ControllerConfig[*conversation.Message]{}, consts.DeleteMany)
+	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations", &types.ControllerConfig[*model.Conversation]{}, consts.Create)
+	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations/:conv", &types.ControllerConfig[*model.Conversation]{ParamName: "conv"}, consts.Delete)
+	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations/:conv", &types.ControllerConfig[*model.Conversation]{ParamName: "conv"}, consts.Patch)
+	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations", &types.ControllerConfig[*model.Conversation]{}, consts.List)
+	router.Register[*model.Conversation, *model.Conversation, *model.Conversation](router.Auth(), "conversations/:conv", &types.ControllerConfig[*model.Conversation]{ParamName: "conv"}, consts.Get)
+	router.Register[*model.Ping, *model.Ping, *model.PingRsp](router.Pub(), "ping", &types.ControllerConfig[*model.Ping]{}, consts.List)
 	return nil
 }

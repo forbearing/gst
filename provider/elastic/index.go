@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 type IndexOption struct {
@@ -140,7 +141,7 @@ func (*index) Exists(indexName string) (bool, error) {
 	}
 	defer res.Body.Close()
 
-	return res.StatusCode == 200, nil
+	return res.StatusCode == http.StatusOK, nil
 }
 
 // Delete removes an Elasticsearch index.

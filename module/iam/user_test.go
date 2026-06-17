@@ -61,6 +61,7 @@ func TestUserList(t *testing.T) {
 		require.NoError(t, err)
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*iam.User]) {
+			t.Helper()
 			actorItem := userFindByUsername(rsp.Items, actor.Username)
 			require.NotNil(t, actorItem)
 			require.Equal(t, actor.Username, actorItem.Username)
@@ -87,7 +88,7 @@ func TestUserCreate(t *testing.T) {
 	cli := userNewClient(t, actor.SessionID)
 	targetUsername := fmt.Sprintf("user_create_target_%d", time.Now().UnixNano())
 	targetDisplayName := "Created By Superuser"
-	targetEmail := fmt.Sprintf("%s@example.com", targetUsername)
+	targetEmail := targetUsername + "@example.com"
 
 	t.Run("forbidden_when_not_superuser", func(t *testing.T) {
 		_, err := cli.Create(iam.User{
@@ -115,6 +116,7 @@ func TestUserCreate(t *testing.T) {
 		})
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			t.Helper()
 			require.NotEmpty(t, rsp.ID)
 			require.Equal(t, targetUsername, rsp.Username)
 			require.Empty(t, rsp.Password)
@@ -142,8 +144,8 @@ func TestUserCreateMany(t *testing.T) {
 	username2 := fmt.Sprintf("user_create_many_target2_%d", time.Now().UnixNano())
 	displayName1 := "Create Many User 1"
 	displayName2 := "Create Many User 2"
-	email1 := fmt.Sprintf("%s@example.com", username1)
-	email2 := fmt.Sprintf("%s@example.com", username2)
+	email1 := username1 + "@example.com"
+	email2 := username2 + "@example.com"
 	superuserEnabled := true
 	superUsername := fmt.Sprintf("user_create_many_super_%d", time.Now().UnixNano())
 
@@ -184,6 +186,7 @@ func TestUserCreateMany(t *testing.T) {
 		})
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp userBatchRsp) {
+			t.Helper()
 			require.Len(t, rsp.Items, 2)
 			require.Equal(t, 2, rsp.Summary.Total)
 			require.Equal(t, 2, rsp.Summary.Succeeded)
@@ -288,6 +291,7 @@ func TestUserPatch(t *testing.T) {
 		require.NotNil(t, resp)
 		require.Equal(t, response.CodeSuccess.Code(), resp.Code)
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			t.Helper()
 			require.Equal(t, victim.UserID, rsp.ID)
 			require.Empty(t, rsp.Password)
 			require.Empty(t, rsp.PasswordHash)
@@ -354,7 +358,7 @@ func TestUserPatch(t *testing.T) {
 
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				target := userSignupUser(t, fmt.Sprintf("user_patch_sensitive_%s", tc.name), "example-UserPatchSensitive-local-01")
+				target := userSignupUser(t, "user_patch_sensitive_"+tc.name, "example-UserPatchSensitive-local-01")
 				before := userLoadByID(t, target.UserID)
 
 				_, err := cli.Patch(target.UserID, []byte(tc.payload(t, target)))
@@ -543,6 +547,7 @@ func TestUserSuperuserTargetProtection(t *testing.T) {
 		})
 
 		helper.TestResp(t, resp, func(t *testing.T, rsp iam.User) {
+			t.Helper()
 			require.Equal(t, adminCreatedUsername, rsp.Username)
 			require.True(t, rsp.IsSuperuser != nil && *rsp.IsSuperuser)
 		})
@@ -602,6 +607,7 @@ func userSignupUser(t *testing.T, prefix, password string) userTestAccount {
 	require.NoError(t, err)
 
 	helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+		t.Helper()
 		require.Equal(t, user.Username, rsp.Username)
 		require.NotEmpty(t, rsp.UserID)
 		require.NotEmpty(t, rsp.Message)
@@ -672,6 +678,7 @@ func userLoginUser(t *testing.T, user *userTestAccount, password string) string 
 
 	sessionID := ""
 	helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+		t.Helper()
 		require.NotEmpty(t, rsp.SessionID)
 		sessionID = rsp.SessionID
 	})
@@ -703,7 +710,7 @@ func userRequireDeleted(t *testing.T, username string) {
 
 	users := make([]*iam.User, 0)
 	require.NoError(t, database.Database[*iam.User](nil).WithQuery(&iam.User{Username: username}).List(&users))
-	require.Len(t, users, 0)
+	require.Empty(t, users)
 }
 
 func userRequireSessionNotFound(t *testing.T, sessionID string) {
@@ -759,7 +766,7 @@ func userRequireMissingByUsername(t *testing.T, username string) {
 
 	users := make([]*iam.User, 0)
 	require.NoError(t, database.Database[*iam.User](nil).WithQuery(&iam.User{Username: username}).List(&users))
-	require.Len(t, users, 0)
+	require.Empty(t, users)
 }
 
 func userFindByUsername(items []*iam.User, username string) *iam.User {

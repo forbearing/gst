@@ -367,16 +367,16 @@ func (c *Client) request(action action, payload any) (*Resp, error) {
 		url = fmt.Sprintf("%s/%s", baseURL, c.param)
 	case create_many:
 		method = http.MethodPost
-		url = fmt.Sprintf("%s/batch", baseURL)
+		url = baseURL + "/batch"
 	case delete_many:
 		method = http.MethodDelete
-		url = fmt.Sprintf("%s/batch", baseURL)
+		url = baseURL + "/batch"
 	case update_many:
 		method = http.MethodPut
-		url = fmt.Sprintf("%s/batch", baseURL)
+		url = baseURL + "/batch"
 	case patch_many:
 		method = http.MethodPatch
-		url = fmt.Sprintf("%s/batch", baseURL)
+		url = baseURL + "/batch"
 	case list:
 		method = http.MethodGet
 		url, err = c.RequestURL()

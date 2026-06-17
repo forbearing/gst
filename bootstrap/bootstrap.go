@@ -40,7 +40,7 @@ import (
 	"github.com/forbearing/gst/provider/mongo"
 	"github.com/forbearing/gst/provider/mqtt"
 	"github.com/forbearing/gst/provider/nats"
-	"github.com/forbearing/gst/provider/otel"
+	gstotel "github.com/forbearing/gst/provider/otel"
 	"github.com/forbearing/gst/provider/redis"
 	"github.com/forbearing/gst/provider/rethinkdb"
 	"github.com/forbearing/gst/provider/rocketmq"
@@ -90,7 +90,7 @@ func Bootstrap() error {
 	Register(
 		// provider
 		redis.Init,
-		otel.Init,
+		gstotel.Init,
 		elastic.Init,
 		mongo.Init,
 		minio.Init,
@@ -129,6 +129,7 @@ func Bootstrap() error {
 	)
 
 	RegisterCleanup(redis.Close)
+	RegisterCleanup(gstotel.Close)
 	RegisterCleanup(kafka.Close)
 	RegisterCleanup(etcd.Close)
 	RegisterCleanup(nats.Close)

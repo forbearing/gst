@@ -57,5 +57,8 @@ func buildDSN(cfg config.SQLServer) string {
 	)
 }
 
+// Transaction runs fn in a transaction on the default SQL Server connection.
 func Transaction(fn func(tx *gorm.DB) error) error { return helper.Transaction(Default, fn) }
-func Exec(sql string, values any) error            { return helper.Exec(Default, sql, values) }
+
+// Exec executes raw SQL on the default SQL Server connection without returning rows.
+func Exec(sql string, values any) error { return helper.Exec(Default, sql, values) }

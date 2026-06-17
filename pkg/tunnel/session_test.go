@@ -1,6 +1,7 @@
 package tunnel_test
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -8,11 +9,11 @@ import (
 	"github.com/forbearing/gst/pkg/tunnel"
 	"github.com/forbearing/gst/types/consts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
-	addr   = "0.0.0.0:12345"
-	doneCh = make(chan struct{}, 1)
+	addr = "0.0.0.0:12345"
 
 	Bye   = tunnel.NewCmd("bye", 1000)
 	Hello = tunnel.NewCmd("hello", 1001)
@@ -35,52 +36,88 @@ var (
 )
 
 func TestSession(t *testing.T) {
-	assert.NoError(t, bootstrap.Bootstrap())
-	go server(t)
-	client(t)
+	require.NoError(t, bootstrap.Bootstrap())
+	readyCh := make(chan struct{}, 1)
+	doneCh := make(chan struct{}, 1)
+	errCh := make(chan error, 1)
+
+	go server(readyCh, errCh)
+	client(t, readyCh, doneCh)
 	<-doneCh
+	require.NoError(t, <-errCh)
 }
 
-func server(t *testing.T) {
+func server(readyCh chan<- struct{}, errCh chan<- error) {
 	l, err := net.Listen("tcp", addr)
-	assert.NoError(t, err)
+	if err != nil {
+		readyCh <- struct{}{}
+		errCh <- err
+		return
+	}
 	defer l.Close()
 
-	doneCh <- struct{}{}
+	readyCh <- struct{}{}
 
 	conn, err := l.Accept()
-	assert.NoError(t, err)
+	if err != nil {
+		errCh <- err
+		return
+	}
 	defer conn.Close()
 
 	session, _ := tunnel.NewSession(conn, consts.Server)
 	for {
 		event, err := session.Read()
-		assert.NoError(t, err)
+		if err != nil {
+			errCh <- err
+			return
+		}
 		switch event.Cmd {
 		case tunnel.Ping:
-			t.Log("client ping")
-			_ = session.Write(&tunnel.Event{Cmd: tunnel.Pong})
+			if err := session.Write(&tunnel.Event{Cmd: tunnel.Pong}); err != nil {
+				errCh <- err
+				return
+			}
 		case Hello:
 			payload := new(HelloPaylod)
-			assert.NoError(t, tunnel.DecodePayload(event.Payload, payload))
-			assert.Equal(t, helloPayload1, *payload)
-			t.Logf("client hello: %+v\n", *payload)
-			_ = session.Write(&tunnel.Event{Cmd: Hello, Payload: helloPayload2})
+			if err := tunnel.DecodePayload(event.Payload, payload); err != nil {
+				errCh <- err
+				return
+			}
+			if helloPayload1 != *payload {
+				errCh <- fmt.Errorf("expected hello payload %+v, got %+v", helloPayload1, *payload)
+				return
+			}
+			if err := session.Write(&tunnel.Event{Cmd: Hello, Payload: helloPayload2}); err != nil {
+				errCh <- err
+				return
+			}
 		case Bye:
 			payload := new(ByePaylod)
-			assert.NoError(t, tunnel.DecodePayload(event.Payload, payload))
-			assert.Equal(t, byePayload1, *payload)
-			t.Logf("client bye: %+v\n", *payload)
-			_ = session.Write(&tunnel.Event{Cmd: Bye, Payload: byePayload2})
+			if err := tunnel.DecodePayload(event.Payload, payload); err != nil {
+				errCh <- err
+				return
+			}
+			if byePayload1 != *payload {
+				errCh <- fmt.Errorf("expected bye payload %+v, got %+v", byePayload1, *payload)
+				return
+			}
+			if err := session.Write(&tunnel.Event{Cmd: Bye, Payload: byePayload2}); err != nil {
+				errCh <- err
+				return
+			}
+			errCh <- nil
+			return
 		}
 	}
 }
 
-func client(t *testing.T) {
-	<-doneCh
+func client(t *testing.T, readyCh <-chan struct{}, doneCh chan<- struct{}) {
+	t.Helper()
+	<-readyCh
 
 	conn, err := net.Dial("tcp", addr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer conn.Close()
 
 	session, _ := tunnel.NewSession(conn, consts.Client)
@@ -88,7 +125,7 @@ func client(t *testing.T) {
 
 	for {
 		event, err := session.Read()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		switch event.Cmd {
 		case tunnel.Pong:
@@ -96,13 +133,13 @@ func client(t *testing.T) {
 			_ = session.Write(&tunnel.Event{Cmd: Hello, Payload: helloPayload1})
 		case Hello:
 			payload := new(HelloPaylod)
-			assert.NoError(t, tunnel.DecodePayload(event.Payload, payload))
+			require.NoError(t, tunnel.DecodePayload(event.Payload, payload))
 			assert.Equal(t, helloPayload2, *payload)
 			t.Logf("server hello: %+v\n", *payload)
 			_ = session.Write(&tunnel.Event{Cmd: Bye, Payload: byePayload1})
 		case Bye:
 			payload := new(ByePaylod)
-			assert.NoError(t, tunnel.DecodePayload(event.Payload, payload))
+			require.NoError(t, tunnel.DecodePayload(event.Payload, payload))
 			assert.Equal(t, byePayload2, *payload)
 			t.Logf("server bye: %+v\n", *payload)
 			doneCh <- struct{}{}

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/forbearing/gst/bootstrap"
 	"github.com/forbearing/gst/client"
 	"github.com/forbearing/gst/config"
+	"github.com/forbearing/gst/database"
 	"github.com/forbearing/gst/internal/helper"
 	modellogmgmt "github.com/forbearing/gst/internal/model/logmgmt"
 	"github.com/forbearing/gst/module/iam"
@@ -41,7 +43,7 @@ type ListResponse[T any] struct {
 func init() {
 	os.Setenv(config.DATABASE_TYPE, string(config.DBSqlite))
 	os.Setenv(config.SQLITE_IS_MEMORY, "true")
-	os.Setenv(config.SERVER_PORT, fmt.Sprintf("%d", port))
+	os.Setenv(config.SERVER_PORT, strconv.Itoa(port))
 	os.Setenv(config.REDIS_ENABLE, "true")
 	os.Setenv(config.LOGGER_DIR, "./logs")
 	os.Setenv(config.AUTH_NONE_EXPIRE_TOKEN, token)
@@ -96,11 +98,14 @@ func TestLogmgmt(t *testing.T) {
 			})
 			require.NoError(t, err)
 			helper.TestResp(t, resp, func(t *testing.T, rsp iam.SignupRsp) {
+				t.Helper(
 				// #modeliam.SignupRsp {
 				//   +UserID   => "019cbcc0-d2dd-7399-a4be-fc4ba2cd6775" #string
 				//   +Username => "user01" #string
 				//   +Message  => "User created successfully" #string
 				// }
+				)
+
 				require.Equal(t, rsp.Username, username)
 				require.NotEmpty(t, rsp.UserID)
 				userID = rsp.UserID
@@ -120,9 +125,12 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				t.Helper(
 				// #*modeliam.LoginRsp {
 				//   +SessionID => "019cbcc0-d312-7b46-a67d-57877893c929" #string
 				// }
+				)
+
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -142,6 +150,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+				t.Helper(
 				// #logmgmt_test.ListResponse[*github.com/forbearing/gst/internal/model/logmgmt.LoginLog] {
 				//   +Items => #[]*modellogmgmt.LoginLog [
 				//     0 => #*modellogmgmt.LoginLog {
@@ -160,11 +169,13 @@ func TestLogmgmt(t *testing.T) {
 				//   ]
 				//   +Total => 1 #int64
 				// }
+				)
+
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.Equal(t, l.UserID, userID)
 				require.Equal(t, l.Username, username)
-				require.Equal(t, string(l.Status), modellogmgmt.LoginStatusSuccess)
+				require.Equal(t, modellogmgmt.LoginStatusSuccess, string(l.Status))
 			})
 		})
 
@@ -181,9 +192,11 @@ func TestLogmgmt(t *testing.T) {
 				require.NoError(t, err)
 
 				helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LogoutRsp) {
+					t.Helper(
 					// #*modeliam.LogoutRsp {
 					//   +Msg => "logout successful" #string
 					// }
+					)
 				})
 			})
 		})
@@ -200,9 +213,12 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.LoginRsp) {
+				t.Helper(
 				// #*modeliam.LoginRsp {
 				//   +SessionID => "019cbcc0-d34d-7e0d-9b9e-89d08c3ada3c" #string
 				// }
+				)
+
 				require.NotEmpty(t, rsp.SessionID)
 				sessionID = rsp.SessionID
 			})
@@ -222,20 +238,21 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.LoginLog]) {
+				t.Helper()
 				require.Len(t, rsp.Items, 3)
 				l1, l2, l3 := rsp.Items[0], rsp.Items[1], rsp.Items[2]
 
 				require.Equal(t, l1.UserID, userID)
 				require.Equal(t, l1.Username, username)
-				require.Equal(t, string(l1.Status), modellogmgmt.LoginStatusSuccess)
+				require.Equal(t, modellogmgmt.LoginStatusSuccess, string(l1.Status))
 
 				require.Equal(t, l2.UserID, userID)
 				require.Equal(t, l2.Username, username)
-				require.Equal(t, string(l2.Status), modellogmgmt.LoginStatusLogout)
+				require.Equal(t, modellogmgmt.LoginStatusLogout, string(l2.Status))
 
 				require.Equal(t, l3.UserID, userID)
 				require.Equal(t, l3.Username, username)
-				require.Equal(t, string(l3.Status), modellogmgmt.LoginStatusSuccess)
+				require.Equal(t, modellogmgmt.LoginStatusSuccess, string(l3.Status))
 			})
 		})
 	})
@@ -256,11 +273,14 @@ func TestLogmgmt(t *testing.T) {
 
 			// operation log count is 0
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
-				require.Len(t, rsp.Items, 0)
+				t.Helper()
+				require.Empty(t, rsp.Items)
 			})
 		})
 
 		t.Run("create-group", func(t *testing.T) {
+			logmgmtSetSuperuser(t, username, true)
+
 			cli, err := client.New(groupAPI, client.WithCookie(&http.Cookie{
 				Name:  "session_id",
 				Value: sessionID,
@@ -273,6 +293,7 @@ func TestLogmgmt(t *testing.T) {
 			require.NoError(t, err)
 
 			helper.TestResp(t, resp, func(t *testing.T, rsp *iam.Group) {
+				t.Helper(
 				// #*modeliamgroup.Group {
 				//   +Name        => "g1" #string
 				//   +Type        => "regular" #modeliamgroup.GroupType
@@ -287,8 +308,10 @@ func TestLogmgmt(t *testing.T) {
 				//     +CreatedBy => "user01" #string
 				//   }
 				// }
+				)
+
 				require.NotNil(t, rsp)
-				require.Equal(t, rsp.Name, "g1")
+				require.Equal(t, "g1", rsp.Name)
 			})
 		})
 
@@ -309,6 +332,7 @@ func TestLogmgmt(t *testing.T) {
 
 			// operation log count is 1
 			helper.TestResp(t, resp, func(t *testing.T, rsp ListResponse[*logmgmt.OperationLog]) {
+				t.Helper(
 				// #logmgmt_test.ListResponse[*github.com/forbearing/gst/internal/model/logmgmt.OperationLog] {
 				//   +Items => #[]*modellogmgmt.OperationLog [
 				//     0 => #*modellogmgmt.OperationLog {
@@ -335,14 +359,27 @@ func TestLogmgmt(t *testing.T) {
 				//   ]
 				//   +Total => 1 #int64
 				// }
+				)
+
 				require.Len(t, rsp.Items, 1)
 				l := rsp.Items[0]
 				require.NotNil(t, l)
 				require.Equal(t, l.User, username)
-				require.Equal(t, l.OP, consts.OP_CREATE)
-				require.Equal(t, l.Table, "groups")
-				require.Equal(t, l.Model, "Group")
+				require.Equal(t, consts.OP_CREATE, l.OP)
+				require.Equal(t, "groups", l.Table)
+				require.Equal(t, "Group", l.Model)
 			})
 		})
 	})
+}
+
+func logmgmtSetSuperuser(t *testing.T, username string, enabled bool) {
+	t.Helper()
+
+	users := make([]*iam.User, 0)
+	require.NoError(t, database.Database[*iam.User](nil).WithLimit(1).WithQuery(&iam.User{Username: username}).List(&users))
+	require.Len(t, users, 1)
+
+	users[0].IsSuperuser = &enabled
+	require.NoError(t, database.Database[*iam.User](nil).Update(users[0]))
 }

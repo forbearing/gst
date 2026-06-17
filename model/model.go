@@ -161,15 +161,13 @@ var (
 // gorm:"foreignKey:ParentID"
 // gorm:"foreignKey:ParentID,references:ID"
 type Base struct {
-	ID string `json:"id" gorm:"primaryKey" schema:"id" url:"-"` // Unique identifier for the record
+	ID string `json:"id" gorm:"primaryKey;size:191" schema:"id" url:"-"` // Unique identifier for the record
 
-	CreatedBy string         `json:"created_by,omitempty" gorm:"index" schema:"created_by" url:"-"` // User ID who created the record
-	UpdatedBy string         `json:"updated_by,omitempty" gorm:"index" schema:"updated_by" url:"-"` // User ID who last updated the record
-	CreatedAt *time.Time     `json:"created_at,omitempty" gorm:"index" schema:"-" url:"-"`          // Timestamp when the record was created
-	UpdatedAt *time.Time     `json:"updated_at,omitempty" gorm:"index" schema:"-" url:"-"`          // Timestamp when the record was last updated
-	DeletedAt gorm.DeletedAt `json:"-" gorm:"index" schema:"-" url:"-"`                             // Timestamp when the record was deleted
-	Remark    *string        `json:"remark,omitempty" gorm:"size:10240" schema:"remark" url:"-"`    // Optional remark or note for the record (pointer type for PATCH support)
-	Order     *uint          `json:"order,omitempty" schema:"-" url:"-"`                            // Optional ordering value for sorting records
+	CreatedBy string         `json:"created_by,omitempty" gorm:"size:191;index" schema:"created_by" url:"-"` // User ID who created the record
+	UpdatedBy string         `json:"updated_by,omitempty" gorm:"size:191;index" schema:"updated_by" url:"-"` // User ID who last updated the record
+	CreatedAt *time.Time     `json:"created_at,omitempty" gorm:"index" schema:"-" url:"-"`                   // Timestamp when the record was created
+	UpdatedAt *time.Time     `json:"updated_at,omitempty" gorm:"index" schema:"-" url:"-"`                   // Timestamp when the record was last updated
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index" schema:"-" url:"-"`                                      // Timestamp when the record was deleted
 
 	// Query parameter
 	Page       uint    `json:"-" gorm:"-" schema:"page" url:"page,omitempty"`                 // Pagination: page number (e.g., page=2)
@@ -186,13 +184,10 @@ type Base struct {
 	Index      string  `json:"-" gorm:"-" schema:"_index" url:"_index,omitempty"`             // Query parameter: index name for search (e.g., _index=name)
 	Select     string  `json:"-" gorm:"-" schema:"_select" url:"_select,omitempty"`           // Query parameter: specific fields to select (e.g., _select=field1,field2)
 	Nototal    bool    `json:"-" gorm:"-" schema:"_nototal" url:"_nototal,omitempty"`         // Query parameter: skip total count calculation (e.g., _nototal=true)
-
-	// cursor pagination
+	// Cursor pagination
 	CursorValue  *string `json:"-" gorm:"-" schema:"_cursor_value" url:"_cursor_value,omitempty"`   // Query parameter: cursor value for pagination (e.g., _cursor_value=0196a0b3-c9d1-713c-870e-adc76af9f857)
 	CursorFields string  `json:"-" gorm:"-" schema:"_cursor_fields" url:"_cursor_fields,omitempty"` // Query parameter: fields used for cursor pagination (e.g., _cursor_fields=field1,field2)
 	CursorNext   bool    `json:"-" gorm:"-" schema:"_cursor_next" url:"_cursor_next,omitempty"`     // Query parameter: direction for cursor pagination (e.g., _cursor_next=true)
-
-	// gorm.Model `json:"-" schema:"-" url:"-"`
 }
 
 func (b *Base) GetTableName() string       { return "" }

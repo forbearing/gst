@@ -8,6 +8,7 @@ import (
 )
 
 func createStack(b *testing.B, size int, safe bool) *arraystack.Stack[int] {
+	b.Helper()
 	cmp := func(a, b int) int { return a - b }
 	var s *arraystack.Stack[int]
 	var err error
@@ -26,6 +27,7 @@ func createStack(b *testing.B, size int, safe bool) *arraystack.Stack[int] {
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(s *arraystack.Stack[int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

@@ -5,19 +5,16 @@ import (
 
 	"github.com/forbearing/gst/ds/list/arraylist"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func cmp(a, b int) int {
 	return a - b
 }
 
-func intCompare(a, b int) int {
-	return a - b
-}
-
 func TestNew(t *testing.T) {
 	list, err := arraylist.New(cmp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, list)
 	assert.True(t, list.IsEmpty())
 	assert.Equal(t, 0, list.Len())
@@ -26,7 +23,7 @@ func TestNew(t *testing.T) {
 func TestNewFromSlice(t *testing.T) {
 	values := []int{1, 2, 3}
 	list, err := arraylist.NewFromSlice(cmp, values)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, list)
 	assert.Equal(t, len(values), list.Len())
 	assert.Equal(t, values, list.Values())

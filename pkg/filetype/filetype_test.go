@@ -82,8 +82,6 @@ func TestDetectFiletype(t *testing.T) {
 	type testCase struct {
 		name     string
 		filename string
-		wantType Filetype
-		wantMime Mime
 	}
 
 	cases := make(

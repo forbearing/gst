@@ -4,15 +4,18 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/forbearing/gst/ds/tree/avltree"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newIntStringTree(t *testing.T) *avltree.Tree[int, string] {
+	t.Helper()
 	tree, err := avltree.NewOrderedKeys(avltree.WithSafe[int, string]())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return tree
 }
 
@@ -38,10 +41,10 @@ func TestAVLTree_New(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tree, err := avltree.New[int, int](tt.cmp)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Nil(t, tree)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.NotNil(t, tree)
 			}
 		})
@@ -344,26 +347,26 @@ func TestAVLTree_String(t *testing.T) {
 		"ten":   10,
 	}
 	tt, err := avltree.NewFromOrderedMap(m)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(tt.String())
 	tt, err = avltree.NewFromOrderedMap(m, avltree.WithNodeFormatter(func(k string, v int) string {
-		return fmt.Sprintf("%v", v)
+		return strconv.Itoa(v)
 	}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	fmt.Println(tt.String())
 }
 
 func TestAVLTree_MarshalJSON(t *testing.T) {
 	tree := newIntStringTree(t)
 	for i := range 10 {
-		tree.Put(i, fmt.Sprintf("%d", i))
+		tree.Put(i, strconv.Itoa(i))
 	}
 	jsonBytes, err := json.Marshal(tree)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	tree2 := newIntStringTree(t)
 	err = json.Unmarshal(jsonBytes, tree2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tree.Keys(), tree2.Keys())
 	assert.Equal(t, tree.Values(), tree2.Values())
 }

@@ -55,19 +55,19 @@ func BenchmarkBuffers(b *testing.B) {
 	buf := bytes.NewBuffer(slice)
 	custom := NewPool().Get()
 	b.Run("ByteSlice", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			slice = append(slice, str...)
 			slice = slice[:0]
 		}
 	})
 	b.Run("BytesBuffer", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			buf.WriteString(str)
 			buf.Reset()
 		}
 	})
 	b.Run("CustomBuffer", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			custom.AppendString(str)
 			custom.Reset()
 		}

@@ -16,7 +16,7 @@ var (
 	logFile       string
 	logLevel      string
 	logFormat     string
-	logEncoder    string
+	logEncoder    string //nolint: unused
 	logMaxAge     int
 	logMaxSize    int
 	logMaxBackups int

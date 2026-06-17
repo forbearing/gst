@@ -6,17 +6,46 @@
 // accepts and recommends using OTLP for sending traces.
 //
 // Supported exporter types:
-//   - otlp-http: OTLP over HTTP (recommended for most use cases)
-//   - otlp-grpc: OTLP over gRPC (for high-performance scenarios)
+//   - http/protobuf: OTLP over HTTP using protobuf payloads.
+//   - grpc: OTLP over gRPC.
 //
-// The package maintains backward compatibility by keeping the same configuration
-// structure and API, but internally uses OTLP exporters to send traces to
-// Jaeger or other OTLP-compatible backends like Uptrace.
+// Full sampling configuration:
+//
+//	[otel]
+//	enable = true
+//	service_name = demo
+//	exporter_otlp_protocol = http/protobuf
+//	exporter_otlp_traces_endpoint = http://localhost:4318/v1/traces
+//	traces_sampler = parentbased_always_on
+//
+// Partial sampling configuration:
+//
+//	[otel]
+//	enable = true
+//	service_name = demo
+//	exporter_otlp_protocol = http/protobuf
+//	exporter_otlp_traces_endpoint = http://localhost:4318/v1/traces
+//	traces_sampler = parentbased_traceidratio
+//	traces_sampler_arg = 0.1
+//	bsp_max_queue_size = 2048
+//	bsp_max_export_batch_size = 512
+//	bsp_schedule_delay = 5s
+//	bsp_export_timeout = 30s
+//
+// Use traces_sampler=parentbased_traceidratio with traces_sampler_arg between
+// 0 and 1 to enable partial sampling while honoring upstream sampling decisions.
+// For example, traces_sampler_arg=0.1 samples about 10% of root traces.
+//
+// The package uses OTLP exporters to send traces to Jaeger or other
+// OTLP-compatible backends like Uptrace.
 package otel
 
 import (
 	"context"
 	"maps"
+	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -48,11 +77,16 @@ var (
 	ErrOTELIsDisabled = errors.New("otel is disabled")
 )
 
+type requestRootSpanKey struct{}
+
 // Init initializes the OpenTelemetry tracer with OTLP exporters.
 // This function replaces the deprecated Jaeger exporter with OTLP exporters
 // that are compatible with Jaeger and other tracing backends.
 func Init() error {
-	cfg := config.App.OTEL
+	cfg, err := normalizeConfig(config.App.OTEL)
+	if err != nil {
+		return err
+	}
 	if !cfg.Enable {
 		logger.OTEL.Info("otel tracing is disabled")
 		return nil
@@ -65,7 +99,7 @@ func Init() error {
 	}
 
 	// Create exporter
-	exporter, err := createExporter(cfg)
+	exporter, err := newExporter(cfg)
 	if err != nil {
 		return errors.Wrap(err, "failed to create exporter")
 	}
@@ -83,14 +117,16 @@ func Init() error {
 	}
 
 	// Create sampler
-	sampler := createSampler(cfg)
+	sampler, err := newSampler(cfg)
+	if err != nil {
+		return errors.Wrap(err, "failed to create sampler")
+	}
 
 	// Create tracer provider
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(
 			exporter,
-			sdktrace.WithBatchTimeout(cfg.BufferFlushInterval),
-			sdktrace.WithMaxExportBatchSize(cfg.ReporterQueueSize),
+			newBatchSpanProcessorOptions(cfg)...,
 		),
 		sdktrace.WithResource(res),
 		sdktrace.WithSampler(sampler),
@@ -115,32 +151,32 @@ func Init() error {
 	logger.OTEL.Info(
 		"otel tracing initialized",
 		zap.String("service_name", cfg.ServiceName),
-		zap.String("exporter_type", string(cfg.ExporterType)),
-		zap.String("sampler_type", string(cfg.SamplerType)),
+		zap.String("exporter_otlp_protocol", string(cfg.ExporterOTLPProtocol)),
+		zap.String("traces_sampler", string(cfg.TracesSampler)),
 	)
 
 	return nil
 }
 
-// Close closes the Jaeger tracer
-func Close() error {
+// Close closes the OpenTelemetry tracer provider.
+func Close() {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if !initialized || tracerProvider == nil {
-		return nil
+		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := tracerProvider.Shutdown(ctx); err != nil {
-		return errors.Wrap(err, "failed to shutdown tracer provider")
+		logger.OTEL.Errorw("failed to shutdown tracer provider", "err", err)
 	}
 
 	initialized = false
+	tracerProvider = nil
 	logger.OTEL.Info("otel tracer closed")
-	return nil
 }
 
 // GetTracer returns the global tracer
@@ -151,17 +187,18 @@ func GetTracer() trace.Tracer {
 	return tracer
 }
 
-// IsEnabled returns whether Jaeger tracing is enabled
+// IsEnabled returns whether OpenTelemetry tracing is enabled.
 func IsEnabled() bool {
 	return config.App.OTEL.Enable && initialized
 }
 
-// StartSpan starts a new span with the given name and options
+// StartSpan starts a new span with the given name and options. The caller owns
+// the returned span and must end it after the traced operation finishes.
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
 	if !IsEnabled() {
 		return ctx, trace.SpanFromContext(ctx)
 	}
-	return tracer.Start(ctx, name, opts...)
+	return tracer.Start(ctx, name, opts...) //nolint:spancheck // Caller receives and ends the returned span.
 }
 
 // SpanFromContext returns the span from the context
@@ -169,134 +206,220 @@ func SpanFromContext(ctx context.Context) trace.Span {
 	return trace.SpanFromContext(ctx)
 }
 
-// createExporter creates an exporter based on configuration
-func createExporter(cfg config.OTEL) (sdktrace.SpanExporter, error) {
-	switch cfg.ExporterType {
-	case config.ExportTypeOtlpHTTP:
-		// Create OTLP HTTP exporter
-		opts := []otlptracehttp.Option{
-			otlptracehttp.WithEndpoint(cfg.OTLPEndpoint),
+// IsSpanRecording reports whether span is active and records telemetry data.
+func IsSpanRecording(span trace.Span) bool {
+	return span != nil && span.IsRecording()
+}
+
+// ContextWithRequestRootSpan marks the current span as the root span for one HTTP request.
+func ContextWithRequestRootSpan(ctx context.Context) context.Context {
+	span := trace.SpanFromContext(ctx)
+	if span == nil || !span.SpanContext().IsValid() {
+		return ctx
+	}
+	return context.WithValue(ctx, requestRootSpanKey{}, span)
+}
+
+// RequestRootContext returns ctx with the request root span restored as the current span.
+func RequestRootContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	span, ok := ctx.Value(requestRootSpanKey{}).(trace.Span)
+	if !ok || span == nil || !span.SpanContext().IsValid() {
+		return ctx
+	}
+	return trace.ContextWithSpan(ctx, span)
+}
+
+// normalizeConfig applies OTEL defaults and validates startup-only settings.
+func normalizeConfig(cfg config.OTEL) (config.OTEL, error) {
+	if cfg.ExporterOTLPProtocol == "" {
+		cfg.ExporterOTLPProtocol = config.OTLPProtocolHTTPProtobuf
+	}
+
+	switch cfg.ExporterOTLPProtocol {
+	case config.OTLPProtocolHTTPProtobuf:
+		if cfg.ExporterOTLPTracesEndpoint == "" {
+			cfg.ExporterOTLPTracesEndpoint = "http://localhost:4318/v1/traces"
+		}
+	case config.OTLPProtocolGRPC:
+		if cfg.ExporterOTLPTracesEndpoint == "" {
+			cfg.ExporterOTLPTracesEndpoint = "http://localhost:4317"
+		}
+	default:
+		return cfg, errors.Errorf("unsupported otlp protocol: %s", cfg.ExporterOTLPProtocol)
+	}
+
+	if cfg.ExporterOTLPCompression == "" {
+		cfg.ExporterOTLPCompression = config.OTLPCompressionNone
+	}
+	switch cfg.ExporterOTLPCompression {
+	case config.OTLPCompressionNone, config.OTLPCompressionGzip:
+	default:
+		return cfg, errors.Errorf("unsupported otlp compression: %s", cfg.ExporterOTLPCompression)
+	}
+
+	if cfg.TracesSampler == "" {
+		cfg.TracesSampler = config.TracesSamplerParentBasedAlwaysOn
+	}
+	if _, err := newSampler(cfg); err != nil {
+		return cfg, err
+	}
+
+	if cfg.BSPMaxQueueSize <= 0 {
+		cfg.BSPMaxQueueSize = sdktrace.DefaultMaxQueueSize
+	}
+	if cfg.BSPMaxExportBatchSize <= 0 {
+		cfg.BSPMaxExportBatchSize = min(sdktrace.DefaultMaxExportBatchSize, cfg.BSPMaxQueueSize)
+	}
+	if cfg.BSPMaxExportBatchSize > cfg.BSPMaxQueueSize {
+		return cfg, errors.Errorf("bsp max export batch size %d exceeds max queue size %d", cfg.BSPMaxExportBatchSize, cfg.BSPMaxQueueSize)
+	}
+	if cfg.BSPScheduleDelay <= 0 {
+		cfg.BSPScheduleDelay = time.Duration(sdktrace.DefaultScheduleDelay) * time.Millisecond
+	}
+	if cfg.BSPExportTimeout <= 0 {
+		cfg.BSPExportTimeout = time.Duration(sdktrace.DefaultExportTimeout) * time.Millisecond
+	}
+
+	return cfg, nil
+}
+
+// newExporter creates an OTLP trace exporter based on startup configuration.
+func newExporter(cfg config.OTEL) (sdktrace.SpanExporter, error) {
+	switch cfg.ExporterOTLPProtocol {
+	case config.OTLPProtocolHTTPProtobuf:
+		opts := []otlptracehttp.Option{}
+		if isEndpointURL(cfg.ExporterOTLPTracesEndpoint) {
+			opts = append(opts, otlptracehttp.WithEndpointURL(cfg.ExporterOTLPTracesEndpoint))
+		} else {
+			opts = append(opts, otlptracehttp.WithEndpoint(cfg.ExporterOTLPTracesEndpoint), otlptracehttp.WithInsecure())
 		}
 
-		if cfg.OTLPInsecure {
-			opts = append(opts, otlptracehttp.WithInsecure())
-		}
-
-		// Prepare headers with Uptrace DSN support
 		headers := make(map[string]string)
-
-		// Copy existing headers
-		maps.Copy(headers, cfg.OTLPHeaders)
-
-		// Add Uptrace DSN header if present in headers
-		// This allows users to set uptrace-dsn in the OTLPHeaders configuration
+		maps.Copy(headers, cfg.ExporterOTLPHeaders)
 		if len(headers) > 0 {
 			opts = append(opts, otlptracehttp.WithHeaders(headers))
 		}
-
-		// Enable compression for better performance (recommended by Uptrace)
-		opts = append(opts, otlptracehttp.WithCompression(otlptracehttp.GzipCompression))
+		if cfg.ExporterOTLPCompression == config.OTLPCompressionGzip {
+			opts = append(opts, otlptracehttp.WithCompression(otlptracehttp.GzipCompression))
+		}
 
 		return otlptracehttp.New(context.Background(), opts...)
 
-	case config.ExportTypeOtlpGRPC:
-		// Create OTLP gRPC exporter
-		opts := []otlptracegrpc.Option{
-			otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint),
+	case config.OTLPProtocolGRPC:
+		opts := []otlptracegrpc.Option{}
+		if isEndpointURL(cfg.ExporterOTLPTracesEndpoint) {
+			opts = append(opts, otlptracegrpc.WithEndpointURL(cfg.ExporterOTLPTracesEndpoint))
+		} else {
+			opts = append(opts, otlptracegrpc.WithEndpoint(cfg.ExporterOTLPTracesEndpoint), otlptracegrpc.WithInsecure())
 		}
 
-		if cfg.OTLPInsecure {
-			opts = append(opts, otlptracegrpc.WithInsecure())
-		}
-
-		// Prepare headers with Uptrace DSN support
 		headers := make(map[string]string)
-
-		// Copy existing headers
-		maps.Copy(headers, cfg.OTLPHeaders)
-
-		// Add Uptrace DSN header if present in headers
-		// This allows users to set uptrace-dsn in the OTLPHeaders configuration
+		maps.Copy(headers, cfg.ExporterOTLPHeaders)
 		if len(headers) > 0 {
 			opts = append(opts, otlptracegrpc.WithHeaders(headers))
 		}
-
-		// Enable compression for better performance (recommended by Uptrace)
-		opts = append(opts, otlptracegrpc.WithCompressor("gzip"))
+		if cfg.ExporterOTLPCompression == config.OTLPCompressionGzip {
+			opts = append(opts, otlptracegrpc.WithCompressor("gzip"))
+		}
 
 		return otlptracegrpc.New(context.Background(), opts...)
 
-	// NOTE: Jaeger exporter is deprecated since OpenTelemetry dropped support in July 2023
-	// Jaeger officially accepts and recommends using OTLP instead
-	// Use otlp-http or otlp-grpc exporter types instead
-	//
-	// case "jaeger":
-	// 	fallthrough
-	// default:
-	// 	// Use Jaeger exporter (default behavior)
-	// 	if cfg.CollectorURL != "" {
-	// 		// Use HTTP collector
-	// 		return otel.New(otel.WithCollectorEndpoint(
-	// 			otel.WithEndpoint(cfg.CollectorURL),
-	// 		))
-	// 	}
-	//
-	// 	// Use UDP agent
-	// 	return otel.New(otel.WithAgentEndpoint(
-	// 		otel.WithAgentHost(cfg.AgentEndpoint),
-	// 	))
-
 	default:
-		return nil, errors.Errorf("unsupported exporter type: %s. Use 'otlp-http' or 'otlp-grpc' instead", cfg.ExporterType)
+		return nil, errors.Errorf("unsupported otlp protocol: %s", cfg.ExporterOTLPProtocol)
 	}
 }
 
-// createSampler creates a sampler based on configuration
-func createSampler(cfg config.OTEL) sdktrace.Sampler {
-	switch cfg.SamplerType {
-	case config.SamplerTypeConst:
-		if cfg.SamplerParam >= 1.0 {
-			return sdktrace.AlwaysSample()
+func isEndpointURL(endpoint string) bool {
+	u, err := url.Parse(endpoint)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
+
+// newSampler creates an OpenTelemetry sampler from standard sampler names.
+func newSampler(cfg config.OTEL) (sdktrace.Sampler, error) {
+	sampler := config.TracesSampler(strings.ToLower(strings.TrimSpace(string(cfg.TracesSampler))))
+	switch sampler {
+	case config.TracesSamplerAlwaysOn:
+		return sdktrace.AlwaysSample(), nil
+	case config.TracesSamplerAlwaysOff:
+		return sdktrace.NeverSample(), nil
+	case config.TracesSamplerTraceIDRatio:
+		ratio, err := traceIDRatioSamplerArg(cfg.TracesSamplerArg)
+		if err != nil {
+			return nil, err
 		}
-		return sdktrace.NeverSample()
-	case config.SamplerTypeProbabilistic:
-		return sdktrace.TraceIDRatioBased(cfg.SamplerParam)
-	case config.SamplerTypeRateLimiting:
-		// Note: OpenTelemetry doesn't have built-in rate limiting sampler
-		// This would need to be implemented separately
-		return sdktrace.TraceIDRatioBased(cfg.SamplerParam)
+		return sdktrace.TraceIDRatioBased(ratio), nil
+	case config.TracesSamplerParentBasedAlwaysOn:
+		return sdktrace.ParentBased(sdktrace.AlwaysSample()), nil
+	case config.TracesSamplerParentBasedAlwaysOff:
+		return sdktrace.ParentBased(sdktrace.NeverSample()), nil
+	case config.TracesSamplerParentBasedTraceIDRatio:
+		ratio, err := traceIDRatioSamplerArg(cfg.TracesSamplerArg)
+		if err != nil {
+			return nil, err
+		}
+		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(ratio)), nil
 	default:
-		return sdktrace.AlwaysSample()
+		return nil, errors.Errorf("unsupported traces sampler: %s", cfg.TracesSampler)
+	}
+}
+
+func traceIDRatioSamplerArg(arg string) (float64, error) {
+	arg = strings.TrimSpace(arg)
+	if arg == "" {
+		return 1, nil
+	}
+
+	ratio, err := strconv.ParseFloat(arg, 64)
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to parse traces sampler arg")
+	}
+	if ratio < 0 || ratio > 1 {
+		return 0, errors.Errorf("traces sampler arg must be between 0 and 1: %s", arg)
+	}
+	return ratio, nil
+}
+
+func newBatchSpanProcessorOptions(cfg config.OTEL) []sdktrace.BatchSpanProcessorOption {
+	return []sdktrace.BatchSpanProcessorOption{
+		sdktrace.WithMaxQueueSize(cfg.BSPMaxQueueSize),
+		sdktrace.WithMaxExportBatchSize(cfg.BSPMaxExportBatchSize),
+		sdktrace.WithBatchTimeout(cfg.BSPScheduleDelay),
+		sdktrace.WithExportTimeout(cfg.BSPExportTimeout),
 	}
 }
 
 // AddSpanTags adds tags to the current span
 func AddSpanTags(span trace.Span, tags map[string]any) {
-	if span == nil || !span.IsRecording() {
+	if !IsSpanRecording(span) || len(tags) == 0 {
 		return
 	}
 
+	attrs := make([]attribute.KeyValue, 0, len(tags))
 	for key, value := range tags {
 		switch v := value.(type) {
 		case string:
-			span.SetAttributes(attribute.String(key, v))
+			attrs = append(attrs, attribute.String(key, v))
 		case int:
-			span.SetAttributes(attribute.Int(key, v))
+			attrs = append(attrs, attribute.Int(key, v))
 		case int64:
-			span.SetAttributes(attribute.Int64(key, v))
+			attrs = append(attrs, attribute.Int64(key, v))
 		case float64:
-			span.SetAttributes(attribute.Float64(key, v))
+			attrs = append(attrs, attribute.Float64(key, v))
 		case bool:
-			span.SetAttributes(attribute.Bool(key, v))
+			attrs = append(attrs, attribute.Bool(key, v))
 		default:
-			span.SetAttributes(attribute.String(key, "unsupported_type"))
+			attrs = append(attrs, attribute.String(key, "unsupported_type"))
 		}
 	}
+	span.SetAttributes(attrs...)
 }
 
 // AddSpanEvent adds an event to the current span
 func AddSpanEvent(span trace.Span, name string, attrs ...attribute.KeyValue) {
-	if span == nil || !span.IsRecording() {
+	if !IsSpanRecording(span) {
 		return
 	}
 	span.AddEvent(name, trace.WithAttributes(attrs...))
@@ -304,7 +427,7 @@ func AddSpanEvent(span trace.Span, name string, attrs ...attribute.KeyValue) {
 
 // RecordError records an error in the current span
 func RecordError(span trace.Span, err error) {
-	if span == nil || !span.IsRecording() || err == nil {
+	if !IsSpanRecording(span) || err == nil {
 		return
 	}
 	span.RecordError(err)

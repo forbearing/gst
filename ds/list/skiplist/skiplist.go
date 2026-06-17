@@ -232,7 +232,7 @@ func (sl *SkipList[K, V]) Delete(key K) (v V, found bool) {
 	deletedValue := target.Value
 
 	// Remove target node from all levels
-	for i := 0; i < len(target.next); i++ {
+	for i := range len(target.next) {
 		if update[i].next[i] == target {
 			update[i].next[i] = target.next[i] // Bypass target node
 		}

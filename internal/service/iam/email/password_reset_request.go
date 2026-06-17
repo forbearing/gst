@@ -17,9 +17,10 @@ type PasswordResetRequestService struct {
 	service.Base[*modeliamemail.PasswordResetRequest, *modeliamemail.PasswordResetRequestReq, *modeliamemail.PasswordResetRequestRsp]
 }
 
-// passwordResetLookupUserByEmail resolves the account bound to the requested email.
-// The indirection keeps the production query simple and allows focused tests to stub
-// the lookup without requiring a database fixture.
+// passwordResetLookupUserByEmail resolves the account bound to the requested email
+// and returns errEmailUserNotFound when no account uses it. The indirection keeps
+// the production query simple and allows focused tests to stub the lookup without
+// requiring a database fixture.
 var passwordResetLookupUserByEmail = func(ctx *types.ServiceContext, email string) (*modeliamuser.User, error) {
 	users := make([]*modeliamuser.User, 0, 1)
 	queryEmail := email
@@ -30,7 +31,7 @@ var passwordResetLookupUserByEmail = func(ctx *types.ServiceContext, email strin
 		return nil, err
 	}
 	if len(users) == 0 {
-		return nil, nil
+		return nil, errEmailUserNotFound
 	}
 	return users[0], nil
 }
@@ -58,6 +59,9 @@ func (s *PasswordResetRequestService) Create(ctx *types.ServiceContext, req *mod
 
 	user, err := passwordResetLookupUserByEmail(ctx, email)
 	if err != nil {
+		if errors.Is(err, errEmailUserNotFound) {
+			return rsp, nil
+		}
 		log.Error("failed to load password reset user", err)
 		return nil, errors.Wrap(err, "failed to load password reset user")
 	}

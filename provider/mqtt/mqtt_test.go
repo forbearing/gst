@@ -11,6 +11,7 @@ import (
 	"github.com/forbearing/gst/provider/mqtt"
 	"github.com/forbearing/gst/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMqtt(t *testing.T) {
@@ -18,7 +19,7 @@ func TestMqtt(t *testing.T) {
 	util.RunOrDie(bootstrap.Bootstrap)
 	defer mqtt.Close()
 
-	assert.NoError(t, mqtt.Health())
+	require.NoError(t, mqtt.Health())
 
 	topic := "test/topic"
 	t.Run("PublishAndSubscribe", func(t *testing.T) {
@@ -33,7 +34,7 @@ func TestMqtt(t *testing.T) {
 		var receivedTopic string
 
 		// subscript
-		assert.NoError(t, mqtt.Subscribe(topic, func(topic string, payload []byte) error {
+		require.NoError(t, mqtt.Subscribe(topic, func(topic string, payload []byte) error {
 			received = payload
 			receivedTopic = topic
 			wg.Done()
@@ -41,7 +42,7 @@ func TestMqtt(t *testing.T) {
 		}))
 
 		// public
-		assert.NoError(t, mqtt.Publish(topic, message))
+		require.NoError(t, mqtt.Publish(topic, message))
 		done := make(chan struct{})
 
 		go func() {
@@ -54,7 +55,7 @@ func TestMqtt(t *testing.T) {
 			assert.Equal(t, topic, receivedTopic)
 			var receivedMsg map[string]any
 			err := json.Unmarshal(received, &receivedMsg)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, message["name"], receivedMsg["name"])
 		case <-time.After(5 * time.Second):
 			t.Fatal("timeout waiting for message")
@@ -71,7 +72,7 @@ func TestMqtt(t *testing.T) {
 			Retain:  true,
 			Timeout: 5 * time.Second,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 
 	t.Run("MultipleSubscriptions", func(t *testing.T) {
@@ -95,13 +96,13 @@ func TestMqtt(t *testing.T) {
 				wg.Done()
 				return nil
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		// 发布消息到所有主题
 		for _, topic := range topics {
 			err := mqtt.Publish(topic, "test message")
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 
 		// 等待所有消息接收
@@ -129,15 +130,15 @@ func TestMqtt(t *testing.T) {
 			t.Error("should not receive message after unsubscribe")
 			return nil
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// 取消订阅
 		err = mqtt.Unsubscribe(topic)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// 发布消息
 		err = mqtt.Publish(topic, "test message")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// 等待一段时间，确保没有收到消息
 		// time.Sleep(2 * time.Second)
@@ -183,16 +184,16 @@ func TestMqtt(t *testing.T) {
 				Time time.Time `json:"time"`
 			}
 			err := json.Unmarshal(data, &received)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, payload.Name, received.Name)
 			assert.Equal(t, payload.Age, received.Age)
 			wg.Done()
 			return nil
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		err = mqtt.Publish(topic, payload)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// 等待消息接收
 		done := make(chan struct{})

@@ -1,8 +1,7 @@
 package serviceiamaccount
 
 import (
-	"fmt"
-
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/database"
 	modeliamaccount "github.com/forbearing/gst/internal/model/iam/account"
 	modeliamuser "github.com/forbearing/gst/internal/model/iam/user"
@@ -22,33 +21,33 @@ func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliamaccount.S
 
 	// Validate input
 	if req.Username == "" {
-		return nil, fmt.Errorf("username is required")
+		return nil, errors.New("username is required")
 	}
 	if req.Password == "" {
-		return nil, fmt.Errorf("password is required")
+		return nil, errors.New("password is required")
 	}
 	if req.Password != req.RePassword {
-		return nil, fmt.Errorf("passwords do not match")
+		return nil, errors.New("passwords do not match")
 	}
 	if len(req.Password) < 6 {
-		return nil, fmt.Errorf("password must be at least 6 characters long")
+		return nil, errors.New("password must be at least 6 characters long")
 	}
 
 	// Check if username already exists
 	existingUsers := make([]*modeliamuser.User, 0)
 	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).WithLimit(1).WithQuery(&modeliamuser.User{Username: req.Username}).List(&existingUsers); err != nil {
 		log.Error("failed to check existing user", zap.Error(err))
-		return nil, fmt.Errorf("failed to create user")
+		return nil, errors.New("failed to create user")
 	}
 	if len(existingUsers) > 0 {
-		return nil, fmt.Errorf("username already exists")
+		return nil, errors.New("username already exists")
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("failed to hash password", zap.Error(err))
-		return nil, fmt.Errorf("failed to create user")
+		return nil, errors.New("failed to create user")
 	}
 
 	// Create new user
@@ -71,7 +70,7 @@ func (s *SignupService) Create(ctx *types.ServiceContext, req *modeliamaccount.S
 	// Save to database
 	if err = database.Database[*modeliamuser.User](ctx.DatabaseContext()).Create(newUser); err != nil {
 		log.Error("failed to create user", zap.Error(err))
-		return nil, fmt.Errorf("failed to create user")
+		return nil, errors.New("failed to create user")
 	}
 
 	log.Info("user created successfully", zap.String("username", req.Username), zap.String("user_id", newUser.ID))

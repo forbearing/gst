@@ -33,7 +33,7 @@ type Database struct {
 func (*Database) setDefault() {
 	cv.SetDefault("database.type", DBSqlite)
 	cv.SetDefault("database.slow_query_threshold", 500*time.Millisecond)
-	cv.SetDefault("database.max_idle_conns", 10)
+	cv.SetDefault("database.max_idle_conns", 100)
 	cv.SetDefault("database.max_open_conns", 100)
 	cv.SetDefault("database.conn_max_lifetime", 1*time.Hour)
 	cv.SetDefault("database.conn_max_idle_time", 10*time.Minute)

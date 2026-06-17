@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -168,16 +169,16 @@ func GetFunctionName(x any) string {
 }
 
 func ParseScheme(req *http.Request) string {
-	if scheme := req.Header.Get("x-forwarded-proto"); len(scheme) != 0 {
+	if scheme := req.Header.Get("X-Forwarded-Proto"); len(scheme) != 0 {
 		return scheme
 	}
-	if scheme := req.Header.Get("x-forwarded-protocol"); len(scheme) != 0 {
+	if scheme := req.Header.Get("X-Forwarded-Protocol"); len(scheme) != 0 {
 		return scheme
 	}
-	if ssl := req.Header.Get("x-forwarded-ssl"); ssl == "on" {
+	if ssl := req.Header.Get("X-Forwarded-Ssl"); ssl == "on" {
 		return "https"
 	}
-	if scheme := req.Header.Get("x-url-scheme"); len(scheme) != 0 {
+	if scheme := req.Header.Get("X-Url-Scheme"); len(scheme) != 0 {
 		return scheme
 	}
 	if req.TLS != nil {
@@ -394,7 +395,7 @@ func FormatDurationSmart(d time.Duration, precisions ...int) string {
 	}
 
 	// Format string, e.g., "%.2f"
-	format := "%." + fmt.Sprintf("%d", precision) + "f%s"
+	format := "%." + strconv.Itoa(precision) + "f%s"
 
 	ns := d.Nanoseconds()
 	absNs := ns
@@ -420,9 +421,12 @@ func SafeGo(fn func(), names ...any) {
 		if len(names) <= 0 {
 			name = "unnamed goroutine"
 		}
+		var nameBuilder strings.Builder
 		for _, v := range names {
-			name += ":" + cast.ToString(v)
+			nameBuilder.WriteByte(':')
+			nameBuilder.WriteString(cast.ToString(v))
 		}
+		name += nameBuilder.String()
 
 		defer func() { Recovery(name) }()
 

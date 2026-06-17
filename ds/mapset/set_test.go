@@ -5,6 +5,7 @@ import (
 
 	"github.com/forbearing/gst/ds/mapset"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func intCmp(a, b int) int {
@@ -22,14 +23,14 @@ func stringCmp(a, b string) int {
 
 func TestNew(t *testing.T) {
 	s, err := mapset.New[int]()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	assert.True(t, s.IsEmpty())
 }
 
 func TestNewFromSlice(t *testing.T) {
 	s, err := mapset.NewFromSlice([]int{1, 2, 3, 4}, mapset.WithSorted(intCmp))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	assert.Equal(t, 4, s.Len())
 	assert.Equal(t, []int{1, 2, 3, 4}, s.Slice())
@@ -38,7 +39,7 @@ func TestNewFromSlice(t *testing.T) {
 func TestNewFromMapKeys(t *testing.T) {
 	m := map[int]string{1: "a", 2: "b", 3: "c"}
 	s, err := mapset.NewFromMapKeys(m, mapset.WithSorted(intCmp))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	assert.Equal(t, 3, s.Len())
 	assert.Equal(t, []int{1, 2, 3}, s.Slice())
@@ -47,7 +48,7 @@ func TestNewFromMapKeys(t *testing.T) {
 func TestNewFromMapValues(t *testing.T) {
 	m := map[int]string{1: "a", 2: "b", 3: "c"}
 	s, err := mapset.NewFromMapValues(m, mapset.WithSorted(stringCmp))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, s)
 	assert.Equal(t, 3, s.Len())
 	assert.Equal(t, []string{"a", "b", "c"}, s.Slice())
@@ -251,7 +252,7 @@ func TestSlice(t *testing.T) {
 func TestMarshalJSON(t *testing.T) {
 	s, _ := mapset.NewFromSlice([]int{1, 2, 3}, mapset.WithSorted(intCmp))
 	data, err := s.MarshalJSON()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.JSONEq(t, "[1,2,3]", string(data))
 }
 
@@ -259,6 +260,6 @@ func TestUnmarshalJSON(t *testing.T) {
 	data := []byte("[1,2,3]")
 	var s mapset.Set[int]
 	err := s.UnmarshalJSON(data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.True(t, s.Contains(1, 2, 3))
 }

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
+	"github.com/forbearing/gst/internal/clioutput"
 	"github.com/forbearing/gst/internal/codegen"
 	"github.com/forbearing/gst/internal/codegen/gen"
 	"github.com/spf13/cobra"
@@ -26,30 +26,30 @@ func pruneRun() {
 	}
 
 	if !fileExists(modelDir) {
-		logError(fmt.Sprintf("model dir not found: %s", modelDir))
+		clioutput.Error("", "model dir not found: %s", modelDir)
 		os.Exit(1)
 	}
 
 	// Scan all models
-	logSection("Scan Models")
+	clioutput.Section("Scan Models")
 	allModels, err := codegen.FindModels(module, modelDir, serviceDir, excludes)
 	checkErr(err)
 	if len(allModels) == 0 {
-		fmt.Println(gray("  No models found, nothing to do"))
-		return
+		clioutput.Item("", "No models found, pruning service files only")
+	} else {
+		clioutput.Success("", "%d models found", len(allModels))
 	}
-	fmt.Printf("  %s %d models found\n", green("✔"), len(allModels))
 
 	// Scan existing service files
 	oldServiceFiles := scanExistingServiceFiles(serviceDir)
 
 	// Prune disabled service files
-	logSection("Prune Disabled Service Files")
+	clioutput.Section("Prune Disabled Service Files")
 	if len(oldServiceFiles) > 0 {
 		pruneServiceFiles(oldServiceFiles, allModels)
 	} else {
-		fmt.Printf("  %s No service files found to prune\n", green("✔"))
+		clioutput.Success("", "No service files found to prune")
 	}
 
-	fmt.Printf("\n%s Code pruning completed successfully!\n", green("🎉"))
+	clioutput.Done("Code pruning completed successfully!")
 }

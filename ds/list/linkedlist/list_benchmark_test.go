@@ -12,6 +12,7 @@ import (
 )
 
 func createLinkedList(b *testing.B, size int, safe bool) *linkedlist.List[int] {
+	b.Helper()
 	slice := make([]int, 0, size)
 	for i := range size {
 		slice = append(slice, i)
@@ -39,6 +40,7 @@ func createStdList(_ *testing.B, size int) *golist.List {
 }
 
 func benchmark(b *testing.B, sizes []int, f1 func(list *linkedlist.List[int]), f2 func(list *golist.List)) {
+	b.Helper()
 	var mu sync.Mutex
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
@@ -136,6 +138,7 @@ func BenchmarkLinkedList_InsertAfter(b *testing.B) {
 }
 
 func benchmarkInsertAfter(b *testing.B, _ int) {
+	b.Helper()
 	var mu sync.Mutex
 
 	b.Run("unsafe custom", func(b *testing.B) {
@@ -225,6 +228,7 @@ func BenchmarkLinkedList_InsertBefore(b *testing.B) {
 }
 
 func benchmarkInsertBefore(b *testing.B, _ int) {
+	b.Helper()
 	var mu sync.Mutex
 
 	b.Run("unsafe custom", func(b *testing.B) {
@@ -364,34 +368,6 @@ func stdListFind(list *golist.List, v any, equal func(int, int) bool) (_v any) {
 	return _v
 }
 
-func benchmarkReverse(b *testing.B, size int) {
-	b.Run("unsafe", func(b *testing.B) {
-		l := createLinkedList(b, size, false)
-		b.ResetTimer()
-		for range b.N {
-			l.Reverse()
-		}
-	})
-
-	b.Run("safe", func(b *testing.B) {
-		l := createLinkedList(b, size, true)
-		b.ResetTimer()
-		for range b.N {
-			l.Reverse()
-		}
-	})
-
-	b.Run("safe conc", func(b *testing.B) {
-		l := createLinkedList(b, size, true)
-		b.ResetTimer()
-		b.RunParallel(func(p *testing.PB) {
-			for p.Next() {
-				l.Reverse()
-			}
-		})
-	})
-}
-
 func BenchmarkLinkedList_Reverse(b *testing.B) {
 	benchmark(b, []int{10, 10000}, func(list *linkedlist.List[int]) {
 		list.Reverse()
@@ -407,6 +383,7 @@ func BenchmarkLinkedList_Merge(b *testing.B) {
 }
 
 func benchmarkMerge(b *testing.B, size int) {
+	b.Helper()
 	b.Run("unsafe", func(b *testing.B) {
 		l1 := createLinkedList(b, size, false)
 		b.ResetTimer()
@@ -436,6 +413,7 @@ func BenchmarkLinkedList_MergeSorted(b *testing.B) {
 }
 
 func benchmarkMergeSorted(b *testing.B, size int) {
+	b.Helper()
 	cmp := func(a, b int) int {
 		if a < b {
 			return -1

@@ -8,6 +8,7 @@ import (
 )
 
 func createSkipList(b *testing.B, size int, safe bool) *skiplist.SkipList[int64, int64] {
+	b.Helper()
 	var sl *skiplist.SkipList[int64, int64]
 	var err error
 	if safe {
@@ -27,6 +28,7 @@ func createSkipList(b *testing.B, size int, safe bool) *skiplist.SkipList[int64,
 }
 
 func benchmark(b *testing.B, sizes []int, do func(sl *skiplist.SkipList[int64, int64])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {
@@ -59,6 +61,7 @@ func benchmark(b *testing.B, sizes []int, do func(sl *skiplist.SkipList[int64, i
 }
 
 func benchmarkIndex(b *testing.B, sizes []int, do func(sl *skiplist.SkipList[int64, int64], i int)) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

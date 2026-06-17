@@ -43,3 +43,6 @@ temp/
 # Build output
 dist/
 build/
+
+# Generated files
+generated/

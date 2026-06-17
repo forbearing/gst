@@ -16,7 +16,7 @@ const bytesPerKey = 30
 
 func init() {
 	// string keys
-	for i := range len(stringKeys) {
+	for i := range stringKeys {
 		key := make([]byte, bytesPerKey)
 		if _, err := rand.Read(key); err != nil {
 			panic("error generating random byte slice")
@@ -26,6 +26,7 @@ func init() {
 }
 
 func createTrie1(b *testing.B, safe bool) *trie.Trie[rune, int] {
+	b.Helper()
 	var t *trie.Trie[rune, int]
 	var err error
 	if safe {
@@ -40,6 +41,7 @@ func createTrie1(b *testing.B, safe bool) *trie.Trie[rune, int] {
 }
 
 func createTrie2(b *testing.B, size int, safe bool) *trie.Trie[rune, int] {
+	b.Helper()
 	var t *trie.Trie[rune, int]
 	var err error
 	if safe {
@@ -57,6 +59,7 @@ func createTrie2(b *testing.B, size int, safe bool) *trie.Trie[rune, int] {
 }
 
 func benchmark(b *testing.B, sizes []int, do func(t *trie.Trie[rune, int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {
@@ -91,7 +94,7 @@ func BenchmarkTrie_Put(b *testing.B) {
 	b.Run("single unsafe", func(b *testing.B) {
 		trie := createTrie1(b, false)
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 	})
@@ -99,7 +102,7 @@ func BenchmarkTrie_Put(b *testing.B) {
 	b.Run("single safe", func(b *testing.B) {
 		trie := createTrie1(b, true)
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 	})
@@ -118,22 +121,22 @@ func BenchmarkTrie_Put(b *testing.B) {
 func BenchmarkTrie_Get(b *testing.B) {
 	b.Run("single unsafe", func(b *testing.B) {
 		trie := createTrie1(b, false)
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Get([]rune(stringKeys[i%len(stringKeys)]))
 		}
 	})
 
 	b.Run("single safe", func(b *testing.B) {
 		trie := createTrie1(b, true)
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Get([]rune(stringKeys[i%len(stringKeys)]))
 		}
 	})
@@ -155,22 +158,22 @@ func BenchmarkTrie_Get(b *testing.B) {
 func BenchmarkTrie_Delete(b *testing.B) {
 	b.Run("single unsafe", func(b *testing.B) {
 		trie := createTrie1(b, false)
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Delete([]rune(stringKeys[i%len(stringKeys)]))
 		}
 	})
 
 	b.Run("single safe", func(b *testing.B) {
 		trie := createTrie1(b, true)
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Delete([]rune(stringKeys[i%len(stringKeys)]))
 		}
 	})
@@ -192,22 +195,22 @@ func BenchmarkTrie_Delete(b *testing.B) {
 func BenchmarkTrie_DeletePrefix(b *testing.B) {
 	b.Run("single unsafe", func(b *testing.B) {
 		trie := createTrie1(b, false)
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.DeletePrefix([]rune(stringKeys[i%len(stringKeys)]))
 		}
 	})
 
 	b.Run("single safe", func(b *testing.B) {
 		trie := createTrie1(b, true)
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.Put([]rune(stringKeys[i%len(stringKeys)]), i)
 		}
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			trie.DeletePrefix([]rune(stringKeys[i%len(stringKeys)]))
 		}
 	})

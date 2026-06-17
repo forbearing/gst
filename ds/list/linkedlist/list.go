@@ -10,13 +10,13 @@
 package linkedlist
 
 import (
-	"fmt"
 	"slices"
 
+	"github.com/cockroachdb/errors"
 	"github.com/forbearing/gst/ds/types"
 )
 
-var ErrNilCmp = fmt.Errorf("nil comparator")
+var ErrNilCmp = errors.New("nil comparator")
 
 // List represents a doubly-linked list.
 type List[V any] struct {
@@ -459,15 +459,4 @@ func (l *List[V]) Clear() {
 	l.Head = nil
 	l.Tail = nil
 	l.count = 0
-}
-
-func (l *List[V]) options() []Option[V] {
-	ops := make([]Option[V], 0)
-	if l.safe {
-		ops = append(ops, WithSafe[V]())
-	}
-	if l.sorted {
-		ops = append(ops, WithSorted(l.cmp))
-	}
-	return ops
 }

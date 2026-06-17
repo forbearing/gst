@@ -8,7 +8,8 @@ import (
 	"github.com/forbearing/gst/ds/heap/binaryheap"
 )
 
-func createSafeHeap(t *testing.B, size int, safe bool) *binaryheap.Heap[int] {
+func createSafeHeap(b *testing.B, size int, safe bool) *binaryheap.Heap[int] {
+	b.Helper()
 	var h *binaryheap.Heap[int]
 	var err error
 	if safe {
@@ -17,7 +18,7 @@ func createSafeHeap(t *testing.B, size int, safe bool) *binaryheap.Heap[int] {
 		h, err = binaryheap.NewOrdered[int]()
 	}
 	if err != nil {
-		t.Fatalf("failed to create binary heap")
+		b.Fatalf("failed to create binary heap")
 	}
 	for i := range size {
 		h.Push(i)
@@ -26,6 +27,7 @@ func createSafeHeap(t *testing.B, size int, safe bool) *binaryheap.Heap[int] {
 }
 
 func benchmark(b *testing.B, sizes []int, do func(h *binaryheap.Heap[int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

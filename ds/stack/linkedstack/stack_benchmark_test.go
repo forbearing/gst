@@ -8,6 +8,7 @@ import (
 )
 
 func createStack(b *testing.B, size int, safe bool) *linkedstack.Stack[int] {
+	b.Helper()
 	var s *linkedstack.Stack[int]
 	var err error
 	if safe {
@@ -25,6 +26,7 @@ func createStack(b *testing.B, size int, safe bool) *linkedstack.Stack[int] {
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(s *linkedstack.Stack[int])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

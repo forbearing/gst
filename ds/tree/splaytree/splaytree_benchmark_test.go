@@ -9,6 +9,7 @@ import (
 )
 
 func createTree(b *testing.B, size int, safe bool) *splaytree.Tree[float64, float64] {
+	b.Helper()
 	var t *splaytree.Tree[float64, float64]
 	var err error
 	if safe {
@@ -26,6 +27,7 @@ func createTree(b *testing.B, size int, safe bool) *splaytree.Tree[float64, floa
 }
 
 func benchmark(b *testing.B, hasConcUnsafe bool, sizes []int, do func(t *splaytree.Tree[float64, float64])) {
+	b.Helper()
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("size-%d", size), func(b *testing.B) {
 			b.Run("single unsafe", func(b *testing.B) {

@@ -35,6 +35,9 @@ func (s *VerificationResendService) Create(ctx *types.ServiceContext, req *model
 
 	user, err := verificationLookupUserByEmail(ctx, email)
 	if err != nil {
+		if errors.Is(err, errEmailUserNotFound) {
+			return rsp, nil
+		}
 		log.Error("failed to load verification resend user", err)
 		return nil, errors.Wrap(err, "failed to load verification resend user")
 	}

@@ -2,7 +2,6 @@ package redis_test
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/forbearing/gst/bootstrap"
@@ -13,11 +12,11 @@ import (
 )
 
 func BenchmarkRedis(b *testing.B) {
-	os.Setenv(config.REDIS_ADDR, "127.0.0.1:6378")
-	os.Setenv(config.REDIS_PASSWORD, "password123")
-	os.Setenv(config.REDIS_ENABLE, "true")
-	os.Setenv(config.LOGGER_FILE, "/tmp/test.log")
-	os.Setenv(config.REDIS_EXPIRATION, "8h")
+	b.Setenv(config.REDIS_ADDR, "127.0.0.1:6378")
+	b.Setenv(config.REDIS_PASSWORD, "password123")
+	b.Setenv(config.REDIS_ENABLE, "true")
+	b.Setenv(config.LOGGER_FILE, "/tmp/test.log")
+	b.Setenv(config.REDIS_EXPIRATION, "8h")
 	util.RunOrDie(bootstrap.Bootstrap)
 
 	groups := make([]*Group, 0, 1000)

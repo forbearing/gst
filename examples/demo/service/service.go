@@ -2,18 +2,31 @@
 package service
 
 import (
-	"demo/service/config/namespace/app"
-	"demo/service/config/namespace/app/env/file"
-	"demo/service/config/namespace/app/env/item"
-	"demo/service/config/namespace/app/env/itemparse"
+	"demo/service/auth/login"
+	"demo/service/common/search"
+	"demo/service/config/file"
+	"demo/service/config/file/encrypt"
+	"demo/service/conversation"
+	"demo/service/conversation/message"
+	"demo/service/ping"
 
 	"github.com/forbearing/gst/service"
 	"github.com/forbearing/gst/types/consts"
 )
 
 func init() {
+	service.Register[*login.Login](consts.PHASE_LIST)
+	service.Register[*search.Dedup](consts.PHASE_CREATE)
+	service.Register[*encrypt.Creator](consts.PHASE_CREATE)
+	service.Register[*file.Creator](consts.PHASE_CREATE)
+	service.Register[*file.Updater](consts.PHASE_UPDATE)
 	service.Register[*file.Lister](consts.PHASE_LIST)
-	service.Register[*item.Lister](consts.PHASE_LIST)
-	service.Register[*itemparse.Creator](consts.PHASE_CREATE)
-	service.Register[*app.Lister](consts.PHASE_LIST)
+	service.Register[*message.Creator](consts.PHASE_CREATE)
+	service.Register[*message.Lister](consts.PHASE_LIST)
+	service.Register[*message.ManyDeleter](consts.PHASE_DELETE_MANY)
+	service.Register[*conversation.Creator](consts.PHASE_CREATE)
+	service.Register[*conversation.Deleter](consts.PHASE_DELETE)
+	service.Register[*conversation.Patcher](consts.PHASE_PATCH)
+	service.Register[*conversation.Lister](consts.PHASE_LIST)
+	service.Register[*ping.Lister](consts.PHASE_LIST)
 }

@@ -27,6 +27,104 @@ func Init() error {
 }
 `
 
+const golangciLintContent = `version: "2"
+
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+severity:
+  default: error
+
+linters:
+  default: none
+  enable:
+    # Core correctness.
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Error handling.
+    - errorlint
+    - errname
+    - nilerr
+    - nilnil
+    - nilnesserr
+
+    # Backend resource safety.
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+    - durationcheck
+    - gosec
+
+    # Code hygiene.
+    - asciicheck
+    - misspell
+    - nolintlint
+    - predeclared
+    - revive
+    - unconvert
+    - wastedassign
+
+    # Go modernization.
+    - intrange
+    - perfsprint
+    - usestdlibvars
+
+    # Test quality.
+    - testifylint
+    - thelper
+    - usetesting
+
+    # Module hygiene.
+    - gomoddirectives
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      exclude-functions:
+        - io.Copy(*bytes.Buffer)
+        - io.Copy(os.Stdout)
+
+    misspell:
+      locale: US
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: var-declaration
+        - name: var-naming
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+      - common-false-positives
+      - legacy
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+
+issues:
+  max-same-issues: 100
+`
+
 var moduleContent = `// Package module provides business logic modules for the application.
 //
 // Recommended pattern:
@@ -206,4 +304,8 @@ temp/
 
 # Build output
 dist/
-build/`
+build/
+
+# Generated files
+generated/
+`

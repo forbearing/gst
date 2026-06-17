@@ -10,8 +10,9 @@ import (
 )
 
 type Permission struct {
-	Resource string `json:"resource,omitempty" schema:"resource"`
-	Action   string `json:"action,omitempty" schema:"action"`
+	Resource string  `json:"resource,omitempty" schema:"resource"`
+	Action   string  `json:"action,omitempty" schema:"action"`
+	Remark   *string `json:"remark,omitempty" gorm:"size:10240" schema:"remark"` // Optional permission summary.
 
 	model.Base
 }
@@ -19,7 +20,7 @@ type Permission struct {
 func (p *Permission) Purge() bool { return true }
 func (p *Permission) CreateBefore(*types.ModelContext) error {
 	p.SetID(util.HashID(p.Resource, p.Action))
-	p.Remark = util.ValueOf(fmt.Sprintf("%s %s", p.Action, p.Resource))
+	p.Remark = new(fmt.Sprintf("%s %s", p.Action, p.Resource))
 	return nil
 }
 
