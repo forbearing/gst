@@ -26,7 +26,6 @@ func init() {
 
 	rootCmd.AddCommand(
 		genCmd,
-		watchCmd,
 		newCmd,
 		astCmd,
 		pruneCmd,

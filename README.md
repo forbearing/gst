@@ -86,7 +86,8 @@ git init
 7. 修改 `Migrate(true)` 的数据库模型字段后，先运行 `gg migrate --dry-run`，
    确认无误后再运行 `gg migrate`。
 
-开发时也可以用 `gg watch` 监听 `model` 目录并自动执行 `gg gen`。
+开发时可以用 `gg dev` 监听 `model` 目录变更并自动执行 `gg gen`，同时通过
+Air 启动热重载服务。
 
 ## 模型 DSL
 
@@ -346,9 +347,8 @@ func init() {
 | `gg prune` | 只扫描并清理废弃 service action 文件 |
 | `gg routes` | 按 model 层级打印当前生成的接口路径 |
 | `gg route-tree` | 按 URL 层级打印当前生成的路由树 |
-| `gg watch` | 监听 `model` 目录并自动执行 `gg gen` |
 | `gg migrate` | 生成当前数据库方言的 schema，预览并按确认执行数据库迁移 |
-| `gg run` | 使用热重载方式启动业务项目 |
+| `gg dev` | 监听 model 变更自动生成代码，并使用 Air 热重载启动业务项目 |
 
 `gg check` 会检查依赖边界、model/service 文件边界、命名规范、`json` tag、
 REQ/RSP 命名和业务项目根目录结构；根目录结构检查会跳过 Git ignore 规则忽略的
